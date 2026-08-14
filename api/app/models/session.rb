@@ -6,6 +6,14 @@ class Session < ApplicationRecord
   STATUSES   = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
+  # A pending invite that's never been used to start an interview goes stale
+  # after this long. Derived from created_at rather than a stored expiry
+  # column — every session already has created_at, and nothing in the product
+  # spec calls for a per-session custom window. See assessment/gap-analysis.md
+  # P1-4. Does NOT apply once a session is active/ended: an interview already
+  # in progress, or already finished, must not be invalidated by this rule.
+  INVITE_TTL = 7.days
+
   belongs_to :assessment
   has_many :transcript_turns, dependent: :destroy
   has_many :coverage_maps, dependent: :destroy
@@ -24,6 +32,10 @@ class Session < ApplicationRecord
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+
+  def invite_expired?
+    pending? && created_at < INVITE_TTL.ago
+  end
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')

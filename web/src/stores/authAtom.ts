@@ -7,7 +7,11 @@ export interface AuthState {
 const STORAGE_KEY = "auth_token";
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null;
+  // No VITE_DEV_TOKEN fallback here on purpose: it used to mean logging out
+  // (or even just loading the app fresh, never having logged in at all) would
+  // silently re-authenticate as whatever token was baked into the build,
+  // bypassing the login form entirely. See assessment/gap-analysis.md P1-6.
+  return localStorage.getItem(STORAGE_KEY);
 }
 
 export function saveToken(token: string) {

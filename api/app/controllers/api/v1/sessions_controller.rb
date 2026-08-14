@@ -118,6 +118,7 @@ module Api
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Invalid or expired invite token", :gone) if session.invite_expired?
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
@@ -134,6 +135,10 @@ module Api
 
         unless session
           return json_error("Invalid or expired invite token", :not_found)
+        end
+
+        if session.invite_expired?
+          return json_error("Invalid or expired invite token", :gone)
         end
 
         # Resolve tenant from the session's own tenant_id so we can load the assessment
