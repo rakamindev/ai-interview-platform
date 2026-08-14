@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, FileText, Loader2, RefreshCw } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -96,10 +96,10 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="mx-auto max-w-2xl space-y-4" data-testid="portfolio-page-skeleton">
+        <Skeleton className="h-6 w-56" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
@@ -153,33 +153,73 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Generating state */}
+      {/* Generating state — skeletons mirror the card layout, with an estimate */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <div>
-            <p className="font-medium">Generating portfolio...</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
-            </p>
+        <div className="space-y-3" data-testid="portfolio-generating">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-3 rounded-lg border p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-52" />
+                  <Skeleton className="h-2.5 w-40" />
+                </div>
+                <Skeleton className="h-8 w-24" />
+              </div>
+              <Skeleton className="h-2.5 w-full" />
+              <Skeleton className="h-2.5 w-4/5" />
+            </div>
+          ))}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
           </div>
         </div>
       )}
 
-      {/* Failed state */}
+      {/* Failed state — plain language, no raw provider error, partial data stays visible */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
+        <div className="space-y-4" data-testid="portfolio-failed">
+          <div className="rounded-lg border border-destructive/40 p-5">
+            <p className="font-medium">The AI couldn't finish analyzing this interview.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The interview and its transcript are unaffected. You can try again.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={async () => {
+                await sessionsApi.regeneratePortfolio(Number(sessionId));
+                setGenerating(true);
+              }}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Try again
+            </Button>
+          </div>
+          {portfolio.skills.length > 0 && (
+            <SkillPortfolioCard
+              skill={portfolio.skills[0]}
+              override={overrides[portfolio.skills[0].id]}
+              onOverrideSaved={(o) => handleOverrideSaved(portfolio.skills[0].id, o)}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Empty state — nothing to review yet, one clear next action */}
+      {!generating && !portfolio && (
+        <div className="rounded-lg border p-10 text-center" data-testid="portfolio-empty">
+          <p className="font-medium">No skill portfolio yet</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            The AI builds this after an interview ends. It takes about two minutes — come
+            back shortly, or open the transcript to review the conversation now.
+          </p>
+          <Link
+            to={`/assessments/${id}/sessions/${sessionId}/transcript`}
+            className="mt-4 inline-flex items-center gap-1 text-sm text-primary hover:underline"
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-          </Button>
+            Open transcript <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       )}
 
@@ -188,7 +228,9 @@ export default function PortfolioPage() {
         <>
           {/* Configured skills */}
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Configured skills
+            </span>
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
@@ -207,11 +249,10 @@ export default function PortfolioPage() {
               <Separator />
               <div className="space-y-3">
                 <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    Discovered skills
+                  </span>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     Skills the AI probed that were not in the original assessment
                   </p>
                 </div>
@@ -246,7 +287,8 @@ export default function PortfolioPage() {
               </SelectContent>
             </Select>
             <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
+              Run Fit/Gap Analysis
+              <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
         </>

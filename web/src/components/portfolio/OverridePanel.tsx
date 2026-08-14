@@ -3,9 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import LevelRadio from "@/components/assessment/LevelRadio";
-import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
-import { Loader2, Pencil } from "lucide-react";
+import { Check, Loader2, Pencil } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -43,23 +42,33 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
   if (!open) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="space-y-1.5">
         {hasOverride ? (
           <>
-            <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
-              <span className="text-muted-foreground text-xs">AI</span>
-              <span className="text-muted-foreground">→</span>
-              <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                <Check className="h-3 w-3" />
+                Override saved
+              </span>
+              <span className="font-mono text-xs tabular-nums">
+                L{existingOverride!.override_level}
+              </span>
+              <span className="font-mono text-xs tabular-nums text-muted-foreground line-through">
+                L{parseLevel(skill.ai_level)}
+              </span>
             </div>
+            {existingOverride!.assessor_notes && (
+              <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
+                &ldquo;{existingOverride!.assessor_notes}&rdquo; — Assessor
+              </p>
+            )}
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <Pencil className="h-3 w-3 mr-1" /> Edit override
             </Button>
           </>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            Override rating ▼
+            <Pencil className="h-3 w-3 mr-1" /> Override rating
           </Button>
         )}
       </div>
@@ -67,8 +76,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   }
 
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Override
       </div>
 

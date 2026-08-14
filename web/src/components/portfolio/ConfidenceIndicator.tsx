@@ -9,29 +9,27 @@ function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
   return "LOW";
 }
 
+/**
+ * Confidence qualifies the level and never outshines it, so HIGH and MEDIUM
+ * stay quiet (muted). LOW is an attention signal — yellow, never red: a
+ * low-confidence rating is not a system failure.
+ */
 export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
   const label = getLabel(confidence);
 
-  if (label === "HIGH") {
+  if (label === "LOW") {
     return (
-      <span className="flex items-center gap-1 text-xs text-green-600">
-        <span className="h-2 w-2 rounded-full bg-green-500" />
-        Confidence: HIGH
-      </span>
-    );
-  }
-  if (label === "MEDIUM") {
-    return (
-      <span className="flex items-center gap-1 text-xs">
+      <span className="flex items-center gap-1 text-xs text-amber-700">
         <span className="h-2 w-2 rounded-full bg-amber-400" />
-        Confidence: MEDIUM
+        Confidence: LOW
       </span>
     );
   }
+
   return (
-    <span className="flex items-center gap-1 text-xs text-destructive">
-      <span className="h-2 w-2 rounded-full bg-destructive" />
-      Confidence: LOW
+    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+      <span className="h-2 w-2 rounded-full bg-border" />
+      Confidence: {label}
     </span>
   );
 }
