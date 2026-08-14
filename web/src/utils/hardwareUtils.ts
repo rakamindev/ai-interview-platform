@@ -4,6 +4,11 @@ export enum ProctoringState {
     WAITING = "waiting",
     LOADING = "loading",
     PASSED = "passed",
+    // Couldn't fully verify (e.g. speed test was inconclusive) but not a
+    // confirmed failure either — lets the candidate proceed with a caveat
+    // instead of being hard-blocked by something that isn't necessarily
+    // their fault. See assessment/gap-analysis.md P0-5.
+    WARNING = "warning",
     ERROR = "error",
 }
 
