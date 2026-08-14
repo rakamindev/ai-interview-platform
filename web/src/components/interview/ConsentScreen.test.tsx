@@ -65,4 +65,20 @@ describe("ConsentScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /Go back/i }));
     expect(screen.getByRole("button", { name: /Start Interview/ })).toBeInTheDocument();
   });
+
+  it("structures the disclosure into short labeled groups", () => {
+    renderScreen();
+    expect(screen.getByRole("heading", { name: "What we collect" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Why we use it" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "How long we keep it" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your rights" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Who to contact" })).toBeInTheDocument();
+  });
+
+  it("states the retention window and shows the policy version in mono", () => {
+    renderScreen();
+    const version = screen.getByText("v1.0");
+    expect(version.className).toContain("font-mono");
+    expect(version.className).toContain("tabular-nums");
+  });
 });
