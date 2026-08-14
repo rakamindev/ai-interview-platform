@@ -86,8 +86,13 @@ module FitGap
     end
 
     def find_portfolio_skill(portfolio_skills, label, skill_id)
-      portfolio_skills.find { |s| s[:skill_id] == skill_id && skill_id.present? } ||
-        portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
+      # Prefer a canonical skill_id match over label matching. Two references to
+      # the same taxonomy skill with slightly different labels (e.g. "Node.js /
+      # Backend Development" vs "Node.js Backend Development") must still count
+      # as the same skill — otherwise a perfectly assessed candidate shows as
+      # "not_assessed".
+      by_id = portfolio_skills.find { |s| s[:skill_id].present? && s[:skill_id] == skill_id } if skill_id.present?
+      by_id || portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
     end
 
     def generate_narratives(skill_comparisons)
