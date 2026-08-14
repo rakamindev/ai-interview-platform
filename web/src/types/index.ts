@@ -182,7 +182,18 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
+
+/**
+ * Why the interview ended up in the "error" state — drives which message the
+ * candidate sees. Never conflate this with "complete": a candidate must
+ * never be told "thank you, recorded" for a session that actually failed.
+ */
+export type InterviewErrorReason =
+  | "fetch_failed"     // couldn't load candidate/session info (bad token, network, backend down)
+  | "connection_lost"  // reconnect attempts exhausted after a genuine drop
+  | "server_error";    // backend sent a non-recoverable error message
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

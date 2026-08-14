@@ -21,14 +21,31 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
-import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { CheckCircle, Mic, MicOff, AlertTriangle } from "lucide-react";
+import type { CandidateInfo, InterviewState, InterviewErrorReason, InterviewSpeaker, TranscriptTurn } from "@/types";
+import type { InterviewErrorDetail } from "@/hooks/useAudioWebSocket";
+
+const ERROR_COPY: Record<InterviewErrorReason, { title: string; body: string }> = {
+  fetch_failed: {
+    title: "This interview link isn't working",
+    body: "It may be invalid or expired. Nothing has been recorded. Please contact the recruiting team for a new link.",
+  },
+  connection_lost: {
+    title: "Connection lost",
+    body: "We couldn't restore the connection to your interview. Your progress up to this point may not be fully saved — please contact the interviewer before retrying.",
+  },
+  server_error: {
+    title: "Something went wrong",
+    body: "The interview couldn't continue due to a technical issue on our end. Nothing further will be recorded — please contact the interviewer.",
+  },
+};
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
+  const [errorReason, setErrorReason] = useState<InterviewErrorReason>("server_error");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
@@ -48,14 +65,25 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => {
+        setErrorReason("fetch_failed");
+        setInterviewState("error");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
 
-  const handleStateChange = useCallback((state: InterviewState) => {
+  const handleStateChange = useCallback((state: InterviewState, errorDetail?: InterviewErrorDetail) => {
     setInterviewState(state);
+
+    if (state === "error" && errorDetail) {
+      setErrorReason(errorDetail.reason);
+      // Technical detail (if any) stays out of the candidate-facing copy —
+      // ERROR_COPY is the only thing rendered — but is worth having in the
+      // console for whoever's helping the candidate debug live.
+      if (errorDetail.message) console.error("[interview error]", errorDetail.reason, errorDetail.message);
+    }
 
     if (state === "draining_audio") {
       // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
@@ -222,6 +250,21 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State: Error ────────────────────────────────────────────────────────
+  // Must never fall through to the "complete" screen below — a candidate
+  // whose link was broken, or whose connection dropped for good, must not
+  // be told "thank you, recorded". See assessment/gap-analysis.md P0-3.
+  if (interviewState === "error") {
+    const copy = ERROR_COPY[errorReason];
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto" />
+        <h2 className="text-xl font-semibold">{copy.title}</h2>
+        <p className="text-sm text-muted-foreground">{copy.body}</p>
       </div>
     );
   }
