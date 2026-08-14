@@ -77,3 +77,25 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer utilities {
+    /* iOS safe area padding for bottom nav */
+    .pb-safe {
+        padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+    }
+    .mb-safe {
+        margin-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+    }
+    /* Subtle touch press feedback */
+    .touch-feedback {
+        @apply transition-transform duration-100 active:scale-95;
+    }
+    /* Hide scrollbar but allow scroll */
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+}

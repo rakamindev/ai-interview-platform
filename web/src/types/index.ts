@@ -34,6 +34,8 @@ export interface AssessmentSkill {
 export interface Session {
   id: number;
   assessment_id: number;
+  assessment_name?: string;
+  role_title?: string;
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
@@ -85,13 +87,17 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export type PortfolioSkillStatus = "assessed" | "not_assessed" | "unparseable";
+
 export interface PortfolioSkill {
   id: number;
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /** "assessed" has a real ai_level/ai_confidence; the other two states never do. */
+  status: PortfolioSkillStatus;
+  ai_level: number | null;       // 1-5, null unless assessed
+  ai_confidence: string | null;  // "high" | "medium" | "low", null unless assessed
   evidence: string[];
   competency_summary: string;
 }
@@ -164,6 +170,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  candidate_name?: string;
 }
 
 export interface PaginationMeta {
@@ -182,7 +189,18 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
+
+/**
+ * Why the interview ended up in the "error" state — drives which message the
+ * candidate sees. Never conflate this with "complete": a candidate must
+ * never be told "thank you, recorded" for a session that actually failed.
+ */
+export type InterviewErrorReason =
+  | "fetch_failed"     // couldn't load candidate/session info (bad token, network, backend down)
+  | "connection_lost"  // reconnect attempts exhausted after a genuine drop
+  | "server_error";    // backend sent a non-recoverable error message
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

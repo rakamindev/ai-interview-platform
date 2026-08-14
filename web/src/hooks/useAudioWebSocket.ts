@@ -1,13 +1,18 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
-import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker } from "@/types";
+import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker, InterviewErrorReason } from "@/types";
+
+export interface InterviewErrorDetail {
+  reason: InterviewErrorReason;
+  message?: string;
+}
 
 interface UseAudioWebSocketOptions {
   sessionId: number;
   token?: string;
   onAudioChunk: (buffer: ArrayBuffer) => void;
   onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text">) => void;
-  onStateChange: (state: InterviewState) => void;
+  onStateChange: (state: InterviewState, errorDetail?: InterviewErrorDetail) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
 }
@@ -27,6 +32,12 @@ export function useAudioWebSocket({
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
+  // Set by our own disconnect() (e.g. candidate clicks "End Interview").
+  // disconnect() also maxes out reconnectAttemptsRef so a genuinely-exhausted
+  // reconnect and a deliberate manual close look identical to onclose below —
+  // without this flag, ending the interview normally would fall into the
+  // same branch as "reconnect exhausted" and get flagged as an error.
+  const manualDisconnectRef = useRef(false);
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
   );
@@ -35,6 +46,7 @@ export function useAudioWebSocket({
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     sessionEndedRef.current = false;
+    manualDisconnectRef.current = false;
     setConnectionState("connecting");
     const url = token
       ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
@@ -103,7 +115,11 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
+                onStateChange("error", { reason: "server_error", message: msg.message });
+              }
               break;
           }
         } catch {
@@ -118,7 +134,13 @@ export function useAudioWebSocket({
 
     ws.onclose = () => {
       setConnectionState("disconnected");
-      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
+      // session_ended / non-recoverable error already decided the terminal
+      // state explicitly; a manual disconnect() (e.g. "End Interview") also
+      // maxes out reconnectAttemptsRef, which would otherwise look
+      // identical to "reconnect exhausted" below. Either way, onclose has
+      // nothing useful to add here.
+      if (sessionEndedRef.current || manualDisconnectRef.current) return;
+
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
         onStateChange("reconnecting");
@@ -127,7 +149,10 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        // Reconnect genuinely exhausted — the candidate's progress up to
+        // this point may not be fully saved. Must not look like a normal
+        // "Interview Complete" screen. See assessment/gap-analysis.md P0-3.
+        onStateChange("error", { reason: "connection_lost" });
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
@@ -146,6 +171,7 @@ export function useAudioWebSocket({
 
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    manualDisconnectRef.current = true;
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
     wsRef.current?.close();
   }, []);

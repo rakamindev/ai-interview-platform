@@ -147,35 +147,112 @@ module Portfolios
       }
     end
 
+    NOT_ASSESSED_SUMMARY = 'This skill was configured for the assessment but was not covered during ' \
+                           'the interview — no probing occurred, so no evidence was collected.'
+    UNPARSEABLE_SUMMARY  = 'The assessment model returned a response for this skill in an unexpected ' \
+                           'format and it could not be scored automatically. Needs manual review.'
+    NO_SUMMARY_FALLBACK  = 'No summary was provided.'
+
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      configured_data = Array(data['configured_skills'])
+      discovered_data = Array(data['discovered_skills'])
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
+      # Iterate the assessment's OWN configured skill list, not just whatever
+      # Gemini happened to return — a skill the interview never got to must
+      # still show up, explicitly marked not_assessed, instead of silently
+      # disappearing. See assessment/gap-analysis.md P0-4.
+      @session.assessment.assessment_skills.order(:display_order).each do |skill|
+        matched = configured_data.find { |sd| skill_data_matches?(sd, skill) }
+
         portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          skill_id:      skill.skill_id,
+          skill_label:   skill.skill_label,
+          is_discovered: false,
+          **outcome_attrs(matched)
         )
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
+      discovered_data.each do |skill_data|
         portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          skill_id:      nil,
+          skill_label:   skill_data['skill_label'],
+          is_discovered: true,
+          **outcome_attrs(skill_data)
         )
       end
+    end
+
+    def skill_data_matches?(skill_data, assessment_skill)
+      return false if skill_data.nil?
+
+      by_id = assessment_skill.skill_id.presence && skill_data['skill_id'] == assessment_skill.skill_id
+      by_label = skill_data['skill_label'].to_s.strip.casecmp?(assessment_skill.skill_label.to_s.strip)
+
+      by_id || by_label
+    end
+
+    # Never assessed (Gemini has nothing for this skill at all) vs
+    # unparseable (Gemini has an entry but we can't extract a valid level
+    # from it) are kept distinct — the first is a real "not covered"
+    # signal, the second is a data-quality problem worth flagging for
+    # manual review rather than silently scoring either one.
+    def outcome_attrs(skill_data)
+      return not_assessed_attrs if skill_data.nil?
+
+      level = parse_level(skill_data['level'])
+      return unparseable_attrs(skill_data) if level.nil?
+
+      assessed_attrs(skill_data, level)
+    end
+
+    def assessed_attrs(skill_data, level)
+      confidence = skill_data['confidence']
+      confidence = 'low' unless PortfolioSkill::CONFIDENCE_LEVELS.include?(confidence)
+
+      {
+        status:             'assessed',
+        ai_level:           level,
+        ai_confidence:      confidence,
+        evidence:           Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary'].presence || NO_SUMMARY_FALLBACK
+      }
+    end
+
+    def not_assessed_attrs
+      {
+        status:             'not_assessed',
+        ai_level:           nil,
+        ai_confidence:      nil,
+        evidence:           [],
+        competency_summary: NOT_ASSESSED_SUMMARY
+      }
+    end
+
+    def unparseable_attrs(skill_data)
+      {
+        status:             'unparseable',
+        ai_level:           nil,
+        ai_confidence:      nil,
+        evidence:           Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary'].presence || UNPARSEABLE_SUMMARY
+      }
+    end
+
+    # Accepts an Integer directly, or extracts the first run of digits from a
+    # string (Gemini occasionally returns "3 (Intermediate)" instead of a
+    # bare number). Returns nil — never a default score — when no level can
+    # be determined at all, so the caller can mark the skill unparseable
+    # instead of silently recording it as the lowest possible level.
+    def parse_level(raw)
+      return raw.clamp(1, 5) if raw.is_a?(Integer)
+      return nil unless raw.is_a?(String)
+
+      digits = raw[/\d+/]
+      digits&.to_i&.clamp(1, 5)
     end
   end
 end
