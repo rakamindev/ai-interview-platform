@@ -27,7 +27,25 @@ RSpec.describe 'Tenant scoping (TenantScoped concern)', type: :model do
     end
   end
 
-  it 'currently leaks all tenants when no tenant context is set (Phase 1 target)' do
-    expect(Assessment.count).to eq(2)
+  it 'returns no records when no tenant context is set (P1-3)' do
+    expect(Assessment.count).to eq(0)
+    expect(Assessment.unscoped.count).to eq(2)
+  end
+
+  describe 'belongs_to associations resolve without tenant context (P1-3 safety net)' do
+    it 'Session#assessment loads with no tenant set' do
+      assessment = create(:assessment, tenant_id: 7, name: 'Owned assessment')
+      session    = create(:session, assessment: assessment, tenant_id: 7)
+
+      loaded = Session.unscoped.find(session.id)
+      expect(loaded.assessment).to eq(assessment)
+    end
+
+    it 'Portfolio#session loads with no tenant set' do
+      session   = create(:session, tenant_id: 9)
+      portfolio = create(:portfolio, session: session)
+
+      expect(Portfolio.find(portfolio.id).session).to eq(session)
+    end
   end
 end
