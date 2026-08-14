@@ -28,6 +28,7 @@ Fill in the required values in `config/application.yml`:
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
 | `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `FRONTEND_BASE_URL` | Frontend base URL used to build candidate invite links, e.g. `http://localhost:5173` |
 
 ---
 
