@@ -1,11 +1,13 @@
 /* Self-hosted so no request leaves the browser for a third party while a
-   candidate is being assessed (see the speed-test finding in the gap analysis). */
-@import "@fontsource/ibm-plex-sans/400.css";
-@import "@fontsource/ibm-plex-sans/500.css";
-@import "@fontsource/ibm-plex-sans/600.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
-@import "@fontsource/source-serif-4/400.css";
+   candidate is being assessed (see the speed-test finding in the gap analysis).
+   Latin subsets only: the app ships English and Indonesian, so the Cyrillic,
+   Greek and Vietnamese subsets would be dead weight in every bundle. */
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/source-serif-4/latin-400.css";
 
 @tailwind base;
 @tailwind components;
