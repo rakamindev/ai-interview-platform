@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle, Mic, MicOff, Loader2, X, Zap } from "lucide-react";
 import ConsentScreen from "@/components/interview/ConsentScreen";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn, ConsentPolicy } from "@/types";
 
@@ -346,7 +346,13 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">{endFailed ? "⚠️" : "✅"}</div>
+        <div className="flex justify-center">
+          {endFailed ? (
+            <AlertTriangle className="h-10 w-10 text-amber-500" />
+          ) : (
+            <CheckCircle className="h-10 w-10 text-primary" />
+          )}
+        </div>
         <h2 className="text-xl font-semibold">
           {endFailed ? "Interview Finished" : "Interview Complete"}
         </h2>
@@ -407,7 +413,9 @@ export default function InterviewPage() {
       {reconnectedPrompt && (
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 
@@ -485,7 +493,7 @@ export default function InterviewPage() {
         {import.meta.env.DEV && (
           <Button variant="outline" size="sm" className="text-xs opacity-50"
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
+            <Zap className="h-3 w-3" /> Force reconnect
           </Button>
         )}
         </div>
