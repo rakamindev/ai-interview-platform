@@ -14,10 +14,30 @@ Satu tema besar: melindungi kandidat (UU PDP + keadilan) DAN memastikan hasil pe
 | **BACKEND — Invite & kontrak** | F-04 (invite_url host), F-05 (invite_token bocor) | `WEB_BASE_URL` terpisah; hapus `invite_token` dari payload assessor; **guard `audio_complete`** — tolak end-session 422 tanpa consent accepted + tanpa bukti sesi berjalan (status active + minimal 1 transcript turn), idempoten tetap 200 |
 | **FRONTEND — Layar consent** | F-03 | Layar disclosure UU PDP sebelum interview + gating tombol start |
 | **FRONTEND — Kontrak fit-gap** | F-06 (Required blank), F-16 (tipe) | Fix `ComparisonTable` + types |
+| **FRONTEND — Presentasi hasil penilaian** | F-06 (lanjutan), + masalah presentasi yang ditemukan saat walkthrough (lihat §1a) | Revamp layar Fit-Gap & Portfolio: instrumen L1–L5 tunggal, `not_assessed` dibedakan dari gap, bukti kutipan didekatkan ke keputusan, seluruh state ditangani |
 
 **Tidak termasuk (sengaja):** F-08 (optimasi payload list), F-14 (transcript kandidat penuh), F-15 (speed test pihak ketiga) — di-list sebagai follow-up, bukan bagian revamp ini agar scope terkendali dalam deadline. F-17 (test/CI) WAJIB disertakan sebagai harness untuk membuktikan semua di atas.
 
-**Klaim depth: backend-heavy** (consent model+API+gating+tenant binding), frontend support (consent UI + contract fix).
+**Klaim depth: fullstack seimbang.** Backend: model consent + API + gating WS + guard `audio_complete` + tenant binding. Frontend: layar consent, perbaikan kontrak fit-gap, dan revamp presentasi hasil penilaian (§1a). Kedua sisi dikerjakan sampai ke test.
+
+---
+
+## 1a. Kenapa presentasi hasil ikut direvamp
+
+Temuan F-06 awalnya dibaca sebagai bug kontrak: kolom "Required" kosong karena frontend membaca `required_level` sedangkan backend mengirim `expected_level`. Setelah kolom itu diisi, masalah yang lebih besar baru kelihatan saat menelusuri layar sebagai hiring manager:
+
+**Skill yang tidak pernah ditanyakan tampil sama seperti skill yang nilainya kurang.**
+`ComparisonTable` merender `not_assessed` dengan baris dan bobot visual yang sama seperti `gap`. Pembacanya menyimpulkan kandidat lemah di skill itu, padahal wawancaranya yang tidak pernah menggalinya. Ini kesalahan yang menimpa kandidat — orang yang tidak memilih memakai produk ini dan tidak bisa membantah hasilnya.
+
+Konsekuensinya, memperbaiki kontrak data saja tidak menyelesaikan kerugiannya. Yang harus berubah adalah cara level dibaca:
+
+1. **Satu instrumen ukur untuk seluruh produk.** L1–L5 selalu digambar sebagai lima segmen. Di fit-gap instrumen yang sama membawa dua penanda — level yang disyaratkan dan level yang dicapai — sehingga gap terbaca sebagai **jarak**, bukan hasil pengurangan angka.
+2. **`not_assessed` = tidak ada pengukuran.** Track digambar putus-putus dan kosong, diberi label kata "Belum dinilai", dan tidak pernah memakai warna gap.
+3. **Merah dikunci untuk kegagalan sistem.** Kandidat yang levelnya di bawah syarat memakai clay, bukan merah. Manusia yang belum memenuhi syarat bukan error, dan mewarnainya seperti error mendorong pembaca ke arah menolak.
+4. **Bukti didekatkan ke keputusan.** Kutipan verbatim kandidat tampil di baris perbandingan, bukan hanya di layar terpisah, supaya penilaian dan alasannya terbaca bersamaan.
+5. **Kata-kata kandidat dibedakan secara tipografis** dari kesimpulan AI (serif vs sans), sehingga pembaca bisa memisahkan kesaksian dari inferensi tanpa membaca label.
+
+**Asumsi yang diambil:** produk ini dinilai juga pada kualitas UI/UX, dan brief menyebut "menggunakan atau memperluas design system". Menambah tiga typeface (IBM Plex Sans/Mono, Source Serif 4) dan empat token warna hasil penilaian dihitung sebagai *memperluas*, bukan mengganti: token dasar, komponen Radix, dan warna brand Rakamin (`#01959f`, `#FBC037`) tidak diubah.
 
 ---
 
@@ -98,6 +118,29 @@ Ditulis sebelum coding. Setiap input & edge case didefinisikan.
 | G2 | Rollback | `db:rollback` | Reversible (drop table/kolom) |
 | G3 | Tidak ada data pribadi baru di log | consent POST | Hanya status+timestamp di log, bukan audio/transkrip |
 
+### H. Presentasi hasil penilaian (frontend)
+
+Ditulis sebelum coding, berlaku untuk layar Fit-Gap dan Portfolio.
+
+| # | Given | When | Then |
+|---|---|---|---|
+| H1 | `result: "not_assessed"` | render baris fit-gap | Track putus-putus & kosong, label "Belum dinilai", **tidak** memakai warna gap/merah; tidak ada angka level yang dikarang |
+| H2 | `candidate_level < expected_level` | render | Warna clay (`--gap`), bukan `--destructive`; delta ditulis mono (`-2`) sebagai konfirmasi, bukan sinyal utama |
+| H3 | delta −1 vs −2 | render berdampingan | −2 terbaca lebih berat secara visual tanpa membaca angkanya |
+| H4 | `is_override: true` | render | Penanda "Disesuaikan asesor" + tooltip; level hasil override jadi primer, level AI jadi konteks sekunder |
+| H5 | `ai_confidence: "low"` | render kartu portfolio | Peringatan eksplisit bahwa skill hanya digali sebentar; memakai aksen kuning (perhatian), bukan merah |
+| H6 | `evidence: []` | render kartu | State kosong yang menjelaskan belum ada kutipan — bukan kartu kosong tanpa penjelasan |
+| H7 | `evidence` berisi 4 kutipan panjang (>3 kalimat) | render | Dua kutipan pertama tampil, sisanya di balik "Tampilkan semua"; layout tidak pecah |
+| H8 | `skill_label` sangat panjang (>60 karakter) | render | `overflow-wrap` menahan layout; track dan angka tidak tergeser |
+| H9 | Laporan sedang digenerate | buka layar | Skeleton yang meniru layout asli + estimasi waktu; bukan spinner di tengah layar |
+| H10 | `generation_status: "failed"` | buka layar | Penjelasan bahasa manusia + tombol coba lagi; **tidak** menampilkan pesan error mentah dari provider AI (lihat F-09) |
+| H11 | Sebagian data siap (perbandingan ada, narasi belum) | buka layar | Bagian yang siap tampil, bagian yang belum diberi skeleton — halaman tidak diblokir seluruhnya |
+| H12 | Belum ada laporan sama sekali | buka layar | State kosong yang menjelaskan apa yang kurang + satu aksi lanjutan |
+| H13 | Viewport 375px | buka kedua layar | Layout responsif nyata (baris jadi tumpukan), aksi tetap terjangkau, tidak ada scroll horizontal |
+| H14 | Kutipan verbatim kandidat | render di mana pun | Selalu serif; teks yang dihasilkan AI selalu sans — pembatas ini konsisten di semua layar |
+| H15 | Mode gelap aktif | render | Seluruh token hasil penilaian punya varian gelap; kontras teks tetap terbaca |
+| H16 | Pengguna hanya melihat warna (uji grayscale) | render | Setiap status tetap terbaca lewat label kata + bentuk, bukan warna saja |
+
 ---
 
 ## 3. Solution Options & Trade-offs
@@ -148,6 +191,26 @@ Ditulis sebelum coding. Setiap input & edge case didefinisikan.
 - Backend: pastikan `skill_comparisons` memakai `expected_level` (sudah) + tambahkan `required_level` alias ATAU dokumentasi kontrak; Frontend: pakai `expected_level`; types dibetulkan.
 - *Maintainability:* satu sumber kebenaran.
 - **→ Pilih A.** (Tambahan: canonical skill matching by `skill_id` di `FitGap::Engine.find_portfolio_skill` — prioritaskan skill_id sebelum label.)
+
+### Keputusan 4 — Cara mendapatkan arah visual untuk revamp presentasi
+
+Dua arah dieksplorasi lebih dulu sebagai mockup, lalu dibandingkan sebelum satu baris kode UI ditulis.
+
+**Option A: Mockup HTML statis memakai token codebase**
+- Semua state digambar sebagai frame terpisah (loaded/loading/empty/error/partial/teks panjang/mobile 375px), memakai variabel CSS dan warna brand yang persis sama dengan aplikasi.
+- *Product Impact:* cakupan state lengkap, dan setiap layar bisa langsung dicek terhadap acceptance criteria H1–H16.
+- *Cost:* rendah; porting ke React nyaris mekanis karena token sudah sama.
+- *Kelemahan:* tanpa shell aplikasi (sidebar, breadcrumb), layar terbaca sebagai lembar spesifikasi, bukan produk. Kualitas komposisi lebih lemah.
+
+**Option B: Generator UI eksternal (v0)**
+- *Product Impact:* komposisi paling kuat — shell aplikasi, ritme baris yang mendekatkan bukti ke keputusan, pemisah kutipan/narasi yang rapi.
+- *Cost:* tinggi kalau diadopsi apa adanya. Keluarannya Next 16 + React 19 + Tailwind v4 (aplikasi ini Vite + React 18 + Tailwind v3), tanpa Radix sama sekali, dan memakai palet karangan sendiri (`#087f73` / `#e8bb27`) alih-alih warna brand Rakamin.
+- *Failure modes:* mengarang data yang tidak ada di model — skor agregat "76/100", `ai_confidence` sebagai float `0.91` (API mengembalikan `high|medium|low`), metrik "Evidence Health", sumber bukti "Reference · 2023". Angka penilaian yang tidak punya metode adalah presisi palsu pada produk yang memutuskan nasib orang. Layar consent-nya bahkan datang dengan **checkbox tercentang default** — secara UU PDP itu bukan persetujuan.
+- *Forecloses:* memasukkannya utuh berarti menjalankan dua sistem UI paralel di satu aplikasi.
+
+**→ Pilih A untuk isi, arah komposisi diambil dari B.** Struktur layout (shell, ritme baris, kedekatan bukti dengan keputusan) diadopsi; palet dikembalikan ke token Rakamin; seluruh metrik karangan dibuang; cakupan state dan kejujuran terhadap data model mengikuti Option A. Yang dibuang dari B adalah penghapusan — murah. Yang diambil dari B adalah komposisi — mahal kalau dibangun dari nol.
+
+*Catatan verifikasi AI:* kedua mockup dihasilkan dengan bantuan AI, dan keduanya salah pada titik yang berbeda — dicatat di bagian AI Verification pada laporan Step 5.
 
 ---
 
