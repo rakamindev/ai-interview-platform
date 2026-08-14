@@ -45,6 +45,8 @@ export default function InterviewPage() {
   const [consentLoading, setConsentLoading] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [consentSubmitting, setConsentSubmitting] = useState(false);
+  // The session could not be closed from the candidate's side (see callAudioComplete).
+  const [endFailed, setEndFailed] = useState(false);
 
   const fetchConsent = useCallback(async () => {
     if (!token) return;
@@ -162,16 +164,36 @@ export default function InterviewPage() {
       clearTimeout(audioCompleteSafetyTimerRef.current);
       audioCompleteSafetyTimerRef.current = null;
     }
-    // Retry until success — endpoint now always returns ended:true or an error.
-    // ended:false is no longer a valid response; any success means the session ended.
-    const attempt = async (delay: number) => {
+    // Retry transient failures only. The endpoint refuses to end a session that
+    // cannot be verified (no consent, no evidence it ran) with a 4xx — retrying
+    // that forever would trap the candidate on a spinner while the session never
+    // closes. Network errors and 5xx/429 are worth retrying; other 4xx are not,
+    // and a bounded number of attempts guarantees we always reach a final state.
+    const MAX_ATTEMPTS = 5;
+
+    const isRetryable = (err: unknown) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === undefined) return true; // network/timeout — no response reached us
+      return status === 429 || status >= 500;
+    };
+
+    const attempt = async (delay: number, attemptsLeft: number) => {
       try {
         await sessionsApi.audioComplete(token);
-      } catch {
-        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
+        setEndFailed(false);
+      } catch (err) {
+        if (attemptsLeft > 1 && isRetryable(err)) {
+          setTimeout(() => attempt(Math.min(delay * 2, 8000), attemptsLeft - 1), delay);
+          return;
+        }
+        // Give up: the interview itself is over, so show the candidate a final
+        // screen instead of an endless spinner. The assessor can close the
+        // session from their side.
+        setEndFailed(true);
+        setInterviewState("complete");
       }
     };
-    attempt(2000);
+    attempt(2000, MAX_ATTEMPTS);
   }, [token, cancelDrain]);
 
   const handleSpeakerChange = useCallback((newSpeaker: InterviewSpeaker) => {
@@ -324,12 +346,25 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <div className="text-4xl">{endFailed ? "⚠️" : "✅"}</div>
+        <h2 className="text-xl font-semibold">
+          {endFailed ? "Interview Finished" : "Interview Complete"}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
+          {endFailed ? (
+            <>
+              Your interview has ended and your answers were recorded.
+              <br />
+              We could not close the session automatically, so the hiring team will
+              finalise it on their side. Nothing is lost — you can close this page.
+            </>
+          ) : (
+            <>
+              Thank you. The interview has been recorded.
+              <br />
+              The hiring team will review your results and follow up with you.
+            </>
+          )}
         </p>
       </div>
     );

@@ -173,7 +173,7 @@ add_index  :users, :tenant_id
 
 **Safety terhadap existing rows:** tabel baru → aman; `users.tenant_id` nullable → rows lama tak rusak, di-403 sampai di-assign (dokumentasi prosedur assign).
 
-**Policy content:** constant versioned (Rails `ConsentPolicy::V1`) dengan en/id — bukan DB (hindari admin UI di scope ini).
+**Policy content:** constant versioned di `app/services/consent_policy.rb` — `ConsentPolicy::POLICY_VERSION` (saat ini `"1.0"`) + `ConsentPolicy.content(language)` untuk en/id. Bukan DB, supaya versi policy bisa naik tanpa migration dan tanpa admin UI di scope ini.
 
 ---
 
