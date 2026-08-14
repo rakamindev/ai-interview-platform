@@ -17,3 +17,5 @@ web/.vite/
 
 # OS
 .DS_Store
+**/._*
+spec/examples.txt
