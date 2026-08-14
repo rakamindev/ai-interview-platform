@@ -9,7 +9,7 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, AlertTriangle } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
@@ -20,6 +20,8 @@ function StateIcon({ state }: { state: ProctoringState }) {
         return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
     if (state === ProctoringState.PASSED)
         return <CheckCircle className="h-4 w-4 text-green-500" />;
+    if (state === ProctoringState.WARNING)
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
     if (state === ProctoringState.ERROR)
         return <XCircle className="h-4 w-4 text-destructive" />;
     return <Circle className="h-4 w-4 text-muted-foreground/40" />;
@@ -28,6 +30,7 @@ function StateIcon({ state }: { state: ProctoringState }) {
 function stateLabel(state: ProctoringState) {
     if (state === ProctoringState.LOADING) return "Checking...";
     if (state === ProctoringState.PASSED) return "Passed";
+    if (state === ProctoringState.WARNING) return "Unverified";
     if (state === ProctoringState.ERROR) return "Failed";
     return "Waiting";
 }
@@ -50,9 +53,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
+        const internetOk = internet === ProctoringState.PASSED || internet === ProctoringState.WARNING;
         setAllPassed(
             osAndBrowser === ProctoringState.PASSED &&
-            internet === ProctoringState.PASSED &&
+            internetOk &&
             camera === ProctoringState.PASSED &&
             audio === ProctoringState.PASSED &&
             microphone === ProctoringState.PASSED
@@ -122,10 +126,19 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         if (progress.internet !== ProctoringState.LOADING) return;
         testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
             setInternetResult(result);
+            // "inconclusive" (couldn't measure at all, e.g. our backend is
+            // unreachable) is a WARNING, not an ERROR — it must not block the
+            // candidate the same way a genuinely slow connection does.
+            // See assessment/gap-analysis.md P0-5.
+            const internetState =
+                result.status === "passed" ? ProctoringState.PASSED
+                : result.status === "inconclusive" ? ProctoringState.WARNING
+                : ProctoringState.ERROR;
+            const canProceed = internetState !== ProctoringState.ERROR;
             setProgress((p) => ({
                 ...p,
-                internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
+                internet: internetState,
+                ...(canProceed
                     ? REQUIRE_CAMERA
                         ? { camera: ProctoringState.LOADING }
                         : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
@@ -198,7 +211,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         { key: "audio", label: "Audio output" },
     ];
 
-    const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
+    const hasError = Object.values(progress).some(
+        (s) => s === ProctoringState.ERROR || s === ProctoringState.WARNING
+    );
 
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
@@ -241,17 +256,24 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
-                            </div>
+                            internetResult.status === "inconclusive" ? (
+                                <p className="mt-2 text-xs text-amber-600">
+                                    Couldn't measure your connection speed — you can still proceed, but a slow
+                                    connection may affect audio quality during the interview.
+                                </p>
+                            ) : (
+                                <div className="mt-2 flex gap-3 text-xs">
+                                    <span className={(internetResult.download ?? 0) >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                                        ↓ {internetResult.download ?? "—"} Mbps
+                                    </span>
+                                    <span className={(internetResult.upload ?? 0) >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                        ↑ {internetResult.upload ?? "—"} Mbps
+                                    </span>
+                                    <span className={(internetResult.ping ?? Infinity) <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                        {internetResult.ping ?? "—"} ms
+                                    </span>
+                                </div>
+                            )
                         )}
 
                         {/* Mic level bar */}

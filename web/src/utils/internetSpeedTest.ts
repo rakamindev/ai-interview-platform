@@ -1,10 +1,28 @@
-// Internet Speed Test Utilities — standalone, no backend dependency
+// Internet Speed Test Utilities.
+//
+// Defaults to this platform's own backend (see api/config/routes.rb
+// speed_test endpoints) instead of third-party CDNs. Third-party endpoints
+// (httpbin.org, jsdelivr, unpkg) can be blocked by a corporate firewall or
+// simply be down, in which case a candidate with genuinely fine internet
+// used to get hard-blocked from starting the interview by a hardcoded
+// fallback number pretending to be a real (bad) measurement. See
+// assessment/gap-analysis.md P0-5. VITE_SPEED_TEST_*_URL still overrides
+// these defaults if a different target is ever needed.
+
+import { API_BASE_URL } from "@/services/api";
 
 export interface InternetSpeedResult {
-    download: number;
-    upload: number;
-    ping: number;
-    passed: boolean;
+    download: number | null;
+    upload: number | null;
+    ping: number | null;
+    /**
+     * "passed"/"failed" mean the measurement itself succeeded — we know the
+     * real speed, and it either meets or misses the threshold. "inconclusive"
+     * means the measurement couldn't complete at all (e.g. our own backend is
+     * unreachable) — we genuinely don't know, and must not treat that the
+     * same as "measured and it's bad".
+     */
+    status: "passed" | "failed" | "inconclusive";
     downloadTests: number[];
     uploadTests: number[];
     pingTests: number[];
@@ -22,98 +40,58 @@ export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     maxPingMs: 300,
 };
 
-const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const PING_URL = (import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined) || `${API_BASE_URL}/health`;
+const DOWNLOAD_URL =
+    (import.meta.env.VITE_SPEED_TEST_DOWNLOAD_URL as string | undefined) || `${API_BASE_URL}/speed_test/download`;
+const UPLOAD_URL = (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) || `${API_BASE_URL}/speed_test`;
 
-async function measurePing(): Promise<number> {
-    if (SPEED_TEST_PING_URL) {
-        try {
-            const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            return 999;
-        }
-    }
-    const testUrls = [
-        "https://www.google.com/favicon.ico",
-        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
-        "https://unpkg.com/react@18/umd/react.production.min.js",
-    ];
-    for (const url of testUrls) {
-        try {
-            const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            continue;
-        }
-    }
-    return 999;
-}
+const DOWNLOAD_PAYLOAD_MB = 500_000 / (1024 * 1024); // matches the fixed size the backend sends
 
-async function measureDownloadSpeed(): Promise<number> {
-    const testFiles = [
-        { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
-        { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },
-        { url: "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js", size: 0.09 },
-    ];
-    for (const testFile of testFiles) {
-        try {
-            const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
-            if (response.ok) {
-                await response.blob();
-                const seconds = (performance.now() - start) / 1000;
-                return testFile.size / seconds;
-            }
-        } catch {
-            continue;
-        }
-    }
-    // Rough fallback
+/** null means "couldn't measure", never a guessed number standing in for a real one. */
+async function measurePing(): Promise<number | null> {
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
-        const duration = (performance.now() - start) / 1000;
-        return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
+        await fetch(PING_URL, { cache: "no-cache" });
+        return performance.now() - start;
     } catch {
-        return 0;
+        return null;
     }
 }
 
-async function measureUploadSpeed(): Promise<number> {
+async function measureDownloadSpeed(): Promise<number | null> {
+    try {
+        const start = performance.now();
+        const response = await fetch(DOWNLOAD_URL, { cache: "no-cache" });
+        if (!response.ok) return null;
+        await response.blob();
+        const seconds = (performance.now() - start) / 1000;
+        return DOWNLOAD_PAYLOAD_MB / seconds;
+    } catch {
+        return null;
+    }
+}
+
+async function measureUploadSpeed(): Promise<number | null> {
     const uploadSizeMB = 0.5;
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
-    for (const endpoint of endpoints) {
-        try {
-            const formData = new FormData();
-            formData.append("test", uploadData);
-            const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
-            const seconds = (performance.now() - start) / 1000;
-            return uploadSizeMB / seconds;
-        } catch {
-            continue;
-        }
+    try {
+        const start = performance.now();
+        await fetch(UPLOAD_URL, { method: "POST", body: uploadData });
+        const seconds = (performance.now() - start) / 1000;
+        return uploadSizeMB / seconds;
+    } catch {
+        return null;
     }
-    return 0.5; // conservative fallback
 }
 
-async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {
+async function runMultipleTests<T>(testFn: () => Promise<T | null>, count = 3): Promise<T[]> {
     const results: T[] = [];
     for (let i = 0; i < count; i++) {
-        try {
-            results.push(await testFn());
-            await new Promise((r) => setTimeout(r, 100));
-        } catch {
-            // skip failed test
-        }
+        const value = await testFn();
+        if (value !== null) results.push(value);
+        await new Promise((r) => setTimeout(r, 100));
     }
     return results;
 }
@@ -129,32 +107,41 @@ function average(values: number[]): number {
 export async function testInternetSpeed(
     thresholds: SpeedThresholds = DEFAULT_THRESHOLDS
 ): Promise<InternetSpeedResult> {
-    try {
-        const [downloadTests, uploadTests, pingTests] = await Promise.all([
-            runMultipleTests(measureDownloadSpeed, 3),
-            runMultipleTests(measureUploadSpeed, 3),
-            runMultipleTests(measurePing, 3),
-        ]);
+    const [downloadTests, uploadTests, pingTests] = await Promise.all([
+        runMultipleTests(measureDownloadSpeed, 3),
+        runMultipleTests(measureUploadSpeed, 3),
+        runMultipleTests(measurePing, 3),
+    ]);
 
-        const downloadMbps = average(downloadTests) * 8;
-        const uploadMbps = average(uploadTests) * 8;
-        const ping = average(pingTests);
-
-        const passed =
-            downloadMbps >= thresholds.minDownloadMbps &&
-            uploadMbps >= thresholds.minUploadMbps &&
-            ping <= thresholds.maxPingMs;
-
-        return {
-            download: Math.round(downloadMbps * 100) / 100,
-            upload: Math.round(uploadMbps * 100) / 100,
-            ping: Math.round(ping),
-            passed,
-            downloadTests: downloadTests.map((v) => Math.round(v * 8 * 100) / 100),
-            uploadTests: uploadTests.map((v) => Math.round(v * 8 * 100) / 100),
-            pingTests: pingTests.map((v) => Math.round(v)),
-        };
-    } catch {
-        return { download: 0, upload: 0, ping: 999, passed: false, downloadTests: [], uploadTests: [], pingTests: [] };
+    // Every single attempt at every metric failed — most likely our own
+    // backend (or the candidate's network entirely) is unreachable, not that
+    // their internet is measurably slow. Inconclusive, not failed.
+    if (downloadTests.length === 0 && uploadTests.length === 0 && pingTests.length === 0) {
+        return { download: null, upload: null, ping: null, status: "inconclusive", downloadTests: [], uploadTests: [], pingTests: [] };
     }
+
+    const downloadMbps = downloadTests.length ? average(downloadTests) * 8 : null;
+    const uploadMbps = uploadTests.length ? average(uploadTests) * 8 : null;
+    const ping = pingTests.length ? average(pingTests) : null;
+
+    const passed =
+        downloadMbps !== null && uploadMbps !== null && ping !== null &&
+        downloadMbps >= thresholds.minDownloadMbps &&
+        uploadMbps >= thresholds.minUploadMbps &&
+        ping <= thresholds.maxPingMs;
+
+    // Partial data (some metrics measured, others didn't) is still not
+    // trustworthy enough to fail a candidate on — only a full measurement
+    // that came back below threshold counts as a real "failed".
+    const complete = downloadMbps !== null && uploadMbps !== null && ping !== null;
+
+    return {
+        download: downloadMbps !== null ? Math.round(downloadMbps * 100) / 100 : null,
+        upload: uploadMbps !== null ? Math.round(uploadMbps * 100) / 100 : null,
+        ping: ping !== null ? Math.round(ping) : null,
+        status: passed ? "passed" : complete ? "failed" : "inconclusive",
+        downloadTests: downloadTests.map((v) => Math.round(v * 8 * 100) / 100),
+        uploadTests: uploadTests.map((v) => Math.round(v * 8 * 100) / 100),
+        pingTests: pingTests.map((v) => Math.round(v)),
+    };
 }
