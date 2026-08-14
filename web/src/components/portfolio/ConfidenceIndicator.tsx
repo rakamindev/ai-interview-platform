@@ -19,8 +19,8 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
 
   if (label === "LOW") {
     return (
-      <span className="flex items-center gap-1 text-xs text-amber-700">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
+      <span className="flex items-center gap-1 text-xs text-attention">
+        <span className="h-2 w-2 rounded-full bg-secondary" />
         Confidence: LOW
       </span>
     );

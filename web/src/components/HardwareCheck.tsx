@@ -9,7 +9,8 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ArrowDown, ArrowUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface HardwareCheckProps {
     onStart?: () => void;
@@ -241,14 +242,19 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                <span className={cn("inline-flex items-center gap-1 font-mono tabular-nums", internetResult.download >= thresholds.minDownloadMbps ? "text-muted-foreground" : "text-destructive")}>
+                                    <ArrowDown className="h-3 w-3" aria-hidden />
+                                    <span className="sr-only">Download:</span>
+                                    {internetResult.download} Mbps
                                 </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
+                                <span className={cn("inline-flex items-center gap-1 font-mono tabular-nums", internetResult.upload >= thresholds.minUploadMbps ? "text-muted-foreground" : "text-destructive")}>
+                                    <ArrowUp className="h-3 w-3" aria-hidden />
+                                    <span className="sr-only">Upload:</span>
+                                    {internetResult.upload} Mbps
                                 </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                <span className={cn("font-mono tabular-nums", internetResult.ping <= thresholds.maxPingMs ? "text-muted-foreground" : "text-destructive")}>
+                                    <span className="sr-only">Latency:</span>
                                     {internetResult.ping} ms
                                 </span>
                             </div>

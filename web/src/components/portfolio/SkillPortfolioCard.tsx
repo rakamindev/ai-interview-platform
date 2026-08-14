@@ -65,9 +65,9 @@ export default function SkillPortfolioCard({
 
         {/* Low confidence — yellow attention, never red */}
         {lowConfidence && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
-            <p className="text-xs leading-relaxed text-amber-900">
+          <div className="flex items-start gap-2 rounded-lg border border-secondary/40 bg-secondary/10 px-3 py-2">
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-secondary" />
+            <p className="text-xs leading-relaxed text-attention">
               This skill was only briefly explored. Confidence is low — a dedicated
               follow-up session is recommended before treating this rating as reliable.
             </p>

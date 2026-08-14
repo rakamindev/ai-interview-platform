@@ -40,6 +40,8 @@ export default {
                 },
                 // Assessment results. Defined once here so no screen invents its
                 // own colour for a level comparison.
+                // Caution copy: readable in both themes, unlike the brand yellow.
+                attention: "hsl(var(--attention))",
                 result: {
                     exceed: "hsl(var(--result-exceed))",
                     match: "hsl(var(--result-match))",

@@ -55,8 +55,8 @@ function SessionRow({
 
       <div className="flex items-center gap-3">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span className="flex items-center gap-1 text-xs text-attention">
+            <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
             Awaiting candidate
           </span>
         )}

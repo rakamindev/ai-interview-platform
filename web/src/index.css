@@ -57,6 +57,11 @@
         --result-match: 215 16% 35%;
         --result-gap: 14 65% 45%;
         --result-none: 215 16% 47%;
+
+        /* Attention text. The brand yellow is a fill colour — at small text
+           sizes it fails contrast — so caution copy uses this darkened partner
+           while the yellow itself stays for dots, rules and fills. */
+        --attention: 32 84% 28%;
     }
 
     .dark {
@@ -92,6 +97,8 @@
         --result-match: 215 20% 72%;
         --result-gap: 14 65% 62%;
         --result-none: 215 20% 65%;
+
+        --attention: 43 90% 66%;
     }
 }
 

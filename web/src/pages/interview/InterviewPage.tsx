@@ -348,7 +348,7 @@ export default function InterviewPage() {
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="flex justify-center">
           {endFailed ? (
-            <AlertTriangle className="h-10 w-10 text-amber-500" />
+            <AlertTriangle className="h-10 w-10 text-secondary" />
           ) : (
             <CheckCircle className="h-10 w-10 text-primary" />
           )}

@@ -237,7 +237,7 @@ export default function LiveMonitorPage() {
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
+                        <Zap className="h-3 w-3 text-secondary" />
                         {skill.skill_label}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -249,7 +249,7 @@ export default function LiveMonitorPage() {
                     </div>
                     <Progress
                       value={COVERAGE_STATE_WIDTH[skill.state]}
-                      indicatorClassName="bg-amber-400"
+                      indicatorClassName="bg-secondary"
                       className="h-2"
                     />
                     {skill.last_signal && (
