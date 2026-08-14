@@ -21,8 +21,9 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
-import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { CheckCircle, Mic, MicOff, Loader2 } from "lucide-react";
+import ConsentScreen from "@/components/interview/ConsentScreen";
+import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn, ConsentPolicy } from "@/types";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -38,6 +39,52 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [consentPolicy, setConsentPolicy] = useState<ConsentPolicy | null>(null);
+  const [consentRequired, setConsentRequired] = useState(false);
+  const [consentStatus, setConsentStatus] = useState<"pending" | "accepted" | "declined" | undefined>();
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [consentError, setConsentError] = useState(false);
+  const [consentSubmitting, setConsentSubmitting] = useState(false);
+
+  const fetchConsent = useCallback(async () => {
+    if (!token) return;
+    setConsentLoading(true);
+    setConsentError(false);
+    try {
+      const res = await sessionsApi.getConsent(token);
+      setConsentPolicy(res.data);
+    } catch {
+      setConsentError(true);
+    } finally {
+      setConsentLoading(false);
+    }
+  }, [token]);
+
+  const handleAcceptConsent = useCallback(async () => {
+    if (!token) return;
+    setConsentSubmitting(true);
+    setConsentError(false);
+    try {
+      await sessionsApi.submitConsent(token, "accepted");
+      setConsentStatus("accepted");
+      setConsentPolicy((prev) => (prev ? { ...prev, consent_status: "accepted" } : prev));
+      setHardwareCheckDone(false);
+    } catch {
+      setConsentError(true);
+    } finally {
+      setConsentSubmitting(false);
+    }
+  }, [token]);
+
+  const handleDeclineConsent = useCallback(async () => {
+    if (!token) return;
+    try {
+      await sessionsApi.submitConsent(token, "declined");
+      setConsentStatus("declined");
+    } catch {
+      // non-blocking — the decline screen is shown regardless
+    }
+  }, [token]);
 
   // Fetch candidate info
   useEffect(() => {
@@ -46,10 +93,13 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        setConsentRequired(!!res.data.consent_required);
+        setConsentStatus(res.data.consent_status);
         if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.consent_required && res.data.consent_status !== "accepted") fetchConsent();
       })
       .catch(() => setInterviewState("complete"));
-  }, [token]);
+  }, [token, fetchConsent]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -186,6 +236,40 @@ export default function InterviewPage() {
       : connectionState === "connected"
       ? "connected"
       : "reconnecting";
+
+  // ── Consent gate (UU PDP) ────────────────────────────────────────────────
+  if (consentRequired && consentStatus !== "accepted") {
+    if (consentLoading) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading data protection notice...</p>
+        </div>
+      );
+    }
+
+    if (consentError || !consentPolicy) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <p className="text-sm text-destructive">Couldn't load the data protection notice.</p>
+          <Button variant="outline" size="lg" onClick={fetchConsent}>
+            Try again
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <ConsentScreen
+        roleTitle={candidateInfo?.role_title ?? "AI Interview"}
+        policy={consentPolicy.policy}
+        policyVersion={consentPolicy.policy_version}
+        submitting={consentSubmitting}
+        onAccept={handleAcceptConsent}
+        onDecline={handleDeclineConsent}
+      />
+    );
+  }
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
