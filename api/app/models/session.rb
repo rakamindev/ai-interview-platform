@@ -25,6 +25,10 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  def assessment
+    Assessment.unscoped { super() }
+  end
+
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
     "#{base}/interview/#{invite_token}"

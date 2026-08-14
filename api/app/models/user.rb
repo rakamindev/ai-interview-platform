@@ -3,6 +3,8 @@
 class User < ApplicationRecord
   has_secure_password
 
+  belongs_to :organization, optional: true
+
   ROLES = %w[admin user].freeze
 
   validates :email, presence: true,
