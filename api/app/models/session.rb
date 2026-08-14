@@ -26,6 +26,11 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # UU PDP gate — an interview may only begin after explicit consent.
+  def consent_given?
+    candidate_consent&.accepted? == true
+  end
+
   def invite_url
     base = ENV.fetch('WEB_BASE_URL', ENV.fetch('APP_BASE_URL', 'http://localhost:3001'))
     "#{base}/interview/#{invite_token}"

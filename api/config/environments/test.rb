@@ -48,3 +48,8 @@ Rails.application.configure do
   # Log level
   config.log_level = :warn
 end
+
+# Rate limiting is disabled under test so specs are deterministic — the throttle
+# uses shared Redis counters keyed by IP, which would otherwise leak between
+# examples and across runs.
+Rack::Attack.enabled = false if defined?(Rack::Attack)

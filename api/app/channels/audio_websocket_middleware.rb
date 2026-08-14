@@ -766,8 +766,7 @@ class AudioWebSocketMiddleware
     # explicit consent. Defense in depth — the web UI blocks the start button,
     # and the server refuses to open the Gemini session without an accepted
     # consent record.
-    consent = session.candidate_consent
-    return [nil, :consent_required] unless consent&.accepted?
+    return [nil, :consent_required] unless session.consent_given?
 
     [session, nil]
   end
