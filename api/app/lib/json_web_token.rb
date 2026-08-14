@@ -21,13 +21,6 @@ class JsonWebToken
     raise ExceptionHandler::InvalidToken, e.message
   end
 
-  def self.decode_without_verification(token)
-    body = JWT.decode(token, nil, false)[0]
-    HashWithIndifferentAccess.new(body)
-  rescue JWT::DecodeError => e
-    raise ExceptionHandler::InvalidToken, e.message
-  end
-
   def self.hmac_secret
     ENV.fetch('SECRET_KEY_BASE')
   end

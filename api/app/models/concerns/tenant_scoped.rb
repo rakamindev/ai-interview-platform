@@ -19,7 +19,7 @@ module TenantScoped
       if RequestStore.store.key?(:tenant_id)
         where(tenant_id: Current.tenant_id)
       else
-        all
+        none
       end
     end
 
@@ -32,6 +32,6 @@ module TenantScoped
   private
 
   def assign_tenant_id
-    self.tenant_id ||= Current.tenant_id
+    self.tenant_id = Current.tenant_id if RequestStore.store.key?(:tenant_id)
   end
 end
