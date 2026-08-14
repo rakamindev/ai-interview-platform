@@ -96,7 +96,13 @@ export default function InterviewPage() {
         setConsentRequired(!!res.data.consent_required);
         setConsentStatus(res.data.consent_status);
         if (res.data.session_status === "ended") setInterviewState("complete");
-        if (res.data.consent_required && res.data.consent_status !== "accepted") fetchConsent();
+        if (
+          res.data.consent_required &&
+          res.data.consent_status !== "accepted" &&
+          res.data.session_status !== "ended"
+        ) {
+          fetchConsent();
+        }
       })
       .catch(() => setInterviewState("complete"));
   }, [token, fetchConsent]);
@@ -238,7 +244,11 @@ export default function InterviewPage() {
       : "reconnecting";
 
   // ── Consent gate (UU PDP) ────────────────────────────────────────────────
-  if (consentRequired && consentStatus !== "accepted") {
+  // An ended session never asks for consent: sessions created before this
+  // feature shipped have no consent record, and the server rejects consent on
+  // an ended session. Showing the completion screen is the correct terminal
+  // state for them.
+  if (consentRequired && consentStatus !== "accepted" && interviewState !== "complete") {
     if (consentLoading) {
       return (
         <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
