@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent_policy consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent_policy consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -145,12 +145,74 @@ module Api
           return json_error("Assessment not found", :not_found)
         end
 
+        consent = session.candidate_consent
+
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:       session.id,
+          role_title:       assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          session_status:   session.status,
+          language:         assessment.language.presence || 'en',
+          consent_required: true,
+          consent_status:   consent&.status || 'pending',
+          policy_version:   ConsentPolicy::POLICY_VERSION
         )
+      end
+
+      # GET /sessions/:token/consent — UU PDP disclosure shown to the candidate.
+      def consent_policy
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        assessment = Assessment.unscoped
+                               .where(tenant_id: session.tenant_id)
+                               .find_by(id: session.assessment_id)
+        language = assessment&.language.presence || 'en'
+
+        json_response(
+          policy_version: ConsentPolicy::POLICY_VERSION,
+          language:       language,
+          consent_status: session.candidate_consent&.status || 'pending',
+          policy:         ConsentPolicy.content(language)
+        )
+      end
+
+      # POST /sessions/:token/consent — record acceptance or refusal (UU PDP).
+      # Idempotent: re-submitting updates the single per-session record.
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.ended?
+          return json_error("Session has ended", :unprocessable_entity)
+        end
+
+        status = params.dig(:consent, :status).to_s
+        unless %w[accepted declined].include?(status)
+          return json_error("Invalid consent status", :unprocessable_entity)
+        end
+
+        consent = session.candidate_consent || session.build_candidate_consent(
+          policy_version: ConsentPolicy::POLICY_VERSION
+        )
+
+        consent.status = status
+        consent.consent_ip = request.remote_ip
+        consent.consent_user_agent = request.user_agent.to_s.truncate(512)
+
+        if status == 'accepted'
+          consent.accepted_at = Time.current
+          consent.declined_at = nil
+        else
+          consent.declined_at = Time.current
+          consent.accepted_at = nil
+        end
+
+        if consent.save
+          json_response(consent: consent_json(consent))
+        else
+          json_error(consent.errors.full_messages.first, :unprocessable_entity)
+        end
       end
 
       private
@@ -168,7 +230,6 @@ module Api
           tenant_id:        session.tenant_id,
           candidate_id:     session.candidate_id,
           candidate_name:   session.candidate_name,
-          invite_token:     session.invite_token,
           invite_url:       session.invite_url,
           status:           session.status,
           end_reason:       session.end_reason,
@@ -176,6 +237,15 @@ module Api
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
           created_at:       session.created_at
+        }
+      end
+
+      def consent_json(consent)
+        {
+          policy_version: consent.policy_version,
+          status:         consent.status,
+          accepted_at:    consent.accepted_at,
+          declined_at:    consent.declined_at
         }
       end
 
