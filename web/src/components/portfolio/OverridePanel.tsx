@@ -10,7 +10,9 @@ import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface OverridePanelProps {
-  skill: PortfolioSkill;
+  // Only ever rendered for an assessed skill (see SkillPortfolioCard) — a
+  // skill with no real AI level has nothing to override.
+  skill: PortfolioSkill & { ai_level: number };
   existingOverride?: AssessorOverride;
   onSaved: (override: AssessorOverride) => void;
 }

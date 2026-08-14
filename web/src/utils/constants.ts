@@ -1,10 +1,19 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
+/**
+ * Parse "L3" → 3, "3 (Intermediate)" → 3, passthrough number.
+ * Returns null (never a fabricated default) when no digit can be found —
+ * callers must treat null as "no real level", not silently show L1.
+ * Overloaded so a known-numeric caller (e.g. an already-narrowed assessed
+ * skill) gets `number` back, not `number | null`, without needing `?? 1`.
+ */
+export function parseLevel(level: number): number;
+export function parseLevel(level: string | number | null | undefined): number | null;
+export function parseLevel(level: string | number | null | undefined): number | null {
+  if (level === null || level === undefined) return null;
   if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+  const match = level.match(/\d+/);
+  return match ? parseInt(match[0], 10) : null;
 }
 
 export const LEVEL_LABELS: Record<number, string> = {

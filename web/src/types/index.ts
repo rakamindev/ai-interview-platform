@@ -85,13 +85,17 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export type PortfolioSkillStatus = "assessed" | "not_assessed" | "unparseable";
+
 export interface PortfolioSkill {
   id: number;
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /** "assessed" has a real ai_level/ai_confidence; the other two states never do. */
+  status: PortfolioSkillStatus;
+  ai_level: number | null;       // 1-5, null unless assessed
+  ai_confidence: string | null;  // "high" | "medium" | "low", null unless assessed
   evidence: string[];
   competency_summary: string;
 }
