@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
-import { getStoredToken } from "@/stores/authAtom";
+import { getDevToken } from "@/stores/authAtom";
 import type { CoverageMap } from "@/types";
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -26,7 +26,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     if (!activeRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const token = getStoredToken();
+    const token = getDevToken();
     const ws = new WebSocket(`${WS_URL}/ws/sessions/${sessionId}/coverage`);
     wsRef.current = ws;
 
