@@ -47,6 +47,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const micStreamRef = useRef<MediaStream | null>(null);
+    const monitorCtxRef = useRef<AudioContext | null>(null);
+    const rafRef = useRef<number | null>(null);
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -68,9 +71,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [videoStream]);
 
     const checkAudioPlayback = async (): Promise<boolean> => {
+        let ctx: AudioContext | null = null;
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            const ctx = new AudioCtx();
+            ctx = new AudioCtx();
             if (ctx.state === "suspended") await ctx.resume();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -80,14 +84,21 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             osc.frequency.setValueAtTime(440, ctx.currentTime);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.1);
+            const toClose = ctx;
+            setTimeout(() => { toClose.close().catch(() => {}); }, 200);
             return true;
-        } catch { return false; }
+        } catch {
+            ctx?.close().catch(() => {});
+            return false;
+        }
     };
 
     const startAudioLevelMonitoring = (stream: MediaStream) => {
         try {
+            micStreamRef.current = stream;
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const ctx = new AudioCtx();
+            monitorCtxRef.current = ctx;
             const source = ctx.createMediaStreamSource(stream);
             const analyser = ctx.createAnalyser();
             analyser.fftSize = 256;
@@ -96,11 +107,26 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             const update = () => {
                 analyser.getByteFrequencyData(data);
                 setAudioLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
-                requestAnimationFrame(update);
+                rafRef.current = requestAnimationFrame(update);
             };
             update();
         } catch { /* silent */ }
     };
+
+    const stopMonitoring = () => {
+        if (rafRef.current != null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+        monitorCtxRef.current?.close().catch(() => {});
+        monitorCtxRef.current = null;
+        micStreamRef.current?.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+    };
+
+    useEffect(() => {
+        return () => stopMonitoring();
+    }, []);
 
     // Step 1: OS & browser
     useEffect(() => {
@@ -176,6 +202,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [progress.audio]);
 
     const retryAll = () => {
+        stopMonitoring();
         videoStream?.getTracks().forEach((t) => t.stop());
         setVideoStream(null);
         setInternetResult(null);
