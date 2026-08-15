@@ -116,14 +116,23 @@ class CoverageWebSocketMiddleware
   end
 
   def authenticate_assessor(env, session_id)
-    auth_header = env['HTTP_AUTHORIZATION']
-    return [nil, 'Missing authorization'] unless auth_header.present?
+    token = token_from_env(env)
+    return [nil, 'Missing authorization'] if token.blank?
 
-    authenticate_assessor_by_token(auth_header.split(' ').last, session_id)
+    authenticate_assessor_by_token(token, session_id)
+  end
+
+  def token_from_env(env)
+    header = env['HTTP_AUTHORIZATION'].to_s
+    return header.split(' ').last if header.start_with?('Bearer ', 'bearer ')
+
+    Rack::Utils.parse_cookies(env)['auth_token'].presence
   end
 
   def authenticate_assessor_by_token(token, session_id)
     payload = JsonWebToken.decode(token)
+
+    return [nil, 'Forbidden'] unless AuthorizeApiRequest::ASSESSOR_ROLES.include?(payload[:role].to_s)
 
     org = Organization.find_by(scheme: payload[:scheme])
     return [nil, 'Invalid tenant'] unless org
