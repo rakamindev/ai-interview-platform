@@ -6,7 +6,6 @@ import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
 
 export default function SignupPage() {
@@ -14,7 +13,6 @@ export default function SignupPage() {
   const setAuth = useSetAtom(authAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +21,7 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await authApi.signup({ email, password, role });
+      const res = await authApi.signup({ email, password, role: "user" });
       const token = res.data.token;
       saveToken(token);
       setAuth({ token });
@@ -66,24 +64,6 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Role</Label>
-            <RadioGroup
-              value={role}
-              onValueChange={(v) => setRole(v as "admin" | "user")}
-              className="flex gap-4"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="user" id="role-user" />
-                <Label htmlFor="role-user" className="font-normal cursor-pointer">User</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="admin" id="role-admin" />
-                <Label htmlFor="role-admin" className="font-normal cursor-pointer">Admin</Label>
-              </div>
-            </RadioGroup>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

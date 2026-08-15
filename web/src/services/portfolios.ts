@@ -22,7 +22,7 @@ export const portfoliosApi = {
 
   exportPortfolio: (portfolioId: number, format: "pdf" | "json", vacancyId?: number) =>
     api.get(`/portfolios/${portfolioId}/export`, {
-      params: { format, ...(vacancyId ? { vacancy_id: vacancyId } : {}) },
+      params: { export_format: format, ...(vacancyId ? { vacancy_id: vacancyId } : {}) },
       responseType: format === "pdf" ? "blob" : "json",
     }),
 };

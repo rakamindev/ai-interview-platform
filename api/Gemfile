@@ -19,6 +19,10 @@ gem 'request_store', '~> 1.5'
 gem 'rack-attack'
 gem 'rack-cors'
 
+# Swagger / API docs
+gem 'rswag-api'
+gem 'rswag-ui'
+
 # Environment
 gem 'figaro'
 
@@ -49,6 +53,7 @@ group :development, :test do
   gem 'faker'
   gem 'pry-rails'
   gem 'rspec-rails', '~> 6.0'
+  gem 'rswag-specs'
 end
 
 group :development do

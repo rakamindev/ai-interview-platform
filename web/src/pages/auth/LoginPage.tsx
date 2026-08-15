@@ -74,6 +74,9 @@ export default function LoginPage() {
           </Button>
         </form>
 
+        <p className="text-center text-sm text-muted-foreground">
+          Contact your administrator to get access.
+        </p>
       </div>
     </div>
   );

@@ -1,0 +1,1007 @@
+openapi: 3.0.1
+info:
+  title: AI Interview Platform API
+  version: v1
+  description: |
+    REST API for AI Interview Platform.
+    
+    **Authentication:** Most endpoints require a JWT token in the `Authorization` header.
+    Format: `Bearer <token>`
+    
+    **Multi-tenancy:** Include `X-Tenant-ID` and `X-Tenant-Scheme` headers for tenant context.
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantID:
+      in: header
+      name: X-Tenant-ID
+      required: false
+      schema:
+        type: string
+      description: Tenant ID for multi-tenant context
+    TenantScheme:
+      in: header
+      name: X-Tenant-Scheme
+      required: false
+      schema:
+        type: string
+      description: Tenant scheme identifier
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_count:
+          type: integer
+        per_page:
+          type: integer
+
+    Assessment:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        time_limit_min:
+          type: integer
+        language:
+          type: string
+          enum: [en, id]
+        system_prompt:
+          type: string
+          nullable: true
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AssessmentSkill:
+      type: object
+      properties:
+        id:
+          type: integer
+        skill_id:
+          type: string
+          nullable: true
+        skill_label:
+          type: string
+        is_custom:
+          type: boolean
+        scope_include:
+          type: string
+          nullable: true
+        scope_exclude:
+          type: string
+          nullable: true
+        l1_anchor:
+          type: string
+          nullable: true
+        l2_anchor:
+          type: string
+          nullable: true
+        l3_anchor:
+          type: string
+          nullable: true
+        l4_anchor:
+          type: string
+          nullable: true
+        l5_anchor:
+          type: string
+          nullable: true
+        expected_level:
+          type: integer
+          nullable: true
+        display_order:
+          type: integer
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        assessment_id:
+          type: integer
+        tenant_id:
+          type: integer
+        candidate_id:
+          type: string
+          nullable: true
+        candidate_name:
+          type: string
+          nullable: true
+        invite_token:
+          type: string
+        invite_url:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, ended]
+        end_reason:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CoverageMap:
+      type: object
+      properties:
+        id:
+          type: integer
+        skill_id:
+          type: string
+          nullable: true
+        skill_label:
+          type: string
+        is_discovered:
+          type: boolean
+        state:
+          type: string
+          enum: [not_started, in_progress, covered]
+        probe_count:
+          type: integer
+        last_signal:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+
+    TranscriptTurn:
+      type: object
+      properties:
+        id:
+          type: integer
+        turn_number:
+          type: integer
+        speaker:
+          type: string
+          enum: [interviewer, candidate]
+        text:
+          type: string
+        audio_start_ms:
+          type: integer
+          nullable: true
+        audio_end_ms:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Vacancy:
+      type: object
+      properties:
+        id:
+          type: integer
+        role_title:
+          type: string
+        culture_dimensions:
+          type: string
+          nullable: true
+        competency_expectations:
+          type: string
+          nullable: true
+        created_by:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    VacancySkill:
+      type: object
+      properties:
+        id:
+          type: integer
+        skill_id:
+          type: string
+          nullable: true
+        skill_label:
+          type: string
+        expected_level:
+          type: integer
+          nullable: true
+        l1_anchor:
+          type: string
+          nullable: true
+        l2_anchor:
+          type: string
+          nullable: true
+        l3_anchor:
+          type: string
+          nullable: true
+        l4_anchor:
+          type: string
+          nullable: true
+        l5_anchor:
+          type: string
+          nullable: true
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/v1/health:
+    get:
+      summary: API v1 health check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/auth/login:
+    post:
+      summary: Login
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@example.com
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      email:
+                        type: string
+                      role:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/assessments:
+    get:
+      summary: List all assessments
+      tags: [Assessments]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/TenantScheme'
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+          description: Items per page
+      responses:
+        '200':
+          description: List of assessments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assessments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Assessment'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create an assessment
+      tags: [Assessments]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/TenantScheme'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assessment]
+              properties:
+                assessment:
+                  type: object
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+                      example: Backend Engineer Interview
+                    time_limit_min:
+                      type: integer
+                      example: 45
+                    language:
+                      type: string
+                      enum: [en, id]
+                      example: en
+                    assessment_skills_attributes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          skill_id:
+                            type: string
+                          skill_label:
+                            type: string
+                          is_custom:
+                            type: boolean
+                          expected_level:
+                            type: integer
+                          display_order:
+                            type: integer
+      responses:
+        '201':
+          description: Assessment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assessment:
+                    $ref: '#/components/schemas/Assessment'
+                  system_prompt_generated:
+                    type: boolean
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/assessments/{id}:
+    get:
+      summary: Get assessment detail
+      tags: [Assessments]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assessment with skills
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assessment:
+                    allOf:
+                      - $ref: '#/components/schemas/Assessment'
+                      - type: object
+                        properties:
+                          skills:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AssessmentSkill'
+        '404':
+          description: Not found
+    put:
+      summary: Update assessment
+      tags: [Assessments]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assessment:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    time_limit_min:
+                      type: integer
+                    language:
+                      type: string
+      responses:
+        '200':
+          description: Updated
+        '404':
+          description: Not found
+    delete:
+      summary: Delete assessment
+      tags: [Assessments]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+        '404':
+          description: Not found
+
+  /api/v1/assessments/{assessment_id}/sessions:
+    get:
+      summary: List sessions for an assessment
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: assessment_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+        '404':
+          description: Assessment not found
+    post:
+      summary: Create a session for an assessment
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: assessment_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session:
+                  type: object
+                  properties:
+                    candidate_id:
+                      type: string
+                      example: candidate_001
+                    candidate_name:
+                      type: string
+                      example: John Doe
+      responses:
+        '201':
+          description: Session created with invite URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session:
+                    $ref: '#/components/schemas/Session'
+                  invite_url:
+                    type: string
+        '404':
+          description: Assessment not found
+
+  /api/v1/sessions/{id}:
+    get:
+      summary: Get session detail
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Session detail with assessment info
+        '404':
+          description: Not found
+
+  /api/v1/sessions/{id}/end_session:
+    post:
+      summary: End a session
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session:
+                  type: object
+                  properties:
+                    reason:
+                      type: string
+                      enum: [manual_assessor, all_covered, time_limit]
+                      example: manual_assessor
+      responses:
+        '200':
+          description: Session ended
+        '422':
+          description: Already ended or invalid reason
+
+  /api/v1/sessions/{id}/coverage:
+    get:
+      summary: Get coverage map for a session
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Coverage maps
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CoverageMap'
+                  discovered:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CoverageMap'
+                  updated_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+
+  /api/v1/sessions/{id}/transcript:
+    get:
+      summary: Get transcript for a session
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: from_turn
+          schema:
+            type: integer
+          description: Return turns from this turn number onwards
+      responses:
+        '200':
+          description: Transcript turns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  turns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TranscriptTurn'
+                  total:
+                    type: integer
+
+  /api/v1/sessions/{token}/candidate:
+    get:
+      summary: Get candidate-facing session info (no JWT required)
+      tags: [Sessions - Candidate]
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+          description: Invite token from the session
+      responses:
+        '200':
+          description: Session info for candidate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: integer
+                  role_title:
+                    type: string
+                  time_limit_min:
+                    type: integer
+                  session_status:
+                    type: string
+        '404':
+          description: Invalid or expired token
+
+  /api/v1/sessions/{token}/audio_complete:
+    post:
+      summary: Signal audio queue drained — triggers session end (no JWT required)
+      tags: [Sessions - Candidate]
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session ended or already ended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ended:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/v1/vacancies:
+    get:
+      summary: List all vacancies
+      tags: [Vacancies]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of vacancies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vacancies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vacancy'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      summary: Create a vacancy
+      tags: [Vacancies]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vacancy]
+              properties:
+                vacancy:
+                  type: object
+                  required: [role_title]
+                  properties:
+                    role_title:
+                      type: string
+                      example: Senior Backend Engineer
+                    culture_dimensions:
+                      type: string
+                    competency_expectations:
+                      type: string
+                    vacancy_skills_attributes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          skill_id:
+                            type: string
+                          skill_label:
+                            type: string
+                          expected_level:
+                            type: integer
+      responses:
+        '201':
+          description: Vacancy created
+        '422':
+          description: Validation error
+
+  /api/v1/vacancies/{id}:
+    get:
+      summary: Get vacancy detail
+      tags: [Vacancies]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vacancy with skills
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vacancy:
+                    allOf:
+                      - $ref: '#/components/schemas/Vacancy'
+                      - type: object
+                        properties:
+                          skills:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/VacancySkill'
+        '404':
+          description: Not found
+    put:
+      summary: Update vacancy
+      tags: [Vacancies]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vacancy:
+                  type: object
+                  properties:
+                    role_title:
+                      type: string
+                    culture_dimensions:
+                      type: string
+                    competency_expectations:
+                      type: string
+      responses:
+        '200':
+          description: Updated
+        '404':
+          description: Not found
+    delete:
+      summary: Delete vacancy
+      tags: [Vacancies]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+        '404':
+          description: Not found
+
+  /api/v1/skill_taxonomies:
+    get:
+      summary: List skill taxonomies
+      tags: [Skill Taxonomies]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      responses:
+        '200':
+          description: List of skill taxonomies
+
+  /api/v1/skill_taxonomies/{skill_id}:
+    get:
+      summary: Get skill taxonomy by skill_id
+      tags: [Skill Taxonomies]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: skill_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Skill taxonomy detail
+        '404':
+          description: Not found
+
+  /api/v1/sessions/{id}/portfolio:
+    get:
+      summary: Get portfolio for a session
+      tags: [Portfolios]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Portfolio data
+        '404':
+          description: Not found
+
+  /api/v1/sessions/{id}/portfolio/regenerate:
+    post:
+      summary: Regenerate portfolio for a session
+      tags: [Portfolios]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Regeneration queued
+
+  /api/v1/portfolios/{id}/fitgap:
+    post:
+      summary: Run fit/gap analysis against a vacancy
+      tags: [Portfolios]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vacancy_id:
+                  type: integer
+      responses:
+        '200':
+          description: Fit/gap analysis queued
+
+  /api/v1/portfolios/{id}/export:
+    get:
+      summary: Export portfolio as PDF
+      tags: [Portfolios]
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /api/v1/speed_test:
+    post:
+      summary: Upload speed test endpoint
+      tags: [Utilities]
+      security: []
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Returns bytes received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received_bytes:
+                    type: integer

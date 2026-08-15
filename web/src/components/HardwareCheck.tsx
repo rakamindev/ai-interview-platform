@@ -35,6 +35,7 @@ function stateLabel(state: ProctoringState) {
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
+    const [retryKey, setRetryKey] = useState(0);
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
         osAndBrowser: ProctoringState.WAITING,
         internet: ProctoringState.WAITING,
@@ -102,7 +103,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         } catch { /* silent */ }
     };
 
-    // Step 1: OS & browser
+    // Step 1: OS & browser — re-runs on every retry
     useEffect(() => {
         setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
         setTimeout(() => {
@@ -115,7 +116,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
-    }, []);
+    }, [retryKey]);
 
     // Step 2: Internet
     useEffect(() => {
@@ -179,13 +180,15 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         videoStream?.getTracks().forEach((t) => t.stop());
         setVideoStream(null);
         setInternetResult(null);
+        setAudioLevel(0);
         setProgress({
-            osAndBrowser: ProctoringState.LOADING,
+            osAndBrowser: ProctoringState.WAITING,
             internet: ProctoringState.WAITING,
             camera: ProctoringState.WAITING,
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,
         });
+        setRetryKey((k) => k + 1);
     };
 
     const thresholds = DEFAULT_THRESHOLDS;
