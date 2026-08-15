@@ -125,12 +125,8 @@ class AudioWebSocketMiddleware
   end
 
   def ensure_system_prompt(session)
-    return if session.assessment.system_prompt.present?
-
-    Rails.logger.warn("[AudioWS] system_prompt missing for assessment #{session.assessment.id} — regenerating")
-    Assessments::SystemPromptCompiler.new(session.assessment).call.tap do |prompt|
-      session.assessment.update_column(:system_prompt, prompt)
-    end
+    prompt = Assessments::SystemPromptCompiler.new(session.assessment).call
+    session.assessment.update_column(:system_prompt, prompt)
   end
 
   def build_gemini_client(browser_ws, state)
@@ -270,16 +266,24 @@ class AudioWebSocketMiddleware
 
   # Strips coverage/time metadata that leaks into output transcription via realtimeInput.text echoes.
   def sanitize_output_transcription(text)
-    text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
-    text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
-    text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
-    # Skip up to the last }] (or }) immediately followed by an uppercase letter — covers partial JSON echoes.
-    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=\p{Lu})/m, '').strip
-    text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/m, '').strip
-    text = text.gsub(/pacing=\S+\s*priority_next=\S*/m, '').strip
-    text = text.gsub(/\[Start the interview[^\]]*\]/m, '').strip
-    text = text.gsub(/\[SESSION RESUME\][^\n]*/m, '').strip
-    text.gsub(/\[SISTEM\][^\n]*/m, '').strip
+    text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/mi, '').strip
+    text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/mi, '').strip
+    text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/mi, '').strip
+    text = text.gsub(/\[SISTEM\][^\n]*/mi, '').strip
+    text = text.gsub(/\[Start the interview[^\]]*\]/mi, '').strip
+    text = text.gsub(/\[SESSION RESUME\][^\n]*/mi, '').strip
+
+    # Strip full or partial JSON objects containing coverage/pacing keys
+    text = text.gsub(/\{[^{}]*"(?:discovered|pacing|time_remaining_minutes|skills|probe_count)"[^{}]*\}/mi, '').strip
+    # Strip any dangling JSON remnants at the start (e.g. , "discovered": [] ... } ] —)
+    text = text.sub(/\A[\s,\[\]\{\}'"\w\d\n:\-]+(?:discovered|pacing|time_remaining_minutes)[^—\n]*[\}\]]*[\s—\-:]*/mi, '').strip
+    # Strip any leading dangling closing brackets/JSON artifacts (e.g. "}\n]\n\n")
+    text = text.sub(/\A[\s,\[\]\{\}'"\\`\n:\-]+/, '').strip
+    # Strip leading punctuation/dashes left over from prompt delimiters
+    text = text.sub(/\A[\s—\-:]+/, '').strip
+
+    text = text.gsub(/pacing=\S+\s*priority_next=\S*/mi, '').strip
+    text
   end
 
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.

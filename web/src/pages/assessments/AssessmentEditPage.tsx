@@ -19,13 +19,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import CustomSkillModal from "@/components/assessment/CustomSkillModal";
+import { ArrowLeft, Plus, Loader2, Clock, Globe, Sparkles, Layers, BookOpen, AlertCircle } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
-import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import { TIME_LIMIT_OPTIONS, LEVEL_LABELS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
 
@@ -35,13 +37,15 @@ export default function AssessmentEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [customModalOpen, setCustomModalOpen] = useState(false);
+  const [editingSkillIndex, setEditingSkillIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
-    defaultValues: { name: "", time_limit_min: 45, skills: [] },
+    defaultValues: { name: "", time_limit_min: 45, language: "en", skills: [] },
   });
 
-  const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
+  const { register, handleSubmit, control, setValue, reset, watch, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
@@ -49,7 +53,7 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({ name: a.name, time_limit_min: a.time_limit_min, language: a.language ?? "en", skills: a.skills });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -69,6 +73,30 @@ export default function AssessmentEditPage() {
     }
   };
 
+  const handleOpenAddCustomSkill = () => {
+    setEditingSkillIndex(null);
+    setCustomModalOpen(true);
+  };
+
+  const handleOpenEditCustomSkill = (index: number) => {
+    setEditingSkillIndex(index);
+    setCustomModalOpen(true);
+  };
+
+  const handleSaveCustomSkill = (skillData: Partial<AssessmentSkill>) => {
+    if (editingSkillIndex !== null) {
+      setValue(`skills.${editingSkillIndex}`, {
+        ...fields[editingSkillIndex],
+        ...skillData,
+      });
+    } else {
+      append({
+        ...skillData,
+        display_order: fields.length,
+      });
+    }
+  };
+
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) { setError("Add at least one skill."); return; }
     setError(null);
@@ -77,6 +105,7 @@ export default function AssessmentEditPage() {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
+        language: data.language,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
       navigate(`/assessments/${id}/invite`);
@@ -89,89 +118,334 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-24 w-full" />
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <Skeleton className="h-10 w-72" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-56 w-full rounded-xl" />
+            <Skeleton className="h-72 w-full rounded-xl" />
+          </div>
+          <div>
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  const name = watch("name");
+  const timeLimit = watch("time_limit_min");
+  const language = watch("language");
+  const skills = watch("skills") || [];
+
+  const isFormValid =
+    Boolean(name?.trim()) &&
+    skills.length > 0 &&
+    skills.every(
+      (s) =>
+        !s.is_custom ||
+        (Boolean(s.skill_label?.trim()) &&
+          Boolean(s.scope_include?.trim()) &&
+          Boolean(s.l1_anchor?.trim()) &&
+          Boolean(s.l2_anchor?.trim()) &&
+          Boolean(s.l3_anchor?.trim()) &&
+          Boolean(s.l4_anchor?.trim()) &&
+          Boolean(s.l5_anchor?.trim()))
+    );
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+    <div className="space-y-6 max-w-7xl mx-auto pb-28 sm:pb-8">
+      {/* ── Page Header ── */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-xs transition-colors cursor-pointer"
+          title="Kembali"
+        >
           <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Edit Assessment</span>
+        </button>
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+            <Link to="/assessments" className="hover:text-foreground">Assessments</Link>
+            <span>/</span>
+            <Link to={`/assessments/${id}/invite`} className="hover:text-foreground">{name || "Detail"}</Link>
+            <span>/</span>
+            <span className="text-slate-900">Edit</span>
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900">
+            Edit Assessment
+          </h1>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Session time limit <span className="text-destructive">*</span></Label>
-          <Select
-            value={String(form.watch("time_limit_min"))}
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TIME_LIMIT_OPTIONS.map((min) => (
-                <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
-          {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              No skills added yet.
-            </div>
-          ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
-                  {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          )}
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill
-            </Button>
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 flex items-start gap-2.5 shadow-xs">
+          <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
+          <div>
+            <p className="font-semibold">Unable to save changes</p>
+            <p className="text-xs text-rose-600 mt-0.5">{error}</p>
           </div>
         </div>
+      )}
 
-        <Separator />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+      {/* ── Form and Preview Grid ── */}
+      <form id="assessment-edit-form" onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        
+        {/* ── Left Column: Form Cards (2 cols on lg) ── */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Card 1: General Information */}
+          <Card className="border-slate-200/80 shadow-xs">
+            <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-base font-bold text-slate-900">
+                1. General Information
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Basic details and settings for the AI Interviewer
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-sm font-semibold text-slate-900">
+                  Role Title <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Senior Frontend Engineer"
+                  className="h-10 text-sm"
+                  {...register("name", { required: "Role title is required" })}
+                />
+                {errors.name && (
+                  <p className="text-xs text-destructive">{errors.name.message}</p>
+                )}
+              </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Changes
-          </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-slate-500" />
+                    Session Time Limit <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={String(watch("time_limit_min"))}
+                    onValueChange={(v) => setValue("time_limit_min", Number(v))}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_LIMIT_OPTIONS.map((min) => (
+                        <SelectItem key={min} value={String(min)}>
+                          {min} minutes
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                    <Globe className="h-3.5 w-3.5 text-slate-500" />
+                    Interview Language
+                  </Label>
+                  <Select
+                  value={language || "id"}
+                  onValueChange={(v) => setValue("language", v as "id" | "en")}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
+                    <SelectItem value="en">🇬🇧 English</SelectItem>
+                  </SelectContent>
+                </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 2: Skills to Assess */}
+          <Card className="border-slate-200/80 shadow-xs">
+            <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  2. Skills &amp; Competencies <span className="text-destructive">*</span>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Reorder or configure expectations for each skill
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="font-semibold text-xs">
+                {fields.length} skill{fields.length !== 1 ? "s" : ""}
+              </Badge>
+            </CardHeader>
+
+            <CardContent className="p-5 space-y-4">
+              {fields.length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center space-y-3 bg-slate-50/40">
+                  <div className="mx-auto w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                    <Layers className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">No skills configured</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Add at least one competency to save this assessment.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={fields.map((f) => f.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {fields.map((field, index) => (
+                        <SkillCard
+                          key={field.id}
+                          id={field.id}
+                          index={index}
+                          form={form}
+                          onRemove={() => remove(index)}
+                          onEdit={() => handleOpenEditCustomSkill(index)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+
+              <div className="flex flex-wrap gap-2.5 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 bg-white shadow-xs"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <BookOpen className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                  Add from Skill Taxonomy
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 bg-white shadow-xs"
+                  onClick={handleOpenAddCustomSkill}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
+                  Add Custom Skill
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* ── Right Column: Summary & Actions (1 col on lg) ── */}
+        <div className="space-y-6">
+          <Card className="border-slate-200/80 shadow-xs sticky top-20">
+            <CardHeader className="py-4 px-5 border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-primary" /> Assessment Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4 text-sm">
+              <div>
+                <span className="text-xs text-muted-foreground block font-medium">Role Name</span>
+                <p className="font-semibold text-slate-900 text-base">
+                  {name?.trim() || <span className="text-muted-foreground font-normal italic">Untitled</span>}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 text-xs">
+                <div>
+                  <span className="text-muted-foreground block">Duration</span>
+                  <span className="font-semibold text-slate-800">{timeLimit} mins</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block">Language</span>
+                  <span className="font-semibold text-slate-800">
+                    {language === "en" ? "🇬🇧 English" : "🇮🇩 Bahasa Indonesia"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <span className="text-xs text-muted-foreground block mb-2 font-medium">
+                  Configured Skills ({skills.length})
+                </span>
+                {skills.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">Add at least one skill.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {skills.map((s, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-slate-50 last:border-0">
+                        <span className="truncate pr-2 text-slate-700 font-medium">
+                          {s.skill_label || `Custom Skill #${idx + 1}`}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0">
+                          {LEVEL_LABELS[s.expected_level ?? 3]}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop action buttons */}
+              <div className="pt-4 border-t border-slate-100 hidden sm:flex flex-col gap-2">
+                <Button
+                  type="submit"
+                  disabled={!isFormValid || submitting}
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold h-10 shadow-sm"
+                >
+                  {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full text-xs text-slate-500 hover:text-slate-900"
+                  onClick={() => navigate(`/assessments/${id}/invite`)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      {/* ── Mobile sticky action bar ── */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-t px-4 py-3 flex gap-2" style={{ bottom: "64px" }}>
+        <Button type="button" variant="outline" className="flex-1 h-10" onClick={() => navigate(`/assessments/${id}/invite`)}>
+          Cancel
+        </Button>
+        <Button form="assessment-edit-form" type="submit" className="flex-1 h-10 bg-primary text-white font-semibold" disabled={!isFormValid || submitting}>
+          {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Save Changes
+        </Button>
+      </div>
+
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ ...s, display_order: fields.length })}
+      />
+
+      <CustomSkillModal
+        open={customModalOpen}
+        onOpenChange={setCustomModalOpen}
+        initialData={editingSkillIndex !== null ? fields[editingSkillIndex] : null}
+        onSave={handleSaveCustomSkill}
+      />
     </div>
   );
 }

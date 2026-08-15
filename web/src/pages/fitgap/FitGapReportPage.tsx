@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +17,7 @@ export default function FitGapReportPage() {
     sessionId: string;
     vacancyId: string;
   }>();
+  const navigate = useNavigate();
 
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
@@ -108,12 +109,14 @@ export default function FitGapReportPage() {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center"
+              title="Kembali ke Halaman Sebelumnya"
             >
               <ArrowLeft className="h-4 w-4" />
-            </Link>
+            </button>
             <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
           </div>
         </div>

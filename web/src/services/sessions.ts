@@ -2,6 +2,9 @@ import api from "./api";
 import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
 
 export const sessionsApi = {
+  listAll: () =>
+    api.get<{ sessions: Session[] }>("/sessions"),
+
   get: (id: number) =>
     api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
       `/sessions/${id}`

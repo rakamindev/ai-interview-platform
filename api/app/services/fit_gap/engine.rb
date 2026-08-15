@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.5-flash'),
         timeout: 30
       )
     end
@@ -40,19 +40,35 @@ module FitGap
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
       portfolio_skills = effective_portfolio_skills  # includes overrides
 
+      if vacancy_skills.empty?
+        return portfolio_skills.map do |skill|
+          {
+            skill_label:     skill[:skill_label],
+            skill_id:        skill[:skill_id],
+            candidate_level: skill[:effective_level],
+            expected_level:  0,
+            result:          'not_assessed',
+            delta:           nil,
+            confidence:      skill[:confidence]
+          }
+        end
+      end
+
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
+        # A portfolio_skill row now always exists for every configured skill
+        # (see Portfolios::Generator), but its effective_level is nil when
+        # status is not_assessed/unparseable — treat that the same as "no
+        # row at all" instead of subtracting nil from expected_level.
+        candidate_level  = portfolio_skill&.dig(:effective_level)
+        expected_level   = vacancy_skill.expected_level
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        if candidate_level
+          delta  = candidate_level - expected_level
+          result = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
+          delta  = nil
+          result = 'not_assessed'
         end
 
         {
@@ -111,12 +127,19 @@ module FitGap
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed)
       vacancy = @vacancy
       portfolio_session = @portfolio.session
-      assessment = portfolio_session.assessment
+      assessment = portfolio_session&.assessment
+
+      lang_instruction = if assessment&.language == 'en'
+        "LANGUAGE: Write all narrative text in English."
+      else
+        "LANGUAGE: Write both 'culture_narrative' and 'overall_narrative' in professional, natural Bahasa Indonesia for Indonesian HR hiring managers and recruiters."
+      end
 
       <<~PROMPT
         You are writing a fit/gap analysis narrative for a candidate evaluation.
 
         ROLE: #{vacancy.role_title}
+        #{lang_instruction}
         #{vacancy.culture_dimensions.present? ? "CULTURE EXPECTATIONS:\n#{vacancy.culture_dimensions}\n" : ""}
         #{vacancy.competency_expectations.present? ? "COMPETENCY EXPECTATIONS:\n#{vacancy.competency_expectations}\n" : ""}
 
@@ -126,7 +149,7 @@ module FitGap
         - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (+#{c[:delta]})" }.join(', ')}
         - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
 
-        Write two short narrative paragraphs:
+        Write two short narrative paragraphs following the LANGUAGE instructions:
         1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
         2. overall_narrative: 2-3 sentence overall hiring recommendation summary.
 
@@ -143,7 +166,12 @@ module FitGap
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      portfolio_session = @portfolio.session
+      if portfolio_session&.assessment&.language == 'en'
+        "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      else
+        "Kandidat menunjukkan #{matches} skill cocok (match), #{exceeds} melebihi target (exceed), dan #{gaps} gap terhadap kriteria lowongan."
+      end
     end
   end
 end

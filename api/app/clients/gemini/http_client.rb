@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -24,21 +24,36 @@ module Gemini
       @connection = build_connection
     end
 
-    # Generates content using Gemini REST API.
+    # Generates content using Gemini REST API with automatic 429 backoff and model fallback.
     # Returns parsed JSON response body.
     def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
-      parse_response(response)
-    rescue Faraday::TimeoutError => e
-      raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
-    rescue Faraday::Error => e
-      raise ApiError.new("Gemini API error: #{e.message}")
-    end
+      models_to_try = [@model, 'gemini-2.5-flash', 'gemini-1.5-flash'].compact.uniq
+      last_error = nil
 
-    private
+      models_to_try.each do |current_model|
+        url = "#{BASE_URL}/models/#{current_model}:generateContent"
 
-    def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+        3.times do |attempt|
+          response = @connection.post(url, request_body(prompt, temperature), request_headers)
+
+          if response.status == 429
+            backoff = (attempt + 1) * 2
+            Rails.logger.warn("[Gemini::HttpClient] Rate limited (429) on #{current_model} (attempt #{attempt + 1}/3) — waiting #{backoff}s")
+            sleep(backoff)
+            next
+          end
+
+          return parse_response(response)
+        rescue Faraday::TimeoutError => e
+          last_error = TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
+        rescue RateLimitError => e
+          last_error = e
+        rescue Faraday::Error => e
+          last_error = ApiError.new("Gemini API error: #{e.message}")
+        end
+      end
+
+      raise last_error || RateLimitError.new("Rate limited across models")
     end
 
     def request_headers

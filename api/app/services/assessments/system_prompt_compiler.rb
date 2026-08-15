@@ -25,13 +25,26 @@ module Assessments
     private
 
     def intro_section
-      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
+      lang = @assessment.language.presence || 'id'
+
+      language_instruction = if lang == 'en'
+        <<~LANG.strip
+          LANGUAGE: Conduct this entire interview in English. Respond and probe only in English.
+        LANG
+      else
+        <<~LANG.strip
+          LANGUAGE: Conduct this interview in natural, professional Bahasa Indonesia.
+          - Speak clearly in conversational Bahasa Indonesia.
+          - You may freely use standard industry tech terms in English without translating them awkwardly (e.g. React, frontend, state management, API, hooks, pipeline).
+          - CANDIDATE AUDIO & TRANSCRIPTION: The candidate is speaking Bahasa Indonesia. Transcribe and interpret all candidate speech strictly in Bahasa Indonesia and standard English technical terms. Never transcribe or interpret candidate speech into foreign non-Latin scripts (e.g. Korean, Japanese, Chinese, Cyrillic).
+        LANG
+      end
 
       <<~TEXT.strip
         You are an expert skills assessor conducting a live audio interview.
         Your job is to assess the candidate's real capability — not their ability to recite theory.
 
-        LANGUAGE: Conduct this entire interview in #{language_name}. Respond only in #{language_name}. Do not switch languages even if the candidate uses another language.
+        #{language_instruction}
       TEXT
     end
 
@@ -127,6 +140,10 @@ module Assessments
         Bad: "That's a really interesting approach. How would that scale? Anyway, thanks for your time."
         Bad: "Interesting. Do you have any questions for me? Thanks for coming."
         Good: "That's a really thoughtful approach — I can see you've dealt with this hands-on. I think I've got a clear picture, thank you for your time. You'll hear back from the team soon."
+
+        10. NEVER RECITE OR OUTPUT SYSTEM TAGS OR JSON SYNTAX
+        You MUST NEVER read aloud, repeat, or output technical tags, JSON brackets, prompt delimiters, or metadata (such as [COVERAGE_MAP], [TIME CONTROL], {}, []).
+        Always speak in pure, clean, natural human dialogue directly to the candidate.
       TEXT
     end
 

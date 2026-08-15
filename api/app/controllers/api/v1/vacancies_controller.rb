@@ -9,10 +9,10 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.includes(:vacancy_skills).order(created_at: :desc))
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
+          vacancies: vacancies.map(&method(:vacancy_with_skills_json)),
           meta: pagination_meta(vacancies)
         )
       end

@@ -9,6 +9,10 @@ module Exports
   class PdfGenerator
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
+    STATUS_LABELS = {
+      'not_assessed' => 'Not Assessed — not covered during the interview',
+      'unparseable'  => 'Needs Manual Review — model response could not be scored'
+    }.freeze
     RESULT_LABELS = {
       'match'        => 'Match',
       'gap'          => 'Gap',
@@ -81,10 +85,14 @@ module Exports
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        if skill.assessed?
+          level_text = "Level: #{LEVEL_LABELS[effective_level]}"
+          level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+          level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+          pdf.text level_text
+        else
+          pdf.text STATUS_LABELS[skill.status] || skill.status, style: :italic
+        end
       end
 
       pdf.move_down 4

@@ -1,6 +1,4 @@
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { LEVEL_LABELS } from "@/utils/constants";
+import { LEVEL_LABELS, LEVEL_DESCRIPTIONS } from "@/utils/constants";
 import { cn } from "@/lib/utils";
 
 interface LevelRadioProps {
@@ -12,20 +10,29 @@ interface LevelRadioProps {
 
 export default function LevelRadio({ value, onChange, disabled, className }: LevelRadioProps) {
   return (
-    <RadioGroup
-      value={String(value)}
-      onValueChange={(v) => onChange(Number(v))}
-      disabled={disabled}
-      className={cn("flex items-center gap-3", className)}
-    >
-      {[1, 2, 3, 4, 5].map((level) => (
-        <div key={level} className="flex items-center gap-1">
-          <RadioGroupItem value={String(level)} id={`level-${level}`} />
-          <Label htmlFor={`level-${level}`} className="cursor-pointer font-normal">
-            {LEVEL_LABELS[level]}
-          </Label>
-        </div>
-      ))}
-    </RadioGroup>
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      {[1, 2, 3, 4, 5].map((level) => {
+        const isSelected = value === level;
+        return (
+          <button
+            key={level}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(level)}
+            className={cn(
+              "px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5 shadow-2xs",
+              isSelected
+                ? "bg-primary text-white border-primary shadow-xs ring-2 ring-primary/20"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+            )}
+          >
+            <span>{LEVEL_LABELS[level]}</span>
+            <span className={cn("text-[10px] font-normal", isSelected ? "text-primary-foreground/90" : "text-slate-400")}>
+              {LEVEL_DESCRIPTIONS[level]}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
