@@ -11,12 +11,8 @@ RSpec.describe 'Tenant resolution (TenantResolverMiddleware)', type: :request do
     create(:assessment, tenant_id: org_b.id, name: 'Victim Assessment')
   end
 
-  def token_for(scheme, role: 'admin', user_id: 1)
-    JsonWebToken.encode(user_id: user_id, role: role, scheme: scheme)
-  end
-
   it 'scopes data to the tenant named in the verified JWT' do
-    get '/api/v1/assessments', headers: { 'Authorization' => "Bearer #{token_for('acme')}" }
+    get '/api/v1/assessments', headers: bearer_for(organization: org_a)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('Acme Assessment')
@@ -25,10 +21,7 @@ RSpec.describe 'Tenant resolution (TenantResolverMiddleware)', type: :request do
 
   it 'ignores a spoofed X-Tenant-Scheme header (P1-2)' do
     get '/api/v1/assessments',
-        headers: {
-          'Authorization'   => "Bearer #{token_for('acme')}",
-          'X-Tenant-Scheme' => 'victim'
-        }
+        headers: bearer_for(organization: org_a).merge('X-Tenant-Scheme' => 'victim')
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('Acme Assessment')

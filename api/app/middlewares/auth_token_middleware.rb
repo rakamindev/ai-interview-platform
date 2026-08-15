@@ -22,13 +22,9 @@ class AuthTokenMiddleware < ApplicationMiddleware
       AuthorizeApiRequest.new(request.headers, @required_roles).call
     end
 
-    if @error
-      return error(*@error) unless @required_roles.empty?
-    end
+    return error(*@error) if @error
 
-    if result
-      Current.user = result[:user]
-    end
+    Current.user = result[:user] if result
 
     super
   end
