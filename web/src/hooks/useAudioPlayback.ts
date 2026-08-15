@@ -7,6 +7,7 @@ export function useAudioPlayback() {
   const nextPlayTimeRef = useRef<number>(0);
   const onDrainedRef = useRef<(() => void) | null>(null);
   const drainCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const afterPlaybackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getCtx = () => {
     if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
@@ -74,11 +75,19 @@ export function useAudioPlayback() {
     if (!ctx) { fn(); return; }
     const remaining = (nextPlayTimeRef.current - ctx.currentTime) * 1000;
     if (remaining <= 0) { fn(); return; }
-    setTimeout(fn, remaining);
+    if (afterPlaybackTimerRef.current) clearTimeout(afterPlaybackTimerRef.current);
+    afterPlaybackTimerRef.current = setTimeout(() => {
+      afterPlaybackTimerRef.current = null;
+      fn();
+    }, remaining);
   }, []);
 
   const stop = useCallback(() => {
     cancelDrain();
+    if (afterPlaybackTimerRef.current) {
+      clearTimeout(afterPlaybackTimerRef.current);
+      afterPlaybackTimerRef.current = null;
+    }
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
     nextPlayTimeRef.current = 0;
