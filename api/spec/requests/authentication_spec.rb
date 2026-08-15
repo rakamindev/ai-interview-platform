@@ -44,12 +44,20 @@ RSpec.describe 'Authentication', type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
-    it 'rejects a non-admin role' do
+    it 'rejects a non-admin, non-assessor role' do
       create(:user, organization: org, email: 'peon@acme.com', password: 'password123', role: 'user')
 
       post '/api/v1/auth/login', params: { email: 'peon@acme.com', password: 'password123' }
 
       expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'allows an assessor to log in (P1-10)' do
+      create(:user, organization: org, email: 'assessor@acme.com', password: 'password123', role: 'assessor')
+
+      post '/api/v1/auth/login', params: { email: 'assessor@acme.com', password: 'password123' }
+
+      expect(response).to have_http_status(:ok)
     end
   end
 end

@@ -5,7 +5,7 @@ class User < ApplicationRecord
 
   belongs_to :organization, optional: true
 
-  ROLES = %w[admin user].freeze
+  ROLES = %w[admin assessor user].freeze
 
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },

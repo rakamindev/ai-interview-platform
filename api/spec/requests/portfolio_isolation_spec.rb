@@ -17,28 +17,26 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
 
   before { org_a && org_b }
 
-  def auth(scheme)
-    { 'Authorization' => "Bearer #{JsonWebToken.encode(user_id: 1, role: 'admin', scheme: scheme)}" }
-  end
+  let(:headers_a) { bearer_for(organization: org_a) }
 
   describe 'P1-5: Portfolio IDOR' do
     it "does not let tenant A export tenant B's portfolio" do
       get "/api/v1/portfolios/#{portfolio_b.id}/export",
-          params: { format: 'json' }, headers: auth('acme')
+          params: { format: 'json' }, headers: headers_a
 
       expect(response).to have_http_status(:not_found)
     end
 
     it "does not let tenant A run fit/gap on tenant B's portfolio" do
       post "/api/v1/portfolios/#{portfolio_b.id}/fitgap",
-           params: { vacancy_id: 1 }, headers: auth('acme')
+           params: { vacancy_id: 1 }, headers: headers_a
 
       expect(response).to have_http_status(:not_found)
     end
 
     it "lets a tenant export its own portfolio" do
       get "/api/v1/portfolios/#{portfolio_a.id}/export",
-          params: { format: 'json' }, headers: auth('acme')
+          params: { format: 'json' }, headers: headers_a
 
       expect(response).to have_http_status(:ok)
     end
@@ -47,14 +45,14 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
   describe 'P1-6: PortfolioSkill override IDOR' do
     it "does not let tenant A override tenant B's portfolio skill" do
       post "/api/v1/portfolio_skills/#{skill_b.id}/override",
-           params: { override: { override_level: 4 } }, headers: auth('acme')
+           params: { override: { override_level: 4 } }, headers: headers_a
 
       expect(response).to have_http_status(:not_found)
     end
 
     it "lets a tenant override its own portfolio skill" do
       post "/api/v1/portfolio_skills/#{skill_a.id}/override",
-           params: { override: { override_level: 4 } }, headers: auth('acme')
+           params: { override: { override_level: 4 } }, headers: headers_a
 
       expect(response).to have_http_status(:created)
     end
