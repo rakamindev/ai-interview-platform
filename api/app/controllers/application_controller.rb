@@ -53,8 +53,17 @@ class ApplicationController < ActionController::API
 
   def authenticate_with_roles!(roles)
     roles = roles.flatten.map(&:to_s)
-    result = AuthorizeApiRequest.new(request.headers, roles).call
+    result = AuthorizeApiRequest.new(auth_headers, roles).call
     Current.user = result[:user]
+  end
+
+  def auth_headers
+    return request.headers if request.headers['Authorization'].present?
+
+    cookie_token = request.cookies['auth_token']
+    return request.headers if cookie_token.blank?
+
+    { 'Authorization' => "Bearer #{cookie_token}" }
   end
 
   # ── Params ──────────────────────────────────────────────────────────────────

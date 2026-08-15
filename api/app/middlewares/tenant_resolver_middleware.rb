@@ -18,14 +18,20 @@ class TenantResolverMiddleware < ApplicationMiddleware
   private
 
   def scheme_from_jwt(request)
-    auth_header = request.headers['Authorization'].to_s
-    return unless auth_header.start_with?('Bearer ', 'bearer ')
+    token = bearer_token(request)
+    return if token.blank?
 
-    token  = auth_header.split(' ').last
     claims = JsonWebToken.decode(token)
     claims[:scheme].presence
   rescue StandardError
     nil
+  end
+
+  def bearer_token(request)
+    auth_header = request.headers['Authorization'].to_s
+    return auth_header.split(' ').last if auth_header.start_with?('Bearer ', 'bearer ')
+
+    request.cookies['auth_token'].presence
   end
 
   def find_organization(scheme)
