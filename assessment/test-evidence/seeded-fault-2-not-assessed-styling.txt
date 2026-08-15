@@ -1,0 +1,25 @@
+=== SEEDED FAULT 2 — not_assessed styled like a gap ===
+Absence of evidence restyled as a finding against the candidate.
+Visually identical to a gap; no type error; no runtime error.
+
+ RUN  v2.1.9 /tmp/aip/web
+ ❯ src/components/fitgap/__tests__/ComparisonTable.test.tsx (9 tests | 1 failed) 162ms
+   × ComparisonTable > an unassessed skill > is styled neutrally, not with the amber a gap uses 13ms
+     → expected 'inline-flex items-center whitespace-n…' to contain 'neutral'
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/components/fitgap/__tests__/ComparisonTable.test.tsx > ComparisonTable > an unassessed skill > is styled neutrally, not with the amber a gap uses
+AssertionError: expected 'inline-flex items-center whitespace-n…' to contain 'neutral'
+Expected: "neutral"
+Received: "inline-flex items-center whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium ring-1 ring-inset text-amber-700 bg-amber-50 ring-amber-600/20"
+ ❯ src/components/fitgap/__tests__/ComparisonTable.test.tsx:79:31
+     77| 
+     78|       const badge = within(table()).getByText("Not assessed");
+     79|       expect(badge.className).toContain("neutral");
+       |                               ^
+     80|       expect(badge.className).not.toContain("amber");
+     81|     });
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  19:29:01
+   Duration  883ms (transform 83ms, setup 41ms, collect 213ms, tests 162ms, environment 229ms, prepare 39ms)

@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.for_current_tenant.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +101,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_current_tenant.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +127,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_current_tenant.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -148,14 +148,17 @@ module Api
       end
 
       def set_portfolio
-        # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
-        if @session
-          @portfolio = @session.portfolio
-        else
-          @portfolio = Portfolio.find(params[:id])
-        end
+        # Routes use :id for both session-based and direct portfolio lookups.
+        # The session path is already safe — Session is TenantScoped — but the
+        # direct path was global, which is how #export could hand one tenant a
+        # PDF of another tenant's candidate evidence quotes.
+        @portfolio = if @session
+                       @session.portfolio
+                     else
+                       Portfolio.for_current_tenant.find(params[:id])
+                     end
       rescue ActiveRecord::RecordNotFound
+        # 404, never 403 — confirming the record exists is itself a disclosure.
         json_error("Portfolio not found", :not_found)
       end
 
@@ -178,8 +181,14 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
+          # ai_level is null whenever assessment_state is not 'assessed'. The
+          # client must render the state, not default the level to a number.
+          assessment_state:  skill.assessment_state,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
+          effective_level:   skill.effective_level,
+          is_override:       skill.overridden?,
+          superseded_at:     skill.superseded_at,
           evidence:          skill.evidence_quotes,
           competency_summary: skill.competency_summary
         }
@@ -205,6 +214,9 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          # Lets the client distinguish "the model failed" from "there is
+          # nothing to say", instead of inferring failure from a null.
+          narrative_status:  report.narrative_status,
           generated_at:      report.generated_at
         }
       end

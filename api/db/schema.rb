@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_15_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -20,8 +20,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_enum "confidence_level", ["high", "medium", "low"]
   create_enum "coverage_state", ["not_yet", "initiated", "partial", "covered"]
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
+  create_enum "fit_gap_narrative_status", ["complete", "failed", "skipped"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "portfolio_assessment_state", ["assessed", "insufficient_evidence", "not_probed"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
 
@@ -89,6 +91,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.enum "narrative_status", default: "complete", null: false, enum_type: "fit_gap_narrative_status"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -112,12 +115,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.enum "assessment_state", default: "assessed", null: false, enum_type: "portfolio_assessment_state"
+    t.datetime "superseded_at"
+    t.index ["portfolio_id", "skill_label"], name: "index_portfolio_skills_on_portfolio_id_and_skill_label", unique: true
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "assessment_state = 'assessed'::portfolio_assessment_state AND ai_level IS NOT NULL AND ai_confidence IS NOT NULL OR assessment_state <> 'assessed'::portfolio_assessment_state AND ai_level IS NULL AND ai_confidence IS NULL", name: "chk_portfolio_skills_level_matches_state"
   end
 
   create_table "portfolios", force: :cascade do |t|

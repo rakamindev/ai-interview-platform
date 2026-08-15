@@ -1,0 +1,29 @@
+=== SEEDED FAULT 1 — required_level made optional in schemas.ts ===
+Reintroduces the condition that let the original contract bug through:
+a payload with no required_level parses cleanly and the column renders blank.
+
+     30|     void required_level;
+     31| 
+     32|     expect(() => parseOrThrow(skillComparisonSchema, missing, "compari…
+       |                                                                              ^
+     33|   });
+     34| 
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+ FAIL  src/services/__tests__/schemas.test.ts > skillComparisonSchema > names the offending field so a contract drift is diagnosable
+AssertionError: expected [Function] to throw an error
+- Expected: 
+null
++ Received: 
+undefined
+ ❯ src/services/__tests__/schemas.test.ts:39:78
+     37|     void required_level;
+     38| 
+     39|     expect(() => parseOrThrow(skillComparisonSchema, missing, "compari…
+       |                                                                              ^
+     40|   });
+     41| 
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+ Test Files  1 failed (1)
+      Tests  2 failed | 5 passed (7)
+   Start at  19:28:53
+   Duration  746ms (transform 56ms, setup 48ms, collect 62ms, tests 11ms, environment 312ms, prepare 46ms)

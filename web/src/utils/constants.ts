@@ -60,11 +60,36 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   gap: "Gap",
   exceed: "Exceeds",
   not_assessed: "Not assessed",
+  additional: "Additional",
 };
 
+// not_assessed is deliberately neutral rather than amber. A gap is a finding
+// about a candidate; an unassessed skill is the absence of one. Styling them
+// alike invites an assessor to read "we never asked" as "they cannot do it".
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-green-700 bg-green-50 ring-green-600/20",
+  gap: "text-amber-700 bg-amber-50 ring-amber-600/20",
+  exceed: "text-green-700 bg-green-50 ring-green-600/20",
+  not_assessed: "text-neutral-600 bg-neutral-100 ring-neutral-500/20",
+  additional: "text-sky-700 bg-sky-50 ring-sky-600/20",
+};
+
+export const ASSESSMENT_STATE_LABELS: Record<string, string> = {
+  assessed: "Assessed",
+  insufficient_evidence: "Insufficient evidence",
+  not_probed: "Never discussed",
+};
+
+export const ASSESSMENT_STATE_EXPLANATIONS: Record<string, string> = {
+  assessed: "Rated from evidence in the interview.",
+  insufficient_evidence:
+    "Discussed, but the exchange did not support a rating anyone could defend.",
+  not_probed:
+    "This skill was never raised during the interview, so there is no evidence to rate.",
+};
+
+export const CONFIDENCE_CLASSES: Record<string, string> = {
+  high: "text-green-700 bg-green-50",
+  medium: "text-amber-700 bg-amber-50",
+  low: "text-red-700 bg-red-50",
 };

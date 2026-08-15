@@ -48,9 +48,12 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        # for_current_tenant, not joins(:portfolio): the original join reached the
+        # portfolio but never filtered by tenant, so any authenticated assessor
+        # could write an override onto another tenant's candidate.
+        @portfolio_skill = PortfolioSkill.for_current_tenant.find(params[:id])
       rescue ActiveRecord::RecordNotFound
+        # 404, never 403 — confirming the record exists is itself a disclosure.
         json_error("Portfolio skill not found", :not_found)
       end
 

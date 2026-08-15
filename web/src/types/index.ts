@@ -87,11 +87,17 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  /** varchar(50) in the database — was previously typed as a number. */
+  skill_id: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  assessment_state: AssessmentState;
+  /** Integer, not "L3". Null whenever assessment_state is not "assessed". */
+  ai_level: number | null;
+  ai_confidence: Confidence | null;
+  effective_level: number | null;
+  is_override: boolean;
+  superseded_at?: string | null;
   evidence: string[];
   competency_summary: string;
 }
@@ -125,24 +131,58 @@ export interface VacancySkill {
   _destroy?: boolean;
 }
 
-export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
+export type SkillComparisonResult =
+  | "match"
+  | "gap"
+  | "exceed"
+  | "not_assessed"
+  | "additional";
 
+/** Why a portfolio skill does or does not carry a level. */
+export type AssessmentState = "assessed" | "insufficient_evidence" | "not_probed";
+
+export type Confidence = "high" | "medium" | "low";
+
+/**
+ * Mirrors FitGap::Engine#comparison_for exactly.
+ *
+ * The previous version of this interface declared `required_level` and
+ * `is_override`, neither of which the API has ever sent — so the compiler was
+ * satisfied while the Required column rendered `undefined` on every row and the
+ * override marker never appeared. Types alone cannot prevent that; these shapes
+ * are now validated at runtime in services/schemas.ts.
+ */
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id: string | null;
+  /** Null for skills the candidate has but the vacancy did not ask for. */
+  required_level: number | null;
+  /** @deprecated Alias of required_level, retained for one release. */
+  expected_level?: number | null;
+  /** The rating to decide on: the assessor's if they made one, else the model's. */
+  candidate_level: number | null;
+  ai_level: number | null;
+  override_level: number | null;
+  is_override: boolean;
+  confidence: Confidence | null;
+  assessment_state: AssessmentState;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  in_vacancy: boolean;
+  is_discovered?: boolean;
 }
+
+export type NarrativeStatus = "complete" | "failed" | "skipped";
 
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  /** Distinguishes "the model failed" from "there was nothing to say". */
+  narrative_status: NarrativeStatus;
   generated_at: string;
 }
 
