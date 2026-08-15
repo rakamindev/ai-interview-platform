@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_15_000000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_15_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -183,6 +183,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_15_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "organization_id"
+    t.boolean "active", default: true, null: false
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
   end
