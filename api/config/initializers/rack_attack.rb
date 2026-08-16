@@ -16,6 +16,11 @@ class Rack::Attack
     req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})
   end
 
+  # Throttle the unauthenticated speed-test endpoint: 10 per minute per IP.
+  throttle('speed_test', limit: 10, period: 1.minute) do |req|
+    req.ip if req.path == '/api/v1/speed_test' && req.post?
+  end
+
   # Return 429 JSON instead of the default plain-text response.
   self.throttled_responder = lambda do |_req|
     [
