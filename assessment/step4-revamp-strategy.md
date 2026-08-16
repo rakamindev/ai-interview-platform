@@ -17,7 +17,12 @@ Satu tema besar: melindungi kandidat (UU PDP + keadilan) DAN memastikan hasil pe
 | **FRONTEND — Presentasi hasil penilaian** | F-06 (lanjutan), + masalah presentasi yang ditemukan saat walkthrough (lihat §1a) | Revamp layar Fit-Gap & Portfolio: instrumen L1–L5 tunggal, `not_assessed` dibedakan dari gap, bukti kutipan didekatkan ke keputusan, seluruh state ditangani |
 | **FRONTEND — Layar live (Interview Room & Live Monitor)** | Lanjutan §1a: konflasi "belum ditanya" vs "sudah ditanya, hasilnya kurang" ternyata muncul lebih dulu di Live Monitor | `CoverageTrack` memakai grammar segmen yang sama dengan `LevelTrack`; skill `not_yet` digambar putus-putus; panel dibuka dengan hitungan skill yang belum ditanya (satu-satunya angka yang masih bisa diubah asesor saat interview berjalan); label transkrip ikut perspektif pembaca; seluruh warna hardcoded dipindah ke token |
 
-**Tidak termasuk (sengaja):** F-08 (optimasi payload list), F-14 (transcript kandidat penuh), F-15 (speed test pihak ketiga) — di-list sebagai follow-up, bukan bagian revamp ini agar scope terkendali dalam deadline. F-17 (test/CI) WAJIB disertakan sebagai harness untuk membuktikan semua di atas.
+| **F-15 — Speed test ke pihak ketiga** | F-15 (dinaikkan dari follow-up) | Hardware check mengukur ke API sendiri (`GET/POST /speed_test`, `/health`), bukan ke Google/jsDelivr/unpkg/httpbin/postman-echo. Payload acak + ukuran di-clamp; kecepatan dihitung dari byte yang **sampai**, bukan yang diminta |
+| **FRONTEND — Navigasi & orientasi** | N-1, N-2, N-4, N-6, N-8, N-9 (audit navigasi, §1b) | Breadcrumb di semua layar di bawah navbar; sesi gagal dapat jalan ke transcript; error dibedakan dari state kosong; fit/gap naik ke atas; transcript pakai serif; login bedakan 401 vs 403 |
+
+**Tidak termasuk (sengaja):** F-08 (optimasi payload list), F-14 (transcript kandidat penuh), dan tiga temuan navigasi N-3/N-5/N-7 (lihat §1b) — di-list sebagai follow-up karena butuh keputusan produk atau migrasi, bukan sekadar perbaikan. F-17 (test/CI) WAJIB disertakan sebagai harness untuk membuktikan semua di atas.
+
+**F-15 naik dari follow-up jadi in-scope.** Alasannya berubah setelah ditelusuri ulang: ini bukan soal kerapian teknis, tapi soal isi janji consent. Layar consent menyebutkan secara eksplisit siapa yang menerima data kandidat; beberapa detik setelah kandidat menyetujuinya, browser mereka mengirim sembilan request ke lima perusahaan yang tidak ada di daftar itu — dan kandidat tak punya cara menolaknya. Memindahkan pengukuran ke API sendiri menutup celah itu, dan biayanya kecil karena endpoint upload sudah ada.
 
 **Klaim depth: fullstack seimbang.** Backend: model consent + API + gating WS + guard `audio_complete` + tenant binding. Frontend: layar consent, perbaikan kontrak fit-gap, dan revamp presentasi hasil penilaian (§1a). Kedua sisi dikerjakan sampai ke test.
 
@@ -39,6 +44,28 @@ Konsekuensinya, memperbaiki kontrak data saja tidak menyelesaikan kerugiannya. Y
 5. **Kata-kata kandidat dibedakan secara tipografis** dari kesimpulan AI (serif vs sans), sehingga pembaca bisa memisahkan kesaksian dari inferensi tanpa membaca label.
 
 **Asumsi yang diambil:** produk ini dinilai juga pada kualitas UI/UX, dan brief menyebut "menggunakan atau memperluas design system". Menambah tiga typeface (IBM Plex Sans/Mono, Source Serif 4) dan empat token warna hasil penilaian dihitung sebagai *memperluas*, bukan mengganti: token dasar, komponen Radix, dan warna brand Rakamin (`#01959f`, `#FBC037`) tidak diubah.
+
+---
+
+## 1b. Audit navigasi — sembilan temuan dari menelusuri aplikasi, bukan membaca kode
+
+Setelah revamp presentasi selesai, aplikasi ditelusuri sebagai assessor sungguhan: dari login sampai laporan fit/gap. Yang muncul adalah kelas masalah yang tidak kelihatan saat membaca file satu per satu — masalah **mencapai** layar, bukan masalah isi layar.
+
+Struktur dasarnya: dua pintu masuk (login assessor, link bertoken kandidat), tanpa sidebar, navbar hanya dua item. Seluruh layar hasil menggantung empat tingkat di bawah navbar sebagai anak dari satu sesi.
+
+| # | Temuan | Status |
+|---|---|---|
+| N-1 | Route `/assessments/:id/invite` adalah pusat kerja review, tapi namanya menjanjikan pengiriman undangan | **Ditutup** — antarmuka menamainya "Candidates"; path tetap agar link lama hidup |
+| N-2 | Kontrol fit/gap berada di dasar halaman sepanjang beberapa layar | **Ditutup** — dipindah ke atas, di atas kartu bukti |
+| N-3 | Vacancy tak punya jalan ke hasil penilaian yang memakainya | Follow-up — butuh endpoint/daftar baru |
+| N-4 | Sesi `end_reason: "error"` tidak merender tombol apa pun → buntu | **Ditutup** — dapat tombol Transcript |
+| N-5 | Nomor kandidat dihitung `sessions.length - i`, berpindah orang tiap ada undangan baru | Follow-up — butuh nomor tersimpan (migrasi) |
+| N-6 | Login menolak role dengan pesan "Invalid email or password" | **Ditutup** — 403 + pesan tentang akses; password salah tetap 401 |
+| N-7 | Membuka URL fit/gap yang belum punya report otomatis memicu job Gemini | Follow-up — perlu keputusan produk soal aksi eksplisit |
+| N-8 | `.catch(() => {})` membuat request gagal tampil sebagai hasil kosong | **Ditutup** — dua halaman punya state error + retry |
+| N-9 | Halaman transcript merender ucapan kandidat dengan sans, melanggar AC H14 sendiri | **Ditutup** — serif, konsisten dengan tiga layar lain |
+
+**N-8 layak dicatat sebagai satu tema dengan §1a.** Keduanya masalah yang sama: antarmuka menyatakan sesuatu tentang kandidat padahal yang terjadi adalah sistem tidak tahu. `not_assessed` yang digambar seperti `gap` bilang "kandidat lemah" padahal artinya "tidak pernah ditanya". Request gagal yang digambar seperti daftar kosong bilang "tidak ada kandidat" padahal artinya "gagal mencari tahu". Dalam dua-duanya, pembacanya bertindak atas kesimpulan yang tidak pernah dibuat siapa pun.
 
 ---
 
@@ -160,6 +187,22 @@ penyesalan. Karena itu angka "belum ditanya" dinaikkan jadi hal pertama yang dib
 | I7 | Koneksi kandidat putus lama | render Interview Room | Merah diizinkan di sini: yang gagal adalah sistem, bukan kandidat. Merah tetap dilarang untuk apa pun yang menilai orangnya |
 | I8 | Mode gelap aktif | render kedua layar live | Tidak ada `bg-white`/warna palet hardcoded yang tersisa; semua lewat token (`--ok` dipisah dari palet hasil dengan sengaja) |
 
+### J. Navigasi, akses & privasi jaringan
+
+| # | Given | When | Then |
+|---|---|---|---|
+| J1 | Kandidat menjalankan hardware check | ukur kecepatan | **Nol** request ke Google/jsDelivr/unpkg/httpbin/postman-echo — semua ke origin sendiri; diuji sebagai daftar tamu, bukan sebagai aritmetika |
+| J2 | API tidak terjangkau | ukur kecepatan | Lapor 0 Mbps dan `passed: false` — bukan fallback 0.5 yang bilang koneksi baik-baik saja |
+| J3 | Proxy memotong response | ukur download | Kecepatan dihitung dari byte yang **sampai**, jadi terbaca lambat, bukan cepat |
+| J4 | `?bytes=` sangat besar | GET `/speed_test` | Di-clamp ke 2 MB — endpoint tak bisa dipakai sebagai amplifier bandwidth |
+| J5 | Dua request berurutan | GET `/speed_test` | Isi payload berbeda; `Cache-Control: no-store` — kompresi/cache tak bisa memalsukan hasil |
+| J6 | Password benar, role bukan `admin` | POST login | **403** dengan pesan soal akses; tidak menyebut password sama sekali |
+| J7 | Password salah | POST login | Tetap **401** `Invalid email or password`; tidak membocorkan akun mana yang ada |
+| J8 | Sesi `end_reason: "error"` | render baris kandidat | Ada jalan ke transcript — sesi yang gagal justru yang paling perlu dilihat manusia |
+| J9 | Request daftar kandidat/portfolio gagal | buka halaman | State error eksplisit + tombol coba lagi; **bukan** state kosong yang berbunyi seperti fakta tentang kandidat |
+| J10 | Berada di layar mana pun di bawah navbar | render | Breadcrumb menamai tiap tingkat dan bisa diklik; halaman daftar kandidat **tidak** disebut "invite" |
+| J11 | Kutipan verbatim di halaman transcript | render | Serif, sama seperti Portfolio/Fit-Gap/Live Monitor (menutup pelanggaran H14 di layar sendiri) |
+
 ---
 
 ## 3. Solution Options & Trade-offs
@@ -217,7 +260,7 @@ Dua arah dieksplorasi lebih dulu sebagai mockup, lalu dibandingkan sebelum satu 
 
 **Option A: Mockup HTML statis memakai token codebase**
 - Semua state digambar sebagai frame terpisah (loaded/loading/empty/error/partial/teks panjang/mobile 375px), memakai variabel CSS dan warna brand yang persis sama dengan aplikasi.
-- *Product Impact:* cakupan state lengkap, dan setiap layar bisa langsung dicek terhadap acceptance criteria H1–H16 dan I1–I8.
+- *Product Impact:* cakupan state lengkap, dan setiap layar bisa langsung dicek terhadap acceptance criteria H1–H16, I1–I8, dan J1–J11.
 - *Cost:* rendah; porting ke React nyaris mekanis karena token sudah sama.
 - *Kelemahan:* tanpa shell aplikasi (sidebar, breadcrumb), layar terbaca sebagai lembar spesifikasi, bukan produk. Kualitas komposisi lebih lemah.
 
