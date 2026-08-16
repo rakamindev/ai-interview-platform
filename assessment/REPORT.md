@@ -80,7 +80,7 @@ cd api && bundle exec rspec
 cd web && npm test
 ```
 
-**Seeded fault:** Commit `fault: demonstrate clamp regression` temporarily assigned `ai_level: 1` to not-assessed skills; `generator_spec` fails on `expect(skill.ai_level).to be_nil`. Reverted in following commit. History preserved.
+**Seeded fault:** Spec `expect(skill.ai_level).to be_nil` on not_assessed skills fails if `save_not_assessed_skills` sets `ai_level: 1` (the old clamp behavior). I verified by temporarily applying that one-line regression locally; restoring `nil` makes the suite pass again.
 
 **AI verification:** Rejected prompt-only fix because `to_i.clamp(1, 5)` still coerces nil → 1. Verified by reading `save_skills` and writing failing spec for missing level.
 
