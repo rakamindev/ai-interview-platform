@@ -25,8 +25,14 @@ export default function LoginPage() {
       setAuthenticated();
       setAuth({ authenticated: true });
       navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 || status === 403) {
+        setError("Invalid email or password.");
+      } else {
+        console.error("[Login] request failed", err);
+        setError("Something went wrong signing in. Please try again in a moment.");
+      }
     } finally {
       setLoading(false);
     }
