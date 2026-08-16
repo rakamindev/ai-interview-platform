@@ -8,10 +8,19 @@ export interface AssessmentPayload {
   assessment_skills_attributes: Partial<AssessmentSkill>[];
 }
 
+export interface AssessmentListParams {
+  page?: number;
+  per_page?: number;
+  q?: string;
+  status?: "awaiting" | "live" | "completed" | "failed";
+  language?: "en" | "id";
+  sort?: "newest" | "oldest" | "name";
+}
+
 export const assessmentsApi = {
-  list: (page = 1) =>
+  list: (params: AssessmentListParams = {}) =>
     api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
+      params,
     }),
 
   get: (id: number) =>

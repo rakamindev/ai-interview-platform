@@ -9,7 +9,11 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        scope = Vacancy
+        scope = scope.where('role_title ILIKE ?', "%#{sanitize_like(query_params[:q])}%") if query_params[:q].present?
+        scope = scope.order(sort_clause)
+
+        vacancies = paginate(scope)
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
@@ -113,6 +117,18 @@ module Api
           total_count:  collection.total_count,
           per_page:     collection.limit_value
         }
+      end
+
+      def sort_clause
+        case query_params[:sort]
+        when 'oldest' then { created_at: :asc }
+        when 'name'   then 'role_title ASC'
+        else              { created_at: :desc }
+        end
+      end
+
+      def sanitize_like(value)
+        value.to_s.gsub(/[%_\\]/) { |m| "\\#{m}" }
       end
     end
   end

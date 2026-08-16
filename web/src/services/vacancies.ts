@@ -8,10 +8,17 @@ export interface VacancyPayload {
   vacancy_skills_attributes: Partial<VacancySkill>[];
 }
 
+export interface VacancyListParams {
+  page?: number;
+  per_page?: number;
+  q?: string;
+  sort?: "newest" | "oldest" | "name";
+}
+
 export const vacanciesApi = {
-  list: (page = 1) =>
+  list: (params: VacancyListParams = {}) =>
     api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
+      params,
     }),
 
   get: (id: number) =>

@@ -9,9 +9,13 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.includes(:sessions)
+        scope = scope.where('assessments.name ILIKE ?', "%#{sanitize_like(query_params[:q])}%") if query_params[:q].present?
+        scope = scope.where(language: query_params[:language]) if query_params[:language].present?
+        scope = filter_by_latest_session_status(scope, query_params[:status]) if query_params[:status].present?
+        scope = scope.order(sort_clause)
+
+        assessments = paginate(scope)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -124,6 +128,38 @@ module Api
           total_count:  collection.total_count,
           per_page:     collection.limit_value
         }
+      end
+
+      # Status filter operates on the LATEST session of each assessment.
+      LATEST_STATUS_SQL = '(SELECT s.status FROM sessions s WHERE s.assessment_id = assessments.id ORDER BY s.created_at DESC, s.id DESC LIMIT 1)'
+      LATEST_REASON_SQL = '(SELECT s.end_reason FROM sessions s WHERE s.assessment_id = assessments.id ORDER BY s.created_at DESC, s.id DESC LIMIT 1)'
+
+      def filter_by_latest_session_status(scope, status)
+        case status
+        when 'awaiting'
+          scope.where("NOT EXISTS (SELECT 1 FROM sessions s WHERE s.assessment_id = assessments.id) OR #{LATEST_STATUS_SQL} = 'pending'")
+        when 'live'
+          scope.where("#{LATEST_STATUS_SQL} = 'active'")
+        when 'completed'
+          # end_reason is an enum — NULL means "no reason set", which is fine.
+          scope.where("#{LATEST_STATUS_SQL} = 'ended' AND #{LATEST_REASON_SQL} IS DISTINCT FROM 'error'")
+        when 'failed'
+          scope.where("#{LATEST_STATUS_SQL} = 'ended' AND #{LATEST_REASON_SQL} = 'error'")
+        else
+          scope
+        end
+      end
+
+      def sort_clause
+        case query_params[:sort]
+        when 'oldest' then { created_at: :asc }
+        when 'name'   then 'assessments.name ASC'
+        else              { created_at: :desc }
+        end
+      end
+
+      def sanitize_like(value)
+        value.to_s.gsub(/[%_\\]/) { |m| "\\#{m}" }
       end
     end
   end
