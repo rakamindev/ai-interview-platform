@@ -13,8 +13,8 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   let icon = "";
   let suffix = "";
   if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
+  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta != null ? ` +${comparison.delta}` : ""; }
+  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta != null ? ` -${Math.abs(comparison.delta)}` : ""; }
   else icon = "—";
 
   return (
@@ -39,6 +39,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
               <th className="text-left px-4 py-2.5 font-medium">Skill</th>
               <th className="text-center px-4 py-2.5 font-medium">Required</th>
               <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
+              <th className="text-center px-4 py-2.5 font-medium">Confidence</th>
               <th className="text-center px-4 py-2.5 font-medium">Result</th>
             </tr>
           </thead>
@@ -47,7 +48,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
               <tr key={i} className="border-b last:border-0">
                 <td className="px-4 py-2.5">{c.skill_label}</td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+                  {LEVEL_LABELS[c.required_level] ?? "—"}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
@@ -58,6 +59,9 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
+                </td>
+                <td className="px-4 py-2.5 text-center text-xs text-muted-foreground capitalize">
+                  {c.confidence ?? "—"}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   <ResultBadge comparison={c} />

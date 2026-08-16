@@ -134,6 +134,7 @@ export interface SkillComparison {
   result: SkillComparisonResult;
   delta?: number;
   is_override?: boolean;
+  confidence?: string | null;
 }
 
 export interface FitGapReport {
