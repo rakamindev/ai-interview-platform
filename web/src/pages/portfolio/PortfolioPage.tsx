@@ -196,19 +196,23 @@ export default function PortfolioPage() {
       {/* Generating state — skeletons mirror the card layout, with an estimate */}
       {generating && (
         <div className="space-y-3" data-testid="portfolio-generating">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="space-y-3 rounded-lg border p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-52" />
-                  <Skeleton className="h-2.5 w-40" />
+          {/* The skeletons sit in the same grid the real cards will, so nothing
+              jumps position when the report arrives. */}
+          <div className="grid items-start gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-52" />
+                    <Skeleton className="h-2.5 w-40" />
+                  </div>
+                  <Skeleton className="h-8 w-24" />
                 </div>
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-2.5 w-full" />
+                <Skeleton className="h-2.5 w-4/5" />
               </div>
-              <Skeleton className="h-2.5 w-full" />
-              <Skeleton className="h-2.5 w-4/5" />
-            </div>
-          ))}
+            ))}
+          </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             The AI is analyzing the interview transcript. This takes about 2 minutes.
@@ -310,11 +314,14 @@ export default function PortfolioPage() {
             )}
           </div>
 
-          {/* Configured skills */}
+          {/* Configured skills. Laid out as a grid so a wide window shows more
+              skills at once instead of one very long card — the comparison
+              between skills is what an assessor is doing here. */}
           <div className="space-y-3">
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               Configured skills
             </span>
+            <div className="grid gap-3 items-start xl:grid-cols-2 2xl:grid-cols-3">
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
@@ -325,6 +332,7 @@ export default function PortfolioPage() {
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
                 />
               ))}
+            </div>
           </div>
 
           {/* Discovered skills */}
@@ -340,6 +348,7 @@ export default function PortfolioPage() {
                     Skills the AI probed that were not in the original assessment
                   </p>
                 </div>
+                <div className="grid gap-3 items-start xl:grid-cols-2 2xl:grid-cols-3">
                 {portfolio.skills
                   .filter((s) => s.is_discovered)
                   .map((skill) => (
@@ -350,6 +359,7 @@ export default function PortfolioPage() {
                       onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
                     />
                   ))}
+                </div>
               </div>
             </>
           )}

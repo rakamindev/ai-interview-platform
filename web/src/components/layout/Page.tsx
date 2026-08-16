@@ -9,23 +9,26 @@ import { cn } from "@/lib/utils";
  * the fit/gap narrative are prose, and prose stretched across 1900px stops
  * being readable — which would break the one thing this revamp exists to fix.
  *
- * So width follows what the screen is *for*:
+ * The resolution: the *container* goes edge to edge, and the width is spent on
+ * columns rather than on longer lines. A list becomes a grid of cards; the
+ * monitor puts coverage beside the transcript; a paragraph keeps its own
+ * measure inside a wide parent via max-w-prose. That way the window is full
+ * and the prose is still readable — those were never actually in conflict, the
+ * old layout just solved it by shrinking everything.
  *
- *   board    — scanned, not read. Lists, the live monitor, the comparison
- *              table. These earn the whole window.
- *   document — a mix. Portfolio cards carry quotes but are also compared
- *              against each other.
- *   form     — filled in, one field at a time. Wide forms make people hunt
- *              for the next input, so these stay deliberately narrow.
- *
- * Prose *inside* a board still gets its own measure via max-w-prose; the tier
- * governs the container, not every descendant.
+ *   board    — scanned, not read. Lists, live monitor, comparison table.
+ *   document — a mix. Portfolio cards carry quotes but are also compared.
+ *   form     — filled in one field at a time. These stay narrow on purpose:
+ *              a 1900px-wide text input makes people hunt for the next field.
  */
 export type PageWidth = "board" | "document" | "form";
 
 const WIDTH: Record<PageWidth, string> = {
-  board: "max-w-[1400px]",
-  document: "max-w-5xl",
+  // Edge to edge. Nothing is held back from the window — the way the width
+  // gets used is by laying content out in columns, not by stretching a single
+  // column until its line length becomes unreadable.
+  board: "max-w-none",
+  document: "max-w-none",
   form: "max-w-2xl",
 };
 

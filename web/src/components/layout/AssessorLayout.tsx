@@ -32,7 +32,7 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-background sticky top-0 z-40">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 sm:px-6">
+        <div className="flex h-14 w-full items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Link to="/candidates" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />

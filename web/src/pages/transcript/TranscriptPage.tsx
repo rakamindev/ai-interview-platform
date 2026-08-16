@@ -90,16 +90,19 @@ export default function TranscriptPage() {
           {turns.map((turn) => {
             const isAI = turn.speaker === "ai";
             return (
+              /* Full-bleed container, but the speaker sits in a fixed gutter
+                 and the words keep their own measure — the width buys a
+                 clearer two-column script, not longer lines. */
               <div
                 key={turn.id}
                 className={cn(
-                  "rounded-lg border p-4",
+                  "rounded-lg border p-4 sm:grid sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-4",
                   isAI ? "border-border bg-muted" : "border-primary/20 bg-background",
                 )}
               >
                 <p
                   className={cn(
-                    "mb-1 text-[11px] font-semibold uppercase tracking-[0.08em]",
+                    "mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] sm:mb-0 sm:pt-0.5",
                     isAI ? "text-muted-foreground" : "text-primary",
                   )}
                 >
@@ -111,7 +114,7 @@ export default function TranscriptPage() {
                     machine-written text stays in the interface sans. */}
                 <p
                   className={cn(
-                    "whitespace-pre-wrap [overflow-wrap:anywhere]",
+                    "max-w-prose whitespace-pre-wrap [overflow-wrap:anywhere]",
                     isAI
                       ? "text-sm leading-relaxed"
                       : "font-serif text-[15px] leading-relaxed",

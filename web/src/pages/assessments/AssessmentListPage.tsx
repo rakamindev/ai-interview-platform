@@ -58,8 +58,8 @@ export default function AssessmentListPage() {
       )}
 
       {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : assessments.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
@@ -69,16 +69,16 @@ export default function AssessmentListPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {assessments.map((a) => (
             <Card
               key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
+              className="cursor-pointer transition-colors hover:border-primary/40"
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
+              <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{a.name}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -92,7 +92,7 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               </CardContent>
             </Card>
           ))}
