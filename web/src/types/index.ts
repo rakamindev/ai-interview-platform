@@ -90,7 +90,7 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: number;       // 1..5; UI renders L1..L5
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
@@ -129,11 +129,31 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string;
+  expected_level: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: string | null;
   is_override?: boolean;
+  caveat?: string | null;
+}
+
+export interface FitGapSummary {
+  match_count: number;
+  exceed_count: number;
+  gap_count: number;
+  not_assessed_count: number;
+  priority_gaps: string[];
+}
+
+export interface AdditionalSkillSignal {
+  skill_id?: string;
+  skill_label: string;
+  candidate_level?: number | null;
+  confidence?: string | null;
+  is_override?: boolean;
+  caveat?: string | null;
 }
 
 export interface FitGapReport {
@@ -141,8 +161,13 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  summary?: FitGapSummary;
+  caveats?: string[];
+  additional_skill_signals?: AdditionalSkillSignal[];
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  narrative_status?: "pending" | "generating" | "complete" | "failed";
+  narrative_error?: string | null;
   generated_at: string;
 }
 

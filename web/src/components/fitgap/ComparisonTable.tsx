@@ -32,7 +32,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="hidden md:block overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
@@ -46,26 +46,33 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             {comparisons.map((c, i) => (
               <tr key={i} className="border-b last:border-0">
                 <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
+                <td className="px-4 py-2.5 text-center text-muted-foreground">{LEVEL_LABELS[c.expected_level]}</td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
+                    <span>{LEVEL_LABELS[c.candidate_level]}{c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}</span>
+                  ) : <span className="text-muted-foreground">—</span>}
                 </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
+                <td className="px-4 py-2.5 text-center"><ResultBadge comparison={c} /></td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="md:hidden space-y-2">
+        {comparisons.map((c, i) => (
+          <div key={i} className="rounded-lg border p-3 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <span className="font-medium text-sm">{c.skill_label}</span>
+              <ResultBadge comparison={c} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+              <span>Required: <strong className="text-foreground">{LEVEL_LABELS[c.expected_level]}</strong></span>
+              <span>Candidate: <strong className="text-foreground">{c.candidate_level != null ? LEVEL_LABELS[c.candidate_level] : "—"}{c.is_override ? " · human" : ""}</strong></span>
+            </div>
+            {c.caveat && <p className="text-xs text-muted-foreground">{c.caveat}</p>}
+          </div>
+        ))}
       </div>
 
       {/* Summary */}
