@@ -3,7 +3,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Briefcase, Users, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 
@@ -14,13 +14,14 @@ const navItems = [
 
 export default function AssessorLayout() {
   const tenant = useAtomValue(tenantAtom);
+  const { user } = useAtomValue(authAtom);
   const setAuth = useSetAtom(authAtom);
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = () => {
     clearToken();
-    setAuth({ token: null });
+    setAuth({ token: null, user: null });
     navigate("/login");
   };
 
@@ -50,12 +51,32 @@ export default function AssessorLayout() {
                   {label}
                 </Link>
               ))}
+              {user?.role === "admin" && (
+                <Link
+                  to="/users"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                    location.pathname.startsWith("/users")
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Users className="h-4 w-4" />
+                  Users
+                </Link>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3">
             {tenant.name && (
               <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
                 Tenant: {tenant.name}
+              </span>
+            )}
+            {user && (
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                {user.email}
+                <span className="ml-1.5 border rounded-full px-2 py-0.5 capitalize">{user.role}</span>
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={handleLogout}>

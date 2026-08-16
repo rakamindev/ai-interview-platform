@@ -14,6 +14,7 @@ import TranscriptPage from "@/pages/transcript/TranscriptPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
+import UsersPage from "@/pages/users/UsersPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 
 export default function App() {
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        <Route path="/users" element={<UsersPage />} />
       </Route>
       </Route>
 

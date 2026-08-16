@@ -5,8 +5,8 @@ export interface TenantState {
   name: string | null;
 }
 
-// Dev: seed from env; replace with platform context later
+// Populated from the login response (the real organization) — never from env.
 export const tenantAtom = atom<TenantState>({
-  id: import.meta.env.VITE_DEV_TENANT_ID ?? null,
-  name: import.meta.env.VITE_DEV_TENANT_NAME ?? "Demo Tenant",
+  id: null,
+  name: null,
 });

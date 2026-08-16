@@ -11,12 +11,19 @@ module Api
 
         return json_error('Invalid email or password', :unauthorized) unless user&.authenticate(params[:password])
 
-        return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
+        # Only admin and assessor roles may use the platform (registration is
+        # admin-only; public signup does not exist).
+        return json_error('Invalid email or password', :unauthorized) unless User::ROLES.include?(user.role)
 
         scheme = resolve_scheme
         token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
+        org    = Organization.identify(scheme)
 
-        json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
+        json_response({
+                        token:,
+                        user:         { id: user.id, email: user.email, role: user.role },
+                        organization: org ? { id: org.id, name: org.name, scheme: org.scheme } : nil
+                      })
       end
 
       private

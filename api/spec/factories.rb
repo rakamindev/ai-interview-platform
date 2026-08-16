@@ -86,6 +86,13 @@ FactoryBot.define do
     l5_anchor { 'L5 anchor' }
   end
 
+  factory :user do
+    sequence(:email) { |n| "user#{n}@test-corp.dev" }
+    # Random password — no literal secrets in code.
+    password { SecureRandom.alphanumeric(12) }
+    role { 'assessor' }
+  end
+
   factory :assessor_override do
     portfolio_skill
     ai_level { 3 }

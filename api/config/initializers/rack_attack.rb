@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Rack::Attack
+  # Specs exercise login/auth repeatedly from a single IP — never throttle in tests.
+  Rack::Attack.enabled = false if Rails.env.test?
+
   # Use Redis for distributed throttle state across pods.
   Rack::Attack.cache.store = ActiveSupport::Cache::RedisCacheStore.new(
     url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1')

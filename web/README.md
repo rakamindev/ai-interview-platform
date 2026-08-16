@@ -25,12 +25,8 @@ VITE_API_BASE_URL=http://localhost:3001/api/v1
 # WebSocket base URL (no /api/v1)
 VITE_WS_BASE_URL=ws://localhost:3001
 
-# Dev auth token — replace with a real JWT from Rakamin platform
-VITE_DEV_TOKEN=<your-jwt-here>
-
-# Dev tenant context
-VITE_DEV_TENANT_ID=1
-VITE_DEV_TENANT_NAME=Demo Tenant
+# (No dev-token bypass: authenticate via the login page with a seeded user —
+# see api/db/seeds.rb; dev password comes from DEV_USER_PASSWORD)
 ```
 
 ```bash
@@ -54,9 +50,6 @@ The app will be available at **http://localhost:5173**.
 | --------------------------- | -------- | --------------------------------------------------- |
 | `VITE_API_BASE_URL`        | Yes      | Backend REST API base URL                           |
 | `VITE_WS_BASE_URL`         | Yes      | WebSocket server URL (used for live audio streaming)|
-| `VITE_DEV_TOKEN`           | Yes      | JWT for authenticating in local development         |
-| `VITE_DEV_TENANT_ID`       | Yes      | Tenant ID for multi-tenant context                  |
-| `VITE_DEV_TENANT_NAME`     | Yes      | Tenant display name                                 |
 | `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint for hardware check speed test  |
 | `VITE_SPEED_TEST_UPLOAD_URL`| No      | Custom upload endpoint for speed test               |
 | `VITE_REQUIRE_CAMERA`      | No       | Set to `"true"` to enforce camera check (default: `"false"`) |
