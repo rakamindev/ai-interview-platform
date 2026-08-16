@@ -8,7 +8,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.5-flash'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -19,20 +19,25 @@ module Portfolios
         candidate_id:      @session.candidate_id,
         generation_status: 'pending'
       )
+      previous_status = portfolio.generation_status
 
-      portfolio.update!(generation_status: 'generating')
+      portfolio.update!(generation_status: 'generating', generation_error: nil)
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      failure_status = previous_status == 'complete' ? 'complete' : 'failed'
+      portfolio&.update(
+        generation_status: failure_status,
+        generation_error: "Portfolio generation failed (#{e.class.name})"
+      )
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
@@ -149,32 +154,39 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      normalized = OutputValidator.new(
+        data: data,
+        assessment: @session.assessment
+      ).call
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Validate the entire response before this transaction. If any insert
+      # fails, the previous skill set remains intact.
+      portfolio.transaction do
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+        normalized[:configured_skills].each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           skill_data[:skill_id],
+            skill_label:        skill_data[:skill_label],
+            is_discovered:      false,
+            ai_level:           skill_data[:level],
+            ai_confidence:      skill_data[:confidence],
+            evidence:           skill_data[:evidence],
+            competency_summary: skill_data[:competency_summary]
+          )
+        end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        normalized[:discovered_skills].each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           nil,
+            skill_label:        skill_data[:skill_label],
+            is_discovered:      true,
+            ai_level:           skill_data[:level],
+            ai_confidence:      skill_data[:confidence],
+            evidence:           skill_data[:evidence],
+            competency_summary: skill_data[:competency_summary]
+          )
+        end
       end
     end
   end
