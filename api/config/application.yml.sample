@@ -13,9 +13,11 @@ DB_PASSWORD: ""
 
 # AI Interview specific
 GEMINI_API_KEY: "your_gemini_api_key"
-GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
-GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
-GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
+GEMINI_LIVE_MODEL: "gemini-2.5-flash-native-audio-latest"
+# REST generation models. NOTE: older models (2.x) return 404 for new-user
+# API keys — verify with the models list before changing.
+GEMINI_FLASH_MODEL: "gemini-3.5-flash"
+GEMINI_PRO_MODEL: "gemini-3.5-flash"
 
 # Frontend (SPA) origin — used to build candidate invite links.
 # Must point at the web app, NOT this API host.
