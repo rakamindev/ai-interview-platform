@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import ErrorNote from "@/components/ErrorNote";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
@@ -23,18 +24,22 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
+    const data = res.data as {
+      status?: string;
+      error?: string;
+      portfolio?: Portfolio & { overrides?: AssessorOverride[] };
+    };
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
-      // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
+      (data.portfolio.overrides || []).forEach((o) => {
         overrideMap[o.portfolio_skill_id] = o;
       });
       setOverrides(overrideMap);
@@ -47,7 +52,7 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setError("Failed to load the portfolio. Please refresh to try again."))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -89,6 +94,8 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch {
+      setError("Export failed. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -106,6 +113,8 @@ export default function PortfolioPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {error && <ErrorNote message={error} />}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
