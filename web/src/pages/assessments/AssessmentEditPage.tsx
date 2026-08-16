@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import Breadcrumb from "@/components/layout/Breadcrumb";
+import Page from "@/components/layout/Page";
 import {
   DndContext,
   closestCenter,
@@ -90,17 +91,17 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <Page width="form" className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
         <Skeleton className="h-24 w-full" />
-      </div>
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <Page width="form">
       {/* Back and Cancel used to land in different places — one at the list,
           one at the assessment you were editing. Both now return here. */}
       <div className="mb-6 space-y-1.5">
@@ -177,6 +178,6 @@ export default function AssessmentEditPage() {
       </form>
 
       <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
-    </div>
+    </Page>
   );
 }

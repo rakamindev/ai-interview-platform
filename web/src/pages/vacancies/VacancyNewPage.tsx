@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
+import Page from "@/components/layout/Page";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
@@ -50,7 +51,7 @@ export default function VacancyNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <Page width="form">
       <div className="flex items-center gap-2 mb-6">
         <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -141,6 +142,6 @@ export default function VacancyNewPage() {
         onOpenChange={setPickerOpen}
         onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
       />
-    </div>
+    </Page>
   );
 }

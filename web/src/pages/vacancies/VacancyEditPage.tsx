@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
+import Page from "@/components/layout/Page";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
@@ -54,10 +55,10 @@ export default function VacancyEditPage() {
     }
   };
 
-  if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+  if (loading) return <Page width="form" className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></Page>;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <Page width="form">
       <div className="flex items-center gap-2 mb-6">
         <Link to="/vacancies" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
         <span className="text-sm font-medium">Edit Vacancy</span>
@@ -100,6 +101,6 @@ export default function VacancyEditPage() {
       </form>
 
       <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
-    </div>
+    </Page>
   );
 }

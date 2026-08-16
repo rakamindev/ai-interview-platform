@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import Breadcrumb from "@/components/layout/Breadcrumb";
+import Page from "@/components/layout/Page";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, FileText, RefreshCw } from "lucide-react";
 import type { Assessment, Session } from "@/types";
@@ -212,17 +213,17 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <Page width="board" className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
-      </div>
+      </Page>
     );
   }
 
   if (loadFailed) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4" data-testid="invite-load-failed">
+      <Page width="board" className="space-y-4" data-testid="invite-load-failed">
         <div className="flex items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -238,12 +239,12 @@ export default function AssessmentInvitePage() {
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Try again
           </Button>
         </div>
-      </div>
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <Page width="board" className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="min-w-0 space-y-1.5">
@@ -325,7 +326,9 @@ export default function AssessmentInvitePage() {
 
       <Separator />
 
-      {/* Sessions list */}
+      {/* Candidates carry the page; what the assessment is made of sits beside
+          them rather than below, so a wide window shows both at once. */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">
@@ -369,22 +372,25 @@ export default function AssessmentInvitePage() {
 
       {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold">Skills assessed</h2>
+          <ul className="divide-y rounded-lg border">
+            {assessment.skills.map((s) => (
+              <li
+                key={s.id ?? s.skill_label}
+                className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 [overflow-wrap:anywhere]">{s.skill_label}</span>
+                <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                  {LEVEL_LABELS[s.expected_level]}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground">Level the role expects for each skill.</p>
+        </div>
       )}
-    </div>
+      </div>
+    </Page>
   );
 }

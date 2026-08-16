@@ -25,6 +25,7 @@ import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, ArrowRight, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import Page from "@/components/layout/Page";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
@@ -107,7 +108,7 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <Page width="form">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
@@ -258,6 +259,6 @@ export default function AssessmentNewPage() {
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
       />
-    </div>
+    </Page>
   );
 }
