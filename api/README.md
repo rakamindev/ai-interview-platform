@@ -27,7 +27,7 @@ Fill in the required values in `config/application.yml`:
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `WEB_BASE_URL` | Frontend (SPA) origin, e.g. `http://localhost:5173` — used to build candidate invite links |
 
 ---
 
@@ -78,7 +78,7 @@ Runs on **port 3001** by default.
 ## 7. Start the frontend
 
 ```bash
-cd ../ai-interview-web
+cd ../web
 npm install
 npm run dev
 ```

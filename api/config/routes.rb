@@ -3,6 +3,13 @@
 Rails.application.routes.draw do
   get '/health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
+  # Stale candidate invite links that point at this API host: bounce them to
+  # the web app, where /interview/:token is served by the SPA.
+  # 302 (not 301) so browsers/proxies never cache a token-scoped URL.
+  get '/interview/:token', to: redirect(status: 302) { |params, _request|
+    "#{ENV.fetch('WEB_BASE_URL', 'http://localhost:5173')}/interview/#{params[:token]}"
+  }
+
   namespace :api do
     namespace :v1 do
       # Auth
