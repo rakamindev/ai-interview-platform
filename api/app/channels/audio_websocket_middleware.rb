@@ -7,6 +7,12 @@ require 'faye/websocket'
 class AudioWebSocketMiddleware
   AUDIO_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/audio\z}
 
+  def self.db_writer_pool
+    @db_writer_pool ||= Concurrent::FixedThreadPool.new(
+      [ActiveRecord::Base.connection_pool.size - 1, 1].max
+    )
+  end
+
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
   BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
@@ -181,7 +187,7 @@ class AudioWebSocketMiddleware
       maybe_piggyback_wrap_up(state, session)
 
       # Push DB writes off the EM thread so audio forwarding doesn't stall.
-      Thread.new do
+      self.class.db_writer_pool.post do
         ActiveRecord::Base.connection_pool.with_connection do
           save_transcript_turn(session, turn_number, 'candidate', text)
           CoverageAnalyzerWorker.perform_async(session.id, turn_number)
@@ -231,7 +237,7 @@ class AudioWebSocketMiddleware
 
       turn_number = state.increment_turn!
 
-      Thread.new do
+      self.class.db_writer_pool.post do
         ActiveRecord::Base.connection_pool.with_connection do
           save_transcript_turn(session, turn_number, 'ai', text)
         end
@@ -311,7 +317,7 @@ class AudioWebSocketMiddleware
       next if state.last_token_persisted_at && (now - state.last_token_persisted_at) < 60
 
       state.last_token_persisted_at = now
-      Thread.new do
+      self.class.db_writer_pool.post do
         ActiveRecord::Base.connection_pool.with_connection do
           session.update_column(:gemini_resumption_token, token)
         end
