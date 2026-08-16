@@ -7,7 +7,9 @@ export interface AuthState {
 const STORAGE_KEY = "auth_token";
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null;
+  return (
+    localStorage.getItem(STORAGE_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null
+  );
 }
 
 export function saveToken(token: string) {

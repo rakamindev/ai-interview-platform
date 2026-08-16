@@ -10,14 +10,17 @@ import { Search, Loader2 } from "lucide-react";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
 
-
 interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (skill: Partial<AssessmentSkill>) => void;
 }
 
-export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
+export default function SkillPicker({
+  open,
+  onOpenChange,
+  onSelect,
+}: SkillPickerProps) {
   const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -28,12 +31,15 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     skillTaxonomiesApi
       .list()
       .then((res) => setSkills(res.data.skill_taxonomies ?? []))
-      .catch((err) => { console.error("skill_taxonomies fetch failed:", err); setSkills([]); })
+      .catch((err) => {
+        console.error("skill_taxonomies fetch failed:", err);
+        setSkills([]);
+      })
       .finally(() => setLoading(false));
   }, [open]);
 
   const filtered = skills.filter((s) =>
-    s.skill_label.toLowerCase().includes(query.toLowerCase())
+    s.skill_label.toLowerCase().includes(query.toLowerCase()),
   );
 
   const handleSelect = (s: SkillTaxonomy) => {
@@ -77,7 +83,9 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No skills found.
+            </p>
           ) : (
             filtered.map((s) => (
               <button

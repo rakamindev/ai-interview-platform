@@ -10,7 +10,9 @@ export function useAudioPlayback() {
 
   const getCtx = () => {
     if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-      audioCtxRef.current = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
+      audioCtxRef.current = new AudioContext({
+        sampleRate: PLAYBACK_SAMPLE_RATE,
+      });
       nextPlayTimeRef.current = 0;
     }
     return audioCtxRef.current;
@@ -71,9 +73,15 @@ export function useAudioPlayback() {
 
   const scheduleAfterPlayback = useCallback((fn: () => void) => {
     const ctx = audioCtxRef.current;
-    if (!ctx) { fn(); return; }
+    if (!ctx) {
+      fn();
+      return;
+    }
     const remaining = (nextPlayTimeRef.current - ctx.currentTime) * 1000;
-    if (remaining <= 0) { fn(); return; }
+    if (remaining <= 0) {
+      fn();
+      return;
+    }
     setTimeout(fn, remaining);
   }, []);
 

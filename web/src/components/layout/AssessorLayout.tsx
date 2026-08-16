@@ -3,7 +3,12 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Briefcase,
+  LogOut,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 
@@ -32,7 +37,9 @@ export default function AssessorLayout() {
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <span className="font-semibold text-sm">
+                Rakamin AI Interview
+              </span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -43,7 +50,7 @@ export default function AssessorLayout() {
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
                     location.pathname.startsWith(href)
                       ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4" />

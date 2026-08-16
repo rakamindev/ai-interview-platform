@@ -9,7 +9,9 @@ function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
   return "LOW";
 }
 
-export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
+export default function ConfidenceIndicator({
+  confidence,
+}: ConfidenceIndicatorProps) {
   const label = getLabel(confidence);
 
   if (label === "HIGH") {

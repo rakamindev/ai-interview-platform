@@ -31,6 +31,10 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
+      # Reload first: after the failed save_skills transaction rolled back, the
+      # in-memory association still holds partially-created children, and
+      # update! would autosave them (resurrecting a half-wiped portfolio).
+      portfolio&.reload
       portfolio&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
@@ -150,31 +154,35 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # All-or-nothing: if any skill fails to save we must not leave the
+      # portfolio half-wiped (destroyed existing skills + partial new ones).
+      ActiveRecord::Base.transaction do
+        # Destroy existing skills (idempotent regeneration)
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+        (data['configured_skills'] || []).each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      false,
+            ai_level:           skill_data['level'].to_i.clamp(1, 5),
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        (data['discovered_skills'] || []).each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           nil,
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      true,
+            ai_level:           skill_data['level'].to_i.clamp(1, 5),
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
       end
     end
   end

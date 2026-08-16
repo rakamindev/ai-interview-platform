@@ -7,7 +7,12 @@ interface VoiceBarsProps {
   className?: string;
 }
 
-export default function VoiceBars({ active, label, variant = "ai", className }: VoiceBarsProps) {
+export default function VoiceBars({
+  active,
+  label,
+  variant = "ai",
+  className,
+}: VoiceBarsProps) {
   const barCount = 5;
 
   return (
@@ -19,9 +24,7 @@ export default function VoiceBars({ active, label, variant = "ai", className }: 
             className={cn(
               "w-1.5 rounded-full transition-all",
               variant === "ai" ? "bg-primary" : "bg-secondary",
-              active
-                ? "animate-voice-bar"
-                : "h-1 opacity-30"
+              active ? "animate-voice-bar" : "h-1 opacity-30",
             )}
             style={
               active

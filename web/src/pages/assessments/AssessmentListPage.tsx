@@ -7,7 +7,11 @@ import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
 
-function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
+function SessionSummary({
+  session,
+}: {
+  session?: Assessment["latest_session"];
+}) {
   if (!session) return null;
 
   if (session.status === "active")
@@ -22,9 +26,13 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     return <span className="text-xs text-destructive">Last: failed</span>;
 
   if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
+    return (
+      <span className="text-xs text-muted-foreground">Last: completed</span>
+    );
 
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  return (
+    <span className="text-xs text-muted-foreground">Awaiting candidate</span>
+  );
 }
 
 export default function AssessmentListPage() {
@@ -58,12 +66,17 @@ export default function AssessmentListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
         </div>
       ) : assessments.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
           <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/assessments/new")}
+          >
             <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
           </Button>
         </div>

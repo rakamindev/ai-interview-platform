@@ -14,8 +14,7 @@ export const vacanciesApi = {
       params: { page },
     }),
 
-  get: (id: number) =>
-    api.get<{ vacancy: Vacancy }>(`/vacancies/${id}`),
+  get: (id: number) => api.get<{ vacancy: Vacancy }>(`/vacancies/${id}`),
 
   create: (data: VacancyPayload) =>
     api.post<{ vacancy: Vacancy }>("/vacancies", { vacancy: data }),

@@ -5,7 +5,10 @@ interface TranscriptBubbleProps {
   text: string;
 }
 
-export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProps) {
+export default function TranscriptBubble({
+  speaker,
+  text,
+}: TranscriptBubbleProps) {
   const isCandidate = speaker === "candidate";
 
   return (
@@ -15,7 +18,7 @@ export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProp
           "max-w-[85%] rounded-lg px-3 py-2 text-sm",
           isCandidate
             ? "bg-primary/10 text-foreground"
-            : "bg-muted text-foreground"
+            : "bg-muted text-foreground",
         )}
       >
         <span className="block text-xs font-medium mb-0.5 text-muted-foreground">

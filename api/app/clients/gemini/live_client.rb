@@ -89,7 +89,7 @@ module Gemini
     end
 
     # Injects hidden context via realtimeInput.text — same channel as audio, no interleaving conflicts.
-    def inject_context(text, turn_complete: true) # turn_complete kept for interface compat, ignored
+    def inject_context(text, _turn_complete: true) # turn_complete kept for interface compat, ignored
       return false unless @connected && @ws
 
       @ws.send({ realtimeInput: { text: text } }.to_json)

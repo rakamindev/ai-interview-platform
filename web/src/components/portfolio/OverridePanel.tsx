@@ -13,11 +13,19 @@ interface OverridePanelProps {
   skill: PortfolioSkill;
   existingOverride?: AssessorOverride;
   onSaved: (override: AssessorOverride) => void;
+  onStale?: () => void;
 }
 
-export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
+export default function OverridePanel({
+  skill,
+  existingOverride,
+  onSaved,
+  onStale,
+}: OverridePanelProps) {
   const [open, setOpen] = useState(false);
-  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+  const [overrideLevel, setOverrideLevel] = useState(
+    existingOverride?.override_level ?? parseLevel(skill.ai_level),
+  );
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -34,7 +42,10 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       });
       onSaved(res.data.override);
       setOpen(false);
-    } catch {
+    } catch (e: any) {
+      if (e?.response?.status === 404) {
+        onStale?.();
+      }
       setSaveError(true);
     } finally {
       setSaving(false);
@@ -51,7 +62,9 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
+              <span className="text-xs text-green-600 font-medium">
+                You Overridden ✓
+              </span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <Pencil className="h-3 w-3 mr-1" /> Edit override
@@ -78,7 +91,9 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor={`notes-${skill.id}`} className="text-sm">Notes (optional):</Label>
+        <Label htmlFor={`notes-${skill.id}`} className="text-sm">
+          Notes (optional):
+        </Label>
         <Textarea
           id={`notes-${skill.id}`}
           value={notes}
@@ -89,11 +104,15 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       </div>
 
       {saveError && (
-        <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
+        <p className="text-xs text-destructive">
+          Failed to save override. Please try again.
+        </p>
       )}
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
         <Button size="sm" onClick={handleSave} disabled={saving}>
           {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
           Save override

@@ -142,8 +142,8 @@ class AudioWebSocketMiddleware
       on_input_transcription: build_on_input_transcription(browser_ws, state, session),
       on_output_transcription: build_on_output_transcription(browser_ws, state, session),
       on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
-      on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
-      on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
+      on_go_away: ->(_time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
+      on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, _reason: reason) },
       on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
       on_resumption_token_update: build_on_resumption_token_update(state, session),
       on_ready: build_on_ready(browser_ws, state, session)
@@ -200,7 +200,7 @@ class AudioWebSocketMiddleware
 
   # Inject coverage only during GENUINE candidate turns; on_input_transcription also fires from
   # generationComplete when Gemini flushes mid-model-turn, which would trigger a dual response.
-  def maybe_inject_coverage(state, session)
+  def maybe_inject_coverage(state, _session)
     return if state.model_speaking
     return unless state.cached_coverage_text.present?
     return if state.last_coverage_digest == state.last_injected_digest
@@ -373,7 +373,7 @@ class AudioWebSocketMiddleware
   end
 
   # Handles unexpected Gemini WebSocket close (not GoAway). Audio is buffered during the gap and replayed.
-  def handle_gemini_close(browser_ws, state, code:, reason:)
+  def handle_gemini_close(browser_ws, state, code:, _reason:)
     # Normal close (1000) is intentional unless flagged as inactivity_close (which also uses 1000).
     return if code == 1000 && !state.gemini_client&.inactivity_close
 
@@ -423,7 +423,7 @@ class AudioWebSocketMiddleware
       if Rails.env.development?
         Rails.logger.warn("[AudioWS] DEBUG: forcing Gemini disconnect for session #{state.session&.id}")
         old_client = state.gemini_client
-        handle_gemini_close(browser_ws, state, code: 1011, reason: 'debug_force_reconnect')
+        handle_gemini_close(browser_ws, state, code: 1011, _reason: 'debug_force_reconnect')
         old_client&.close
       end
     when 'end_session'
@@ -498,7 +498,7 @@ class AudioWebSocketMiddleware
   end
 
   # Cancellable EM timer (vs Thread.new+sleep) — releases on session end without holding a thread for 2min.
-  def schedule_graceful_end(browser_ws, state)
+  def schedule_graceful_end(_browser_ws, state)
     return unless state.session
 
     state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do

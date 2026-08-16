@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
 class Portfolio < ApplicationRecord
+  include TenantScopedBySession
+
   GENERATION_STATUSES = %w[pending generating complete failed].freeze
+
+  tenant_scoped_by :session
 
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy

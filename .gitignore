@@ -17,3 +17,10 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Case-study deliverables (disubmit terpisah, bukan isi produk)
+docs/case-study/
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

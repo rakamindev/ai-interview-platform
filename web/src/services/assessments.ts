@@ -1,5 +1,10 @@
 import api from "./api";
-import type { Assessment, AssessmentSkill, PaginationMeta, Session } from "@/types";
+import type {
+  Assessment,
+  AssessmentSkill,
+  PaginationMeta,
+  Session,
+} from "@/types";
 
 export interface AssessmentPayload {
   name: string;
@@ -10,9 +15,12 @@ export interface AssessmentPayload {
 
 export const assessmentsApi = {
   list: (page = 1) =>
-    api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
-    }),
+    api.get<{ assessments: Assessment[]; meta: PaginationMeta }>(
+      "/assessments",
+      {
+        params: { page },
+      },
+    ),
 
   get: (id: number) =>
     api.get<{ assessment: Assessment }>(`/assessments/${id}`),
@@ -20,13 +28,13 @@ export const assessmentsApi = {
   create: (data: AssessmentPayload) =>
     api.post<{ assessment: Assessment; system_prompt_generated: boolean }>(
       "/assessments",
-      { assessment: data }
+      { assessment: data },
     ),
 
   update: (id: number, data: AssessmentPayload) =>
     api.put<{ assessment: Assessment; system_prompt_generated: boolean }>(
       `/assessments/${id}`,
-      { assessment: data }
+      { assessment: data },
     ),
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
@@ -34,9 +42,13 @@ export const assessmentsApi = {
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
-  createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
+  createSession: (
+    assessmentId: number,
+    candidateName?: string,
+    candidateId?: number,
+  ) =>
     api.post<{ session: Session; invite_url: string }>(
       `/assessments/${assessmentId}/sessions`,
-      { session: { candidate_name: candidateName, candidate_id: candidateId } }
+      { session: { candidate_name: candidateName, candidate_id: candidateId } },
     ),
 };

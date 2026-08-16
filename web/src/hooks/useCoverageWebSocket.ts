@@ -12,7 +12,9 @@ interface UseCoverageWebSocketResult {
   isConnected: boolean;
 }
 
-export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketResult {
+export function useCoverageWebSocket(
+  sessionId: number,
+): UseCoverageWebSocketResult {
   const [coverageMap, setCoverageMap] = useState<CoverageMap | null>(null);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
@@ -40,7 +42,10 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "coverage_update") {
-          setCoverageMap({ skills: msg.skills ?? [], discovered: msg.discovered ?? [] });
+          setCoverageMap({
+            skills: msg.skills ?? [],
+            discovered: msg.discovered ?? [],
+          });
         } else if (msg.type === "session_status") {
           if (msg.status === "ended") {
             setSessionEnded(true);

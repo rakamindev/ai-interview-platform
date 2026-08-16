@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
 class PortfolioSkill < ApplicationRecord
+  include TenantScopedBySession
+
   CONFIDENCE_LEVELS = %w[high medium low].freeze
+
+  tenant_scoped_by portfolio: :session
 
   belongs_to :portfolio
   has_one :assessor_override, dependent: :destroy
