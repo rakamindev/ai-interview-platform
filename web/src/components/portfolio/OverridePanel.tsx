@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,12 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+
+  useEffect(() => {
+    if (open) return;
+    setOverrideLevel(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+    setNotes(existingOverride?.assessor_notes ?? "");
+  }, [existingOverride, skill.ai_level, open]);
 
   const hasOverride = !!existingOverride;
 

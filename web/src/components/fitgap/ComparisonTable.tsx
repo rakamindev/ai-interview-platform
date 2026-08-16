@@ -43,8 +43,8 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
+            {comparisons.map((c) => (
+              <tr key={c.skill_label} className="border-b last:border-0">
                 <td className="px-4 py-2.5">{c.skill_label}</td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
                   {LEVEL_LABELS[c.required_level]}
