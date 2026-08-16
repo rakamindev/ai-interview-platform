@@ -144,7 +144,7 @@ Run: `cd web && npm test`
 
 ### Seeded fault test
 
-I introduced a deliberate regression (restored `.clamp(1, 5)` on missing levels), confirmed `generator_spec` would fail on `not_assessed` skills getting `ai_level: 1`, then reverted. Commit history shows the fault and revert.
+I introduced a deliberate regression (set `ai_level: 1` on not_assessed rows), confirmed `generator_spec` fails on `expect(skill.ai_level).to be_nil`, then restored `nil`.
 
 ## AI verification note
 
