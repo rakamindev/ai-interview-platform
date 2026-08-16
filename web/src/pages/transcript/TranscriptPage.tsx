@@ -13,6 +13,7 @@ export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [assessmentName, setAssessmentName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -24,6 +25,7 @@ export default function TranscriptPage() {
       .then(([tRes, sRes]) => {
         setTurns(tRes.data.turns);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setAssessmentName(sRes.data.assessment?.name ?? null);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -50,7 +52,7 @@ export default function TranscriptPage() {
           <Breadcrumb
             crumbs={[
               { label: "Assessments", to: "/assessments" },
-              { label: "Candidates", to: `/assessments/${id}/invite` },
+              { label: assessmentName ?? "Candidates", to: `/assessments/${id}/invite` },
               { label: candidateName ?? "Candidate" },
               { label: "Transcript" },
             ]}

@@ -25,6 +25,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [assessmentName, setAssessmentName] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
@@ -54,6 +55,7 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setAssessmentName(sRes.data.assessment?.name ?? null);
       })
       .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
@@ -152,7 +154,7 @@ export default function PortfolioPage() {
           <Breadcrumb
             crumbs={[
               { label: "Assessments", to: "/assessments" },
-              { label: "Candidates", to: `/assessments/${id}/invite` },
+              { label: assessmentName ?? "Candidates", to: `/assessments/${id}/invite` },
               { label: candidateName ?? "Candidate" },
               { label: "Portfolio" },
             ]}
