@@ -160,6 +160,9 @@ module Api
       end
 
       def portfolio_json(portfolio)
+        session = portfolio.session
+        skills  = portfolio.portfolio_skills
+
         {
           id:                portfolio.id,
           session_id:        portfolio.session_id,
@@ -167,21 +170,35 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides:         portfolio.assessor_overrides.map(&method(:override_json))
+          skills:            skills.map(&method(:portfolio_skill_json)),
+          overrides:         portfolio.assessor_overrides.map(&method(:override_json)),
+          session_verdict:   session_verdict_json(session, skills)
+        }
+      end
+
+      def session_verdict_json(session, skills)
+        {
+          end_reason:           session.end_reason,
+          duration_seconds:     session.duration_seconds,
+          assessed_count:       skills.count(&:assessed?),
+          not_assessed_count:   skills.count(&:not_assessed?),
+          low_confidence_count: skills.count { |s| s.ai_confidence == 'low' }
         }
       end
 
       def portfolio_skill_json(skill)
         {
-          id:                skill.id,
-          skill_id:          skill.skill_id,
-          skill_label:       skill.skill_label,
-          is_discovered:     skill.is_discovered,
-          ai_level:          skill.ai_level,
-          ai_confidence:     skill.ai_confidence,
-          evidence:          skill.evidence_quotes,
-          competency_summary: skill.competency_summary
+          id:                 skill.id,
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          is_discovered:      skill.is_discovered,
+          assessment_status:  skill.assessment_status,
+          ai_level:           skill.ai_level,
+          ai_confidence:      skill.ai_confidence,
+          evidence:           skill.evidence_quotes,
+          competency_summary: skill.competency_summary,
+          coverage_state:     skill.coverage_state,
+          probe_count:        skill.probe_count
         }
       end
 

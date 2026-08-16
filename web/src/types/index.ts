@@ -74,6 +74,14 @@ export interface TranscriptTurn {
   created_at: string;
 }
 
+export interface SessionVerdict {
+  end_reason?: string;
+  duration_seconds?: number;
+  assessed_count: number;
+  not_assessed_count: number;
+  low_confidence_count: number;
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;
@@ -83,17 +91,23 @@ export interface Portfolio {
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+  session_verdict?: SessionVerdict;
 }
+
+export type PortfolioAssessmentStatus = "assessed" | "not_assessed";
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  assessment_status: PortfolioAssessmentStatus;
+  ai_level: number | null;
+  ai_confidence: string | null;
   evidence: string[];
   competency_summary: string;
+  coverage_state?: string;
+  probe_count?: number;
 }
 
 export interface AssessorOverride {
@@ -129,10 +143,12 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string;
+  expected_level: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: string | null;
   is_override?: boolean;
 }
 
@@ -182,7 +198,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

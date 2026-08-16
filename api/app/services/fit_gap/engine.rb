@@ -13,7 +13,6 @@ module FitGap
       )
     end
 
-    # Returns the FitGapReport record.
     def call
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
@@ -38,47 +37,70 @@ module FitGap
 
     def build_skill_comparisons
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
-      portfolio_skills = effective_portfolio_skills  # includes overrides
+      portfolio_skills = effective_portfolio_skills
 
-      comparisons = vacancy_skills.map do |label, vacancy_skill|
+      vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
+        expected_level  = vacancy_skill.expected_level
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        if portfolio_skill.nil?
+          {
+            skill_label:     label,
+            skill_id:        vacancy_skill.skill_id,
+            candidate_level: nil,
+            expected_level:  expected_level,
+            result:          'not_assessed',
+            delta:           nil,
+            confidence:      nil,
+            is_override:     false
+          }
+        elsif portfolio_skill[:effective_level].nil?
+          {
+            skill_label:     label,
+            skill_id:        vacancy_skill.skill_id,
+            candidate_level: nil,
+            expected_level:  expected_level,
+            result:          'not_assessed',
+            delta:           nil,
+            confidence:      portfolio_skill[:confidence],
+            is_override:     portfolio_skill[:overridden]
+          }
         else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
+          candidate_level = portfolio_skill[:effective_level]
+          delta           = candidate_level - expected_level
+          result          = delta.zero? ? 'match' : (delta.positive? ? 'exceed' : 'gap')
+
+          {
+            skill_label:     label,
+            skill_id:        vacancy_skill.skill_id,
+            candidate_level: candidate_level,
+            expected_level:  expected_level,
+            result:          result,
+            delta:           delta,
+            confidence:      portfolio_skill[:confidence],
+            is_override:     portfolio_skill[:overridden]
+          }
         end
-
-        {
-          skill_label:     label,
-          skill_id:        vacancy_skill.skill_id,
-          candidate_level: candidate_level,
-          expected_level:  expected_level,
-          result:          result,
-          delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
-        }
       end
-
-      comparisons
     end
 
-    # Returns portfolio skills with overrides applied.
     def effective_portfolio_skills
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
         override = skill.assessor_override
+        effective = if override
+                      override.override_level
+                    elsif skill.not_assessed?
+                      nil
+                    else
+                      skill.ai_level
+                    end
+
         {
           id:              skill.id,
           skill_id:        skill.skill_id,
           skill_label:     skill.skill_label,
           ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
+          effective_level: effective,
           confidence:      skill.ai_confidence,
           overridden:      override.present?
         }
@@ -87,13 +109,13 @@ module FitGap
 
     def find_portfolio_skill(portfolio_skills, label, skill_id)
       portfolio_skills.find { |s| s[:skill_id] == skill_id && skill_id.present? } ||
-        portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
+        portfolio_skills.find { |s| s[:skill_label].casecmp?(label) }
     end
 
     def generate_narratives(skill_comparisons)
-      gaps    = skill_comparisons.select { |c| c[:result] == 'gap' }
-      matches = skill_comparisons.select { |c| c[:result] == 'match' }
-      exceeds = skill_comparisons.select { |c| c[:result] == 'exceed' }
+      gaps         = skill_comparisons.select { |c| c[:result] == 'gap' }
+      matches      = skill_comparisons.select { |c| c[:result] == 'match' }
+      exceeds      = skill_comparisons.select { |c| c[:result] == 'exceed' }
       not_assessed = skill_comparisons.select { |c| c[:result] == 'not_assessed' }
 
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
@@ -110,8 +132,6 @@ module FitGap
 
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed)
       vacancy = @vacancy
-      portfolio_session = @portfolio.session
-      assessment = portfolio_session.assessment
 
       <<~PROMPT
         You are writing a fit/gap analysis narrative for a candidate evaluation.
@@ -139,11 +159,13 @@ module FitGap
     end
 
     def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      gaps         = comparisons.count { |c| c[:result] == 'gap' }
+      matches      = comparisons.count { |c| c[:result] == 'match' }
+      exceeds      = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, #{gaps} gaps, " \
+        "and #{not_assessed} not assessed against role requirements."
     end
   end
 end

@@ -57,18 +57,26 @@ module Exports
       pdf.move_down 8
 
       skills = @portfolio.portfolio_skills.includes(:assessor_override)
-      configured = skills.reject(&:is_discovered)
+      configured_assessed = skills.reject(&:is_discovered).select(&:assessed?)
+      configured_not_assessed = skills.reject(&:is_discovered).select(&:not_assessed?)
       discovered = skills.select(&:is_discovered)
 
-      if configured.any?
-        pdf.font_size(13) { pdf.text "Assessed Skills", style: :bold }
+      if configured_assessed.any?
+        pdf.font_size(13) { pdf.text 'Assessed Skills', style: :bold }
         pdf.move_down 6
-        configured.each { |skill| render_skill_card(pdf, skill) }
+        configured_assessed.each { |skill| render_skill_card(pdf, skill) }
+      end
+
+      if configured_not_assessed.any?
+        pdf.move_down 6
+        pdf.font_size(13) { pdf.text 'Not Assessed Skills', style: :bold }
+        pdf.move_down 6
+        configured_not_assessed.each { |skill| render_skill_card(pdf, skill) }
       end
 
       if discovered.any?
         pdf.move_down 6
-        pdf.font_size(13) { pdf.text "Discovered Skills", style: :bold }
+        pdf.font_size(13) { pdf.text 'Discovered Skills', style: :bold }
         pdf.move_down 6
         discovered.each { |skill| render_skill_card(pdf, skill) }
       end
@@ -76,15 +84,24 @@ module Exports
 
     def render_skill_card(pdf, skill)
       override = skill.assessor_override
-      effective_level = override ? override.override_level : skill.ai_level
+      effective_level = override&.override_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text skill.skill_label.to_s, style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        if skill.not_assessed? && effective_level.nil?
+          pdf.text 'Not assessed in this session'
+        elsif skill.not_assessed? && effective_level
+          pdf.text "Assessor rating: #{LEVEL_LABELS[effective_level]}"
+        else
+          level = effective_level || skill.ai_level
+          level_text = "Level: #{LEVEL_LABELS[level]}"
+          if override && skill.ai_level
+            level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})"
+          end
+          level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+          pdf.text level_text
+        end
       end
 
       pdf.move_down 4
