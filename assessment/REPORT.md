@@ -345,6 +345,8 @@ A suite that has only ever been green proves the code passes the tests. It does 
 | RSpec | 62 examples, 0 failures | **62 examples, 14 failures** |
 | Vitest | 48 tests, 0 failures | **19 failed, 29 passed, 2 uncaught exceptions** |
 
+*(The spike branches from the portfolio-states work, which is why it counts 62 RSpec examples rather than the 66 above — the four login-tenancy specs came later and are unrelated to this defect.)*
+
 Three things in that output matter more than the counts.
 
 **The failures name the defect.** They do not read `expected 1, got nil`. They read *"refuses to invent a level from nil"*, *"does not invent a rating from a non-numeric level (the model returned prose where a level belongs)"*. A test whose name describes the bug tells the next person what broke without opening a file.
