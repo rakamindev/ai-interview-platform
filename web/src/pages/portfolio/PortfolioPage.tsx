@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import VerdictStrip from "@/components/portfolio/VerdictStrip";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
@@ -18,6 +19,7 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
@@ -26,13 +28,19 @@ export default function PortfolioPage() {
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
+    const data = res.data as {
+      status?: string;
+      portfolio?: Portfolio;
+    };
+    if (
+      data.status === "generating" ||
+      data.portfolio?.generation_status === "generating" ||
+      data.portfolio?.generation_status === "pending"
+    ) {
       setGenerating(true);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
-      // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
         overrideMap[o.portfolio_skill_id] = o;
@@ -47,11 +55,10 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setLoadError("Could not load portfolio data."))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
@@ -94,33 +101,48 @@ export default function PortfolioPage() {
     }
   };
 
+  const configuredSkills = portfolio?.skills.filter((s) => !s.is_discovered) ?? [];
+  const assessedConfigured = configuredSkills.filter((s) => s.assessment_status === "assessed");
+  const notAssessedConfigured = configuredSkills.filter((s) => s.assessment_status === "not_assessed");
+  const discoveredSkills = portfolio?.skills.filter((s) => s.is_discovered) ?? [];
+
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-3xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-24 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="max-w-3xl mx-auto border border-destructive/40 rounded-lg p-8 text-center space-y-3">
+        <p className="text-sm text-destructive">{loadError}</p>
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+            <h1 className="font-verdict text-xl font-semibold">Skill verdict</h1>
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -128,23 +150,13 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {!generating && portfolio?.generation_status === "complete" && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("pdf")}
-                disabled={!!exporting}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
                 {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 PDF
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("json")}
-                disabled={!!exporting}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
                 {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 JSON
               </Button>
@@ -153,23 +165,26 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Generating state */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              Analyzing transcript. Usually about two minutes.
             </p>
           </div>
         </div>
       )}
 
-      {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          <p className="text-sm text-destructive">
+            Portfolio generation failed.
+            {portfolio.generation_error && (
+              <span className="block mt-1 text-muted-foreground">{portfolio.generation_error}</span>
+            )}
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -183,15 +198,14 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
-          {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
+          {portfolio.session_verdict && <VerdictStrip verdict={portfolio.session_verdict} />}
+
+          {assessedConfigured.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold">Assessed skills</h2>
+              {assessedConfigured.map((skill) => (
                 <SkillPortfolioCard
                   key={skill.id}
                   skill={skill}
@@ -199,42 +213,56 @@ export default function PortfolioPage() {
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
                 />
               ))}
-          </div>
+            </div>
+          )}
 
-          {/* Discovered skills */}
-          {portfolio.skills.some((s) => s.is_discovered) && (
+          {notAssessedConfigured.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-muted-foreground">Not assessed</h2>
+              <p className="text-xs text-muted-foreground">
+                No reliable evidence from this session. Assign a rating manually if you have outside context.
+              </p>
+              {notAssessedConfigured.map((skill) => (
+                <SkillPortfolioCard
+                  key={skill.id}
+                  skill={skill}
+                  override={overrides[skill.id]}
+                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                />
+              ))}
+            </div>
+          )}
+
+          {discoveredSkills.length > 0 && (
             <>
               <Separator />
               <div className="space-y-3">
                 <div>
                   <h2 className="text-sm font-semibold flex items-center gap-1.5">
                     <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills
+                    Discovered skills
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
+                    Skills probed during the interview that were not in the original assessment
                   </p>
                 </div>
-                {portfolio.skills
-                  .filter((s) => s.is_discovered)
-                  .map((skill) => (
-                    <SkillPortfolioCard
-                      key={skill.id}
-                      skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                    />
-                  ))}
+                {discoveredSkills.map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))}
               </div>
             </>
           )}
 
           <Separator />
 
-          {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Choose vacancy..." />
               </SelectTrigger>
               <SelectContent>
@@ -245,11 +273,17 @@ export default function PortfolioPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
+            <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="sm:w-auto">
+              Run fit/gap analysis
             </Button>
           </div>
         </>
+      )}
+
+      {!generating && !portfolio && (
+        <div className="border rounded-lg p-8 text-center text-sm text-muted-foreground">
+          No portfolio available for this session yet.
+        </div>
       )}
     </div>
   );

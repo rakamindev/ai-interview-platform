@@ -21,7 +21,7 @@ module Api
         else
           new_override = @portfolio_skill.build_assessor_override(
             override_params.merge(
-              ai_level:      @portfolio_skill.ai_level,
+              ai_level:      @portfolio_skill.ai_level || override_params[:override_level],
               overridden_by: current_user.id,
               overridden_at: Time.current
             )

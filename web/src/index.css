@@ -74,6 +74,11 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-sans;
+        font-family: "Source Sans 3", system-ui, sans-serif;
+    }
+
+    .font-verdict {
+        font-family: "Fraunces", Georgia, serif;
     }
 }

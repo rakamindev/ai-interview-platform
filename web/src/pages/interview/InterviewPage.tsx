@@ -38,17 +38,22 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [infoLoading, setInfoLoading] = useState(true);
 
-  // Fetch candidate info
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setInterviewState("error");
+      setInfoLoading(false);
+      return;
+    }
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("error"))
+      .finally(() => setInfoLoading(false));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -226,15 +231,34 @@ export default function InterviewPage() {
     );
   }
 
+  if (infoLoading) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center text-sm text-muted-foreground">
+        Loading interview...
+      </div>
+    );
+  }
+
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <h2 className="text-xl font-semibold">Interview link invalid</h2>
+        <p className="text-sm text-muted-foreground">
+          This link may have expired or was entered incorrectly.
+          Contact the hiring team for a new invite.
+        </p>
+      </div>
+    );
+  }
+
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <CheckCircle className="h-12 w-12 text-primary mx-auto" />
+        <h2 className="text-xl font-semibold">Interview complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
-          <br />
           The hiring team will review your results and follow up with you.
         </p>
       </div>

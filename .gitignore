@@ -17,3 +17,6 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Case-study brief only — feature docs in docs/ are tracked
+docs/task.md

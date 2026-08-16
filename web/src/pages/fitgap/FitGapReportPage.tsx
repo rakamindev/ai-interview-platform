@@ -193,7 +193,9 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {s.ai_level != null
+                            ? `L${s.ai_level} (${s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})`
+                            : "Not assessed"}
                         </span>
                         <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>
@@ -203,6 +205,11 @@ export default function FitGapReportPage() {
             </>
           )}
         </>
+      )}
+      {!generating && !report && portfolio && (
+        <div className="border rounded-lg p-8 text-center text-sm text-muted-foreground">
+          Fit/gap report could not be loaded. Try regenerating.
+        </div>
       )}
     </div>
   );

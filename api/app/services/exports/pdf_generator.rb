@@ -76,15 +76,21 @@ module Exports
 
     def render_skill_card(pdf, skill)
       override = skill.assessor_override
-      effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text skill.skill_label.to_s, style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        if skill.not_assessed?
+          pdf.text 'Not assessed in this session'
+        else
+          effective_level = override ? override.override_level : skill.ai_level
+          level_text = "Level: #{LEVEL_LABELS[effective_level]}"
+          if override && skill.ai_level
+            level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})"
+          end
+          level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+          pdf.text level_text
+        end
       end
 
       pdf.move_down 4
