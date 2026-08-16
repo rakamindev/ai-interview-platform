@@ -18,10 +18,7 @@ module FitGap
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
 
-      report = FitGapReport.find_or_initialize_by(
-        portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
-      )
+      report = @portfolio.fit_gap_reports.find_or_initialize_by(vacancy_id: @vacancy.id)
 
       report.update!(
         skill_comparisons: skill_comparisons,

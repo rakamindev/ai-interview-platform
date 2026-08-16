@@ -60,7 +60,9 @@ module Sessions
 
       @session.create_portfolio!(
         candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
+        generation_status: 'pending',
+        # May run from a worker (grace-period end) — inherit the tenant explicitly.
+        tenant_id:         @session.tenant_id
       )
     end
 

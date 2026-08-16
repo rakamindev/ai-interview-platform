@@ -24,6 +24,8 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -52,6 +54,14 @@ export default function FitGapReportPage() {
           setPortfolio(data.portfolio);
         }
       })
+      .catch((e: any) => {
+        const status = e?.response?.status;
+        setLoadError(
+          status === 404 || status === 403
+            ? "Portfolio not found or you don't have access to it."
+            : "Failed to load the portfolio. Please refresh the page."
+        );
+      })
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -68,6 +78,8 @@ export default function FitGapReportPage() {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+    } catch {
+      setActionError("Failed to regenerate the report. Please try again.");
     } finally {
       setRegenerating(false);
     }
@@ -88,6 +100,8 @@ export default function FitGapReportPage() {
       a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setActionError("Export failed. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -98,6 +112,25 @@ export default function FitGapReportPage() {
       <div className="max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+        </div>
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">{loadError}</p>
+        </div>
       </div>
     );
   }
@@ -139,6 +172,13 @@ export default function FitGapReportPage() {
           </div>
         )}
       </div>
+
+      {/* Action error */}
+      {actionError && (
+        <div className="border border-destructive/40 rounded-lg p-4 text-center">
+          <p className="text-sm text-destructive">{actionError}</p>
+        </div>
+      )}
 
       {/* Generating */}
       {generating && (

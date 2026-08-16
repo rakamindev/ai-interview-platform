@@ -91,7 +91,7 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
+        portfolio.fit_gap_reports.find_by(vacancy_id: vacancy.id)&.destroy
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
@@ -114,7 +114,7 @@ module Api
         end
 
         # Return cached report if it exists and portfolio has no new overrides
-        existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+        existing = portfolio.fit_gap_reports.find_by(vacancy_id: vacancy.id)
         if existing
           return json_response(report: fit_gap_json(existing))
         end
@@ -128,7 +128,10 @@ module Api
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
         portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        vacancy   = Vacancy.find_by(id: params[:vacancy_id])
+        return json_error("Vacancy not found", :not_found) unless vacancy
+
+        report = portfolio.fit_gap_reports.find_by(vacancy_id: vacancy.id)
 
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
@@ -216,7 +219,7 @@ module Api
         }
 
         if vacancy_id.present?
-          report = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy_id)
+          report = portfolio.fit_gap_reports.find_by(vacancy_id: vacancy_id)
           data[:fit_gap_report] = report ? fit_gap_json(report) : nil
         end
 
