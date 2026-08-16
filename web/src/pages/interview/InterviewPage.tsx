@@ -177,8 +177,15 @@ export default function InterviewPage() {
     stopPlayback();
     sendJson({ type: "end_session" });
     disconnect();
+    if (token) {
+      try {
+        await sessionsApi.audioComplete(token);
+      } catch (e) {
+        console.error("Failed to send audioComplete status", e);
+      }
+    }
     setInterviewState("complete");
-  }, [stopCapture, stopPlayback, sendJson, disconnect]);
+  }, [token, stopCapture, stopPlayback, sendJson, disconnect]);
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
