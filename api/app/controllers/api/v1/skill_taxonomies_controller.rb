@@ -16,7 +16,7 @@ module Api
       # GET /api/v1/skill_taxonomies/:skill_id
       def show
         skill = SkillTaxonomy.find_by!(skill_id: params[:skill_id])
-        json_response(skill: skill_json(skill))
+        json_response(skill_taxonomy: skill_json(skill))
       rescue ActiveRecord::RecordNotFound
         json_error("Skill not found", :not_found)
       end
