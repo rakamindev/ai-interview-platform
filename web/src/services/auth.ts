@@ -14,7 +14,4 @@ export const authApi = {
     api.post<LoginResponse>("/auth/login", data),
 
   logout: () => api.post("/auth/logout"),
-
-  signup: (data: { email: string; password: string; role: "admin" | "user" }) =>
-    api.post<LoginResponse>("/signup", data),
 };
