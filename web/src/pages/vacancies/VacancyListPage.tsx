@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
+import Page from "@/components/layout/Page";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
 import type { Vacancy } from "@/types";
 
@@ -21,7 +22,7 @@ export default function VacancyListPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <Page width="board" className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Vacancies</h1>
         <Button onClick={() => navigate("/vacancies/new")}>
@@ -65,6 +66,6 @@ export default function VacancyListPage() {
           ))}
         </div>
       )}
-    </div>
+    </Page>
   );
 }

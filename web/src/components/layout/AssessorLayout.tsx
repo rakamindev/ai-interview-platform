@@ -3,11 +3,15 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Briefcase, LogOut, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 
+// Candidates comes first because it is the only entry that names a job rather
+// than a database table: "who is waiting on me?" Assessments and Vacancies are
+// the things you configure once and return to rarely.
 const navItems = [
+  { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
   { href: "/vacancies", label: "Vacancies", icon: Briefcase },
 ];
@@ -28,9 +32,9 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-background sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
+            <Link to="/candidates" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
@@ -74,8 +78,10 @@ export default function AssessorLayout() {
         </div>
       </header>
 
-      {/* Page content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+      {/* Page content. The shell no longer caps the width — each screen picks
+          its own tier through <Page>, because a candidate list and a two-field
+          form do not want the same measure. */}
+      <main className="w-full flex-1 px-4 py-6 sm:px-6">
         <Outlet />
       </main>
     </div>

@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import CoverageTrack from "@/components/monitor/CoverageTrack";
+import Page from "@/components/layout/Page";
 import Breadcrumb from "@/components/layout/Breadcrumb";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
@@ -173,11 +174,11 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <Page width="board" className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
-      </div>
+      </Page>
     );
   }
 
@@ -188,7 +189,7 @@ export default function LiveMonitorPage() {
   const coveredCount = allSkills.filter((s) => s.state === "covered").length;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <Page width="board" className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="min-w-0 space-y-1.5">
@@ -237,6 +238,9 @@ export default function LiveMonitorPage() {
         </div>
       )}
 
+      {/* Two columns once there is room: coverage is what the assessor acts on,
+          the transcript is what they read while deciding. Stacked below lg. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
       {/* Coverage map */}
       <Card>
         <CardHeader className="pb-3">
@@ -316,6 +320,7 @@ export default function LiveMonitorPage() {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {endError && (
         <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
@@ -354,6 +359,6 @@ export default function LiveMonitorPage() {
           </Button>
         )}
       </div>
-    </div>
+    </Page>
   );
 }

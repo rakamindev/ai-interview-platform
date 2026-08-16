@@ -47,6 +47,23 @@ export interface Session {
   created_at?: string;
 }
 
+/** One row on the cross-assessment candidate list. */
+export interface CandidateRow {
+  id: number;
+  assessment_id: number;
+  candidate_id?: number;
+  candidate_name?: string;
+  status: "pending" | "active" | "ended";
+  end_reason?: string;
+  started_at?: string;
+  ended_at?: string;
+  duration_seconds?: number;
+  created_at?: string;
+  assessment: { id: number; name?: string };
+  /** null until the AI has produced something for this session. */
+  portfolio_status: "pending" | "generating" | "complete" | "failed" | null;
+}
+
 export interface CoverageSkill {
   id: number;
   skill_id: number;

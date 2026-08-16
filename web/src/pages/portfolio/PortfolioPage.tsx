@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import Breadcrumb from "@/components/layout/Breadcrumb";
+import Page from "@/components/layout/Page";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
@@ -105,17 +106,17 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4" data-testid="portfolio-page-skeleton">
+      <Page width="document" className="space-y-4" data-testid="portfolio-page-skeleton">
         <Skeleton className="h-6 w-56" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-40 w-full" />
-      </div>
+      </Page>
     );
   }
 
   if (loadFailed) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4" data-testid="portfolio-load-failed">
+      <Page width="document" className="space-y-4" data-testid="portfolio-load-failed">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -139,12 +140,12 @@ export default function PortfolioPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <Page width="document" className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="min-w-0 space-y-1.5">
@@ -355,6 +356,6 @@ export default function PortfolioPage() {
 
         </>
       )}
-    </div>
+    </Page>
   );
 }

@@ -3,6 +3,7 @@ import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/auth/LoginPage";
+import CandidatesPage from "@/pages/candidates/CandidatesPage";
 import AssessmentListPage from "@/pages/assessments/AssessmentListPage";
 import AssessmentNewPage from "@/pages/assessments/AssessmentNewPage";
 import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
@@ -25,7 +26,10 @@ export default function App() {
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>
       <Route element={<AssessorLayout />}>
-        <Route path="/" element={<Navigate to="/assessments" replace />} />
+        {/* Candidates is the landing page: people arrive holding a name, not
+            an assessment id. */}
+        <Route path="/" element={<Navigate to="/candidates" replace />} />
+        <Route path="/candidates" element={<CandidatesPage />} />
         <Route path="/assessments" element={<AssessmentListPage />} />
         <Route path="/assessments/new" element={<AssessmentNewPage />} />
         <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />

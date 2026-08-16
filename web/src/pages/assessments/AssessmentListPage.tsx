@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
+import Page from "@/components/layout/Page";
 import { Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
 
@@ -42,7 +43,7 @@ export default function AssessmentListPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <Page width="board" className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Assessments</h1>
         <Button onClick={() => navigate("/assessments/new")}>
@@ -97,6 +98,6 @@ export default function AssessmentListPage() {
           ))}
         </div>
       )}
-    </div>
+    </Page>
   );
 }

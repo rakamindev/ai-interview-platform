@@ -7,9 +7,16 @@ import type {
   CandidateInfo,
   ConsentPolicy,
   ConsentRecord,
+  CandidateRow,
 } from "@/types";
 
 export const sessionsApi = {
+  /** Every candidate in the tenant, across all assessments. */
+  listCandidates: (status?: string) =>
+    api.get<{ sessions: CandidateRow[] }>("/sessions/candidates", {
+      params: status && status !== "all" ? { status } : undefined,
+    }),
+
   get: (id: number) =>
     api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
       `/sessions/${id}`

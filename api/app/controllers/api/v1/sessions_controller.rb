@@ -8,6 +8,24 @@ module Api
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
+      # GET /api/v1/sessions
+      #
+      # Every candidate in this tenant, newest first, regardless of which
+      # assessment they sat. An assessor arrives holding a person's name, not
+      # an assessment id, and until now the only way in was to already know
+      # which assessment to open.
+      #
+      # Session is TenantScoped, so the default scope does the isolation; the
+      # specs assert it rather than trusting it, because a listing endpoint
+      # that spans parents is exactly the shape the earlier cross-tenant leak
+      # took.
+      def all_sessions
+        sessions = Session.includes(:assessment, :portfolio).order(created_at: :desc)
+        sessions = sessions.where(status: params[:status]) if Session::STATUSES.include?(params[:status])
+
+        json_response(sessions: sessions.map { |s| candidate_row_json(s) })
+      end
+
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
@@ -246,6 +264,19 @@ module Api
           duration_seconds: session.duration_seconds,
           created_at:       session.created_at
         }
+      end
+
+      # One row on the candidate list. Carries just enough for the list to
+      # decide which action to offer without a second request per row —
+      # the assessment it belongs to, and whether a report is ready.
+      def candidate_row_json(session)
+        session_json(session).except(:invite_url).merge(
+          assessment: {
+            id:   session.assessment_id,
+            name: session.assessment&.name
+          },
+          portfolio_status: session.portfolio&.generation_status
+        )
       end
 
       def consent_json(consent)

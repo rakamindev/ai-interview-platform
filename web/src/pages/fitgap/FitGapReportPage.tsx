@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import Breadcrumb from "@/components/layout/Breadcrumb";
+import Page from "@/components/layout/Page";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
@@ -177,7 +178,7 @@ export default function FitGapReportPage() {
     : "ready";
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-1 pb-16">
+    <Page width="board" className="space-y-6 px-1 pb-16">
       <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <Breadcrumb
@@ -337,6 +338,6 @@ export default function FitGapReportPage() {
           )}
         </>
       )}
-    </div>
+    </Page>
   );
 }

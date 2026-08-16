@@ -44,6 +44,11 @@ Rails.application.routes.draw do
       end
 
       # Sessions
+      # Declared before `resources :sessions` so the literal path wins over the
+      # :id segment — otherwise /sessions/candidates would look like a lookup
+      # for a session whose id is "candidates".
+      get 'sessions/candidates', to: 'sessions#all_sessions'
+
       resources :sessions, only: %i[show] do
         member do
           post :end_session

@@ -6,6 +6,7 @@ import { sessionsApi } from "@/services/sessions";
 import { ArrowLeft, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Breadcrumb from "@/components/layout/Breadcrumb";
+import Page from "@/components/layout/Page";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -43,7 +44,7 @@ export default function TranscriptPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <Page width="document" className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="min-w-0 space-y-1.5">
           <Breadcrumb
@@ -123,6 +124,6 @@ export default function TranscriptPage() {
           })}
         </div>
       )}
-    </div>
+    </Page>
   );
 }
