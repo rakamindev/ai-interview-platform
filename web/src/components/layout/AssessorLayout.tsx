@@ -34,22 +34,30 @@ export default function AssessorLayout() {
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
-            <nav className="flex items-center gap-1">
-              {navItems.map(({ href, label, icon: Icon }) => (
-                <Link
-                  key={href}
-                  to={href}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
-                    location.pathname.startsWith(href)
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
-              ))}
+            <nav className="flex items-center gap-1" aria-label="Main">
+              {navItems.map(({ href, label, icon: Icon }) => {
+                const active = location.pathname.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    to={href}
+                    // The active section was signalled by colour alone. Every
+                    // result screen sits several levels under one of these two
+                    // links, so which one is lit is the only thing telling an
+                    // assessor which branch they are in.
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
+                      active
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
           <div className="flex items-center gap-3">

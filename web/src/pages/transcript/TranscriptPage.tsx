@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
 import { ArrowLeft, Download } from "lucide-react";
+import { cn } from "@/lib/utils";
+import Breadcrumb from "@/components/layout/Breadcrumb";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -43,19 +45,16 @@ export default function TranscriptPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
-          </div>
+        <div className="min-w-0 space-y-1.5">
+          <Breadcrumb
+            crumbs={[
+              { label: "Assessments", to: "/assessments" },
+              { label: "Candidates", to: `/assessments/${id}/invite` },
+              { label: candidateName ?? "Candidate" },
+              { label: "Transcript" },
+            ]}
+          />
+          <h1 className="text-lg font-semibold">Interview Transcript</h1>
         </div>
         {!loading && !error && turns.length > 0 && (
           <Button variant="outline" size="sm" onClick={handleDownload}>
@@ -92,20 +91,33 @@ export default function TranscriptPage() {
             return (
               <div
                 key={turn.id}
-                className={`rounded-lg p-4 ${
-                  isAI
-                    ? "bg-muted border"
-                    : "bg-background border border-primary/20"
-                }`}
+                className={cn(
+                  "rounded-lg border p-4",
+                  isAI ? "border-border bg-muted" : "border-primary/20 bg-background",
+                )}
               >
                 <p
-                  className={`text-xs font-semibold mb-1 ${
-                    isAI ? "text-muted-foreground" : "text-primary"
-                  }`}
+                  className={cn(
+                    "mb-1 text-[11px] font-semibold uppercase tracking-[0.08em]",
+                    isAI ? "text-muted-foreground" : "text-primary",
+                  )}
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>
-                <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
+                {/* This page is nothing but verbatim speech, so it is the last
+                    place that should break the rule the rest of the product
+                    keeps: the candidate's own words carry the serif, and only
+                    machine-written text stays in the interface sans. */}
+                <p
+                  className={cn(
+                    "whitespace-pre-wrap [overflow-wrap:anywhere]",
+                    isAI
+                      ? "text-sm leading-relaxed"
+                      : "font-serif text-[15px] leading-relaxed",
+                  )}
+                >
+                  {turn.text}
+                </p>
               </div>
             );
           })}

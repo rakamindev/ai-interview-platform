@@ -47,5 +47,37 @@ RSpec.describe 'Authentication tenant binding', type: :request do
                                  headers: { 'Content-Type' => 'application/json' }
       expect(response).to have_http_status(:unauthorized)
     end
+
+    context 'when the credentials are right but the role has no access' do
+      let(:non_assessor) { create_user(tenant: org, email: 'hr@example.test', role: 'user') }
+
+      it 'answers 403, not the credential error' do
+        post '/api/v1/auth/login',
+             params: { email: non_assessor.email, password: 'Password123!' }.to_json,
+             headers: { 'Content-Type' => 'application/json' }
+
+        expect(response).to have_http_status(:forbidden)
+      end
+
+      it 'does not tell them their password is wrong' do
+        # Sending someone to reset a password that already works guarantees they
+        # never get in, however many times they try.
+        post '/api/v1/auth/login',
+             params: { email: non_assessor.email, password: 'Password123!' }.to_json,
+             headers: { 'Content-Type' => 'application/json' }
+
+        message = JSON.parse(response.body)['errors'].first['message']
+        expect(message).not_to match(/password/i)
+        expect(message).to match(/does not have access/i)
+      end
+
+      it 'still refuses to mint a token' do
+        post '/api/v1/auth/login',
+             params: { email: non_assessor.email, password: 'Password123!' }.to_json,
+             headers: { 'Content-Type' => 'application/json' }
+
+        expect(JSON.parse(response.body)).not_to have_key('token')
+      end
+    end
   end
 end

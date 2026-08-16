@@ -33,4 +33,9 @@ class Message
   def self.session_not_active
     'Session is not active.'
   end
+
+  def self.assessor_access_required
+    'This account does not have access to the assessor workspace. ' \
+      'Ask your administrator to grant access.'
+  end
 end

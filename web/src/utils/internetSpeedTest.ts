@@ -22,87 +22,85 @@ export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     maxPingMs: 300,
 };
 
-const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+/**
+ * Every measurement below runs against this application's own API.
+ *
+ * The earlier implementation timed requests to Google, jsDelivr, unpkg,
+ * httpbin.org and postman-echo.com. That put a candidate's IP address and a
+ * timestamp in front of five companies nobody named in the data-protection
+ * notice they had just accepted, seconds before an interview — a disclosure
+ * they were never asked about and could not decline.
+ *
+ * Measuring our own origin is also the more honest number: what matters is
+ * whether the candidate's line can carry an interview with *this* service, not
+ * how quickly a CDN edge node answers them.
+ *
+ * The two VITE_SPEED_TEST_* variables remain as an escape hatch for
+ * deployments that terminate the media path somewhere other than the API.
+ */
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api/v1";
 
-async function measurePing(): Promise<number> {
-    if (SPEED_TEST_PING_URL) {
-        try {
-            const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            return 999;
-        }
-    }
-    const testUrls = [
-        "https://www.google.com/favicon.ico",
-        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
-        "https://unpkg.com/react@18/umd/react.production.min.js",
-    ];
-    for (const url of testUrls) {
-        try {
-            const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            continue;
-        }
-    }
-    return 999;
+const PING_URL =
+    (import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined) || `${API_BASE_URL}/health`;
+const DOWNLOAD_URL = `${API_BASE_URL}/speed_test`;
+const UPLOAD_URL =
+    (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) || `${API_BASE_URL}/speed_test`;
+
+const DOWNLOAD_BYTES = 512 * 1024;
+const UPLOAD_BYTES = 512 * 1024;
+const UNREACHABLE_PING_MS = 999;
+
+/** Defeats any cache between here and the server without varying the path. */
+function bust(url: string): string {
+    return `${url}${url.includes("?") ? "&" : "?"}_=${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-async function measureDownloadSpeed(): Promise<number> {
-    const testFiles = [
-        { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
-        { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },
-        { url: "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js", size: 0.09 },
-    ];
-    for (const testFile of testFiles) {
-        try {
-            const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
-            if (response.ok) {
-                await response.blob();
-                const seconds = (performance.now() - start) / 1000;
-                return testFile.size / seconds;
-            }
-        } catch {
-            continue;
-        }
-    }
-    // Rough fallback
+async function measurePing(): Promise<number> {
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
-        const duration = (performance.now() - start) / 1000;
-        return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
+        const res = await fetch(bust(PING_URL), { cache: "no-store" });
+        if (!res.ok) return UNREACHABLE_PING_MS;
+        await res.arrayBuffer();
+        return performance.now() - start;
+    } catch {
+        return UNREACHABLE_PING_MS;
+    }
+}
+
+/** Megabytes per second. Zero means the transfer never completed. */
+async function measureDownloadSpeed(): Promise<number> {
+    try {
+        const start = performance.now();
+        const res = await fetch(bust(`${DOWNLOAD_URL}?bytes=${DOWNLOAD_BYTES}`), { cache: "no-store" });
+        if (!res.ok) return 0;
+
+        // Measure the bytes that actually arrived rather than the bytes we
+        // asked for: a proxy or a truncated response would otherwise be
+        // reported as a fast line.
+        const received = (await res.arrayBuffer()).byteLength;
+        const seconds = (performance.now() - start) / 1000;
+        if (seconds <= 0 || received === 0) return 0;
+
+        return received / (1024 * 1024) / seconds;
     } catch {
         return 0;
     }
 }
 
 async function measureUploadSpeed(): Promise<number> {
-    const uploadSizeMB = 0.5;
-    const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
-        type: "application/octet-stream",
-    });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
-    for (const endpoint of endpoints) {
-        try {
-            const formData = new FormData();
-            formData.append("test", uploadData);
-            const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
-            const seconds = (performance.now() - start) / 1000;
-            return uploadSizeMB / seconds;
-        } catch {
-            continue;
-        }
+    const payload = new Blob([new ArrayBuffer(UPLOAD_BYTES)], { type: "application/octet-stream" });
+
+    try {
+        const start = performance.now();
+        const res = await fetch(bust(UPLOAD_URL), { method: "POST", body: payload });
+        if (!res.ok) return 0;
+        const seconds = (performance.now() - start) / 1000;
+        if (seconds <= 0) return 0;
+
+        return UPLOAD_BYTES / (1024 * 1024) / seconds;
+    } catch {
+        return 0;
     }
-    return 0.5; // conservative fallback
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {

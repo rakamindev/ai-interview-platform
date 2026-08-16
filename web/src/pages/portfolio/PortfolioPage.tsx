@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import Breadcrumb from "@/components/layout/Breadcrumb";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
@@ -23,6 +24,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -41,15 +43,22 @@ export default function PortfolioPage() {
     }
   }, [sessionId]);
 
-  useEffect(() => {
+  // Swallowing this used to render the "no portfolio yet" empty state, which
+  // tells an assessor the AI has not finished — when in fact the request
+  // failed and the portfolio may well exist. The two lead to opposite actions.
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadFailed(false);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
+
+  useEffect(load, [load]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -104,20 +113,50 @@ export default function PortfolioPage() {
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+  if (loadFailed) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4" data-testid="portfolio-load-failed">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+          <h1 className="text-lg font-semibold">Couldn't load these results</h1>
+        </div>
+        <div className="rounded-lg border border-destructive/40 p-5">
+          <p className="text-sm">
+            The request failed, so this page cannot tell you whether a portfolio exists for
+            this session. This is not the same as the AI having found nothing.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={load}>
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Try again
+            </Button>
+            <Link
+              to={`/assessments/${id}/sessions/${sessionId}/transcript`}
+              className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-accent"
+            >
+              <FileText className="h-3.5 w-3.5" /> Open transcript
+            </Link>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="min-w-0 space-y-1.5">
+          <Breadcrumb
+            crumbs={[
+              { label: "Assessments", to: "/assessments" },
+              { label: "Candidates", to: `/assessments/${id}/invite` },
+              { label: candidateName ?? "Candidate" },
+              { label: "Portfolio" },
+            ]}
+          />
+          <h1 className="text-lg font-semibold">Portfolio Results</h1>
         </div>
 
         <div className="flex gap-2">
@@ -226,6 +265,50 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          {/* Comparing this candidate against a role is the decision this page
+              feeds, so it sits above the evidence rather than below all of it.
+              It used to be the last control on a page several screens long. */}
+          <div
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3"
+            data-testid="fitgap-launcher"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Compare against a role</p>
+              <p className="text-xs text-muted-foreground">
+                {vacancies.length === 0
+                  ? "No vacancies yet — create one to run a fit/gap analysis."
+                  : "See where this candidate meets, exceeds, or falls short of the requirements."}
+              </p>
+            </div>
+            {vacancies.length === 0 ? (
+              <Link
+                to="/vacancies/new"
+                className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-accent"
+              >
+                New vacancy <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue placeholder="Choose vacancy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vacancies.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.role_title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                  Run fit/gap
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Configured skills */}
           <div className="space-y-3">
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -270,27 +353,6 @@ export default function PortfolioPage() {
             </>
           )}
 
-          <Separator />
-
-          {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
         </>
       )}
     </div>

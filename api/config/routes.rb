@@ -10,7 +10,29 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
+      # Speed test, both directions, served from our own origin.
+      #
+      # The candidate runs this seconds before an interview, so measuring their
+      # line against a public CDN would hand their IP and timing to third
+      # parties we never named in the consent notice — and would measure the
+      # route to that CDN rather than the route to the service they are about
+      # to talk to. Both problems disappear when the bytes come from here.
+
+      # Download: a fixed, incompressible payload. `?bytes=` is clamped so the
+      # endpoint cannot be turned into an outbound bandwidth amplifier.
+      get 'speed_test', to: proc { |env|
+        requested = Rack::Request.new(env).params['bytes'].to_i
+        bytes = requested.clamp(64 * 1024, 2 * 1024 * 1024)
+        bytes = 512 * 1024 if requested.zero?
+
+        [200, {
+          'Content-Type' => 'application/octet-stream',
+          'Cache-Control' => 'no-store, no-cache, must-revalidate',
+          'Content-Length' => bytes.to_s
+        }, [SecureRandom.bytes(bytes)]]
+      }
+
+      # Upload: accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]

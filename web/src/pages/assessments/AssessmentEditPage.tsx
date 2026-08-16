@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import Breadcrumb from "@/components/layout/Breadcrumb";
 import {
   DndContext,
   closestCenter,
@@ -23,7 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
@@ -100,13 +101,17 @@ export default function AssessmentEditPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Edit Assessment</span>
+      {/* Back and Cancel used to land in different places — one at the list,
+          one at the assessment you were editing. Both now return here. */}
+      <div className="mb-6 space-y-1.5">
+        <Breadcrumb
+          crumbs={[
+            { label: "Assessments", to: "/assessments" },
+            { label: "Candidates", to: `/assessments/${id}/invite` },
+            { label: "Edit" },
+          ]}
+        />
+        <h1 className="text-lg font-semibold">Edit Assessment</h1>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

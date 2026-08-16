@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import CoverageTrack from "@/components/monitor/CoverageTrack";
+import Breadcrumb from "@/components/layout/Breadcrumb";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import { COVERAGE_STATE_LABELS } from "@/utils/constants";
@@ -190,16 +191,15 @@ export default function LiveMonitorPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
-          </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
+        <div className="min-w-0 space-y-1.5">
+          <Breadcrumb
+            crumbs={[
+              { label: "Assessments", to: "/assessments" },
+              { label: assessmentName || "Candidates", to: `/assessments/${id}/invite` },
+              { label: "Live Monitor" },
+            ]}
+          />
+          <h1 className="text-lg font-semibold">Live Monitor</h1>
         </div>
 
         <div className="flex items-center gap-3">

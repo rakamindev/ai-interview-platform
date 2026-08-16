@@ -11,7 +11,12 @@ module Api
 
         return json_error('Invalid email or password', :unauthorized) unless user&.authenticate(params[:password])
 
-        return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
+        # Their credentials are correct; the account simply is not allowed in
+        # here. Reusing the credential error would send someone to reset a
+        # password that already works, and they would never get past this line
+        # however many times they tried. The message says nothing about which
+        # accounts do have access, so it leaks no more than the login form does.
+        return json_error(Message.assessor_access_required, :forbidden) unless user.role == 'admin'
 
         scheme = resolve_scheme(user)
         token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })

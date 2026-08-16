@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import Breadcrumb from "@/components/layout/Breadcrumb";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, FileText, RefreshCw } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -114,6 +115,19 @@ function SessionRow({
               Results
             </Button>
           )}
+          {/* A failed session is the one an assessor most needs to look at, and
+              it used to render no button at all — its transcript existed but
+              nothing in the interface led there. */}
+          {isEnded && session.end_reason === "error" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/transcript`)}
+            >
+              <FileText className="h-3 w-3 mr-1" /> Transcript
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -132,21 +146,29 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
     setSessions(res.data.sessions);
   }, [id]);
 
-  useEffect(() => {
+  // A swallowed error used to render as an assessment with no candidates,
+  // which reads as "nobody has been invited" — the opposite of "we could not
+  // find out". An assessor acts on that difference.
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadFailed(false);
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => setLoadFailed(true)).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(load, [load]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -198,14 +220,39 @@ export default function AssessmentInvitePage() {
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+  if (loadFailed) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4" data-testid="invite-load-failed">
         <div className="flex items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
+          <h1 className="text-lg font-semibold">Couldn't load this assessment</h1>
+        </div>
+        <div className="rounded-lg border border-destructive/40 p-5">
+          <p className="text-sm">
+            The candidate list could not be fetched, so this page cannot show who has been
+            invited. Nothing has been changed or deleted.
+          </p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={load}>
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="min-w-0 space-y-1.5">
+          <Breadcrumb
+            crumbs={[
+              { label: "Assessments", to: "/assessments" },
+              { label: assessment?.name ?? "Assessment" },
+            ]}
+          />
           <div>
             <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">

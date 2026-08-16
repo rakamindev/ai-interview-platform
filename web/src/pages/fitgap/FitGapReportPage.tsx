@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+import Breadcrumb from "@/components/layout/Breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
@@ -179,16 +180,15 @@ export default function FitGapReportPage() {
     <div className="mx-auto max-w-4xl space-y-6 px-1 pb-16">
       <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="inline-flex items-center gap-1 hover:text-foreground"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Portfolio
-            </Link>
-          </div>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight">Fit / Gap Report</h1>
+          <Breadcrumb
+            crumbs={[
+              { label: "Assessments", to: "/assessments" },
+              { label: "Candidates", to: `/assessments/${id}/invite` },
+              { label: "Portfolio", to: `/assessments/${id}/sessions/${sessionId}/portfolio` },
+              { label: "Fit / Gap" },
+            ]}
+          />
+          <h1 className="mt-1.5 text-xl font-semibold tracking-tight">Fit / Gap Report</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             How this candidate's assessed skills line up with what the role asks for.
           </p>
