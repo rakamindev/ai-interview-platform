@@ -16,7 +16,7 @@ default: &default
 
 development:
   <<: *default
-  database: rakamin_development
+  database: <%= ENV['DB_NAME'] %>
 
 test:
   <<: *default
