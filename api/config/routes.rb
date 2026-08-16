@@ -14,12 +14,6 @@ Rails.application.routes.draw do
       get  'speed_test/ping',   to: 'speed_tests#ping'
       post 'speed_test/upload', to: 'speed_tests#upload'
 
-      # Legacy upload endpoint retained for existing clients.
-      post 'speed_test', to: proc { |env|
-        bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
-      }
-
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
