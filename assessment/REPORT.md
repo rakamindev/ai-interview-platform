@@ -30,7 +30,7 @@ I fixed the fabrication at its source, made "not assessed" a state the database,
 
 | | |
 |---|---|
-| **Umbrella pull request** | `<<UMBRELLA_PR_URL>>` |
+| **Umbrella pull request** | [rakamindev/ai-interview-platform#20](https://github.com/rakamindev/ai-interview-platform/pull/20) |
 | **Video walkthrough** (3–5 min) | `<<VIDEO_URL>>` |
 | Sub-PR #4 | [Add a working dev environment and test harness](https://github.com/husenEF/ai-interview-platform/pull/4) |
 | Sub-PR #5 | [Scope portfolios to their tenant](https://github.com/husenEF/ai-interview-platform/pull/5) |
