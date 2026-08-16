@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete appeal]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete appeal]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -151,6 +151,29 @@ module Api
           time_limit_min:  assessment.time_limit_min,
           session_status:  session.status
         )
+      end
+
+      # POST /sessions/:token/appeal — no JWT, invite token in URL
+      def appeal
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.end_reason != "error"
+          return json_error("Session is not eligible for appeal", :unprocessable_entity)
+        end
+
+        notes = params.dig(:appeal, :candidate_objection_notes).to_s.strip
+
+        if notes.length < 10
+          return json_error("Objection notes must be at least 10 characters", :unprocessable_entity)
+        end
+
+        session.update!(
+          candidate_objection_notes: notes,
+          audit_status: "objection_filed"
+        )
+
+        json_response({ message: "Appeal submitted successfully" }, :created)
       end
 
       private
