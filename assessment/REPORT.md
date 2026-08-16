@@ -3,7 +3,7 @@
 **Candidate:** Ukino  
 **Repository:** github.com/rakamindev/ai-interview-platform  
 **Branch:** `feature/honest-skill-verdict`  
-**Pull Request:** _(see PR link after push)_  
+**Pull Request:** https://github.com/rakamindev/ai-interview-platform/pull/22  
 **Video walkthrough:** _(record 3–5 min using script below; paste Loom/YouTube link here)_
 
 ---
@@ -118,7 +118,7 @@ _Screenshots to embed in PDF:_
 
 ## 4. Pull request
 
-GitHub PR link: _(filled after `gh pr create`)_
+GitHub PR link: https://github.com/rakamindev/ai-interview-platform/pull/22
 
 ---
 
