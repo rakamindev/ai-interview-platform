@@ -364,7 +364,13 @@ module Gemini
 
         stop_silence_pump unless @model_emitting_audio
         @model_emitting_audio = true
-        audio_bytes = Base64.strict_decode64(inline['data'])
+        audio_bytes =
+          begin
+            Base64.strict_decode64(inline['data'])
+          rescue ArgumentError => e
+            Rails.logger.warn("[Gemini::LiveClient] Skipping malformed audio chunk: #{e.message}")
+            next
+          end
         @on_audio&.call(audio_bytes)
       end
     end
