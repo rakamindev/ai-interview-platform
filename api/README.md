@@ -87,6 +87,26 @@ Runs on **port 5173** by default.
 
 ---
 
+## 8. Running Tests
+
+To run the automated RSpec test suite:
+
+1. Prepare the test database:
+   ```bash
+   RAILS_ENV=test bundle exec rails db:test:prepare
+   ```
+
+2. Run the specs:
+   ```bash
+   # Standard command
+   bundle exec rspec
+
+   # If using rbenv on macOS
+   /opt/homebrew/bin/rbenv exec bundle exec rspec
+   ```
+
+---
+
 ## All services at a glance
 
 | Service | Command | Port |
@@ -94,4 +114,6 @@ Runs on **port 5173** by default.
 | Redis | `docker run -d -p 6379:6379 --name redis redis:alpine` | 6379 |
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
-| Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+| Frontend | `npm run dev` (in `web/`) | 5173 |
+| RSpec Tests | `bundle exec rspec` | — |
+
