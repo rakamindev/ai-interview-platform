@@ -52,7 +52,7 @@ module FitGap
           candidate_level = nil
           expected_level  = vacancy_skill.expected_level
           delta           = nil
-          result          = 'not_assessed'
+          result          = @portfolio.session&.end_reason == 'error' ? 'system_error' : 'not_assessed'
         end
 
         {
