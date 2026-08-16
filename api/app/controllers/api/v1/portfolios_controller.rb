@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = portfolio_scope.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +101,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = portfolio_scope.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +127,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = portfolio_scope.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -141,6 +141,12 @@ module Api
 
       private
 
+      # Tenant boundary: portfolios have no tenant_id column, so scope through
+      # the owning session. Prevents cross-tenant reads by ID guessing (UU PDP).
+      def portfolio_scope
+        Portfolio.joins(:session).where(sessions: { tenant_id: current_tenant_id })
+      end
+
       def set_session
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -153,7 +159,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = portfolio_scope.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -202,11 +208,22 @@ module Api
           id:                report.id,
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
+          skill_comparisons: normalized_comparisons(report.skill_comparisons),
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at
         }
+      end
+
+      # Backward compatibility: reports generated before the payload contract fix
+      # stored the vacancy requirement as `expected_level` and omitted `is_override`.
+      def normalized_comparisons(comparisons)
+        (comparisons || []).map do |c|
+          c = c.stringify_keys
+          c["required_level"] ||= c.delete("expected_level")
+          c["is_override"] = false unless c.key?("is_override")
+          c
+        end
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
