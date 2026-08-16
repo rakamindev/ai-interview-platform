@@ -60,11 +60,8 @@ module Gemini
           interval_randomness: 0.5,
           backoff_factor: 2,
           retry_statuses: [429, 500, 502, 503],
-          retry_block: ->(env, _opts, retries, exc) {
-            retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
-          }
+          methods: [],
+          retry_if: ->(_env, _exc) { true }
         }
         f.options.timeout = @timeout
         f.options.open_timeout = 10
@@ -79,7 +76,12 @@ module Gemini
         raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
       end
 
-      data = JSON.parse(response.body)
+      data =
+        begin
+          JSON.parse(response.body)
+        rescue JSON::ParserError => e
+          raise ApiError.new("Malformed JSON from Gemini: #{e.message}", status: response.status, body: response.body)
+        end
       text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
 
       raise ApiError.new("No content in Gemini response") unless text
