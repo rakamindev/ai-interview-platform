@@ -14,6 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { usePolling } from "@/hooks/usePolling";
+import ErrorNote from "@/components/ErrorNote";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
@@ -132,6 +134,7 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -149,12 +152,8 @@ export default function AssessmentInvitePage() {
   }, [id]);
 
   // Poll while any session is live or pending
-  useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
-    if (!hasActive) return;
-    const interval = setInterval(loadSessions, 5000);
-    return () => clearInterval(interval);
-  }, [sessions, loadSessions]);
+  const hasActiveSession = sessions.some((s) => s.status !== "ended");
+  usePolling(loadSessions, 5000, hasActiveSession);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
@@ -162,6 +161,8 @@ export default function AssessmentInvitePage() {
   };
 
   const handleInviteCandidate = async () => {
+    if (creatingSession) return;
+    setError(null);
     setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
@@ -170,6 +171,8 @@ export default function AssessmentInvitePage() {
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+    } catch {
+      setError("Failed to create the invite link. Please try again.");
     } finally {
       setCreatingSession(false);
     }
@@ -200,6 +203,8 @@ export default function AssessmentInvitePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {error && <ErrorNote message={error} />}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -239,14 +244,14 @@ export default function AssessmentInvitePage() {
               placeholder="e.g. Budi Santoso"
               value={candidateNameInput}
               onChange={(e) => setCandidateNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
+              onKeyDown={(e) => { if (e.key === "Enter" && !creatingSession) handleInviteCandidate(); }}
               autoFocus
             />
             <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
-            <Button onClick={handleInviteCandidate}>Create Link</Button>
+            <Button onClick={handleInviteCandidate} disabled={creatingSession}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
