@@ -386,7 +386,9 @@ puts ""
 # console. The login screen is unusable as shipped.
 #
 # AuthenticationController#authenticate additionally rejects anyone whose role
-# is not 'admin', so a 'user' row would not be enough.
+# is not 'admin', so a 'user' row would not be enough — and now also rejects a
+# user with no organisation, since the tenant in the issued token is read from
+# the user's own record rather than from the request.
 
 DEV_ASSESSOR = {
   email:    ENV.fetch('SEED_ASSESSOR_EMAIL', 'assessor@test-corp.local'),
@@ -399,10 +401,11 @@ assessor = User.find_or_initialize_by(email: DEV_ASSESSOR[:email])
 if assessor.persisted?
   puts "  Assessor already exists: #{assessor.email} (skipped)"
 else
-  assessor.password = DEV_ASSESSOR[:password]
-  assessor.role     = DEV_ASSESSOR[:role]
+  assessor.password  = DEV_ASSESSOR[:password]
+  assessor.role      = DEV_ASSESSOR[:role]
+  assessor.tenant_id = org['id']
   assessor.save!
-  puts "  Created assessor: #{assessor.email}"
+  puts "  Created assessor: #{assessor.email} (tenant #{org['id']} / #{org['scheme']})"
 end
 
 puts ""

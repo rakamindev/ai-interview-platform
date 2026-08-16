@@ -2,6 +2,7 @@
 
 FactoryBot.define do
   factory :user do
+    organization
     sequence(:email) { |n| "assessor#{n}@example.test" }
     password { 'correct horse battery staple' }
     role     { 'admin' }
