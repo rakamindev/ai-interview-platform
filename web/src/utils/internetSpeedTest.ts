@@ -16,9 +16,14 @@ export interface SpeedThresholds {
     maxPingMs: number;
 }
 
+// Calibrated for a voice-only interview: the audio WebSocket needs roughly
+// 64–128 kbps per direction (Opus), so 2 Mbps down / 1 Mbps up leaves
+// 8–15x headroom while still rejecting connections that cannot sustain a
+// real-time call. The old 8/4 Mbps defaults rejected typical Indonesian
+// home connections (3–5 Mbps up) that would have streamed audio fine.
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minDownloadMbps: 2,
+    minUploadMbps: 1,
     maxPingMs: 300,
 };
 
@@ -29,7 +34,7 @@ async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {
         try {
             const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
+            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache", signal: AbortSignal.timeout(5000) });
             return performance.now() - start;
         } catch {
             return 999;
@@ -43,7 +48,9 @@ async function measurePing(): Promise<number> {
     for (const url of testUrls) {
         try {
             const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
+            // no-cors: we only time the round trip and never read the opaque
+            // response, so the endpoint needs no CORS headers.
+            await fetch(url, { mode: "no-cors", cache: "no-cache", signal: AbortSignal.timeout(5000) });
             return performance.now() - start;
         } catch {
             continue;
@@ -61,7 +68,9 @@ async function measureDownloadSpeed(): Promise<number> {
     for (const testFile of testFiles) {
         try {
             const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
+            // Needs a real CORS-enabled endpoint: we read the response body
+            // (blob) to measure throughput, so no-cors is not an option here.
+            const response = await fetch(testFile.url, { cache: "no-cache", signal: AbortSignal.timeout(10_000) });
             if (response.ok) {
                 await response.blob();
                 const seconds = (performance.now() - start) / 1000;
@@ -74,7 +83,7 @@ async function measureDownloadSpeed(): Promise<number> {
     // Rough fallback
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
+        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache", signal: AbortSignal.timeout(5000) });
         const duration = (performance.now() - start) / 1000;
         return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
     } catch {
@@ -87,15 +96,24 @@ async function measureUploadSpeed(): Promise<number> {
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+    // Only postman-echo is kept: it answers multipart POST reliably, and with
+    // no-cors below it needs no CORS headers. (httpbin.org is intermittently
+    // down and does not respond at all — it was removed.)
+    const endpoints = SPEED_TEST_UPLOAD_URL ? [SPEED_TEST_UPLOAD_URL] : ["https://postman-echo.com/post"];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            // no-cors: we only time the upload and never read the opaque
+            // response, so the endpoint needs no CORS headers. A timeout keeps
+            // a dead endpoint from hanging the hardware check forever.
+            await fetch(endpoint, {
+                method: "POST",
+                mode: "no-cors",
+                body: formData,
+                signal: AbortSignal.timeout(10_000),
+            });
             const seconds = (performance.now() - start) / 1000;
             return uploadSizeMB / seconds;
         } catch {
