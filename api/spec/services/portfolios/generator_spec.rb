@@ -11,6 +11,23 @@ RSpec.describe Portfolios::Generator do
   let(:gemini_client) { instance_double(Gemini::HttpClient) }
 
   describe '#call' do
+    context 'when initiated with insufficient probes' do
+      before do
+        create(:coverage_map, session: session, skill_id: 'sk-a', skill_label: 'Skill A',
+                              state: 'initiated', probe_count: 1)
+      end
+
+      it 'marks the skill not_assessed without calling Gemini' do
+        expect(gemini_client).not_to receive(:generate_content)
+
+        portfolio = Portfolios::Generator.new(session: session, gemini_client: gemini_client).call
+        skill = portfolio.portfolio_skills.find_by(skill_label: 'Skill A')
+
+        expect(skill.assessment_status).to eq('not_assessed')
+        expect(skill.ai_level).to be_nil
+      end
+    end
+
     context 'when a skill was not discussed' do
       before do
         create(:coverage_map, session: session, skill_id: 'sk-a', skill_label: 'Skill A',

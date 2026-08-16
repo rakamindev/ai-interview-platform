@@ -23,18 +23,20 @@ module Portfolios
 
       portfolio.update!(generation_status: 'generating')
 
-      classification = classify_coverage_maps
-      portfolio.portfolio_skills.destroy_all
+      ActiveRecord::Base.transaction do
+        classification = classify_coverage_maps
+        portfolio.portfolio_skills.destroy_all
 
-      save_not_assessed_skills(portfolio, classification[:not_assessed])
+        save_not_assessed_skills(portfolio, classification[:not_assessed])
 
-      if classification[:assessed].any?
-        prompt   = build_prompt(classification[:assessed])
-        response = @gemini_client.generate_content(prompt, temperature: 0.2)
-        save_assessed_skills(portfolio, classification[:assessed], response)
+        if classification[:assessed].any?
+          prompt   = build_prompt(classification[:assessed])
+          response = @gemini_client.generate_content(prompt, temperature: 0.2)
+          save_assessed_skills(portfolio, classification[:assessed], response)
+        end
+
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
       end
-
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
@@ -80,14 +82,18 @@ module Portfolios
     end
 
     def build_prompt(assessed_maps)
-      assessment        = @session.assessment
-      configured_skills = assessment.assessment_skills.order(:display_order)
-      turns             = @session.transcript_turns.ordered
+      assessment = @session.assessment
+      turns      = @session.transcript_turns.ordered
 
       assessed_configured = assessed_maps.reject(&:is_discovered)
       assessed_discovered = assessed_maps.select(&:is_discovered)
+      assessed_labels = assessed_maps.map(&:skill_label)
 
-      skills_text = configured_skills.map { |s| skill_definition_block(s) }.join("\n\n")
+      skills_text = assessment.assessment_skills
+                              .select { |s| assessed_labels.include?(s.skill_label) }
+                              .sort_by(&:display_order)
+                              .map { |s| skill_definition_block(s) }
+                              .join("\n\n")
 
       coverage_json = {
         skills:     assessed_configured.map { |m| coverage_json(m) },

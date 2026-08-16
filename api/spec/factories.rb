@@ -40,7 +40,7 @@ FactoryBot.define do
 
     trait :with_coverage do
       after(:create) do |session|
-        skill = session.assessment.assessment_skills.first
+        skill = create(:assessment_skill, assessment: session.assessment)
         create(:coverage_map,
                session: session,
                skill_id: skill.skill_id,
