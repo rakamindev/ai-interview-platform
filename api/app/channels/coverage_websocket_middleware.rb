@@ -124,6 +124,7 @@ class CoverageWebSocketMiddleware
 
   def authenticate_assessor_by_token(token, session_id)
     payload = JsonWebToken.decode(token)
+    return [nil, 'Unauthorized role'] unless %w[assessor admin].include?(payload[:role])
 
     org = Organization.find_by(scheme: payload[:scheme])
     return [nil, 'Invalid tenant'] unless org
