@@ -58,11 +58,15 @@ Struktur dasarnya: dua pintu masuk (login assessor, link bertoken kandidat), tan
 | N-2 | Kontrol fit/gap berada di dasar halaman sepanjang beberapa layar | **Ditutup** — dipindah ke atas, di atas kartu bukti |
 | N-3 | Vacancy tak punya jalan ke hasil penilaian yang memakainya | Follow-up — butuh endpoint/daftar baru |
 | N-4 | Sesi `end_reason: "error"` tidak merender tombol apa pun → buntu | **Ditutup** — dapat tombol Transcript |
-| N-5 | Nomor kandidat dihitung `sessions.length - i`, berpindah orang tiap ada undangan baru | Follow-up — butuh nomor tersimpan (migrasi) |
+| N-5 | Nomor kandidat posisional (`sessions.length - i`), bukan identitas tersimpan | Follow-up — **bukan bug hari ini** (lihat catatan koreksi di bawah), tapi jadi bug begitu retensi data dijalankan |
 | N-6 | Login menolak role dengan pesan "Invalid email or password" | **Ditutup** — 403 + pesan tentang akses; password salah tetap 401 |
 | N-7 | Membuka URL fit/gap yang belum punya report otomatis memicu job Gemini | Follow-up — perlu keputusan produk soal aksi eksplisit |
 | N-8 | `.catch(() => {})` membuat request gagal tampil sebagai hasil kosong | **Ditutup** — dua halaman punya state error + retry |
 | N-9 | Halaman transcript merender ucapan kandidat dengan sans, melanggar AC H14 sendiri | **Ditutup** — serif, konsisten dengan tiga layar lain |
+
+**Koreksi terhadap N-5.** Saat pertama ditulis, N-5 disebut sebagai nomor yang bergeser tiap ada undangan baru. Itu **keliru**, dan ketahuan saat ditelusuri ulang: `sessions#index` mengurutkan `created_at: :desc`, sehingga `sessions.length - i` memberi nomor 1 pada sesi tertua dan N pada yang terbaru. Menambah kandidat baru hanya menambah N+1 di ujung — nomor yang lama tidak bergeser. Tidak ada route `destroy` untuk sesi, jadi hari ini penomorannya stabil.
+
+Yang tersisa lebih sempit, tapi tetap nyata: nomornya **posisional, bukan identitas**. Menghapus satu sesi akan menggeser semua nomor di bawahnya. Dan kita sendiri yang membuat penghapusan itu pasti terjadi — layar consent menjanjikan batas retensi data (`ConsentPolicy`, poin *retention*). Begitu purge retensi diimplementasikan, "Kandidat 3" di catatan seorang assessor akan menunjuk orang lain. Karena itu N-5 tetap di daftar follow-up, tapi sebagai **utang yang jatuh tempo bersamaan dengan fitur retensi**, bukan sebagai bug yang aktif sekarang.
 
 **N-8 layak dicatat sebagai satu tema dengan §1a.** Keduanya masalah yang sama: antarmuka menyatakan sesuatu tentang kandidat padahal yang terjadi adalah sistem tidak tahu. `not_assessed` yang digambar seperti `gap` bilang "kandidat lemah" padahal artinya "tidak pernah ditanya". Request gagal yang digambar seperti daftar kosong bilang "tidak ada kandidat" padahal artinya "gagal mencari tahu". Dalam dua-duanya, pembacanya bertindak atas kesimpulan yang tidak pernah dibuat siapa pun.
 
