@@ -7,7 +7,7 @@
             "DOM",
             "DOM.Iterable"
         ],
-        "types": ["vite/client"],
+        "types": ["vite/client", "vitest/globals"],
         "module": "ESNext",
         "skipLibCheck": true,
         "moduleResolution": "bundler",
