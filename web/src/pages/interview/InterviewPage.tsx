@@ -214,7 +214,7 @@ export default function InterviewPage() {
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6 flex-1 content-center">
+      <div className="max-w-2xl w-full mx-auto px-4 py-8 space-y-6 flex-1 content-center">
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
@@ -257,7 +257,7 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex-1 content-center">
+      <div className="max-w-2xl w-full mx-auto px-4 py-16 text-center space-y-4 flex-1 content-center">
         <div className="flex justify-center">
           <CheckCircle size={"42"} className="text-green-500"/>
         </div>
@@ -274,7 +274,7 @@ export default function InterviewPage() {
   // ── State E: Invalid invite OR system failure ───────────────────────────
   if (interviewState === "error") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex-1 content-center">
+      <div className="max-w-2xl w-full mx-auto px-4 py-16 text-center space-y-4 flex-1 content-center">
         <div className="flex justify-center">
           <FileWarningIcon size={"42"} className="text-orange-500"/>
         </div>
@@ -305,7 +305,7 @@ export default function InterviewPage() {
   const candidateSpeaking = speaker === "candidate";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <div className="max-w-2xl w-full mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
         <span className="text-sm font-medium">AI Interview</span>

@@ -87,8 +87,8 @@ export default function AssessorLayout() {
         </div>
       </header>
 
-      {/* Page content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+      {/* Page content — one consistent width across the app */}
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
         <Outlet />
       </main>
     </div>
