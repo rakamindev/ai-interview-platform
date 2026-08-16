@@ -19,14 +19,9 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => {
-    if (response.data && typeof response.data === "object" && "data" in response.data) {
-      response.data = response.data.data;
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    if (error.response?.status === 401 && window.location.pathname !== "/login") {
       clearAuth();
       window.location.href = "/login";
     }

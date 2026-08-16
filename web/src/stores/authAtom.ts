@@ -27,3 +27,8 @@ export function clearAuth() {
 export const authAtom = atom<AuthState>({
   authenticated: isAuthenticated(),
 });
+
+export const logoutAtom = atom(null, (_get, set) => {
+  clearAuth();
+  set(authAtom, { authenticated: false });
+});
