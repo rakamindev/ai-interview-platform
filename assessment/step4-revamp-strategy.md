@@ -15,6 +15,7 @@ Satu tema besar: melindungi kandidat (UU PDP + keadilan) DAN memastikan hasil pe
 | **FRONTEND — Layar consent** | F-03 | Layar disclosure UU PDP sebelum interview + gating tombol start |
 | **FRONTEND — Kontrak fit-gap** | F-06 (Required blank), F-16 (tipe) | Fix `ComparisonTable` + types |
 | **FRONTEND — Presentasi hasil penilaian** | F-06 (lanjutan), + masalah presentasi yang ditemukan saat walkthrough (lihat §1a) | Revamp layar Fit-Gap & Portfolio: instrumen L1–L5 tunggal, `not_assessed` dibedakan dari gap, bukti kutipan didekatkan ke keputusan, seluruh state ditangani |
+| **FRONTEND — Layar live (Interview Room & Live Monitor)** | Lanjutan §1a: konflasi "belum ditanya" vs "sudah ditanya, hasilnya kurang" ternyata muncul lebih dulu di Live Monitor | `CoverageTrack` memakai grammar segmen yang sama dengan `LevelTrack`; skill `not_yet` digambar putus-putus; panel dibuka dengan hitungan skill yang belum ditanya (satu-satunya angka yang masih bisa diubah asesor saat interview berjalan); label transkrip ikut perspektif pembaca; seluruh warna hardcoded dipindah ke token |
 
 **Tidak termasuk (sengaja):** F-08 (optimasi payload list), F-14 (transcript kandidat penuh), F-15 (speed test pihak ketiga) — di-list sebagai follow-up, bukan bagian revamp ini agar scope terkendali dalam deadline. F-17 (test/CI) WAJIB disertakan sebagai harness untuk membuktikan semua di atas.
 
@@ -141,6 +142,24 @@ Ditulis sebelum coding, berlaku untuk layar Fit-Gap dan Portfolio.
 | H15 | Mode gelap aktif | render | Seluruh token hasil penilaian punya varian gelap; kontras teks tetap terbaca |
 | H16 | Pengguna hanya melihat warna (uji grayscale) | render | Setiap status tetap terbaca lewat label kata + bentuk, bukan warna saja |
 
+### I. Layar live — Interview Room & Live Monitor (frontend)
+
+Layar live punya beban berbeda dari layar hasil: keputusannya masih bisa diubah.
+Kalau asesor tahu ada skill yang belum ditanya **sementara interview masih jalan**,
+dia bisa minta AI menggalinya. Setelah sesi selesai, informasi yang sama cuma jadi
+penyesalan. Karena itu angka "belum ditanya" dinaikkan jadi hal pertama yang dibaca.
+
+| # | Given | When | Then |
+|---|---|---|---|
+| I1 | Ada skill `state: "not_yet"` | buka Live Monitor | Jumlahnya dinyatakan dengan kata di atas daftar ("2 dari 3 skill belum ditanya"), memakai aksen perhatian — bukan disembunyikan sebagai bar kosong |
+| I2 | Semua skill sudah tersentuh | buka Live Monitor | Kalimat positif eksplisit; aksen perhatian hilang — asesor tidak perlu menghitung bar satu per satu |
+| I3 | Skill `not_yet` | render track | Segmen putus-putus & kosong, sama persis dengan perlakuan `not_assessed` di layar hasil — satu bahasa visual untuk "belum ada pengukuran" |
+| I4 | Skill hasil discovery AI | render | Dihitung dalam tally yang sama dengan skill terkonfigurasi; ditandai ikon, bukan diukur dengan instrumen berbeda |
+| I5 | Asesor membuka Live Monitor | render transkrip | Giliran kandidat berlabel "Candidate", bukan "You" (label yang benar hanya di layar kandidat) |
+| I6 | `last_signal` ada | render | Kutipan verbatim serif dan **tidak** dipotong — kutipan itulah alasan panel ini dibaca |
+| I7 | Koneksi kandidat putus lama | render Interview Room | Merah diizinkan di sini: yang gagal adalah sistem, bukan kandidat. Merah tetap dilarang untuk apa pun yang menilai orangnya |
+| I8 | Mode gelap aktif | render kedua layar live | Tidak ada `bg-white`/warna palet hardcoded yang tersisa; semua lewat token (`--ok` dipisah dari palet hasil dengan sengaja) |
+
 ---
 
 ## 3. Solution Options & Trade-offs
@@ -198,7 +217,7 @@ Dua arah dieksplorasi lebih dulu sebagai mockup, lalu dibandingkan sebelum satu 
 
 **Option A: Mockup HTML statis memakai token codebase**
 - Semua state digambar sebagai frame terpisah (loaded/loading/empty/error/partial/teks panjang/mobile 375px), memakai variabel CSS dan warna brand yang persis sama dengan aplikasi.
-- *Product Impact:* cakupan state lengkap, dan setiap layar bisa langsung dicek terhadap acceptance criteria H1–H16.
+- *Product Impact:* cakupan state lengkap, dan setiap layar bisa langsung dicek terhadap acceptance criteria H1–H16 dan I1–I8.
 - *Cost:* rendah; porting ke React nyaris mekanis karena token sudah sama.
 - *Kelemahan:* tanpa shell aplikasi (sidebar, breadcrumb), layar terbaca sebagai lembar spesifikasi, bukan produk. Kualitas komposisi lebih lemah.
 
