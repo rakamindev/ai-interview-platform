@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ErrorNote from "@/components/ErrorNote";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
@@ -26,8 +27,9 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
+  const { register, handleSubmit, control, setValue, watch, reset, formState: { errors } } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
@@ -36,11 +38,12 @@ export default function VacancyEditPage() {
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
       reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => setError("Failed to load the vacancy.")).finally(() => setLoading(false));
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
     setSubmitting(true);
+    setError(null);
     try {
       await vacanciesApi.update(Number(id), {
         role_title: data.role_title,
@@ -49,6 +52,8 @@ export default function VacancyEditPage() {
         vacancy_skills_attributes: data.skills,
       });
       navigate("/vacancies");
+    } catch {
+      setError("Failed to save changes. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -64,9 +69,11 @@ export default function VacancyEditPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {error && <ErrorNote message={error} />}
         <div className="space-y-1.5">
           <Label>Role title <span className="text-destructive">*</span></Label>
           <Input {...register("role_title", { required: true })} />
+          {errors.role_title && <p className="text-xs text-destructive">Role title is required.</p>}
         </div>
         <Separator />
         <div className="space-y-3">
@@ -75,7 +82,7 @@ export default function VacancyEditPage() {
             <div key={field.id} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
+                <button type="button" aria-label="Remove skill" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
               </div>
               <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
             </div>

@@ -113,6 +113,7 @@ export default function AssessmentEditPage() {
         <div className="space-y-1.5">
           <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
           <Input id="name" {...register("name", { required: true })} />
+          {errors.name && <p className="text-xs text-destructive">Role title is required.</p>}
         </div>
 
         <div className="space-y-1.5">

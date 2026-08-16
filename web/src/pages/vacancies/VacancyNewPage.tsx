@@ -64,6 +64,7 @@ export default function VacancyNewPage() {
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
           <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          {errors.role_title && <p className="text-xs text-destructive">Role title is required.</p>}
         </div>
 
         <Separator />
@@ -82,7 +83,7 @@ export default function VacancyNewPage() {
                 <div key={field.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                    <button type="button" aria-label="Remove skill" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
