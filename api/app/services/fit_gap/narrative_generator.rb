@@ -1,117 +1,58 @@
 # frozen_string_literal: true
 
 module FitGap
-  # N13: Generates a fit/gap report comparing a portfolio against a vacancy.
-  # Uses rule-based comparison for skill levels + Gemini Flash for culture narrative.
-  class Engine
-    def initialize(portfolio:, vacancy:, gemini_client: nil)
-      @portfolio = portfolio
-      @vacancy   = vacancy
+  class NarrativeGenerationError < StandardError; end
+
+  # Generates the AI narrative for a Fit/Gap report from aggregate comparison
+  # data and Vacancy expectations. Never determines match/gap/exceed/not_assessed;
+  # deterministic classification lives in FitGap::ComparisonBuilder.
+  # Used by FitGapGeneratorWorker via #generate_narrative!; errors surface as
+  # narrative_status=failed instead of rule-based fallback prose.
+  class NarrativeGenerator
+    def initialize(vacancy:, gemini_client: nil)
+      @vacancy = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.5-flash'),
         timeout: 30
       )
     end
 
-    # Returns the FitGapReport record.
-    def call
-      skill_comparisons = build_skill_comparisons
-      narratives        = generate_narratives(skill_comparisons)
+    # Strict path used by the narrative worker. Errors must reach the worker so
+    # report state becomes failed instead of presenting fallback prose as AI output.
+    def generate_narrative!(skill_comparisons)
+      comparisons = normalize_comparisons(skill_comparisons)
+      gaps = comparisons.select { |comparison| comparison[:result] == "gap" }
+      matches = comparisons.select { |comparison| comparison[:result] == "match" }
+      exceeds = comparisons.select { |comparison| comparison[:result] == "exceed" }
+      not_assessed = comparisons.select { |comparison| comparison[:result] == "not_assessed" }
 
-      report = FitGapReport.find_or_initialize_by(
-        portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
+      response = @gemini_client.generate_content(
+        build_narrative_prompt(gaps, matches, exceeds, not_assessed),
+        temperature: 0.4
       )
+      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      culture = data["culture_narrative"] || data[:culture_narrative]
+      overall = data["overall_narrative"] || data[:overall_narrative]
 
-      report.update!(
-        skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
-      )
+      unless culture.respond_to?(:to_str) && overall.respond_to?(:to_str) && culture.present? && overall.present?
+        raise NarrativeGenerationError, "Gemini response missing narrative fields"
+      end
 
-      Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
-      report
+      { culture: culture, overall: overall }
+    rescue JSON::ParserError => e
+      raise NarrativeGenerationError, "Gemini response was not valid JSON: #{e.message}"
     end
 
     private
 
-    def build_skill_comparisons
-      vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
-      portfolio_skills = effective_portfolio_skills  # includes overrides
-
-      comparisons = vacancy_skills.map do |label, vacancy_skill|
-        portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
-
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
-        else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
-        end
-
-        {
-          skill_label:     label,
-          skill_id:        vacancy_skill.skill_id,
-          candidate_level: candidate_level,
-          expected_level:  expected_level,
-          result:          result,
-          delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
-        }
-      end
-
-      comparisons
-    end
-
-    # Returns portfolio skills with overrides applied.
-    def effective_portfolio_skills
-      @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
-        override = skill.assessor_override
-        {
-          id:              skill.id,
-          skill_id:        skill.skill_id,
-          skill_label:     skill.skill_label,
-          ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
-          confidence:      skill.ai_confidence,
-          overridden:      override.present?
-        }
-      end
-    end
-
-    def find_portfolio_skill(portfolio_skills, label, skill_id)
-      portfolio_skills.find { |s| s[:skill_id] == skill_id && skill_id.present? } ||
-        portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
-    end
-
-    def generate_narratives(skill_comparisons)
-      gaps    = skill_comparisons.select { |c| c[:result] == 'gap' }
-      matches = skill_comparisons.select { |c| c[:result] == 'match' }
-      exceeds = skill_comparisons.select { |c| c[:result] == 'exceed' }
-      not_assessed = skill_comparisons.select { |c| c[:result] == 'not_assessed' }
-
-      prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
-
-      begin
-        response = @gemini_client.generate_content(prompt, temperature: 0.4)
-        data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
-      rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+    def normalize_comparisons(skill_comparisons)
+      Array(skill_comparisons).map do |comparison|
+        comparison.respond_to?(:deep_symbolize_keys) ? comparison.deep_symbolize_keys : comparison
       end
     end
 
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed)
       vacancy = @vacancy
-      portfolio_session = @portfolio.session
-      assessment = portfolio_session.assessment
 
       <<~PROMPT
         You are writing a fit/gap analysis narrative for a candidate evaluation.
@@ -136,14 +77,6 @@ module FitGap
           "overall_narrative": "..."
         }
       PROMPT
-    end
-
-    def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
-
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
     end
   end
 end
