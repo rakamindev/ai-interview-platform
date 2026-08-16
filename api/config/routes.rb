@@ -54,6 +54,9 @@ Rails.application.routes.draw do
       get  'skill_taxonomies',          to: 'skill_taxonomies#index'
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
+      # Tenant-scoped reusable custom skills
+      resources :custom_skills, only: %i[index create destroy]
+
       # Vacancies
       resources :vacancies
 

@@ -25,6 +25,7 @@ import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { customSkillsApi } from "@/services/customSkills";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
@@ -88,6 +89,26 @@ export default function AssessmentNewPage() {
     setError(null);
     setSubmitting(true);
     try {
+      // Save reusable custom skills to the tenant library so they appear in
+      // the picker of future assessments. Duplicates are ignored.
+      await Promise.all(
+        data.skills
+          .filter((s) => s.is_custom && s.skill_label?.trim())
+          .map((s) =>
+            customSkillsApi
+              .create({
+                skill_label: s.skill_label,
+                scope_include: s.scope_include,
+                l1_anchor: s.l1_anchor,
+                l2_anchor: s.l2_anchor,
+                l3_anchor: s.l3_anchor,
+                l4_anchor: s.l4_anchor,
+                l5_anchor: s.l5_anchor,
+              })
+              .catch(() => null)
+          )
+      );
+
       const payload = {
         name: data.name,
         time_limit_min: data.time_limit_min,
@@ -257,6 +278,7 @@ export default function AssessmentNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
+        selectedLabels={fields.map((f) => f.skill_label).filter((l): l is string => Boolean(l))}
       />
     </div>
   );

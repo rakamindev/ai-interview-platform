@@ -159,6 +159,18 @@ export interface SkillTaxonomy {
   l5_anchor: string;
 }
 
+export interface CustomSkill {
+  id: number;
+  skill_label: string;
+  scope_include?: string;
+  scope_exclude?: string;
+  l1_anchor: string;
+  l2_anchor: string;
+  l3_anchor: string;
+  l4_anchor: string;
+  l5_anchor: string;
+}
+
 export interface CandidateInfo {
   session_id: number;
   role_title: string;
@@ -182,7 +194,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -204,4 +217,5 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+  turn_number?: number;
 }
