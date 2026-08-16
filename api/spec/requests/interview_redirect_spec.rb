@@ -12,6 +12,7 @@ RSpec.describe 'Invite link redirect', type: :request do
   end
 
   it 'redirects old API-host invite links to the web app with a 302' do
+    # Any token works — the redirect never validates it, only forwards it.
     token = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef'
 
     get "/interview/#{token}"

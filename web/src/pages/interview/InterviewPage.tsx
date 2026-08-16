@@ -21,16 +21,17 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, FileWarningIcon, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [candidateInfoLoading, setCandidateInfoLoading] = useState(true);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
-  const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
+  const [transcript, setTranscript] = useState<(Pick<TranscriptTurn, "speaker" | "text"> & { turn_number?: number })[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
@@ -38,23 +39,30 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [interviewError, setInterviewError] = useState<string | null>(null);
 
   // Fetch candidate info
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setCandidateInfoLoading(false);
+      setInterviewState("error");
+      return;
+    }
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("error"))
+      .finally(() => setCandidateInfoLoading(false));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
 
-  const handleStateChange = useCallback((state: InterviewState) => {
+  const handleStateChange = useCallback((state: InterviewState, message?: string) => {
+    if (message) setInterviewError(message);
     setInterviewState(state);
 
     if (state === "draining_audio") {
@@ -90,7 +98,7 @@ export default function InterviewPage() {
     reconnectedPromptTimerRef.current = setTimeout(() => setReconnectedPrompt(false), 10_000);
   }, []);
 
-  const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
+  const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text"> & { turn_number?: number }) => {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
 
@@ -118,12 +126,19 @@ export default function InterviewPage() {
     attempt(2000);
   }, [token, cancelDrain]);
 
+  // Cancel handle for the deferred "candidate turn" timer — a stale timer must
+  // never flip the indicator (or unmute the mic) mid-AI-turn.
+  const playbackCancelRef = useRef<(() => void) | null>(null);
+
   const handleSpeakerChange = useCallback((newSpeaker: InterviewSpeaker) => {
+    playbackCancelRef.current?.();
+    playbackCancelRef.current = null;
+
     if (newSpeaker === "ai") {
       setSpeaker("ai");
       muteRef.current?.();
     } else if (newSpeaker === "candidate") {
-      scheduleAfterPlayback(() => {
+      playbackCancelRef.current = scheduleAfterPlayback(() => {
         setSpeaker("candidate");
         if (!micMutedRef.current) unmuteRef.current?.();
       });
@@ -172,6 +187,8 @@ export default function InterviewPage() {
 
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
+    playbackCancelRef.current?.();
+    playbackCancelRef.current = null;
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
     stopCapture();
     stopPlayback();
@@ -179,6 +196,13 @@ export default function InterviewPage() {
     disconnect();
     setInterviewState("complete");
   }, [stopCapture, stopPlayback, sendJson, disconnect]);
+
+  // Keep the newest bubble in view as the transcript grows.
+  const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = transcriptScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [transcript]);
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
@@ -190,7 +214,7 @@ export default function InterviewPage() {
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-xl mx-auto px-4 py-8 space-y-6 flex-1 content-center">
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
@@ -200,7 +224,11 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {candidateInfoLoading ? (
+          <p className="text-center text-sm text-muted-foreground animate-pulse">
+            Loading your interview...
+          </p>
+        ) : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
@@ -229,13 +257,44 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex-1 content-center">
+        <div className="flex justify-center">
+          <CheckCircle size={"42"} className="text-green-500"/>
+        </div>
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State E: Invalid invite OR system failure ───────────────────────────
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex-1 content-center">
+        <div className="flex justify-center">
+          <FileWarningIcon size={"42"} className="text-orange-500"/>
+        </div>
+        <h2 className="text-xl font-semibold">
+          {interviewError ? "Interview Interrupted" : "Invite link not valid"}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {interviewError ? (
+            <>
+              {interviewError}
+              <br />
+              Please contact the hiring team for help.
+            </>
+          ) : (
+            <>
+              This invite link is invalid or has expired.
+              <br />
+              Please contact the hiring team for a new link.
+            </>
+          )}
         </p>
       </div>
     );
@@ -283,7 +342,7 @@ export default function InterviewPage() {
       )}
 
       {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col items-center justify-center gap-4 py-6">
         {interviewState === "connecting" ? (
           <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
         ) : interviewState === "draining_audio" ? (
@@ -293,12 +352,14 @@ export default function InterviewPage() {
           </div>
         ) : (
           <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
-
+            {/* Only one indicator at a time — the AI bar hides entirely while the candidate speaks. */}
+            {!candidateSpeaking && (
+              <VoiceBars
+                active={aiSpeaking}
+                label={aiSpeaking ? "AI speaking" : "Listening..."}
+                variant="ai"
+              />
+            )}
             {candidateSpeaking && (
               <VoiceBars
                 active={true}
@@ -307,11 +368,12 @@ export default function InterviewPage() {
               />
             )}
 
-            {/* Transcript */}
+            {/* Transcript — flex-1 + min-h-0 makes this box scroll internally
+                instead of pushing the page; auto-scroll keeps the newest bubble visible. */}
             {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
+              <div ref={transcriptScrollRef} className="w-full flex-1 min-h-0 overflow-y-auto space-y-2 pb-2">
                 {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
+                  <TranscriptBubble key={turn.turn_number ?? i} speaker={turn.speaker} text={turn.text} />
                 ))}
               </div>
             )}

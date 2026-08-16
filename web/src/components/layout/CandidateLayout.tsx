@@ -10,7 +10,9 @@ export default function CandidateLayout() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      {/* overflow-hidden: only the interview page renders here, and its inner
+          transcript area handles its own scrolling. */}
+      <main className="flex-1 flex flex-col overflow-hidden">
         <Outlet />
       </main>
     </div>
