@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
+import ErrorNote from "@/components/ErrorNote";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
@@ -24,6 +25,7 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -46,12 +48,11 @@ export default function FitGapReportPage() {
   useEffect(() => {
     sessionsApi
       .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
-        }
+      .then((res) => {
+        const data = res.data as { portfolio?: Portfolio };
+        if (data.portfolio) setPortfolio(data.portfolio);
       })
+      .catch(() => setError("Failed to load the portfolio for this report."))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -64,10 +65,13 @@ export default function FitGapReportPage() {
   const handleRegenerate = async () => {
     if (!portfolio) return;
     setRegenerating(true);
+    setError(null);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+    } catch {
+      setError("Failed to start regeneration. Please try again.");
     } finally {
       setRegenerating(false);
     }
@@ -88,6 +92,8 @@ export default function FitGapReportPage() {
       a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setError("Export failed. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -104,6 +110,8 @@ export default function FitGapReportPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {error && <ErrorNote message={error} />}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
