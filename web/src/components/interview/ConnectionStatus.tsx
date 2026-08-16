@@ -7,8 +7,8 @@ interface ConnectionStatusProps {
 export default function ConnectionStatus({ state }: ConnectionStatusProps) {
   if (state === "connected") {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-green-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+      <div className="flex items-center gap-1.5 text-xs text-ok">
+        <span className="h-1.5 w-1.5 rounded-full bg-ok" />
         Connected
       </div>
     );

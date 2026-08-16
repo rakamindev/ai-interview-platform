@@ -27,7 +27,7 @@ export default function AssessorLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
-      <header className="border-b bg-white sticky top-0 z-40">
+      <header className="border-b bg-background sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">

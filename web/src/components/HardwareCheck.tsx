@@ -9,7 +9,7 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ArrowDown, ArrowUp } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ArrowDown, ArrowUp, VideoOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HardwareCheckProps {
@@ -20,7 +20,7 @@ function StateIcon({ state }: { state: ProctoringState }) {
     if (state === ProctoringState.LOADING)
         return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
     if (state === ProctoringState.PASSED)
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-ok" />;
     if (state === ProctoringState.ERROR)
         return <XCircle className="h-4 w-4 text-destructive" />;
     return <Circle className="h-4 w-4 text-muted-foreground/40" />;
@@ -209,15 +209,16 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                        <svg className="w-10 h-10 opacity-30" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                        </svg>
+                        <VideoOff className="h-10 w-10 opacity-30" aria-hidden />
                         <p className="text-xs">Camera not active</p>
                     </div>
                 )}
+                {/* Recording red, the one place the colour is a convention rather
+                    than a verdict: it says the camera is on, not that anything
+                    is wrong. */}
                 {progress.camera === ProctoringState.PASSED && videoStream && (
-                    <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-destructive px-2 py-0.5 text-xs text-destructive-foreground">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive-foreground" aria-hidden />
                         LIVE
                     </span>
                 )}
@@ -231,7 +232,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             <span className="text-sm font-medium">{label}</span>
                             <div className="flex items-center gap-2">
                                 <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
+                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-ok" :
                                     progress[key] === ProctoringState.ERROR ? "text-destructive" :
                                         "text-muted-foreground"
                                     }`}>
@@ -265,7 +266,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             <div className="mt-2 flex items-center gap-2">
                                 <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
                                     <div
-                                        className="h-full bg-green-500 transition-all duration-150"
+                                        className="h-full bg-ok transition-all duration-150"
                                         style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
                                     />
                                 </div>

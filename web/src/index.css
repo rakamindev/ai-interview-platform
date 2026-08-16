@@ -62,6 +62,12 @@
            sizes it fails contrast — so caution copy uses this darkened partner
            while the yellow itself stays for dots, rules and fills. */
         --attention: 32 84% 28%;
+
+        /* Healthy state: connection up, hardware check passed, topic covered.
+           Held apart from the result palette on purpose — "the microphone
+           works" and "the candidate exceeds the requirement" are unrelated
+           claims and should not share a variable. */
+        --ok: 164 62% 26%;
     }
 
     .dark {
@@ -99,6 +105,7 @@
         --result-none: 215 20% 65%;
 
         --attention: 43 90% 66%;
+        --ok: 164 55% 58%;
     }
 }
 

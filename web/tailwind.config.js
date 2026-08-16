@@ -42,6 +42,7 @@ export default {
                 // own colour for a level comparison.
                 // Caution copy: readable in both themes, unlike the brand yellow.
                 attention: "hsl(var(--attention))",
+                ok: "hsl(var(--ok))",
                 result: {
                     exceed: "hsl(var(--result-exceed))",
                     match: "hsl(var(--result-match))",

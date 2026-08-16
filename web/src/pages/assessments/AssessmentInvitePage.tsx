@@ -73,8 +73,8 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span className="flex items-center gap-1 text-xs text-ok">
+            <span className="w-1.5 h-1.5 rounded-full bg-ok" />
             Completed
           </span>
         )}
@@ -260,7 +260,7 @@ export default function AssessmentInvitePage() {
                 ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
                 : <>New invite link ready — share with your candidate:</>}
             </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-background">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>

@@ -318,18 +318,18 @@ export default function InterviewPage() {
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
+            <ul className="list-outside list-disc space-y-1.5 rounded-lg bg-muted/50 p-4 pl-8 text-sm text-muted-foreground">
+              <li>This is a voice interview. Make sure you're in a quiet place.</li>
+              <li>The AI will ask follow-up questions — there are no scripts.</li>
+              <li>The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</li>
+              <li>Your mic will be active throughout. You can end anytime.</li>
+            </ul>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-              <CheckCircle className="h-4 w-4 shrink-0" />
+            <div className="flex items-center gap-2 rounded-lg border border-ok/30 bg-ok/10 px-4 py-2.5 text-sm text-ok">
+              <CheckCircle className="h-4 w-4 shrink-0" aria-hidden />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
             <Button className="w-full" size="lg" onClick={startInterview}>
@@ -383,7 +383,7 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="sticky top-12 z-10 flex items-center justify-between border-b bg-background py-3">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -396,14 +396,23 @@ export default function InterviewPage() {
 
       {/* Reconnecting banner */}
       {interviewState === "reconnecting" && (
+        /* The network failing is a system fault, not the candidate's — so red is
+           allowed here, where it points at the connection, and nowhere that
+           describes their performance. */
         connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
+          <div
+            role="status"
+            className="mt-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive"
+          >
+            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-destructive" aria-hidden />
             <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
+          <div
+            role="status"
+            className="mt-2 flex items-center gap-2 rounded-lg border border-secondary/40 bg-secondary/10 px-4 py-2.5 text-sm text-attention"
+          >
+            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-secondary" aria-hidden />
             <span>Briefly reconnecting — please wait a moment.</span>
           </div>
         )
@@ -411,10 +420,17 @@ export default function InterviewPage() {
 
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>
-            <X className="h-3.5 w-3.5" />
+        <div
+          role="status"
+          className="mt-2 flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground"
+        >
+          <span>Reconnected — please say <strong>&ldquo;check&rdquo;</strong> or continue your answer to resume.</span>
+          <button
+            className="ml-3 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => setReconnectedPrompt(false)}
+          >
+            <span className="sr-only">Dismiss</span>
+            <X className="h-3.5 w-3.5" aria-hidden />
           </button>
         </div>
       )}
@@ -457,7 +473,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
