@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete appeal]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete appeal]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript resolve retake]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -75,6 +75,55 @@ module Api
         else
           json_error("Failed to end session", :unprocessable_entity)
         end
+      end
+
+      # POST /api/v1/sessions/:id/resolve
+      def resolve
+        if @session.audit_status != "objection_filed"
+          return json_error("Session does not have an active objection", :unprocessable_entity)
+        end
+
+        notes = params.dig(:resolution, :notes).to_s.strip
+        if notes.blank?
+          return json_error("Resolution notes cannot be empty", :unprocessable_entity)
+        end
+
+        @session.update!(
+          audit_status: "resolved",
+          resolved_at: Time.current,
+          resolution_notes: notes
+        )
+
+        json_response({ message: "Objection resolved successfully", session: session_json(@session) })
+      end
+
+      # POST /api/v1/sessions/:id/retake
+      def retake
+        if @session.audit_status != "objection_filed"
+          return json_error("Session does not have an active objection", :unprocessable_entity)
+        end
+
+        ActiveRecord::Base.transaction do
+          # 1. Create a new session
+          @new_session = @session.assessment.sessions.create!(
+            tenant_id:      @session.tenant_id,
+            candidate_id:   @session.candidate_id,
+            candidate_name: @session.candidate_name
+          )
+
+          # 2. Update the old session
+          @session.update!(
+            audit_status: "retake_approved",
+            resolved_at: Time.current,
+            resolution_notes: "System approved retake. Generated new session."
+          )
+        end
+
+        json_response(
+          message: "Retake approved successfully",
+          session: session_json(@session),
+          invite_url: @new_session.invite_url
+        )
       end
 
       # GET /api/v1/sessions/:id/coverage
@@ -149,7 +198,10 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason,
+          audit_status:    session.audit_status,
+          candidate_objection_notes: session.candidate_objection_notes
         )
       end
 
@@ -198,7 +250,9 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          created_at:       session.created_at,
+          audit_status:     session.audit_status,
+          candidate_objection_notes: session.candidate_objection_notes
         }
       end
 
