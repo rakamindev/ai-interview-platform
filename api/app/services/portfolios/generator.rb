@@ -27,6 +27,7 @@ module Portfolios
 
       save_skills(portfolio, response)
       portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.recompute_verdict!
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
