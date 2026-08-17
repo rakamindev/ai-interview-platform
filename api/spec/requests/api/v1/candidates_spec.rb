@@ -143,7 +143,7 @@ RSpec.describe "Api::V1::Candidates", type: :request do
       session = make_session
 
       post "/api/v1/assessments/#{assessment.id}/candidates/export",
-           params: { format: "pdf", candidate_ids: [session.id] }, headers: headers
+           params: { format: "xml", candidate_ids: [session.id] }, headers: headers
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -155,7 +155,7 @@ RSpec.describe "Api::V1::Candidates", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
-    it "flags candidate_ids that do not belong to the assessment as errors instead of raising" do
+    it "flags candidate_ids that do not belong to the assessment as not_found instead of raising" do
       foreign_session = Current.using(tenant_id: other_org.id) { create(:session, assessment: other_assessment) }
 
       post "/api/v1/assessments/#{assessment.id}/candidates/export",
@@ -163,19 +163,55 @@ RSpec.describe "Api::V1::Candidates", type: :request do
 
       body = JSON.parse(response.body)
       expect(response).to have_http_status(:ok)
-      expect(body["results"].first["status"]).to eq("error")
+      expect(body["results"].first["status"]).to eq("not_found")
       expect(body["results"].first["error"]).to include("does not belong")
     end
 
-    it "reports missing portfolio data as a per-candidate error, not a failure of the whole export" do
+    it "reports missing portfolio data as a per-candidate failure, not a failure of the whole export" do
       session = make_session(candidate_name: "NoPortfolio")
 
       post "/api/v1/assessments/#{assessment.id}/candidates/export",
            params: { format: "json", candidate_ids: [session.id] }, headers: headers
 
       body = JSON.parse(response.body)
-      expect(body["results"].first["status"]).to eq("error")
+      expect(body["results"].first["status"]).to eq("failed")
       expect(body["results"].first["error"]).to include("Portfolio not available")
+    end
+
+    it "exports a base64-encoded PDF per candidate" do
+      session = make_session(candidate_name: "Alice")
+      portfolio = Current.using(tenant_id: org.id) { create(:portfolio, session: session, verdict: "pass") }
+      Current.using(tenant_id: org.id) { create(:portfolio_skill, portfolio: portfolio, ai_level: 4) }
+
+      post "/api/v1/assessments/#{assessment.id}/candidates/export",
+           params: { format: "pdf", candidate_ids: [session.id] }, headers: headers
+
+      body = JSON.parse(response.body)
+      result = body["results"].first
+      expect(result["status"]).to eq("ok")
+      expect(result["data"]["filename"]).to eq("portfolio-#{session.id}.pdf")
+      decoded = Base64.decode64(result["data"]["pdf_base64"])
+      expect(decoded[0..3]).to eq("%PDF")
+    end
+
+    it "reports a failed status when pdf-exporting a candidate with no completed portfolio" do
+      session = make_session(candidate_name: "NoPortfolio")
+
+      post "/api/v1/assessments/#{assessment.id}/candidates/export",
+           params: { format: "pdf", candidate_ids: [session.id] }, headers: headers
+
+      body = JSON.parse(response.body)
+      expect(body["results"].first["status"]).to eq("failed")
+    end
+
+    it "reports not_found for a pdf export of a candidate outside this assessment" do
+      foreign_session = Current.using(tenant_id: other_org.id) { create(:session, assessment: other_assessment) }
+
+      post "/api/v1/assessments/#{assessment.id}/candidates/export",
+           params: { format: "pdf", candidate_ids: [foreign_session.id] }, headers: headers
+
+      body = JSON.parse(response.body)
+      expect(body["results"].first["status"]).to eq("not_found")
     end
   end
 end

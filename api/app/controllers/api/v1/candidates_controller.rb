@@ -29,17 +29,12 @@ module Api
       end
 
       # POST /api/v1/assessments/:assessment_id/candidates/export
-      #
-      # Bulk export is intentionally scoped to transcript/json for this
-      # revamp. PDF export already exists per-candidate (portfolios#export);
-      # looping it across a bulk selection is left as a documented follow-up
-      # rather than shipped half-tested under this deadline.
       def export
         format = params[:format].to_s
         candidate_ids = Array(params[:candidate_ids]).reject(&:blank?).map(&:to_i)
 
-        unless %w[transcript json].include?(format)
-          return json_error("format must be 'transcript' or 'json'", :unprocessable_entity)
+        unless %w[transcript json pdf].include?(format)
+          return json_error("format must be 'transcript', 'json', or 'pdf'", :unprocessable_entity)
         end
 
         if candidate_ids.empty?
@@ -52,7 +47,7 @@ module Api
 
         results = sessions.map { |session| export_one(session, format) }
         missing_ids.each do |id|
-          results << { candidate_id: id, status: "error", error: "Candidate does not belong to this assessment" }
+          results << { candidate_id: id, status: "not_found", error: "Candidate does not belong to this assessment" }
         end
 
         json_response(exported_at: Time.current.iso8601, format: format, results: results)
@@ -61,7 +56,11 @@ module Api
       private
 
       def export_one(session, format)
-        format == "transcript" ? export_transcript(session) : export_json_payload(session)
+        case format
+        when "transcript" then export_transcript(session)
+        when "json"       then export_json_payload(session)
+        else                   export_pdf(session)
+        end
       end
 
       def export_transcript(session)
@@ -79,14 +78,7 @@ module Api
       def export_json_payload(session)
         portfolio = session.portfolio
 
-        unless portfolio&.complete?
-          return {
-            candidate_id:   session.id,
-            candidate_name: session.candidate_name,
-            status:         "error",
-            error:          "Portfolio not available for this candidate"
-          }
-        end
+        return portfolio_unavailable(session) unless portfolio&.complete?
 
         {
           candidate_id:   session.id,
@@ -105,6 +97,41 @@ module Api
               }
             end
           }
+        }
+      end
+
+      def export_pdf(session)
+        portfolio = session.portfolio
+
+        return portfolio_unavailable(session) unless portfolio&.complete?
+
+        pdf_data = Exports::PdfGenerator.new(portfolio: portfolio).call
+
+        {
+          candidate_id:   session.id,
+          candidate_name: session.candidate_name,
+          status:         "ok",
+          data: {
+            filename:    "portfolio-#{session.id}.pdf",
+            pdf_base64:  Base64.strict_encode64(pdf_data)
+          }
+        }
+      rescue StandardError => e
+        Rails.logger.error("PDF export failed for session #{session.id}: #{e.message}")
+        {
+          candidate_id:   session.id,
+          candidate_name: session.candidate_name,
+          status:         "failed",
+          error:          "PDF generation failed for this candidate"
+        }
+      end
+
+      def portfolio_unavailable(session)
+        {
+          candidate_id:   session.id,
+          candidate_name: session.candidate_name,
+          status:         "failed",
+          error:          "Portfolio not available for this candidate"
         }
       end
 
