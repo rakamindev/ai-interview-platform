@@ -23,7 +23,7 @@ RSpec.describe 'Portfolio status semantics', type: :request do
 
   it 'returns status generating only when a portfolio is actually generating' do
     session = create(:session, tenant_id: org.id, assessment: assessment, status: 'active')
-    create(:portfolio, session: session, generation_status: 'generating')
+    create(:portfolio, session: session, tenant_id: org.id, generation_status: 'generating')
 
     get "/api/v1/sessions/#{session.id}/portfolio", headers: auth
 
