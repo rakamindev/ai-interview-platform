@@ -119,6 +119,20 @@ export default function AssessmentInvitePage() {
         </div>
       </div>
 
+      {/* Skills assessed */}
+      {assessment?.skills && assessment.skills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {assessment.skills.map((s) => (
+            <span
+              key={s.id ?? s.skill_label}
+              className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+            >
+              {s.skill_label} · {LEVEL_LABELS[s.expected_level]}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
         <DialogContent className="sm:max-w-sm">
@@ -181,25 +195,6 @@ export default function AssessmentInvitePage() {
           onResults={(sessionId) => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
         />
       </div>
-
-      {/* Assessment skills detail */}
-      {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      )}
     </div>
   );
 }
