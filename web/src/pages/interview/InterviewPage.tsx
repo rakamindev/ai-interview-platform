@@ -329,16 +329,6 @@ export default function InterviewPage() {
               <Button className="w-full" size="lg" onClick={() => setInterviewState("hardware_check")}>
                 Lanjutkan
               </Button>
-              {import.meta.env.DEV && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs text-muted-foreground border-dashed"
-                  onClick={() => setInterviewState("active")}
-                >
-                  🧪 Dev Preview: Buka UI Wawancara Tanpa Koneksi Gemini
-                </Button>
-              )}
             </div>
           </div>
         )}

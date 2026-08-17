@@ -78,6 +78,7 @@ export interface Portfolio {
   id: number;
   session_id: number;
   candidate_id?: number;
+  candidate_name?: string;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;

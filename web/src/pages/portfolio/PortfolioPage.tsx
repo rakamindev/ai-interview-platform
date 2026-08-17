@@ -91,12 +91,16 @@ export default function PortfolioPage() {
         format,
         selectedVacancy ? Number(selectedVacancy) : undefined
       );
+      const nameSlug = portfolio.candidate_name
+        ? `-${portfolio.candidate_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+        : "";
+
       if (format === "json") {
         const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
+        a.download = `portfolio${nameSlug}-session-${sessionId}.json`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -104,7 +108,7 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
+        a.download = `portfolio${nameSlug}-session-${sessionId}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
       }

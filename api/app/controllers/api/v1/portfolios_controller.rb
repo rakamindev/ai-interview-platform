@@ -178,6 +178,7 @@ module Api
           id:                portfolio.id,
           session_id:        portfolio.session_id,
           candidate_id:      portfolio.candidate_id,
+          candidate_name:    portfolio.session&.candidate_name,
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
@@ -241,8 +242,10 @@ module Api
 
       def build_export_json(portfolio, vacancy_id = nil)
         data = {
-          exported_at: Time.current.iso8601,
-          portfolio:   portfolio_json(portfolio)
+          exported_at:     Time.current.iso8601,
+          candidate_name:  portfolio.session&.candidate_name,
+          assessment_name: portfolio.session&.assessment&.name,
+          portfolio:       portfolio_json(portfolio)
         }
 
         if vacancy_id.present?
