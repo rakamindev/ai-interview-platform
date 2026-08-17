@@ -31,8 +31,12 @@ export default function FitGapReportPage() {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
+      if (res.status === 202 || (res.data as any).status === "generating") {
+        setGenerating(true);
+      } else if (res.data.report) {
+        setReport(res.data.report);
+        setGenerating(false);
+      }
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
@@ -40,7 +44,10 @@ export default function FitGapReportPage() {
           setGenerating(true);
         } catch {
           setGenerating(false);
+          setActionError("Failed to start fit/gap generation.");
         }
+      } else {
+        setActionError("Failed to load fit/gap report. Please try again.");
       }
     }
   }, [portfolio, vacancyId]);
