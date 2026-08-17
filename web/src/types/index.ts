@@ -90,17 +90,43 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: string | null;    // "L1".."L5" or null (not assessed)
+  ai_confidence: string | null;  // "high" | "medium" | "low" or null
   evidence: string[];
+  evidence_provenance?: EvidenceProvenance[];
   competency_summary: string;
+  requires_review?: boolean;
+  review_reasons?: string[];
+  review?: AssessorReview | null;
+  effective_level?: string | null;
+}
+
+export interface EvidenceProvenance {
+  quote_index: number;
+  transcript_turn_id: number | null;
+  turn_number: number | null;
+  verified: boolean;
+}
+
+export type ReviewOutcome = "confirmed" | "adjusted" | "insufficient_evidence";
+
+export interface AssessorReview {
+  id: number;
+  portfolio_skill_id: number;
+  ai_level: number | null;
+  outcome: ReviewOutcome;
+  reviewed_level: number | null;
+  effective_level: number | null;
+  rationale: string | null;
+  reviewed_by?: number;
+  reviewed_at?: string;
 }
 
 export interface AssessorOverride {
   id: number;
   portfolio_skill_id: number;
-  ai_level: number;
-  override_level: number;
+  ai_level: number | null;
+  override_level: number | null;
   assessor_notes: string;
   overridden_by?: number;
   overridden_at?: string;
@@ -129,11 +155,14 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
+  skill_id?: string | null;
   required_level: number;
-  candidate_level?: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta?: number | null;
+  confidence?: string | null;
+  review_outcome?: ReviewOutcome | null;
+  level_source?: "ai_generated" | "ai_confirmed" | "human_adjusted" | "not_assessed" | null;
 }
 
 export interface FitGapReport {
@@ -141,9 +170,11 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
-  generated_at: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  generation_status: "pending" | "generating" | "complete" | "failed";
+  generation_error?: string | null;
+  generated_at: string | null;
 }
 
 export interface SkillTaxonomy {
