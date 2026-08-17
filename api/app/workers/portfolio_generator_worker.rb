@@ -17,6 +17,14 @@ class PortfolioGeneratorWorker
 
   def perform(session_id)
     session = Session.find(session_id)
+    # AC-B3 guard: if the candidate's consent was revoked (data deletion in
+    # flight / data deleted), never regenerate a portfolio from that data —
+    # this closes the race where a queued generation re-creates the portfolio
+    # after CandidateDataDeletionJob removed it.
+    unless session.consent_granted?
+      return Rails.logger.warn("[N10] Session #{session_id} consent not granted — skipping generation")
+    end
+
     Portfolios::Generator.new(session: session).call
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N10] Session #{session_id} not found — skipping")
