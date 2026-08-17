@@ -8,7 +8,7 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, ShieldAlert, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
@@ -29,8 +29,13 @@ export default function FitGapReportPage() {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
+      const r = res.data.report;
+      setReport(r);
+      if (r.generation_status === "generating" || r.generation_status === "pending") {
+        setGenerating(true);
+      } else {
+        setGenerating(false);
+      }
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
@@ -59,7 +64,8 @@ export default function FitGapReportPage() {
     if (portfolio) fetchReport();
   }, [portfolio, fetchReport]);
 
-  usePolling(fetchReport, 5000, generating && !!portfolio);
+  // Poll while generating or retrying a failed report.
+  usePolling(fetchReport, 5000, (generating || report?.generation_status === "failed") && !!portfolio);
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
@@ -67,6 +73,17 @@ export default function FitGapReportPage() {
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
+      setGenerating(true);
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!portfolio) return;
+    setRegenerating(true);
+    try {
+      await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
       setGenerating(true);
     } finally {
       setRegenerating(false);
@@ -92,6 +109,9 @@ export default function FitGapReportPage() {
       setExporting(null);
     }
   };
+
+  const notAssessedCount = report?.skill_comparisons.filter((c) => c.result === "not_assessed").length ?? 0;
+  const reportFailed = report?.generation_status === "failed";
 
   if (loading) {
     return (
@@ -124,7 +144,7 @@ export default function FitGapReportPage() {
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
               Regenerate
             </Button>
-            {report && (
+            {report && !reportFailed && (
               <>
                 <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
                   {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
@@ -148,9 +168,45 @@ export default function FitGapReportPage() {
         </div>
       )}
 
-      {/* Report ready */}
-      {report && (
+      {/* Failed — comparisons retained, narrative failed */}
+      {reportFailed && report && (
+        <div className="space-y-4">
+          <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+            <span className="flex-1">
+              <strong>Narrative generation failed.</strong> The deterministic skill comparison below is
+              still valid. {report.generation_error ? `(${report.generation_error})` : ""}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleRetry} disabled={regenerating}>
+              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              Retry
+            </Button>
+          </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Skill Comparison</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <ComparisonTable comparisons={report.skill_comparisons} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Complete report */}
+      {report && !reportFailed && !generating && (
         <>
+          {/* Incomplete-evidence banner */}
+          {notAssessedCount > 0 && (
+            <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                <strong>{notAssessedCount} skill(s)</strong> were not assessed and appear as “Not assessed”.
+                They are excluded from match/gap/exceed counts.
+              </span>
+            </div>
+          )}
+
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
@@ -170,7 +226,7 @@ export default function FitGapReportPage() {
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
+                {report.culture_narrative || report.overall_narrative || "No narrative available."}
               </p>
             </CardContent>
           </Card>
@@ -193,7 +249,8 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {s.ai_level ?? "Not assessed"}
+                          {s.ai_confidence ? ` (${s.ai_confidence.toLowerCase() === "low" ? "low confidence" : "confirmed"})` : ""}
                         </span>
                         <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>

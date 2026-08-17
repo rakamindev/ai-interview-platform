@@ -1,4 +1,4 @@
-import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
+import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES, LEVEL_SOURCE_LABELS } from "@/utils/constants";
 import { cn } from "@/lib/utils";
 import type { SkillComparison } from "@/types";
 
@@ -24,11 +24,26 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   );
 }
 
+function LevelSourceTag({ comparison }: { comparison: SkillComparison }) {
+  const source = comparison.level_source;
+  if (!source) return null;
+  const label = LEVEL_SOURCE_LABELS[source] ?? source;
+  const cls =
+    source === "human_adjusted"
+      ? "text-teal-700 bg-teal-50"
+      : source === "ai_confirmed"
+        ? "text-green-700 bg-green-50"
+        : source === "not_assessed"
+          ? "text-neutral-500 bg-neutral-50"
+          : "text-neutral-500 bg-neutral-50";
+  return <span className={cn("inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ml-1", cls)}>{label}</span>;
+}
+
 export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+  const notAssessedCount = comparisons.filter((c) => c.result === "not_assessed").length;
 
   return (
     <div className="space-y-3">
@@ -53,7 +68,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
                   {c.candidate_level != null ? (
                     <span>
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      <LevelSourceTag comparison={c} />
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -69,11 +84,11 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+        {notAssessedCount > 0 && <span>— Not assessed: {notAssessedCount} skill{notAssessedCount !== 1 ? "s" : ""}</span>}
       </div>
     </div>
   );
