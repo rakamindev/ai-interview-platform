@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
@@ -7,7 +7,9 @@ import { ArrowLeft, Download } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
-  const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
+  const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,17 @@ export default function TranscriptPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Scroll to the turn referenced in the URL hash (e.g. #turn-12)
+  useEffect(() => {
+    if (turns.length === 0) return;
+    const hash = location.hash;
+    if (!hash) return;
+    const el = document.getElementById(hash.slice(1));
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [location.hash, turns]);
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -44,12 +57,16 @@ export default function TranscriptPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+          {/* Back returns to wherever the user came from (candidate detail or
+              the assessment portfolio flow), not a hardcoded page. */}
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
             className="text-muted-foreground hover:text-foreground"
+            aria-label="Back"
           >
             <ArrowLeft className="h-4 w-4" />
-          </Link>
+          </button>
           <div>
             <h1 className="text-lg font-semibold">Interview Transcript</h1>
             {candidateName && (
@@ -92,6 +109,7 @@ export default function TranscriptPage() {
             return (
               <div
                 key={turn.id}
+                id={`turn-${turn.turn_number}`}
                 className={`rounded-lg p-4 ${
                   isAI
                     ? "bg-muted border"
