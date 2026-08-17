@@ -57,17 +57,16 @@ describe("AssessorLayout header", () => {
     for (const link of links) expect(link.textContent?.trim()).not.toBe("");
   });
 
-  it("drops the wordmark before it drops a nav item", () => {
-    // When space runs out the icon still identifies the product; the nav does
-    // not identify itself by anything else.
-    const { container } = render(<AssessorLayout />);
+  it("keeps the wordmark at every width", () => {
+    // It was hidden on phones back when the nav shared this row. The nav moved
+    // to the bottom bar, so the row has space again and an icon on its own
+    // left the header looking unfinished.
+    render(<AssessorLayout />);
 
-    const wordmark = screen.getAllByText("Rakamin AI Interview")[0];
-    expect(wordmark.className).toContain("hidden");
-    expect(wordmark.className).toContain("sm:inline");
-
-    // ...and it stays announced to screen readers at every width.
-    expect(container.querySelector(".sr-only")).not.toBeNull();
+    const wordmark = screen.getByText("Rakamin AI Interview");
+    expect(wordmark.className).not.toContain("hidden");
+    // Truncated rather than dropped, so a narrow screen degrades gracefully.
+    expect(wordmark.className).toContain("truncate");
   });
 
   it("marks the section you are in, not just colours it", () => {

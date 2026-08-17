@@ -86,12 +86,13 @@ export default function AssessorLayout() {
       <header className="border-b bg-background">
         <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between gap-3 border-b bg-background px-4 sm:border-b-0 sm:px-6">
           <div className="flex min-w-0 items-center gap-6">
-            <Link to="/candidates" className="flex shrink-0 items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" aria-hidden />
-              {/* The wordmark is the first thing to go when space runs out —
-                  the icon still identifies the product, and the nav does not. */}
-              <span className="hidden text-sm font-semibold sm:inline">Rakamin AI Interview</span>
-              <span className="sr-only sm:hidden">Rakamin AI Interview</span>
+            {/* The wordmark stays at every width. It was hidden on phones back
+                when the nav shared this row and space was genuinely tight; the
+                nav moved to the bottom bar, so the reason went with it and an
+                icon alone left the bar looking unfinished. */}
+            <Link to="/candidates" className="flex min-w-0 items-center gap-2">
+              <LayoutDashboard className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+              <span className="truncate text-sm font-semibold">Rakamin AI Interview</span>
             </Link>
             <div className="hidden sm:block">
               <NavLinks variant="inline" />
@@ -105,9 +106,8 @@ export default function AssessorLayout() {
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 sm:mr-1.5" aria-hidden />
-              <span className="hidden sm:inline">Logout</span>
-              <span className="sr-only sm:hidden">Logout</span>
+              <LogOut className="mr-1.5 h-4 w-4" aria-hidden />
+              Logout
             </Button>
           </div>
         </div>
