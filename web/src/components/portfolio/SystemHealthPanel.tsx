@@ -6,7 +6,7 @@ export default function SystemHealthPanel({ session }: { session: Session }) {
 
   if (session.audit_status === "retake_approved") {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 shadow-sm">
+      <div className="bg-blue-50/80 backdrop-blur-md border border-blue-200/60 rounded-xl p-4 mb-6 shadow-sm">
         <div className="flex items-start gap-3">
           <RotateCcw className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
           <div className="space-y-1">
@@ -24,7 +24,7 @@ export default function SystemHealthPanel({ session }: { session: Session }) {
 
   if (session.audit_status === "resolved") {
     return (
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6 shadow-sm">
+      <div className="bg-emerald-50/80 backdrop-blur-md border border-emerald-200/60 rounded-xl p-4 mb-6 shadow-sm">
         <div className="flex items-start gap-3">
           <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
           <div className="space-y-1">
@@ -41,7 +41,7 @@ export default function SystemHealthPanel({ session }: { session: Session }) {
   }
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 shadow-sm">
+    <div className="bg-amber-50/80 backdrop-blur-md border border-amber-200/60 rounded-xl p-4 mb-6 shadow-sm">
       <div className="flex items-start gap-3">
         <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
         <div className="space-y-1">
