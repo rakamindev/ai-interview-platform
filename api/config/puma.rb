@@ -27,14 +27,10 @@ preload_app!
 on_worker_boot do
   ActiveRecord::Base.establish_connection if defined?(ActiveRecord)
 
-  # Restart the EventMachine reactor in each forked worker — preload_app! forks
-  # after EM starts in the master, killing the reactor thread in child processes.
-  # Without this, all WebSocket connections silently fail in production workers.
-  unless EventMachine.reactor_running?
-    ready = Queue.new
-    Thread.new { EventMachine.run { ready.push(:ok) } }
-    ready.pop
-  end
+  # Start the EventMachine reactor in each forked worker. Under preload_app! the
+  # reactor is intentionally NOT started in the master (fork-unsafe), so each worker
+  # starts its own here via the shared, self-healing starter.
+  EmReactor.start! if defined?(EmReactor)
 end
 
 plugin :tmp_restart
