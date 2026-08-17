@@ -51,4 +51,82 @@ RSpec.describe Portfolio, type: :model do
       expect(portfolio.reload.verdict).to eq("pass")
     end
   end
+
+  describe "#recompute_verdict! verdict_summary" do
+    it "is nil when there are no skills" do
+      portfolio.recompute_verdict!
+
+      expect(portfolio.reload.verdict_summary).to be_nil
+    end
+
+    it "mentions strengths and concerns when both exist" do
+      Current.using(tenant_id: org.id) { create(:portfolio_skill, portfolio: portfolio, skill_label: "React", ai_level: 5) }
+      Current.using(tenant_id: org.id) { create(:portfolio_skill, portfolio: portfolio, skill_label: "SQL", ai_level: 1) }
+
+      portfolio.recompute_verdict!
+
+      expect(portfolio.reload.verdict_summary).to eq(
+        "Strong on React. Less certain on SQL — worth a follow-up before deciding."
+      )
+    end
+
+    it "praises across the board when only strengths exist" do
+      Current.using(tenant_id: org.id) { create(:portfolio_skill, portfolio: portfolio, skill_label: "React", ai_level: 5) }
+      Current.using(tenant_id: org.id) { create(:portfolio_skill, portfolio: portfolio, skill_label: "Node.js", ai_level: 4) }
+
+      portfolio.recompute_verdict!
+
+      expect(portfolio.reload.verdict_summary).to eq(
+        "Strong across the board, especially React and Node.js."
+      )
+    end
+
+    it "flags a single weak skill as a narrow, inconclusive read" do
+      Current.using(tenant_id: org.id) { create(:portfolio_skill, portfolio: portfolio, skill_label: "React", ai_level: 2) }
+
+      portfolio.recompute_verdict!
+
+      expect(portfolio.reload.verdict_summary).to eq(
+        "Only tested on React, and the result was weak or uncertain — treat this as a narrow, inconclusive read."
+      )
+    end
+
+    it "treats a non-overridden low-confidence skill as a concern even at a mid level" do
+      Current.using(tenant_id: org.id) do
+        create(:portfolio_skill, portfolio: portfolio, skill_label: "React", ai_level: 5)
+        create(:portfolio_skill, portfolio: portfolio, skill_label: "SQL", ai_level: 3, ai_confidence: "low")
+      end
+
+      portfolio.recompute_verdict!
+
+      expect(portfolio.reload.verdict_summary).to eq(
+        "Strong on React. Less certain on SQL — worth a follow-up before deciding."
+      )
+    end
+
+    it "does not treat an overridden skill's low ai_confidence as a concern" do
+      skill = Current.using(tenant_id: org.id) do
+        create(:portfolio_skill, portfolio: portfolio, skill_label: "SQL", ai_level: 1, ai_confidence: "low")
+      end
+      Current.using(tenant_id: org.id) do
+        skill.build_assessor_override(ai_level: 1, override_level: 5, overridden_by: 1, overridden_at: Time.current).save!
+      end
+
+      portfolio.recompute_verdict!
+
+      expect(portfolio.reload.verdict_summary).to eq(
+        "Strong across the board, especially SQL."
+      )
+    end
+
+    it "gives a consistent-performance sentence when nothing is strong or concerning" do
+      Current.using(tenant_id: org.id) { create(:portfolio_skill, portfolio: portfolio, skill_label: "React", ai_level: 3) }
+
+      portfolio.recompute_verdict!
+
+      expect(portfolio.reload.verdict_summary).to eq(
+        "Solid, consistent performance across everything assessed."
+      )
+    end
+  end
 end
