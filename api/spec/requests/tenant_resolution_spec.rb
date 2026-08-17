@@ -5,11 +5,24 @@ require 'rails_helper'
 RSpec.describe 'Tenant resolution hardening', type: :request do
   let(:middleware) { TenantResolverMiddleware.new(->(_env) { [200, {}, []] }) }
 
+  # Assembled from its parts rather than pasted as one base64 string, so the claims an
+  # attacker would put in the token are readable on the page. The signature segment is a
+  # plain word: this token is meant to be unverifiable, and the spec below asserts that
+  # nothing about it resolves a tenant.
+  def forged_bearer(claims)
+    segments = [
+      Base64.urlsafe_encode64({ alg: 'HS256' }.to_json, padding: false),
+      Base64.urlsafe_encode64(claims.to_json, padding: false),
+      'FORGEDSIGNATURE'
+    ]
+    "Bearer #{segments.join('.')}"
+  end
+
   describe 'forged JWT must not resolve a tenant' do
     it 'returns no scheme for a token with an invalid signature' do
       env = Rack::MockRequest.env_for(
         '/api/v1/assessments',
-        'HTTP_AUTHORIZATION' => 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoiYWRtaW4iLCJzY2hlbWUiOiJ0ZXN0LWNvcnAifQ.FORGEDSIGNATURE'
+        'HTTP_AUTHORIZATION' => forged_bearer(user_id: 1, role: 'admin', scheme: 'test-corp')
       )
       request = ActionDispatch::Request.new(env)
 

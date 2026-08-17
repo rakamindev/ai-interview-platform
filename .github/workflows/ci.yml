@@ -51,11 +51,12 @@ jobs:
       RAILS_ENV: test
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/rakamin_test
       REDIS_URL: redis://localhost:6379/1
-      # config/application.yml is gitignored (it holds the shared JWT secret),
-      # so CI supplies the same keys as environment variables. None of these are
-      # real credentials — the suite never calls Gemini, and the token specs
-      # only need a secret that is stable within one run.
-      SECRET_KEY_BASE: ci-secret-key-base-not-a-real-secret
+      # config/application.yml is gitignored (it holds the shared JWT secret), so CI
+      # supplies the same keys as environment variables. None of these are real
+      # credentials — the suite never calls Gemini. SECRET_KEY_BASE is generated per
+      # run in the step below rather than written here: the token specs only need a
+      # signing key that stays stable within one run, and a fresh one leaves no static
+      # value in the repository to mistake for a real secret.
       ALLOWED_ORIGINS: "*"
       APP_BASE_URL: http://localhost:3001
       WEB_BASE_URL: http://localhost:5173
@@ -75,6 +76,10 @@ jobs:
           ruby-version-file: .ruby-version
           bundler-cache: true
           working-directory: api
+
+      - name: Generate a throwaway signing key
+        # Scoped to this job only, and discarded with the runner.
+        run: echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> "$GITHUB_ENV"
 
       - name: Prepare database
         # db:migrate rather than db:schema:load — the ai_interview schema is
