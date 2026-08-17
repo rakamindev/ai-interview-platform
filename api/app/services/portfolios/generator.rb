@@ -1,11 +1,20 @@
 # frozen_string_literal: true
 
-module Portfolios
-  # N10: Generates a structured skill portfolio from the full transcript
-  # and final coverage map using Gemini Pro.
-  # Runs post-session as a background job.
-  class Generator
-    def initialize(session:, gemini_client: nil)
+  module Portfolios
+    # N10: Generates a structured skill portfolio from the full transcript
+    # and final coverage map using Gemini Pro.
+    # Runs post-session as a background job.
+    class Generator
+      # Raised when the AI response cannot produce a usable portfolio.
+      # Caught by the caller (worker) → portfolio marked `failed` with a
+      # human-readable message instead of a 500 or silent corruption.
+      class GenerationError < StandardError; end
+
+      ALLOWED_CONFIDENCE = %w[high medium low].freeze
+      MAX_EVIDENCE_QUOTES = 3
+      MAX_LABEL_LENGTH = 255
+
+      def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
         model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
@@ -31,7 +40,10 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # NOTE: do NOT flip to `failed` here. Sidekiq retries the job on StandardError,
+      # and flipping to `failed` lets the assessor hit "Retry" while the original
+      # retry is still queued → two jobs race and duplicate work. The status only
+      # becomes `failed` in PortfolioGeneratorWorker.sidekiq_retries_exhausted.
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -148,34 +160,58 @@ module Portfolios
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      data = parse_response(response)
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      configured = Array(data['configured_skills']).filter_map { |s| sanitize_skill(s, is_discovered: false) }
+      discovered = Array(data['discovered_skills']).filter_map { |s| sanitize_skill(s, is_discovered: true) }
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      # An empty portfolio is never a valid outcome — the assessor would see a
+      # candidate with "no skills" and act on a wrong signal. Fail loudly so the
+      # assessor can retry generation instead of silently shipping nothing.
+      raise GenerationError, 'AI returned no usable configured skills' if configured.empty?
+
+      (configured + discovered).each do |attrs|
+        portfolio.portfolio_skills.create!(attrs)
       end
+    end
+
+    def parse_response(response)
+      return response if response.is_a?(Hash)
+
+      JSON.parse(response.to_s)
+    rescue JSON::ParserError => e
+      raise GenerationError, "AI response was not valid JSON: #{e.message}"
+    end
+
+    # Defensive sanitization of a single AI skill entry. Invalid entries are
+    # skipped (so one hallucinated skill does not sink the whole portfolio);
+    # only a completely unusable response raises GenerationError.
+    def sanitize_skill(skill_data, is_discovered:)
+      return nil unless skill_data.is_a?(Hash)
+
+      label = skill_data['skill_label'].to_s.strip
+      return nil if label.blank? || label.length > MAX_LABEL_LENGTH
+
+      level = Integer(skill_data['level'] || skill_data['ai_level'], exception: false)
+      return nil if level.nil?
+
+      level = level.clamp(1, 5)
+
+      confidence = skill_data['confidence'].to_s.downcase
+      confidence = 'low' unless ALLOWED_CONFIDENCE.include?(confidence)
+
+      {
+        skill_id:           is_discovered ? nil : skill_data['skill_id'].to_s.first(50),
+        skill_label:        label,
+        is_discovered:      is_discovered,
+        ai_level:           level,
+        ai_confidence:      confidence,
+        evidence:           Array(skill_data['evidence']).map(&:to_s).first(MAX_EVIDENCE_QUOTES),
+        competency_summary: skill_data['competency_summary'].to_s.strip.presence || 'No competency summary provided by the model.'
+      }
     end
   end
 end
