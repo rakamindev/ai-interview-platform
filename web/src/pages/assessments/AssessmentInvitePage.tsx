@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Scale } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -175,15 +175,22 @@ export default function AssessmentInvitePage() {
     }
   };
 
+  const getCandidateUrl = (s: Session) => {
+    if (s.invite_url && !s.invite_url.includes(":3001")) {
+      return s.invite_url;
+    }
+    return `${window.location.origin}/interview/${s.invite_token}`;
+  };
+
   const copyLink = (session: Session, id: number) => {
-    navigator.clipboard.writeText(session.invite_url);
+    navigator.clipboard.writeText(getCandidateUrl(session));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const copyNewSessionLink = () => {
-    if (!newSession?.invite_url) return;
-    navigator.clipboard.writeText(newSession.invite_url);
+    if (!newSession) return;
+    navigator.clipboard.writeText(getCandidateUrl(newSession));
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
@@ -219,6 +226,12 @@ export default function AssessmentInvitePage() {
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
+          <Link
+            to={`/assessments/${id}/comparison`}
+            className="inline-flex items-center gap-1.5 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+          >
+            <Scale className="h-3.5 w-3.5" /> Compare
+          </Link>
           <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
@@ -262,7 +275,7 @@ export default function AssessmentInvitePage() {
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
-                {newSession.invite_url}
+                {getCandidateUrl(newSession)}
               </span>
             </div>
             <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">

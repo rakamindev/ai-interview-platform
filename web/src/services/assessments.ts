@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Assessment, AssessmentSkill, PaginationMeta, Session } from "@/types";
+import type { Assessment, AssessmentSkill, PaginationMeta, Session, AssessmentComparison } from "@/types";
 
 export interface AssessmentPayload {
   name: string;
@@ -39,4 +39,7 @@ export const assessmentsApi = {
       `/assessments/${assessmentId}/sessions`,
       { session: { candidate_name: candidateName, candidate_id: candidateId } }
     ),
+
+  getComparison: (id: number) =>
+    api.get<AssessmentComparison>(`/assessments/${id}/comparison`),
 };

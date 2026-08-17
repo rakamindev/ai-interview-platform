@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
+import { Plus, Clock, ChevronRight, ClipboardList } from "lucide-react";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -61,12 +62,14 @@ export default function AssessmentListPage() {
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="No assessments yet"
+          description="Create your first assessment to start interviewing candidates with evidence-backed evaluation."
+          actionLabel="Create your first assessment"
+          actionIcon={Plus}
+          onAction={() => navigate("/assessments/new")}
+        />
       ) : (
         <div className="space-y-2">
           {assessments.map((a) => (

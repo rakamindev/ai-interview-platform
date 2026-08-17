@@ -3,6 +3,17 @@
 Rails.application.routes.draw do
   get '/health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
+  # Web redirect fallback for candidate links opened on the API port
+  get '/interview/:token', to: redirect { |params, _req|
+    frontend = ENV.fetch('FRONTEND_URL', ENV.fetch('WEB_BASE_URL', 'http://localhost:5173'))
+    "#{frontend}/interview/#{params[:token]}"
+  }
+
+  get '/feedback/:token', to: redirect { |params, _req|
+    frontend = ENV.fetch('FRONTEND_URL', ENV.fetch('WEB_BASE_URL', 'http://localhost:5173'))
+    "#{frontend}/feedback/#{params[:token]}"
+  }
+
   namespace :api do
     namespace :v1 do
       # Auth
@@ -18,6 +29,9 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
+        member do
+          get :comparison
+        end
         resources :sessions, only: %i[index create]
       end
 
@@ -34,7 +48,9 @@ Rails.application.routes.draw do
 
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
+      get  'sessions/:token/feedback',       to: 'sessions#feedback'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      post 'sessions/:token/integrity',      to: 'sessions#integrity'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

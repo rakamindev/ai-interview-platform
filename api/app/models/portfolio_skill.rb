@@ -15,4 +15,10 @@ class PortfolioSkill < ApplicationRecord
   def evidence_quotes
     Array(evidence)
   end
+
+  # counter_evidence is stored as JSONB array of quote strings (contradictions /
+  # gaps that a robust evaluation should expose alongside supporting evidence)
+  def counter_evidence_quotes
+    Array(counter_evidence)
+  end
 end

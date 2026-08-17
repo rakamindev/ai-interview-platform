@@ -16,11 +16,11 @@ default: &default
 
 development:
   <<: *default
-  database: rakamin_development
+  database: <%= ENV.fetch('DB_NAME', 'ai_interview_development') %>
 
 test:
   <<: *default
-  database: rakamin_test
+  database: <%= ENV.fetch('DB_NAME', 'rakamin_test') %>
 
 staging:
   <<: *default

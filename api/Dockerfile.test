@@ -1,0 +1,27 @@
+# Test image for the AI Interview API.
+#
+# Unlike the production Dockerfile (which installs `--without 'development test'`),
+# this image installs ALL bundle groups so RSpec / RuboCop / FactoryBot / Faker are
+# available inside the container. Used by `docker-compose.test.yml`.
+#
+# Base must match `.ruby-version` and the Gemfile.lock pin (3.3.2p78).
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  libpq-dev \
+  tzdata \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+# Install all gem groups (dev + test included).
+COPY Gemfile Gemfile.lock ./
+RUN bundle config set --local without '' && \
+    bundle install --jobs 4
+
+COPY . .
+
+# Default command: run the suite.
+CMD ["bundle", "exec", "rspec"]

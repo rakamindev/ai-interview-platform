@@ -44,6 +44,7 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  integrity_metadata?: IntegrityMetadata;
   created_at?: string;
 }
 
@@ -81,8 +82,28 @@ export interface Portfolio {
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
+  evaluation?: EvaluationSummary;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+}
+
+export interface EvaluationSummary {
+  overall_status: "ready_for_review" | "needs_review";
+  coverage: { assessed: number; total: number; percent: number };
+  needs_review: boolean;
+  review_reasons: string[];
+  skills: EvaluationSkillSummary[];
+}
+
+export interface EvaluationSkillSummary {
+  id: number;
+  skill_label: string;
+  is_discovered: boolean;
+  assessment_status: "assessed" | "partial" | "not_assessed";
+  ai_level?: number;
+  ai_confidence?: string;
+  evidence: string[];
+  counter_evidence: string[];
 }
 
 export interface PortfolioSkill {
@@ -90,9 +111,10 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: number;        // 1-5 (backend returns integer, not "L3")
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
+  counter_evidence?: string[];
   competency_summary: string;
 }
 
@@ -164,6 +186,40 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  skill_areas: string[];
+}
+
+export interface CandidateFeedback {
+  role_title: string;
+  overall: string;
+  strengths: string[];
+  growth_areas: string[];
+  coverage: { assessed: number; total: number; percent: number };
+}
+
+export interface IntegrityMetadata {
+  device_state?: string;
+  connection_health?: string;
+  reconnect_events?: number;
+  audio_quality?: string;
+}
+
+export interface ComparisonCandidate {
+  candidate_id?: number;
+  candidate_name?: string;
+  session_id: number;
+  coverage: { assessed: number; total: number; percent: number };
+  overall_status: string;
+  avg_level: number;
+  assessed_skills: number;
+  total_skills: number;
+  overridden_count: number;
+  generated_at?: string;
+}
+
+export interface AssessmentComparison {
+  assessment: { id: number; name: string };
+  candidates: ComparisonCandidate[];
 }
 
 export interface PaginationMeta {

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
-import { Plus, Briefcase, ChevronRight } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
+import { Plus, Briefcase, ChevronRight, FilePlus2 } from "lucide-react";
 import type { Vacancy } from "@/types";
 
 export default function VacancyListPage() {
@@ -40,12 +41,14 @@ export default function VacancyListPage() {
           {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
       ) : vacancies.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No vacancies yet.</p>
-          <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy
-          </Button>
-        </div>
+        <EmptyState
+          icon={FilePlus2}
+          title="No vacancies yet"
+          description="Create your first vacancy so candidates can be compared against a clear role profile."
+          actionLabel="Create your first vacancy"
+          actionIcon={Plus}
+          onAction={() => navigate("/vacancies/new")}
+        />
       ) : (
         <div className="space-y-2">
           {vacancies.map((v) => (

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -21,6 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import ConsentModal from "@/components/interview/ConsentModal";
+import PrepHub from "@/components/interview/PrepHub";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -32,6 +34,7 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,6 +56,23 @@ export default function InterviewPage() {
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
+  const reconnectCountRef = useRef(0);
+  const integrityReportedRef = useRef(false);
+
+  // Best-effort integrity signals for the assessor trust panel (W2). Fire-and-forget.
+  const recordIntegrity = useCallback(
+    (integrity: Partial<{ device_state: string; connection_health: string; reconnect_events: number }>) => {
+      if (!token) return;
+      sessionsApi.recordIntegrity(token, integrity).catch(() => {});
+    },
+    [token]
+  );
+
+  const reportDeviceIntegrity = useCallback(() => {
+    if (integrityReportedRef.current) return;
+    integrityReportedRef.current = true;
+    recordIntegrity({ device_state: "checked", connection_health: "initialized" });
+  }, [recordIntegrity]);
 
   const handleStateChange = useCallback((state: InterviewState) => {
     setInterviewState(state);
@@ -71,6 +91,8 @@ export default function InterviewPage() {
 
     if (state === "reconnecting") {
       muteRef.current?.();
+      reconnectCountRef.current += 1;
+      recordIntegrity({ reconnect_events: reconnectCountRef.current, connection_health: "flaky" });
       connectionLostTimerRef.current = setTimeout(() => {
         setConnectionLostLong(true);
       }, 60_000);
@@ -82,7 +104,7 @@ export default function InterviewPage() {
       setConnectionLostLong(false);
       if (state === "active" && !micMutedRef.current) unmuteRef.current?.();
     }
-  }, []);
+  }, [recordIntegrity]);
 
   const handleReconnected = useCallback(() => {
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
@@ -161,6 +183,7 @@ export default function InterviewPage() {
 
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
+    reportDeviceIntegrity();
     setInterviewState("connecting");
     connect();
     await startCapture();
@@ -168,7 +191,7 @@ export default function InterviewPage() {
     // This prevents mic audio from being sent during AI speech, since separate
     // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
-  }, [sessionId, connect, startCapture]);
+  }, [sessionId, connect, startCapture, reportDeviceIntegrity]);
 
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
@@ -202,13 +225,12 @@ export default function InterviewPage() {
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            <PrepHub
+              roleTitle={candidateInfo?.role_title ?? "AI Interview"}
+              timeLimitMin={candidateInfo?.time_limit_min ?? 30}
+              skillAreas={candidateInfo?.skill_areas ?? []}
+            />
+            <HardwareCheck onStart={() => setIsConsentModalOpen(true)} />
           </div>
         ) : (
           <div className="space-y-4">
@@ -216,12 +238,21 @@ export default function InterviewPage() {
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
+            <Button className="w-full" size="lg" onClick={() => setIsConsentModalOpen(true)}>
               <Mic className="h-4 w-4 mr-2" />
               Start Interview
             </Button>
           </div>
         )}
+
+        <ConsentModal
+          open={isConsentModalOpen}
+          onOpenChange={setIsConsentModalOpen}
+          onConfirmConsent={() => {
+            setHardwareCheckDone(true);
+            startInterview();
+          }}
+        />
       </div>
     );
   }
@@ -237,6 +268,13 @@ export default function InterviewPage() {
           <br />
           The hiring team will review your results and follow up with you.
         </p>
+        {token && (
+          <div>
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/feedback/${token}`}>See your outcome summary</Link>
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

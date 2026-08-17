@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: ai_interview_development
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_interview_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.test
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p 3001"
+    ports:
+      - "3001:3001"
+    environment:
+      RAILS_ENV: development
+      RACK_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_NAME: ai_interview_development
+      REDIS_URL: redis://redis:6379/1
+      ALLOWED_ORIGINS: http://localhost:5173
+      APP_BASE_URL: http://localhost:3001
+      FRONTEND_URL: http://localhost:5173
+      SECRET_KEY_BASE: rakamin-api
+      GEMINI_API_KEY: test-key
+      GEMINI_LIVE_MODEL: gemini-2.0-flash-live-001
+      GEMINI_FLASH_MODEL: gemini-2.0-flash-001
+      GEMINI_PRO_MODEL: gemini-2.0-pro-001
+    volumes:
+      - ./api:/ai-interview
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.test
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: development
+      RACK_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_NAME: ai_interview_development
+      REDIS_URL: redis://redis:6379/1
+      SECRET_KEY_BASE: rakamin-api
+      GEMINI_API_KEY: test-key
+      GEMINI_LIVE_MODEL: gemini-2.0-flash-live-001
+      GEMINI_FLASH_MODEL: gemini-2.0-flash-001
+      GEMINI_PRO_MODEL: gemini-2.0-pro-001
+    volumes:
+      - ./api:/ai-interview
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  postgres_dev_data:

@@ -10,6 +10,7 @@ import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+import { LEVEL_LABELS, parseLevel } from "@/utils/constants";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -34,8 +35,13 @@ export default function FitGapReportPage() {
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
+          const triggerRes = await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+          if ("report" in triggerRes.data && triggerRes.data.report) {
+            setReport(triggerRes.data.report);
+            setGenerating(false);
+          } else {
+            setGenerating(true);
+          }
         } catch {
           setGenerating(false);
         }
@@ -193,7 +199,7 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {LEVEL_LABELS[parseLevel(s.ai_level)]} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
                         </span>
                         <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>

@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete feedback integrity]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete feedback integrity]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -149,8 +149,41 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          skill_areas:     assessment.assessment_skills.order(:display_order).pluck(:skill_label)
         )
+      end
+
+      # GET /sessions/:token/feedback  — no JWT, invite token in URL
+      # Candidate-facing, tenant-safe outcome summary. Deliberately non-scoring:
+      # no raw levels, confidence, or internal override notes.
+      def feedback
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        portfolio = Portfolio.unscoped.find_by(session_id: session.id)
+        return json_error("Your feedback is not ready yet", :not_found) unless portfolio&.complete?
+
+        json_response(feedback: Evaluations::Feedback.new(portfolio).call)
+      end
+
+      # POST /sessions/:token/integrity  — no JWT, invite token in URL
+      # Records candidate-side integrity signals (device state, connection
+      # health, reconnect events) captured by the browser during the interview.
+      def integrity
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        data = params.fetch(:integrity, {}).to_unsafe_h.slice(
+          :device_state, :connection_health, :reconnect_events, :audio_quality
+        )
+        data['reconnect_events'] = data['reconnect_events'].to_i if data.key?('reconnect_events')
+
+        session.update!(
+          integrity_metadata: session.integrity_metadata.merge(data)
+        )
+
+        json_response(recorded: true)
       end
 
       private
@@ -175,6 +208,7 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          integrity_metadata: session.integrity_metadata,
           created_at:       session.created_at
         }
       end

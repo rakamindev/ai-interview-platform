@@ -1,5 +1,13 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type {
+  Session,
+  CoverageMap,
+  TranscriptTurn,
+  Portfolio,
+  CandidateInfo,
+  CandidateFeedback,
+  IntegrityMetadata,
+} from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
@@ -28,6 +36,12 @@ export const sessionsApi = {
 
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+
+  getFeedback: (token: string) =>
+    api.get<{ feedback: CandidateFeedback }>(`/sessions/${token}/feedback`),
+
+  recordIntegrity: (token: string, integrity: Partial<IntegrityMetadata>) =>
+    api.post<{ recorded: boolean }>(`/sessions/${token}/integrity`, { integrity }),
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),

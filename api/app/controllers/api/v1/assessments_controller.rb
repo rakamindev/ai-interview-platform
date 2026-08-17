@@ -5,7 +5,7 @@ module Api
     class AssessmentsController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_assessment, only: %i[show update destroy]
+      before_action :set_assessment, only: %i[show update destroy comparison]
 
       # GET /api/v1/assessments
       def index
@@ -53,7 +53,51 @@ module Api
         json_response({ message: "Assessment deleted" })
       end
 
+      # GET /api/v1/assessments/:id/comparison
+      # Candidate fair-comparison / ranking view (Wow idea W4): normalizes all
+      # completed sessions for an assessment onto one rubric so recruiters
+      # compare like-for-like. Tenant-isolated via the scoped Assessment find.
+      def comparison
+        rows = @assessment.sessions
+                          .joins(:portfolio)
+                          .where(portfolios: { generation_status: 'complete' })
+                          .order('portfolios.generated_at DESC')
+                          .map(&method(:comparison_row))
+
+        ranked = rows.sort_by { |r| [r[:coverage][:percent], r[:avg_level]] }.reverse
+
+        json_response(
+          assessment: {
+            id:   @assessment.id,
+            name: @assessment.name
+          },
+          candidates: ranked
+        )
+      end
+
       private
+
+      def comparison_row(session)
+        portfolio = session.portfolio
+        summary   = Evaluations::Summary.new(portfolio)
+        skills    = portfolio.portfolio_skills
+        assessed  = skills.select { |s| summary.status_for(s) == 'assessed' }
+
+        avg_level = assessed.empty? ? 0 : (assessed.sum(&:ai_level).to_f / assessed.size).round(1)
+
+        {
+          candidate_id:     session.candidate_id,
+          candidate_name:   session.candidate_name,
+          session_id:       session.id,
+          coverage:         summary.coverage,
+          overall_status:   summary.overall_status,
+          avg_level:        avg_level,
+          assessed_skills:  assessed.size,
+          total_skills:     skills.size,
+          overridden_count: portfolio.assessor_overrides.count,
+          generated_at:     portfolio.generated_at
+        }
+      end
 
       def set_assessment
         @assessment = Assessment.find(params[:id])

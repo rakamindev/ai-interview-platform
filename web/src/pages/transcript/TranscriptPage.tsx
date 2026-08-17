@@ -3,7 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
+import { ArrowLeft, Download, MessagesSquare } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -80,9 +81,11 @@ export default function TranscriptPage() {
       )}
 
       {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-          No transcript available for this session.
-        </div>
+        <EmptyState
+          icon={MessagesSquare}
+          title="No transcript yet"
+          description="The transcript will appear here once the candidate starts answering."
+        />
       )}
 
       {!loading && !error && turns.length > 0 && (
