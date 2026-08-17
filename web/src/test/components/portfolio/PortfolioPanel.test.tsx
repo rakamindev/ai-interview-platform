@@ -69,6 +69,21 @@ describe("PortfolioPanel", () => {
     expect(screen.getByText("Configured Skills")).toBeInTheDocument();
   });
 
+  it("renders the backend-provided verdict_summary verbatim, without computing its own wording", () => {
+    renderPanel({
+      portfolio: portfolio({ verdict_summary: "Strong across the board, especially React." }),
+    });
+
+    expect(screen.getByText("Strong across the board, especially React.")).toBeInTheDocument();
+  });
+
+  it("omits the summary paragraph when verdict_summary is absent", () => {
+    renderPanel({ portfolio: portfolio({ verdict_summary: null }) });
+
+    expect(screen.getByText("Pass")).toBeInTheDocument();
+    expect(screen.queryByText(/Strong across the board|Weak or uncertain|Solid, consistent|Only tested/)).not.toBeInTheDocument();
+  });
+
   it("shows the override control by default (not read-only)", () => {
     renderPanel({ onOverrideSaved: vi.fn() });
 

@@ -133,10 +133,11 @@ describe("PortfolioPage verdict card", () => {
     expect(screen.queryByText("Verdict")).not.toBeInTheDocument();
   });
 
-  it("still shows the plain-English summary alongside the backend badge", async () => {
+  it("displays the backend-provided verdict summary verbatim, without recomputing it", async () => {
     mockLoaded(
       portfolio({
         verdict: "pass",
+        verdict_summary: "Strong across the board, especially React.",
         skills: [skill({ id: 1, skill_label: "React", ai_level: 5 })],
       })
     );
@@ -144,7 +145,7 @@ describe("PortfolioPage verdict card", () => {
     renderPage();
 
     await screen.findByText("Pass");
-    expect(screen.getByText(/Strong across the board/)).toBeInTheDocument();
+    expect(screen.getByText("Strong across the board, especially React.")).toBeInTheDocument();
   });
 });
 
