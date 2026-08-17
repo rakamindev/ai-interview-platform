@@ -130,10 +130,24 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 export interface SkillComparison {
   skill_label: string;
   required_level: number;
+  expected_level?: number; // Legacy reports generated before contract v2.
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
   is_override?: boolean;
+  confidence?: "high" | "medium" | "low" | null;
+  evidence_count?: number;
+}
+
+export interface FitGapReviewSummary {
+  total_skills: number;
+  match: number;
+  gap: number;
+  exceed: number;
+  not_assessed: number;
+  low_confidence: number;
+  human_overrides: number;
+  decision_status: "evidence_ready" | "review_required";
 }
 
 export interface FitGapReport {
@@ -143,7 +157,10 @@ export interface FitGapReport {
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
-  generated_at: string;
+  generated_at?: string;
+  generation_status: "pending" | "generating" | "complete" | "failed";
+  generation_error?: string;
+  review_summary: FitGapReviewSummary;
 }
 
 export interface SkillTaxonomy {
