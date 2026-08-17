@@ -241,6 +241,24 @@ export default function InterviewPage() {
     );
   }
 
+  // ── State G: Connection failed (never actually completed) ──────────────
+  if (interviewState === "connection_failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Connection Lost</h2>
+        <p className="text-sm text-muted-foreground">
+          We couldn't restore your connection, so the interview did not finish.
+          <br />
+          This has not been submitted. Please contact the hiring team for next steps.
+        </p>
+        <Button className="w-full" size="lg" onClick={startInterview}>
+          Try to Reconnect
+        </Button>
+      </div>
+    );
+  }
+
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
