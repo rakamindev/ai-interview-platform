@@ -85,6 +85,11 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export interface EvidenceItem {
+  text: string;
+  turn_number?: number | null;
+}
+
 export interface PortfolioSkill {
   id: number;
   skill_id?: number;
@@ -92,8 +97,10 @@ export interface PortfolioSkill {
   is_discovered: boolean;
   ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
   ai_confidence: string;  // "high" | "medium" | "low"
-  evidence: string[];
+  evidence: EvidenceItem[];
   competency_summary: string;
+  probe_count?: number;
+  coverage_state?: string;
 }
 
 export interface AssessorOverride {
@@ -130,10 +137,19 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 export interface SkillComparison {
   skill_label: string;
   required_level: number;
+  expected_level?: number;
   candidate_level?: number;
+  ai_level?: number;
+  override_level?: number;
+  assessor_notes?: string;
   result: SkillComparisonResult;
   delta?: number;
   is_override?: boolean;
+  confidence?: string;
+  evidence?: EvidenceItem[];
+  competency_summary?: string;
+  probe_count?: number;
+  coverage_state?: string;
 }
 
 export interface FitGapReport {
