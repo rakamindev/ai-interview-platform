@@ -40,13 +40,34 @@ function tone(result: SkillComparisonResult) {
   return result === "not_assessed" ? "neutral" : result;
 }
 
+/**
+ * How far the candidate sits from the requirement.
+ *
+ * `delta ?? 0` used to stand in for a missing value, and zero renders as
+ * "on level" — so a report that omitted the field announced every skill as
+ * meeting the requirement, including one two levels short. A gap silently
+ * became a pass. Absent is not zero, and the whole point of this screen is
+ * that the interface must not state what the system does not know.
+ *
+ * So the distance is derived from the two levels when the field is missing,
+ * and when it genuinely cannot be known nothing is claimed at all.
+ */
 function DeltaReading({ comparison }: { comparison: SkillComparison }) {
   if (comparison.result === "not_assessed") {
     return <span className="font-mono text-xs text-result-none">no reading</span>;
   }
 
-  const delta = comparison.delta ?? 0;
-  const sign = delta > 0 ? `+${delta}` : `${delta}`;
+  const { delta, candidate_level, expected_level } = comparison;
+  const derived =
+    typeof delta === "number"
+      ? delta
+      : typeof candidate_level === "number" && typeof expected_level === "number"
+      ? candidate_level - expected_level
+      : null;
+
+  if (derived === null) {
+    return <span className="font-mono text-xs text-result-none">—</span>;
+  }
 
   return (
     <span
@@ -55,10 +76,10 @@ function DeltaReading({ comparison }: { comparison: SkillComparison }) {
         RESULT_TEXT[comparison.result],
         // A two-level shortfall has to look heavier than a one-level one
         // without the reader parsing the number.
-        delta <= -2 && "font-medium",
+        derived <= -2 && "font-medium",
       )}
     >
-      {delta === 0 ? "on level" : sign}
+      {derived === 0 ? "on level" : derived > 0 ? `+${derived}` : `${derived}`}
     </span>
   );
 }
@@ -109,6 +130,8 @@ export default function ComparisonTable({ comparisons, evidenceByLabel }: Compar
             return (
               <div
                 key={`${c.skill_label}-${i}`}
+                data-testid="comparison-row"
+                data-result={c.result}
                 className={cn(
                   "grid gap-x-6 gap-y-3 border-b py-4",
                   "sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1.4fr)]",

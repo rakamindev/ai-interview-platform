@@ -269,7 +269,10 @@ export default function FitGapReportPage() {
 
       {state === "ready" && report && (
         <>
-          <section className="border-t-2 border-t-primary border-b bg-card px-5 py-4">
+          <section
+            className="border-t-2 border-t-primary border-b bg-card px-5 py-4"
+            data-testid="fitgap-summary"
+          >
             <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">

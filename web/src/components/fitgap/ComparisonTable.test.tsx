@@ -131,3 +131,53 @@ describe("ComparisonTable", () => {
     expect(screen.queryByText("Node.js / Backend Development")).not.toBeInTheDocument();
   });
 });
+
+describe("DeltaReading — jarak ke syarat", () => {
+  const row = (over: Record<string, unknown>) => ({
+    skill_label: "System Design",
+    expected_level: 4,
+    candidate_level: 2,
+    result: "gap",
+    is_override: false,
+    evidence: [],
+    ...over,
+  });
+
+  it("never reports a shortfall as meeting the requirement", () => {
+    // `delta ?? 0` turned a missing field into zero, and zero prints as
+    // "on level" — a skill two levels short announced itself as a pass.
+    render(<ComparisonTable comparisons={[row({ delta: undefined })] as any} />);
+
+    expect(screen.queryByText("on level")).toBeNull();
+    expect(screen.getByText("-2")).toBeInTheDocument();
+  });
+
+  it("uses the delta the backend sent when it sends one", () => {
+    render(<ComparisonTable comparisons={[row({ delta: -3 })] as any} />);
+
+    expect(screen.getByText("-3")).toBeInTheDocument();
+  });
+
+  it("says nothing when the distance genuinely cannot be known", () => {
+    render(
+      <ComparisonTable
+        comparisons={[row({ delta: undefined, candidate_level: undefined })] as any}
+      />,
+    );
+
+    // The level column also shows an em dash for the missing reading, so the
+    // assertion is that nothing *claims* a distance rather than a node count.
+    expect(screen.queryByText("on level")).toBeNull();
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("still says on level when the levels really are equal", () => {
+    render(
+      <ComparisonTable
+        comparisons={[row({ delta: undefined, candidate_level: 4, result: "match" })] as any}
+      />,
+    );
+
+    expect(screen.getByText("on level")).toBeInTheDocument();
+  });
+});
