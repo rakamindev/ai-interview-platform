@@ -17,8 +17,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/** Sign-in failures belong to the form, not to the session handler. */
+const isLoginRequest = (url?: string) => !!url && url.includes("/auth/login");
+
 // Unwrap backend envelope: { data: { ... } } → { ... }
-// On 401/403, clear stored credentials and redirect to login.
 api.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === "object" && "data" in response.data) {
@@ -27,10 +29,22 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const status = error.response?.status;
+
+    // Only a 401 means the session is no longer good. A 403 means we know who
+    // you are and this particular thing is not yours — logging you out for it
+    // throws away a working session over one refused request.
+    //
+    // And never for the login call itself: it answers 401 for a wrong password
+    // and 403 for a role without access, and both of those are the form's to
+    // display. Redirecting here reloaded the page and wiped the React state
+    // before the message could render, so every failed sign-in showed a blink
+    // and an empty form with no explanation at all.
+    if (status === 401 && !isLoginRequest(error.config?.url)) {
       clearToken();
       window.location.href = "/login";
     }
+
     return Promise.reject(error);
   }
 );
