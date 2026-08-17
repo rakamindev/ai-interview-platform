@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_17_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -58,14 +58,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
-    t.integer "override_level", null: false
+    t.integer "ai_level"
+    t.integer "override_level"
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
+    t.string "outcome", default: "adjusted", null: false
+    t.integer "reviewed_level"
+    t.bigint "reviewed_by"
+    t.datetime "reviewed_at"
+    t.text "rationale"
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
+    t.index ["reviewed_by"], name: "index_assessor_overrides_on_reviewed_by"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
+    t.check_constraint "outcome::text = ANY (ARRAY['confirmed'::character varying, 'adjusted'::character varying, 'insufficient_evidence'::character varying]::text[])", name: "chk_assessor_overrides_outcome"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
+    t.check_constraint "reviewed_level IS NULL OR reviewed_level >= 1 AND reviewed_level <= 5", name: "chk_assessor_overrides_reviewed_level"
   end
 
   create_table "coverage_maps", force: :cascade do |t|
@@ -89,9 +97,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "generation_status", default: "complete", null: false
+    t.text "generation_error"
+    t.index ["generation_status"], name: "index_fit_gap_reports_on_generation_status"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.check_constraint "generation_status::text = ANY (ARRAY['pending'::character varying, 'generating'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_fit_gap_generation_status"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -112,12 +124,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.jsonb "evidence_provenance", default: [], null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -126,8 +139,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.bigint "tenant_id"
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
   end
 
   create_table "sessions", force: :cascade do |t|
