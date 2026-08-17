@@ -3,8 +3,10 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent consent_revoke
+                                                  candidate_transcript candidate_data_delete]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent consent_revoke
+                                                    candidate_transcript candidate_data_delete]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -119,6 +121,10 @@ module Api
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
 
+        # Consent gate — the candidate must have granted consent before the
+        # session can complete (AC-B1).
+        return json_error("Consent required to complete the session", :forbidden) unless session.consent_granted?
+
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
         # No coverage re-check here. The backend WS already verified all_covered
@@ -149,8 +155,97 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          consent_required: true,
+          consent_version: Consent::CURRENT_VERSION,
+          has_consent:      session.consent_granted?
         )
+      end
+
+      # POST /sessions/:token/consent — grant (no JWT, invite token in URL).
+      # Idempotent: first grant → 201, repeat → 200 with the same record
+      # (a revoked consent is re-granted in place, never duplicated).
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        version = params[:version].to_s.presence
+        return json_error("Consent version is required", :unprocessable_entity) unless version
+        return json_error("Consent version mismatch — please review the latest disclosure", :unprocessable_entity) if version != Consent::CURRENT_VERSION
+
+        existing = session.consent
+        if existing&.granted?
+          return json_response({ consent: consent_json(existing), status: 'granted' }, :ok)
+        end
+
+        if existing
+          existing.update!(
+            version: version, status: 'granted', granted_at: Time.current, revoked_at: nil,
+            ip: request.remote_ip, user_agent: request.user_agent&.truncate(255),
+            tenant_id: session.tenant_id
+          )
+          json_response({ consent: consent_json(existing), status: 'granted' }, :ok)
+        else
+          consent_record = session.build_consent(
+            version: version, status: 'granted', granted_at: Time.current,
+            ip: request.remote_ip, user_agent: request.user_agent&.truncate(255),
+            tenant_id: session.tenant_id
+          )
+
+          if consent_record.save
+            json_response({ consent: consent_json(consent_record), status: 'granted' }, :created)
+          else
+            json_error(consent_record.errors.full_messages.first, :unprocessable_entity)
+          end
+        end
+      end
+
+      # POST /sessions/:token/consent/revoke — revoke (no JWT, invite token in URL).
+      def consent_revoke
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        consent_record = session.consent
+        return json_error("No consent found for this session", :not_found) unless consent_record
+
+        unless consent_record.revoked?
+          consent_record.update!(status: 'revoked', revoked_at: Time.current)
+        end
+
+        json_response({ consent: consent_json(consent_record), status: 'revoked' }, :ok)
+      end
+
+      # GET /sessions/:token/candidate/transcript — candidate's own transcript (no JWT).
+      # Only accessible while consent is granted (AC-B1).
+      def candidate_transcript
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Consent required to access the transcript", :forbidden) unless session.consent_granted?
+
+        turns = session.transcript_turns.ordered.map do |t|
+          {
+            id:             t.id,
+            turn_number:    t.turn_number,
+            speaker:        t.speaker,
+            text:           t.text,
+            audio_start_ms: t.audio_start_ms,
+            audio_end_ms:   t.audio_end_ms,
+            created_at:     t.created_at
+          }
+        end
+
+        json_response(turns: turns, total: turns.size)
+      end
+
+      # DELETE /sessions/:token/data — schedule deletion of the candidate's data.
+      # Idempotent; the job revokes consent, deletes transcript + portfolio and
+      # nulls the candidate identity (AC-B3).
+      def candidate_data_delete
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        CandidateDataDeletionJob.perform_async(session.id)
+        json_response({ status: 'accepted', message: 'Data deletion scheduled' }, :accepted)
       end
 
       private
@@ -189,6 +284,15 @@ module Api
           probe_count:   map.probe_count,
           last_signal:   map.last_signal,
           updated_at:    map.updated_at
+        }
+      end
+
+      def consent_json(consent_record)
+        {
+          version:    consent_record.version,
+          status:     consent_record.status,
+          granted_at: consent_record.granted_at,
+          revoked_at: consent_record.revoked_at
         }
       end
     end

@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Pre-commit hook: lint + format only staged files (via lint-staged in web/).
+cd "$(dirname "$0")/.."
+npx lint-staged --relative

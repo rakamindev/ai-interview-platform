@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'securerandom'
+
 Rails.application.routes.draw do
   get '/health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
@@ -10,7 +12,20 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
+      # Speed test — candidate hardware check probes the platform's own API so
+      # healthy connections aren't rejected because third-party test services
+      # (CDNs / httpbin / postman-echo) are slow, blocked, or CORS-restricted.
+      # GET  streams a fixed-size random payload for download measurement.
+      # POST accepts any payload, discards it, returns bytes received.
+      get 'speed_test', to: proc {
+        bytes = 3 * 1024 * 1024
+        headers = {
+          'Content-Type' => 'application/octet-stream',
+          'Cache-Control' => 'no-store',
+          'Content-Length' => bytes.to_s
+        }
+        [200, headers, [::SecureRandom.random_bytes(bytes)]]
+      }
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
@@ -33,8 +48,14 @@ Rails.application.routes.draw do
       end
 
       # Candidate-facing (no JWT — invite token only)
-      get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
-      post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      # NB: candidate transcript lives under /candidate to avoid shadowing the
+      # assessor's authenticated GET sessions/:id/transcript member route.
+      get    'sessions/:token/candidate',            to: 'sessions#candidate_info'
+      get    'sessions/:token/candidate/transcript', to: 'sessions#candidate_transcript'
+      post   'sessions/:token/consent',              to: 'sessions#consent'
+      post   'sessions/:token/consent/revoke',       to: 'sessions#consent_revoke'
+      delete 'sessions/:token/data',                 to: 'sessions#candidate_data_delete'
+      post   'sessions/:token/audio_complete',       to: 'sessions#audio_complete'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

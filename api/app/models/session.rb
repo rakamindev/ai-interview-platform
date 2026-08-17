@@ -10,6 +10,7 @@ class Session < ApplicationRecord
   has_many :transcript_turns, dependent: :destroy
   has_many :coverage_maps, dependent: :destroy
   has_one  :portfolio, dependent: :destroy
+  has_one  :consent, dependent: :destroy
 
   validates :invite_token, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
@@ -24,6 +25,10 @@ class Session < ApplicationRecord
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+
+  def consent_granted?
+    consent&.granted? || false
+  end
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
