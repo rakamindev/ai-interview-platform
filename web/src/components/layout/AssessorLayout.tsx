@@ -29,12 +29,24 @@ export default function AssessorLayout() {
   };
 
   /**
-   * The same three links in both places the header can put them: inline beside
-   * the brand on a wide screen, and on their own row underneath on a narrow
-   * one. Rendering one list twice keeps the two from drifting apart.
+   * The same three links, laid out for where the hand actually is.
+   *
+   * Hiding them behind a menu button was never on: Nielsen Norman measured a
+   * 20%+ drop in discoverability for hidden navigation and recommends showing
+   * links outright at four items or fewer. Three qualifies.
+   *
+   * Where they sit is the part worth arguing about. On a phone the top of the
+   * screen is the hardest place to reach one-handed, which is why both
+   * Material and the Human Interface Guidelines put primary destinations at
+   * the bottom. So below sm this is a bottom bar in the thumb's path; from sm
+   * up, where there is no thumb and no reach problem, it sits inline beside
+   * the brand.
    */
-  const NavLinks = ({ className }: { className?: string }) => (
-    <nav className={cn("flex items-center gap-1", className)} aria-label="Main">
+  const NavLinks = ({ variant }: { variant: "bar" | "inline" }) => (
+    <nav
+      className={cn(variant === "bar" ? "flex items-stretch" : "flex items-center gap-1")}
+      aria-label="Main"
+    >
       {navItems.map(({ href, label, icon: Icon }) => {
         const active = location.pathname.startsWith(href);
         return (
@@ -47,13 +59,21 @@ export default function AssessorLayout() {
             // are in.
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors sm:flex-none sm:justify-start",
+              "transition-colors",
+              variant === "bar"
+                ? // 56px tall clears the 44px minimum touch target with room to
+                  // spare, and the label stays: an icon alone is a guess.
+                  "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium"
+                : "flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm",
               active
-                ? "bg-primary/10 font-medium text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                ? variant === "bar"
+                  ? "text-primary"
+                  : "bg-primary/10 font-medium text-primary"
+                : "text-muted-foreground hover:text-foreground",
+              variant === "inline" && !active && "hover:bg-muted",
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <Icon className={cn("shrink-0", variant === "bar" ? "h-5 w-5" : "h-4 w-4")} aria-hidden />
             {label}
           </Link>
         );
@@ -73,7 +93,9 @@ export default function AssessorLayout() {
               <span className="hidden text-sm font-semibold sm:inline">Rakamin AI Interview</span>
               <span className="sr-only sm:hidden">Rakamin AI Interview</span>
             </Link>
-            <NavLinks className="hidden sm:flex" />
+            <div className="hidden sm:block">
+              <NavLinks variant="inline" />
+            </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
@@ -90,25 +112,24 @@ export default function AssessorLayout() {
           </div>
         </div>
 
-        {/* Below sm the nav gets its own row rather than hiding behind a menu
-            button: three destinations do not earn a hamburger, and a visible
-            row costs one tap instead of two.
-
-            It deliberately does not pin. Pinned, the header would hold 96px of
-            a ~570px phone viewport — a sixth of the screen, permanently, to
-            repeat something you already read. Scrolling it away gives that back
-            while you read, and it returns the moment you scroll up. */}
-        <div className="px-2 py-1.5 sm:hidden">
-          <NavLinks />
-        </div>
       </header>
 
       {/* Page content. The shell no longer caps the width — each screen picks
           its own tier through <Page>, because a candidate list and a two-field
           form do not want the same measure. */}
-      <main className="w-full flex-1 px-4 py-6 sm:px-6">
+      {/* pb-20 keeps the last row of any list clear of the bottom bar. */}
+      <main className="w-full flex-1 px-4 py-6 pb-20 sm:px-6 sm:pb-6">
         <Outlet />
       </main>
+
+      {/* Thumb-zone navigation. Padded for the home indicator so the labels do
+          not sit under it on a gesture-bar phone. */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] sm:hidden"
+        data-testid="mobile-nav"
+      >
+        <NavLinks variant="bar" />
+      </div>
     </div>
   );
 }

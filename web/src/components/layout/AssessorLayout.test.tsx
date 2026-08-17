@@ -25,19 +25,36 @@ vi.mock("@/stores/tenantAtom", () => ({ tenantAtom: {} }));
 vi.mock("@/stores/authAtom", () => ({ authAtom: {}, clearToken: vi.fn() }));
 
 describe("AssessorLayout header", () => {
-  it("keeps every destination reachable on a phone, without a menu button", () => {
-    // Three destinations do not earn a hamburger. The nav gets its own row
-    // below sm instead, so reaching a section stays one tap.
+  it("shows every destination on a phone rather than hiding them behind a menu", () => {
+    // Nielsen Norman measured a 20%+ drop in discoverability for hidden
+    // navigation and recommends showing links outright at four or fewer.
     render(<AssessorLayout />);
 
-    const navs = screen.getAllByRole("navigation", { name: "Main" });
-    expect(navs.length).toBe(2);
-
-    const mobileNav = navs.find((n) => n.closest(".sm\\:hidden"));
-    expect(mobileNav).toBeDefined();
+    const bar = screen.getByTestId("mobile-nav");
     for (const label of ["Candidates", "Assessments", "Vacancies"]) {
-      expect(within(mobileNav as HTMLElement).getByText(label)).toBeInTheDocument();
+      expect(within(bar).getByText(label)).toBeInTheDocument();
     }
+    expect(screen.queryByRole("button", { name: /menu/i })).toBeNull();
+  });
+
+  it("puts the phone navigation in the thumb's path, not out of reach at the top", () => {
+    // The top of a phone screen is the hardest place to reach one-handed,
+    // which is why Material and the HIG both anchor primary destinations low.
+    render(<AssessorLayout />);
+
+    const bar = screen.getByTestId("mobile-nav");
+    expect(bar.className).toContain("fixed");
+    expect(bar.className).toContain("bottom-0");
+    expect(bar.className).toContain("sm:hidden");
+  });
+
+  it("keeps a label under every icon", () => {
+    // An icon on its own is a guess, and these three are not universal.
+    const bar = (render(<AssessorLayout />), screen.getByTestId("mobile-nav"));
+    const links = within(bar).getAllByRole("link");
+
+    expect(links).toHaveLength(3);
+    for (const link of links) expect(link.textContent?.trim()).not.toBe("");
   });
 
   it("drops the wordmark before it drops a nav item", () => {
@@ -64,17 +81,12 @@ describe("AssessorLayout header", () => {
     expect(other).not.toHaveAttribute("aria-current");
   });
 
-  it("does not pin the mobile nav row", () => {
-    // Pinned, the header would hold 96px of a ~570px phone viewport — a sixth
-    // of the screen, permanently, to repeat something already read.
+  it("leaves room so the bar never covers the last row of a list", () => {
     const { container } = render(<AssessorLayout />);
 
-    const mobileRow = container.querySelector(".sm\\:hidden");
-    expect(mobileRow).not.toBeNull();
-    expect(mobileRow?.className).not.toContain("sticky");
-
-    // The bar carrying the brand and logout does stay put.
-    expect(container.querySelector(".sticky")).not.toBeNull();
+    const main = container.querySelector("main");
+    expect(main?.className).toContain("pb-20");
+    expect(main?.className).toContain("sm:pb-6");
   });
 
   it("hides the tenant chip on narrow screens rather than letting it squeeze the nav", () => {
