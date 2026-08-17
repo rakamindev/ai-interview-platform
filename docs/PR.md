@@ -4,7 +4,7 @@ Branch: `feature/hadist-improvement` → `main`
 
 ## Summary
 
-This PR walks the candidate-facing interview flow and the assessor-facing portfolio/candidate management screens end to end, fixes a data-integrity bug in the verdict system, removes a duplicated business-logic path between frontend and backend, closes UU PDP compliance gaps in candidate consent, data subject rights, retention, and encryption at rest, and fixes an invite-link bug that pointed candidates at the wrong host in two separate places.
+This PR walks the candidate-facing interview flow and the assessor-facing portfolio/candidate management screens end to end, fixes a data-integrity bug in the verdict system, removes a duplicated business-logic path between frontend and backend, closes UU PDP compliance gaps in candidate consent, data subject rights, retention, and encryption at rest, fixes an invite-link bug that pointed candidates at the wrong host in two separate places, and hardens a silent transcript-capture failure that was found live while testing the encryption change.
 
 Every change ships with RSpec and/or Vitest coverage, a migration where the schema changed, and a seeded-fault proof recorded before the commit: the relevant test was broken on purpose, watched fail, then reverted.
 
@@ -12,11 +12,11 @@ Every change ships with RSpec and/or Vitest coverage, a migration where the sche
 
 | Severity | Count | Definition |
 |---|---|---|
-| P0 | 3 | Breaks a core workflow, a compliance requirement, or shows wrong data to a real decision-maker |
+| P0 | 4 | Breaks a core workflow, a compliance requirement, or shows wrong data to a real decision-maker |
 | P1 | 6 | Real workflow or maintainability impact, not yet broken in production |
 | P2 | 4 | Moderate UX or code-health improvement |
 | P3 | 1 | Cosmetic polish |
-| **Total** | **14** | |
+| **Total** | **15** | |
 
 ## Improvements in this branch
 
@@ -34,6 +34,7 @@ Every change ships with RSpec and/or Vitest coverage, a migration where the sche
 | 10 | No side-by-side view to compare two candidates' portfolios | `PortfolioPage.tsx`, `CompareCandidatePicker.tsx`, `SkillPortfolioCard.tsx` | Adds | P2 |
 | 11 | Encryption at rest for transcript text (UU PDP) | `transcript_turn.rb`, `config/application.rb`, `config/initializers/active_record_encryption.rb` | Adds (partial — see doc) | P2 |
 | 12 | "Skills assessed" list sat disconnected at the page bottom | `AssessmentInvitePage.tsx` | Fixed | P3 |
+| 13 | Transcript-save failures were silently swallowed — a candidate could finish an interview with zero transcript saved and no signal anywhere | `audio_websocket_middleware.rb`, `session.rb`, `sessions_controller.rb`, `TranscriptPage.tsx`, `MyDataDialog.tsx` | Fixed | P0 |
 
 ## Specification files
 
@@ -53,6 +54,7 @@ Each row above has its own specification document under `docs/assessments/`, fol
 | 10 | Compare-candidates view | `assessments/08-compare-candidates-view.md` |
 | 11 | Encryption at rest | `assessments/12-encryption-at-rest.md` |
 | 12 | Skills assessed reposition | `assessments/09-skills-assessed-reposition.md` |
+| 13 | Silent transcript capture failure | `assessments/13-silent-transcript-capture-failure.md` |
 
 ## Constraint signal
 
@@ -64,5 +66,6 @@ Each row above has its own specification document under `docs/assessments/`, fol
 - **Defense in depth on consent.** The consent gate isn't just a frontend dialog — the Rails websocket middleware (`audio_websocket_middleware.rb`) independently rejects the interview connection server-side if no consent record exists, so a candidate can't bypass the dialog by hitting the API directly.
 - **One purge routine, two callers.** `Session#purge_personal_data!` is called by both the retention Rake task (item 8) and the candidate-initiated deletion endpoint (item 7) — one definition of "what counts as deleted," not two that could quietly drift apart.
 - **Config-loading gotcha with ActiveRecord Encryption.** Setting the encryption keys in a normal `config/initializers/*.rb` file silently failed — Rails' own `active_record.encryption` initializer reads those config values earlier in the boot sequence than app-level initializers run, so a later assignment is ignored without error. Had to move the assignment into a `config.before_initialize` hook in `config/application.rb` instead. Documented in `assessments/12-encryption-at-rest.md` since it's the kind of thing that looks like it should work and silently doesn't.
+- **That same config gotcha surfaced a real, separate bug (item 13).** A stale Puma process, still running from before the encryption keys were added, raised a configuration error on every transcript-turn save for three real interview sessions during manual testing — 24 turns dropped, silently, because `save_transcript_turn`'s broad rescue just logged and moved on. Restarting the server fixed the immediate cause; item 13 hardens the actual gap it exposed, since the next thing to trigger the same silent-swallow pattern won't be this specific config issue.
 - **AI verification moment.** An early draft of the consent-gate test suite asserted on button text with an empty accessible name (`getByRole("button", { name: "" })`), which happened to pass locally but would have matched the wrong button the moment a second icon-only button existed on the page. Caught in review and replaced with an explicit `aria-label="Copy invite link"` plus a named-role query — a small instance of AI-generated test code that looked correct and would have been a silent false-positive later.
-- **Test harness.** RSpec had zero specs and the web app had no test runner at the start of this engagement. Both now run in CI-ready form: 75 RSpec examples, 113 Vitest examples, `tsc --noEmit` clean.
+- **Test harness.** RSpec had zero specs and the web app had no test runner at the start of this engagement. Both now run in CI-ready form: 81 RSpec examples, 117 Vitest examples, `tsc --noEmit` clean.
