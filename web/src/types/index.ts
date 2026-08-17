@@ -45,6 +45,8 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  audit_status?: string;
+  candidate_objection_notes?: string;
 }
 
 export interface CoverageSkill {
@@ -164,6 +166,9 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string;
+  audit_status?: string;
+  candidate_objection_notes?: string;
 }
 
 export interface PaginationMeta {

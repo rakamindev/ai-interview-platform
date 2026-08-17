@@ -31,4 +31,17 @@ export const sessionsApi = {
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+
+  submitAppeal: (token: string, notes: string) =>
+    api.post<{ message: string }>(`/sessions/${token}/appeal`, {
+      appeal: { candidate_objection_notes: notes }
+    }),
+
+  resolve: (id: number, notes: string) =>
+    api.post<{ message: string; session: Session }>(`/sessions/${id}/resolve`, {
+      resolution: { notes }
+    }),
+
+  retake: (id: number) =>
+    api.post<{ message: string; session: Session; invite_url: string }>(`/sessions/${id}/retake`),
 };
