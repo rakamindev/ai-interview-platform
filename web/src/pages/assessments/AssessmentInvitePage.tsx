@@ -18,6 +18,7 @@ import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Check, Copy, Clock, Pencil, Plus } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 import CandidateManagement from "@/components/candidates/CandidateManagement";
+import { buildInviteUrl } from "@/utils/inviteLink";
 
 export default function AssessmentInvitePage() {
   const { id } = useParams<{ id: string }>();
@@ -74,8 +75,8 @@ export default function AssessmentInvitePage() {
   };
 
   const copyNewSessionLink = () => {
-    if (!newSession?.invite_url) return;
-    navigator.clipboard.writeText(newSession.invite_url);
+    if (!newSession?.invite_token) return;
+    navigator.clipboard.writeText(buildInviteUrl(newSession.invite_token));
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
@@ -154,7 +155,7 @@ export default function AssessmentInvitePage() {
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
-                {newSession.invite_url}
+                {buildInviteUrl(newSession.invite_token)}
               </span>
             </div>
             <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">

@@ -20,6 +20,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toastExportSummary, toastExportFailure } from "@/utils/exportToast";
 import { VERDICT_BADGE_CLASSES } from "@/utils/verdictBadge";
 import type { Candidate, Session } from "@/types";
+import { buildInviteUrl } from "@/utils/inviteLink";
 import {
   ArrowDown,
   ArrowUp,
@@ -162,7 +163,7 @@ export default function CandidateManagement({
   const copyLink = (candidateId: number) => {
     const session = sessionsById.get(candidateId);
     if (!session?.invite_token) return;
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${session.invite_token}`);
+    navigator.clipboard.writeText(buildInviteUrl(session.invite_token));
     setCopiedId(candidateId);
     setTimeout(() => setCopiedId(null), 2000);
   };
