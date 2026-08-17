@@ -16,6 +16,20 @@ export function buildSession(overrides: Partial<Session> = {}): Session {
   };
 }
 
+/**
+ * Mirrors the backend sessions#show shape: the assessment is NESTED inside the
+ * session hash (session_json.merge(assessment: ...)).
+ */
+export function buildSessionShow(overrides: Partial<Session> = {}) {
+  const session = buildSession(overrides);
+  return {
+    session: {
+      ...session,
+      assessment: { id: 1, name: "Frontend Engineer Assessment", time_limit_min: 30 },
+    },
+  };
+}
+
 export function buildSkill(overrides: Partial<PortfolioSkill> = {}): PortfolioSkill {
   return {
     id: 10,
@@ -69,12 +83,7 @@ export function buildReport(overrides: Partial<FitGapReport> = {}): FitGapReport
 
 export const handlers = [
   http.get(`${API}/sessions/:id`, () =>
-    HttpResponse.json({
-      data: {
-        session: buildSession(),
-        assessment: { id: 1, name: "Frontend Engineer Assessment", time_limit_min: 30 },
-      },
-    })
+    HttpResponse.json({ data: buildSessionShow() })
   ),
 
   http.get(`${API}/sessions/:id/portfolio`, () =>

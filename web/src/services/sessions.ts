@@ -3,9 +3,11 @@ import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, Po
 
 export const sessionsApi = {
   get: (id: number) =>
-    api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
-      `/sessions/${id}`
-    ),
+    api.get<{
+      session: Session & {
+        assessment: { id: number; name: string; time_limit_min: number };
+      };
+    }>(`/sessions/${id}`),
 
   endSession: (id: number, reason = "manual_assessor") =>
     api.post<{ session: Session }>(`/sessions/${id}/end_session`, {

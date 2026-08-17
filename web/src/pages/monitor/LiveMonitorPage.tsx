@@ -82,7 +82,7 @@ export default function LiveMonitorPage() {
       .then(([sRes, tRes]) => {
         const s = sRes.data.session;
         setStartedAt(s.started_at ?? null);
-        setAssessmentName(sRes.data.assessment?.name ?? "");
+        setAssessmentName(s.assessment?.name ?? "");
         if (s.status !== "active") setSessionActive(false);
 
         const turns = tRes.data.turns;

@@ -46,12 +46,12 @@ export default function PortfolioPage() {
 
   useEffect(() => {
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
+.then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
-        setAssessmentName(sRes.data.assessment.name);
+        setAssessmentName(sRes.data.session.assessment?.name ?? null);
       })
-      .catch(() => setStatus("error"))
+      .catch((e) => setStatus("error"))
       .finally(() => setStatus((prev) => (prev === "loading" ? "error" : prev)));
   }, [fetchPortfolio, sessionId]);
 
@@ -72,7 +72,7 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
-        setAssessmentName(sRes.data.assessment.name);
+        setAssessmentName(sRes.data.session.assessment?.name ?? null);
       })
       .catch(() => setStatus("error"))
       .finally(() => setStatus((prev) => (prev === "loading" ? "error" : prev)));
