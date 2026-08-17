@@ -91,7 +91,12 @@ export default function MyDataDialog({ token, open, onOpenChange }: MyDataDialog
                 <div className="space-y-1">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transcript</p>
                   <div className="space-y-1.5 text-sm max-h-48 overflow-y-auto border rounded-md p-2">
-                    {data.transcript.length === 0 ? (
+                    {data.transcript.length === 0 && data.transcript_capture_failed ? (
+                      <p className="text-destructive">
+                        Recording failed during this interview, so nothing was saved. This is a
+                        technical failure, not a reflection of your interview.
+                      </p>
+                    ) : data.transcript.length === 0 ? (
                       <p className="text-muted-foreground">No transcript recorded.</p>
                     ) : (
                       data.transcript.map((turn, i) => (

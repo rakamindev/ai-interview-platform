@@ -16,7 +16,7 @@ export const sessionsApi = {
     api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
   getTranscript: (id: number, fromTurn?: number) =>
-    api.get<{ turns: TranscriptTurn[]; total: number }>(`/sessions/${id}/transcript`, {
+    api.get<{ turns: TranscriptTurn[]; total: number; transcript_capture_failed: boolean }>(`/sessions/${id}/transcript`, {
       params: fromTurn ? { from_turn: fromTurn } : undefined,
     }),
 
@@ -46,6 +46,7 @@ export const sessionsApi = {
 export interface MyData {
   candidate_name: string | null;
   data_purged: boolean;
+  transcript_capture_failed: boolean;
   transcript: { speaker: string; text: string }[];
   verdict: string | null;
   skills: { skill_label: string; ai_level: number | string }[];
