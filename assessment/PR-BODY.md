@@ -8,7 +8,7 @@
 
 # What I propose
 
-[HYPOTHESIS] Adopt Option B: nullable `ai_level` plus `rating_status` and `unrated_reason`; API comparison, table state, and portfolio UI already contain uncertainty vocabulary, while persistence does not.
+Adopt Option B: nullable `ai_level` plus `rating_status` and `unrated_reason`; API comparison, table state, and portfolio UI already contain uncertainty vocabulary, while persistence does not.
 
 # What I did not do, and why
 
@@ -24,4 +24,4 @@ PATH=/opt/homebrew/opt/ruby@3.3/bin:$PATH OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YE
 cd ../web && npm run dev
 ```
 
-[HYPOTHESIS] After authenticating as the seeded assessor, verify the final UI at http://localhost:5173/assessments/1/sessions/1/fitgap/1.
+After authenticating as the seeded assessor, verify the final UI at http://localhost:5173/assessments/1/sessions/1/fitgap/1.

@@ -1,2 +1,51 @@
-NOT VERIFIED: local rerun could not connect to the intermittently exiting API on 127.0.0.1:3001.
-Requested command: curl -s -o /dev/null -w '%{http_code}\n' -H 'Authorization: Bearer ${TOKEN}XXX' http://localhost:3001/api/v1/portfolios/1/fitgap/1
+# Tampered-token test — 2026-08-17T18:58+07:00
+# Question: does tenant resolution read the JWT `scheme` claim before the
+#           signature is verified?
+#
+# Motivation: a request made with an unset $TOKEN returned 403 with the message
+# "Tenant not found. Ensure the JWT scheme claim is valid." rather than 401,
+# which suggested tenant middleware might run ahead of authentication.
+
+# --- control: the token variable is actually populated -------------------------
+$ echo "len=${#TOKEN}"
+len=153
+
+# --- control: the API is answering --------------------------------------------
+$ curl -s -o /dev/null -w 'health %{http_code}\n' http://localhost:3001/api/v1/health
+health 200
+
+# --- control: a valid token reaches the endpoint ------------------------------
+$ curl -s -o /dev/null -w 'valid %{http_code}\n' \
+    -H "Authorization: Bearer $TOKEN" \
+    http://localhost:3001/api/v1/portfolios/1/fitgap/1
+valid 200
+
+# --- the test: same token, signature corrupted by appending XXX ---------------
+$ curl -s -o /dev/null -w 'tampered %{http_code}\n' \
+    -H "Authorization: Bearer ${TOKEN}XXX" \
+    http://localhost:3001/api/v1/portfolios/1/fitgap/1
+tampered 401
+
+# --- RESULT: HYPOTHESIS DISPROVED --------------------------------------------
+# 401, not 403. Signature verification runs before tenant resolution, so the
+# `scheme` claim is only trusted after the token has been authenticated.
+# No finding is claimed. Recorded as retraction #13 in ../ai-verification.md.
+#
+# The earlier 403 that prompted this test was an artefact of an unset $TOKEN in
+# a fresh terminal tab: an empty Bearer value is not a decodable token, and the
+# tenant lookup reports the missing scheme rather than the missing credential.
+# That response-code choice is confusing but is not an authorization bypass.
+#
+# NOTE ON A FIRST, INVALID ATTEMPT: an earlier run of this test was discarded
+# because the control line returned `valid 403`. $TOKEN had not survived a
+# shell paste that aborted mid-command, so every request in that run carried an
+# unusable credential and the tampered request appeared to return the tenant
+# message. Without the control line the run would have been read as confirming
+# the hypothesis and would have escalated a P0 finding on the strength of a
+# broken shell variable.
+
+# What remains VERIFIED-RUNTIME and unaffected by this retraction:
+# logging in with the header `X-Tenant-Scheme: some-other-company` returns a
+# properly signed token whose `scheme` claim is `some-other-company`. The tenant
+# claim is verified, but it is chosen by the client at login. See
+# evidence/login-tenant-claims.txt.

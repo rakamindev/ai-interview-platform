@@ -1,6 +1,6 @@
 # Findings
 
-[VERIFIED-CODE] Evidence labels identify the basis of each finding; line references are source locations read for this assessment.
+Evidence labels identify the basis of each finding; line references are source locations read for this assessment.
 
 ## F1 — P0: malformed level is asserted as L1
 
@@ -48,15 +48,17 @@
 
 [VERIFIED-RUNTIME] The Required column was blank for every established report row, and the override legend rendered despite `AssessorOverride.count` being zero.
 
-[VERIFIED-RUNTIME] The established fit/gap page carries neither evidence, competency summary, discovered status, nor override provenance although the Portfolio Results page displays them.
+[VERIFIED-RUNTIME] The established fit/gap page carries neither evidence, competency summary, nor override provenance, although the Portfolio Results page displays all three.
 
 [VERIFIED-CODE] This harms hiring decisions because the decision screen reduces a rating to a label and result; carry the canonical field names and provenance into the contract.
 
-## F6 — P1: not-assessed and discovered skills are silently lost from decision context
+## F6 — P1: not-assessed and discovered skills are excluded from the decision summary
 
 [VERIFIED-CODE] `web/src/components/fitgap/ComparisonTable.tsx:29-31,73-76` counts only match, gap, and exceed, then always renders the override legend.
 
-[VERIFIED-RUNTIME] The established narrative totals four assessed results while the report contains five rows including `not_assessed`; Kubernetes Operations, a discovered skill, is absent from comparisons.
+[VERIFIED-RUNTIME] The established narrative totals four assessed results while the report contains five rows including `not_assessed`.
+
+[VERIFIED-RUNTIME] Kubernetes Operations, a discovered skill, is absent from `skill_comparisons`, the footer counts, the narrative, and the JSON export, while rendering separately on screen from a second portfolio fetch; the screen reduces it to `3 (low confidence)`, dropping the level label, confidence colour, evidence quote, and low-confidence caveat banner that the Portfolio Results page shows for the same skill.
 
 [VERIFIED-CODE] `api/app/services/fit_gap/engine.rb:39-43` iterates vacancy skills, explaining why discovered-only skills are not compared.
 

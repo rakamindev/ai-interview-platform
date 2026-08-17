@@ -111,17 +111,32 @@ Twelve claims were withdrawn or narrowed before publication.
     caveat banner and the evidence quote down to the string `3 (low confidence)`.
     *Lesson: the interface reads from more than one endpoint; a payload does not
     define a screen.*
+13. **"Tenant resolution reads the `scheme` claim before the signature is
+    verified."** [VERIFIED-RUNTIME] Disproved. With a control line confirming
+    `len=153` for the token variable and a valid request returning 200, the same
+    token with a corrupted signature returned **401**, not 403. Signature
+    verification precedes tenant resolution. No finding is claimed; see
+    `evidence/tampered-token-outcome.txt`.
+
+    The first attempt at this test was **discarded**, and that matters more than
+    the result. Its control line returned `valid 403`: `$TOKEN` had not survived
+    a shell paste that aborted mid-command, so every request carried an unusable
+    credential and the tampered request appeared to return the tenant message.
+    Read without the control line, that run would have been taken as confirming
+    the hypothesis and would have escalated a P0 finding on the strength of a
+    broken shell variable. *Lesson: a test needs a control that fails loudly when
+    the instrument is not connected — without `valid 200`, the interesting number
+    means nothing.*
 
 ## 4. What was not verified
 
 Stated plainly, because a verification log that lists only successes is a
 marketing document.
 
-- Whether tenant resolution reads the `scheme` claim without verifying the token
-  signature remains `[HYPOTHESIS]`. The supporting observation is that a request
-  with a malformed Authorization value returned **403 with a tenant message**
-  rather than 401. The deciding test and its outcome are in
-  `evidence/tampered-token-outcome.txt`.
+- The response code for an unauthenticated request is confusing but not a
+  bypass: an empty Bearer value yields 403 with a tenant message rather than
+  401, because the tenant lookup reports the missing scheme instead of the
+  missing credential. Worth fixing for diagnosability; not a security finding.
 - No real interview was ever conducted, so the live WebSocket path and the
   `/sessions/:id/coverage` endpoint are unverified. The coverage endpoint returns
   empty arrays with `updated_at: null` for a completed session; because its data
