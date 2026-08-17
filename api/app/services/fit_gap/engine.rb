@@ -2,7 +2,14 @@
 
 module FitGap
   # N13: Generates a fit/gap report comparing a portfolio against a vacancy.
-  # Uses rule-based comparison for skill levels + Gemini Flash for culture narrative.
+  #
+  # Reliability hardening:
+  #  - Deterministic skill comparisons are persisted FIRST, before any model call.
+  #  - Narrative generation is optional: if Gemini fails, comparisons remain and
+  #    the report is marked `failed` (with the error) so the UI can show a retry
+  #    without losing the deterministic result.
+  #  - The worker atomically claims pending/retryable work (unique portfolio+vacancy
+  #    key prevents duplicate reports; duplicate workers exit without a model call).
   class Engine
     def initialize(portfolio:, vacancy:, gemini_client: nil)
       @portfolio = portfolio
@@ -16,17 +23,28 @@ module FitGap
     # Returns the FitGapReport record.
     def call
       skill_comparisons = build_skill_comparisons
-      narratives        = generate_narratives(skill_comparisons)
 
+      # 1. Persist the deterministic comparisons immediately (lifecycle: generating).
       report = FitGapReport.find_or_initialize_by(
         portfolio_id: @portfolio.id,
         vacancy_id:   @vacancy.id
       )
-
       report.update!(
         skill_comparisons: skill_comparisons,
+        generation_status: 'generating',
+        generation_error:  nil,
+        generated_at:      nil
+      )
+
+      # 2. Generate the optional narrative. Failure is non-fatal to the
+      #    comparisons — mark failed so the UI can offer retry.
+      narratives = generate_narratives(skill_comparisons)
+
+      report.update!(
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
+        generation_status: 'complete',
+        generation_error:  nil,
         generated_at:      Time.current
       )
 
@@ -38,7 +56,7 @@ module FitGap
 
     def build_skill_comparisons
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
-      portfolio_skills = effective_portfolio_skills  # includes overrides
+      portfolio_skills = effective_portfolio_skills  # includes overrides/reviews
 
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
@@ -46,8 +64,13 @@ module FitGap
         if portfolio_skill
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          if candidate_level.nil?
+            result          = 'not_assessed'
+            delta           = nil
+          else
+            delta           = candidate_level - expected_level
+            result          = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          end
         else
           candidate_level = nil
           expected_level  = vacancy_skill.expected_level
@@ -62,14 +85,16 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          review_outcome:  portfolio_skill&.dig(:review_outcome),
+          level_source:    portfolio_skill&.dig(:level_source)
         }
       end
 
       comparisons
     end
 
-    # Returns portfolio skills with overrides applied.
+    # Returns portfolio skills with reviews applied.
     def effective_portfolio_skills
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
         override = skill.assessor_override
@@ -78,9 +103,11 @@ module FitGap
           skill_id:        skill.skill_id,
           skill_label:     skill.skill_label,
           ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
+          effective_level: override ? override.effective_level : skill.ai_level,
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          overridden:      override.present?,
+          review_outcome:  override&.outcome,
+          level_source:    override ? (override.confirmed? ? 'ai_confirmed' : (override.adjusted? ? 'human_adjusted' : 'not_assessed')) : 'ai_generated'
         }
       end
     end
@@ -104,7 +131,8 @@ module FitGap
         { culture: data['culture_narrative'], overall: data['overall_narrative'] }
       rescue => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        # Keep comparisons; surface the failure so the UI can offer retry.
+        raise NarrativeGenerationError, e.message
       end
     end
 
@@ -128,7 +156,10 @@ module FitGap
 
         Write two short narrative paragraphs:
         1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
-        2. overall_narrative: 2-3 sentence overall hiring recommendation summary.
+        2. overall_narrative: 2-3 sentence overall summary of strengths and gaps.
+
+        This is decision support for a human reviewer, NOT an automated hire/no-hire verdict.
+        Never recommend hiring or rejecting. Describe evidence and fit only.
 
         OUTPUT (JSON only):
         {
@@ -138,12 +169,9 @@ module FitGap
       PROMPT
     end
 
-    def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
-
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
-    end
+    # Narrative failure — a domain error so the worker can distinguish it from
+    # infrastructure failures and mark the report failed (retryable) instead of
+    # re-enqueuing the whole deterministic comparison.
+    class NarrativeGenerationError < StandardError; end
   end
 end

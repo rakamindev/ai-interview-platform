@@ -9,7 +9,7 @@ class Session < ApplicationRecord
   belongs_to :assessment
   has_many :transcript_turns, dependent: :destroy
   has_many :coverage_maps, dependent: :destroy
-  has_one  :portfolio, dependent: :destroy
+  has_one  :portfolio, dependent: :destroy, inverse_of: :session
 
   validates :invite_token, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
@@ -26,7 +26,7 @@ class Session < ApplicationRecord
   def pending? = status == 'pending'
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('APP_BASE_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
 

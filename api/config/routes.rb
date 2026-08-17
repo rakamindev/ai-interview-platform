@@ -36,9 +36,10 @@ Rails.application.routes.draw do
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
 
-      # Portfolio skills overrides
+      # Portfolio skills — assessor review + legacy override compatibility
       resources :portfolio_skills, only: [] do
         member do
+          put  :review
           post :override
         end
       end
