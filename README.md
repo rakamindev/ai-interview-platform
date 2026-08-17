@@ -20,8 +20,14 @@ Each service has its own setup guide. Run the API first, then the web app pointe
 1. **API** — see [`api/README.md`](api/README.md). Rails app; needs Ruby (see `api/.ruby-version`), PostgreSQL, and Redis. It serves on `http://localhost:3001`.
 2. **Web** — see [`web/README.md`](web/README.md). Vite app; `npm install`, copy `.env.example` to `.env`, point `VITE_API_BASE_URL` at the API, then `npm run dev`. It serves on `http://localhost:5173`.
 
+## Running Tests
+
+To run the automated test suite on the backend API:
+* Refer to the instructions in [`api/README.md#8-running-tests`](api/README.md#8-running-tests).
+
 ## Notes for the case study
 
 - This is the codebase you assess, harden, and release. Treat it as a version about to ship to a client.
 - Work in the `/assessment` folder at the repo root for your written deliverables; code changes go in `api/` or `web/`.
 - See the case-study brief you were given for what to produce and how it is evaluated.
+
