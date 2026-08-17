@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
 import { getStoredToken } from "@/stores/authAtom";
-import type { CoverageMap } from "@/types";
+import type { CoverageMap, TranscriptTurn } from "@/types";
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
 
@@ -10,6 +10,7 @@ interface UseCoverageWebSocketResult {
   sessionEnded: boolean;
   sessionEndReason: string | null;
   isConnected: boolean;
+  liveTurn: TranscriptTurn | null;
 }
 
 export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketResult {
@@ -17,6 +18,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [liveTurn, setLiveTurn] = useState<TranscriptTurn | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,6 +43,8 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
         const msg = JSON.parse(event.data);
         if (msg.type === "coverage_update") {
           setCoverageMap({ skills: msg.skills ?? [], discovered: msg.discovered ?? [] });
+        } else if (msg.type === "transcript_turn" && msg.turn) {
+          setLiveTurn(msg.turn);
         } else if (msg.type === "session_status") {
           if (msg.status === "ended") {
             setSessionEnded(true);
@@ -81,5 +85,5 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     };
   }, [connect]);
 
-  return { coverageMap, sessionEnded, sessionEndReason, isConnected };
+  return { coverageMap, sessionEnded, sessionEndReason, isConnected, liveTurn };
 }

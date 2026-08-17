@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useSetAtom } from "jotai";
+import axios from "axios";
 import { authAtom, saveToken } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
+import AuthShell from "@/components/layout/AuthShell";
+import { useCapsLock } from "@/hooks/useCapsLock";
+
+type FieldErrors = Partial<Record<"email" | "password" | "role", string>>;
+
+function extractFieldErrors(err: unknown): FieldErrors {
+  if (axios.isAxiosError(err) && err.response?.data?.errors?.[0]?.detail) {
+    const detail = err.response.data.errors[0].detail;
+    const fields: FieldErrors = {};
+    if (typeof detail === "object" && detail !== null) {
+      for (const [field, messages] of Object.entries(detail)) {
+        if (Array.isArray(messages) && messages.length > 0) {
+          fields[field as keyof FieldErrors] = messages[0];
+        }
+      }
+    }
+    return fields;
+  }
+  return {};
+}
+
+function signupErrorText(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (!err.response) return "Cannot reach the server. Check your connection and try again.";
+    if (err.response.status === 422) {
+      return "Signup failed. Check the highlighted fields and try again.";
+    }
+  }
+  return "Signup failed. Check your details and try again.";
+}
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -17,90 +48,129 @@ export default function SignupPage() {
   const [role, setRole] = useState<"admin" | "user">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const { capsLock, onKeyDown, onKeyUp } = useCapsLock();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setLoading(true);
     try {
-      const res = await authApi.signup({ email, password, role });
+      const res = await authApi.signup({ email: email.trim(), password, role });
       const token = res.data.token;
       saveToken(token);
       setAuth({ token });
-      navigate("/assessments");
-    } catch {
-      setError("Signup failed. Please try again.");
+      void navigate("/assessments");
+    } catch (err) {
+      setFieldErrors(extractFieldErrors(err));
+      setError(signupErrorText(err));
     } finally {
       setLoading(false);
     }
   };
 
+  const passwordDescribedBy = [
+    fieldErrors.password ? "password-error" : null,
+    capsLock ? "capslock-hint" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create an account</p>
+    <AuthShell
+      title="Create your account"
+      subtitle="Start assessing candidates with AI-conducted interviews."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={fieldErrors.email ? true : undefined}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
+            required
+          />
+          {fieldErrors.email && (
+            <p id="email-error" role="alert" className="text-sm text-destructive">
+              {fieldErrors.email}
+            </p>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={onKeyDown}
+            onKeyUp={onKeyUp}
+            aria-invalid={fieldErrors.password ? true : undefined}
+            aria-describedby={passwordDescribedBy || undefined}
+            required
+            minLength={8}
+          />
+          <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+          {capsLock && (
+            <p id="capslock-hint" role="status" className="text-sm text-muted-foreground">
+              Caps Lock is on.
+            </p>
+          )}
+          {fieldErrors.password && (
+            <p id="password-error" role="alert" className="text-sm text-destructive">
+              {fieldErrors.password}
+            </p>
+          )}
+        </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label id="role-label">Role</Label>
+          <RadioGroup
+            value={role}
+            onValueChange={(v) => setRole(v as "admin" | "user")}
+            aria-labelledby="role-label"
+            className="flex gap-4"
+          >
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="user" id="role-user" />
+              <Label htmlFor="role-user" className="font-normal cursor-pointer">
+                User
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="admin" id="role-admin" />
+              <Label htmlFor="role-admin" className="font-normal cursor-pointer">
+                Admin
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
 
-          <div className="space-y-1.5">
-            <Label>Role</Label>
-            <RadioGroup
-              value={role}
-              onValueChange={(v) => setRole(v as "admin" | "user")}
-              className="flex gap-4"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="user" id="role-user" />
-                <Label htmlFor="role-user" className="font-normal cursor-pointer">User</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="admin" id="role-admin" />
-                <Label htmlFor="role-admin" className="font-normal cursor-pointer">Admin</Label>
-              </div>
-            </RadioGroup>
-          </div>
+        {error && (
+          <p id="signup-error" role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" className="w-full" disabled={loading} aria-busy={loading}>
+          {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />}
+          {loading ? "Creating account…" : "Sign up"}
+        </Button>
+      </form>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign up
-          </Button>
-        </form>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </div>
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link to="/login" className="text-primary hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

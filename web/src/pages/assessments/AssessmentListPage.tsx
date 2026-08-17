@@ -58,7 +58,9 @@ export default function AssessmentListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
         </div>
       ) : assessments.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">

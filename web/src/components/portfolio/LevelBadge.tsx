@@ -14,7 +14,7 @@ export default function LevelBadge({ level, size = "md", className }: LevelBadge
         "inline-flex flex-col items-center justify-center rounded font-semibold",
         size === "md" ? "px-3 py-2 min-w-14 text-base" : "px-2 py-1 min-w-10 text-sm",
         LEVEL_BADGE_CLASSES[level],
-        className
+        className,
       )}
     >
       <span>{LEVEL_LABELS[level]}</span>

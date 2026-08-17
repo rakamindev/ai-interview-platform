@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
+import ErrorRetryState from "@/components/layout/ErrorRetryState";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
+import { vacanciesApi } from "@/services/vacancies";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
-import type { FitGapReport, Portfolio } from "@/types";
+import type { FitGapReport, Portfolio, Vacancy } from "@/types";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -20,8 +22,10 @@ export default function FitGapReportPage() {
 
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [vacancy, setVacancy] = useState<Vacancy | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
@@ -43,20 +47,28 @@ export default function FitGapReportPage() {
     }
   }, [portfolio, vacancyId]);
 
-  useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const res = await sessionsApi.getPortfolio(Number(sessionId));
+      const data = res.data as any;
+      if (data.portfolio) setPortfolio(data.portfolio);
+      const vRes = await vacanciesApi.get(Number(vacancyId));
+      setVacancy(vRes.data.vacancy);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, vacancyId]);
 
   useEffect(() => {
-    if (portfolio) fetchReport();
+    void loadAll();
+  }, [loadAll]);
+
+  useEffect(() => {
+    if (portfolio) void fetchReport();
   }, [portfolio, fetchReport]);
 
   usePolling(fetchReport, 5000, generating && !!portfolio);
@@ -79,9 +91,10 @@ export default function FitGapReportPage() {
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
       const ext = format;
-      const blob = format === "pdf"
-        ? new Blob([res.data as BlobPart], { type: "application/pdf" })
-        : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const blob =
+        format === "pdf"
+          ? new Blob([res.data as BlobPart], { type: "application/pdf" })
+          : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -92,6 +105,15 @@ export default function FitGapReportPage() {
       setExporting(null);
     }
   };
+
+  if (loadError) {
+    return (
+      <ErrorRetryState
+        message="Failed to load the fit/gap report."
+        onRetry={() => void loadAll()}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -116,22 +138,63 @@ export default function FitGapReportPage() {
             </Link>
             <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
           </div>
+          {vacancy && (
+            <p className="text-sm text-muted-foreground pl-6">
+              Against vacancy:{" "}
+              <span className="font-medium text-foreground/80">{vacancy.role_title}</span>
+              {(vacancy.skills ?? []).length > 0 && (
+                <span className="ml-1.5">
+                  · {(vacancy.skills ?? []).length} skills · expected{" "}
+                  {(vacancy.skills ?? [])
+                    .map((s) => `${s.skill_label} L${s.expected_level}`)
+                    .join(", ")}
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         {portfolio && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={regenerating || generating}
+            >
+              {regenerating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              )}
               Regenerate
             </Button>
             {report && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport("pdf")}
+                  disabled={!!exporting}
+                >
+                  {exporting === "pdf" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 mr-1" />
+                  )}
                   PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport("json")}
+                  disabled={!!exporting}
+                >
+                  {exporting === "json" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 mr-1" />
+                  )}
                   JSON
                 </Button>
               </>
@@ -157,7 +220,11 @@ export default function FitGapReportPage() {
               <CardTitle className="text-sm">Skill Comparison</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <ComparisonTable comparisons={report.skill_comparisons} />
+              <ComparisonTable
+                comparisons={report.skill_comparisons}
+                assessmentId={id}
+                sessionId={sessionId}
+              />
             </CardContent>
           </Card>
 
@@ -193,9 +260,15 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {s.ai_level} (
+                          {s.ai_confidence?.toLowerCase() === "low"
+                            ? "low confidence"
+                            : "confirmed"}
+                          )
                         </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
+                        <span className="text-xs text-muted-foreground">
+                          — Not required for this role, may be additive.
+                        </span>
                       </div>
                     ))}
                 </CardContent>

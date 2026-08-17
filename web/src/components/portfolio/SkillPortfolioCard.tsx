@@ -2,20 +2,35 @@ import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
+import { Link } from "react-router-dom";
 import { Zap } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
-import type { PortfolioSkill, AssessorOverride } from "@/types";
+import type { PortfolioSkill, AssessorOverride, TranscriptTurn } from "@/types";
 
 interface SkillPortfolioCardProps {
   skill: PortfolioSkill;
   override?: AssessorOverride;
   onOverrideSaved: (override: AssessorOverride) => void;
+  assessmentId: string;
+  sessionId: string;
+  turns: TranscriptTurn[];
+}
+
+function resolveQuoteTurn(quote: string, turns: TranscriptTurn[]): number | null {
+  const normalized = quote.trim().replace(/\s+/g, " ");
+  const turn = turns.find(
+    (t) => t.speaker === "candidate" && t.text.replace(/\s+/g, " ").includes(normalized),
+  );
+  return turn?.turn_number ?? null;
 }
 
 export default function SkillPortfolioCard({
   skill,
   override,
   onOverrideSaved,
+  assessmentId,
+  sessionId,
+  turns,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
 
@@ -25,7 +40,14 @@ export default function SkillPortfolioCard({
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
+            <div className="flex flex-col items-center gap-0.5">
+              <LevelBadge level={effectiveLevel} />
+              {override ? (
+                <span className="text-[10px] font-medium text-green-600">Your verdict</span>
+              ) : (
+                <span className="text-[10px] font-medium text-muted-foreground">AI draft</span>
+              )}
+            </div>
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>
@@ -36,6 +58,13 @@ export default function SkillPortfolioCard({
                 )}
               </div>
               <ConfidenceIndicator confidence={skill.ai_confidence} />
+              {override && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-muted-foreground">
+                    AI draft: <span className="font-medium text-foreground">{skill.ai_level}</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
@@ -44,7 +73,8 @@ export default function SkillPortfolioCard({
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
           <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+            Only briefly explored. Confidence is low — warrants a dedicated session if this skill
+            matters.
           </div>
         )}
 
@@ -55,11 +85,24 @@ export default function SkillPortfolioCard({
               Evidence from interview
             </span>
             <ul className="space-y-1">
-              {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
-                </li>
-              ))}
+              {skill.evidence.map((quote, i) => {
+                const turnNumber = resolveQuoteTurn(quote, turns);
+                return (
+                  <li key={i} className="text-sm text-foreground">
+                    {turnNumber ? (
+                      <Link
+                        to={`/assessments/${assessmentId}/sessions/${sessionId}/transcript?turn=${turnNumber}`}
+                        className="text-primary hover:underline"
+                        title={`View turn ${turnNumber} in transcript`}
+                      >
+                        • "{quote}"
+                      </Link>
+                    ) : (
+                      <span>• "{quote}"</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
