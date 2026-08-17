@@ -9,7 +9,7 @@ export interface Assessment {
   updated_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: SessionStatus;
     end_reason?: string | null;
   };
 }
@@ -164,6 +164,20 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+}
+
+export type Verdict = "pass" | "consider" | "failed";
+export type SessionStatus = "pending" | "active" | "ended" | "failed";
+export type InterviewStatus = "pending" | "active" | "completed" | "failed";
+
+export interface Candidate {
+  candidate_id: number;
+  candidate_name?: string;
+  session_id: number;
+  session_status: SessionStatus;
+  interview_status: InterviewStatus;
+  interview_date?: string;
+  verdict?: Verdict | null;
 }
 
 export interface PaginationMeta {
