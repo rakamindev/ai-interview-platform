@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
-import type { Portfolio, PortfolioSkill } from "@/types";
+import { candidatesApi } from "@/services/candidates";
+import type { Portfolio, PortfolioSkill, Candidate } from "@/types";
 
 vi.mock("@/services/sessions", () => ({
   sessionsApi: {
@@ -26,9 +27,16 @@ vi.mock("@/services/portfolios", () => ({
   },
 }));
 
+vi.mock("@/services/candidates", () => ({
+  candidatesApi: {
+    list: vi.fn(),
+  },
+}));
+
 const getPortfolioMock = vi.mocked(sessionsApi.getPortfolio);
 const getSessionMock = vi.mocked(sessionsApi.get);
 const listVacanciesMock = vi.mocked(vacanciesApi.list);
+const listCandidatesMock = vi.mocked(candidatesApi.list);
 
 function skill(overrides: Partial<PortfolioSkill> = {}): PortfolioSkill {
   return {
@@ -55,10 +63,25 @@ function portfolio(overrides: Partial<Portfolio> = {}): Portfolio {
   };
 }
 
+function candidate(overrides: Partial<Candidate> = {}): Candidate {
+  return {
+    candidate_id: 2,
+    candidate_name: "Bob",
+    session_id: 2,
+    session_status: "ended",
+    interview_status: "completed",
+    verdict: "consider",
+    ...overrides,
+  };
+}
+
 function mockLoaded(p: Portfolio) {
   getPortfolioMock.mockResolvedValue({ data: { portfolio: p } } as any);
   getSessionMock.mockResolvedValue({ data: { session: { candidate_name: "Alice" } } } as any);
   listVacanciesMock.mockResolvedValue({ data: { vacancies: [] } } as any);
+  listCandidatesMock.mockResolvedValue({
+    data: { candidates: [candidate()], meta: { current_page: 1, total_pages: 1, total_count: 1, per_page: 10 } },
+  } as any);
 }
 
 function renderPage() {
@@ -166,5 +189,94 @@ describe("PortfolioPage zero-skills empty state", () => {
 
     await screen.findByText("Configured Skills");
     expect(screen.queryByText("No skills were assessed")).not.toBeInTheDocument();
+  });
+});
+
+describe("PortfolioPage compare", () => {
+  function mockCompareCandidatePortfolio(compareResult: Portfolio | "error") {
+    getPortfolioMock.mockImplementation(((sessionId: number) => {
+      if (sessionId === 9) return Promise.resolve({ data: { portfolio: portfolio() } });
+      if (compareResult === "error") return Promise.reject(new Error("network down"));
+      return Promise.resolve({ data: { portfolio: compareResult } });
+    }) as any);
+  }
+
+  it("opens a picker in a right panel when Compare is clicked", async () => {
+    mockLoaded(portfolio());
+    renderPage();
+    await screen.findByText("Configured Skills");
+
+    fireEvent.click(screen.getByRole("button", { name: /Compare/ }));
+
+    expect(await screen.findByText("Comparing")).toBeInTheDocument();
+    expect(await screen.findByText("Bob")).toBeInTheDocument();
+  });
+
+  it("loads the selected candidate's portfolio read-only after picking them", async () => {
+    mockLoaded(portfolio());
+    mockCompareCandidatePortfolio(
+      portfolio({ id: 2, session_id: 2, verdict: "failed", skills: [skill({ id: 2, skill_label: "Node.js", ai_level: 1 })] })
+    );
+    renderPage();
+    await screen.findByText("Configured Skills");
+
+    fireEvent.click(screen.getByRole("button", { name: /Compare/ }));
+    fireEvent.click(await screen.findByText("Bob"));
+
+    expect((await screen.findAllByText("Node.js")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Failed")).toBeInTheDocument();
+    // Only the left (own, editable) panel's skill should show the override control.
+    expect(screen.getAllByText("Override rating ▼")).toHaveLength(1);
+  });
+
+  it("returns to the picker when Change is clicked", async () => {
+    mockLoaded(portfolio());
+    mockCompareCandidatePortfolio(portfolio({ id: 2, session_id: 2, skills: [skill({ id: 2 })] }));
+    renderPage();
+    await screen.findByText("Configured Skills");
+
+    fireEvent.click(screen.getByRole("button", { name: /Compare/ }));
+    fireEvent.click(await screen.findByText("Bob"));
+    await screen.findByText("Change");
+
+    fireEvent.click(screen.getByText("Change"));
+
+    expect(await screen.findByText("Compare with")).toBeInTheDocument();
+  });
+
+  it("closes the compare panel entirely when the close button is clicked", async () => {
+    mockLoaded(portfolio());
+    renderPage();
+    await screen.findByText("Configured Skills");
+
+    fireEvent.click(screen.getByRole("button", { name: /Compare/ }));
+    await screen.findByText("Comparing");
+
+    fireEvent.click(screen.getByLabelText("Close compare"));
+
+    expect(screen.queryByText("Comparing")).not.toBeInTheDocument();
+  });
+
+  it("shows an error state when the compared candidate's portfolio fails to load", async () => {
+    mockLoaded(portfolio());
+    mockCompareCandidatePortfolio("error");
+    renderPage();
+    await screen.findByText("Configured Skills");
+
+    fireEvent.click(screen.getByRole("button", { name: /Compare/ }));
+    fireEvent.click(await screen.findByText("Bob"));
+
+    expect(await screen.findByText("Couldn't load this candidate's portfolio.")).toBeInTheDocument();
+  });
+
+  it("does not show the Compare button while the portfolio is still generating", async () => {
+    getPortfolioMock.mockResolvedValue({ data: { status: "generating" } } as any);
+    getSessionMock.mockResolvedValue({ data: { session: { candidate_name: "Alice" } } } as any);
+    listVacanciesMock.mockResolvedValue({ data: { vacancies: [] } } as any);
+
+    renderPage();
+
+    await screen.findByText("Generating portfolio…");
+    expect(screen.queryByRole("button", { name: /Compare/ })).not.toBeInTheDocument();
   });
 });

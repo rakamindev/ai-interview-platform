@@ -85,4 +85,17 @@ describe("SkillPortfolioCard", () => {
     rerender(<SkillPortfolioCard skill={skill({ competency_summary: "" })} onOverrideSaved={vi.fn()} />);
     expect(screen.queryByText("Competency summary")).not.toBeInTheDocument();
   });
+
+  it("hides the override control when readOnly, but still shows the level badge", () => {
+    render(<SkillPortfolioCard skill={skill({ ai_level: 4 })} readOnly />);
+
+    expect(screen.getByText("L4")).toBeInTheDocument();
+    expect(screen.queryByText("Override rating ▼")).not.toBeInTheDocument();
+  });
+
+  it("shows the override control when not readOnly and onOverrideSaved is provided", () => {
+    render(<SkillPortfolioCard skill={skill()} onOverrideSaved={vi.fn()} />);
+
+    expect(screen.getByText("Override rating ▼")).toBeInTheDocument();
+  });
 });
