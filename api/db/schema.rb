@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_17_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -22,8 +22,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "rating_status", ["rated", "unrated"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
+  create_enum "unrated_reason", ["absent", "malformed", "out_of_range", "no_evidence"]
 
   create_table "assessment_skills", force: :cascade do |t|
     t.bigint "assessment_id", null: false
@@ -58,7 +60,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
@@ -112,12 +114,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
-    t.text "competency_summary", null: false
+    t.text "competency_summary"
+    t.enum "rating_status", default: "rated", null: false, enum_type: "rating_status"
+    t.enum "unrated_reason", enum_type: "unrated_reason"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
+    t.index ["rating_status"], name: "index_portfolio_skills_on_rating_status"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "rating_status = 'rated'::rating_status AND ai_level IS NOT NULL AND unrated_reason IS NULL OR rating_status = 'unrated'::rating_status AND ai_level IS NULL AND unrated_reason IS NOT NULL", name: "chk_portfolio_skills_rating_consistency"
   end
 
   create_table "portfolios", force: :cascade do |t|

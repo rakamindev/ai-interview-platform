@@ -1,0 +1,5 @@
+POST /api/v1/auth/login with X-Tenant-Scheme: test-corp
+{"token":"[REDACTED]","decoded_payload":{"user_id":1,"role":"admin","scheme":"test-corp","exp":1787221303}}
+
+POST /api/v1/auth/login with X-Tenant-Scheme: some-other-company
+{"token":"[REDACTED]","decoded_payload":{"user_id":1,"role":"admin","scheme":"some-other-company","exp":1787221315}}

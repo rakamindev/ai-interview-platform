@@ -1,0 +1,2 @@
+$ ruby -e 'p ["", "foo", "L3", nil.to_s].map { |s| s.to_i.clamp(1,5) }'
+[1, 1, 1, 1]

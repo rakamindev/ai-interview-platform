@@ -1,0 +1,2 @@
+GET /api/v1/sessions/1/coverage
+{"skills":[],"discovered":[],"updated_at":null}
