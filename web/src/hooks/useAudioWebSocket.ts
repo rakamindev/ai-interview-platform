@@ -47,6 +47,7 @@ export function useAudioWebSocket({
       setConnectionState("connected");
       reconnectAttemptsRef.current = 0;
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
+      onStateChange("active");
     };
 
     // Only signal AI speaking once per turn (first binary chunk).
@@ -103,6 +104,7 @@ export function useAudioWebSocket({
               break;
             case "session_ended":
               sessionEndedRef.current = true;
+              if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
               // reason "error" = the SYSTEM failed (e.g. Gemini unreachable) —
               // never show the success screen for that.
@@ -114,7 +116,14 @@ export function useAudioWebSocket({
               break;
             case "error":
               if (!msg.recoverable) {
-                onStateChange("error", msg.message ?? "The interview could not be started. Please contact the hiring team.");
+                sessionEndedRef.current = true;
+                if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+                if (msg.message === "Session has ended" || msg.code === "session_ended" || msg.code === "auth_failed") {
+                  onStateChange("complete");
+                } else {
+                  onStateChange("error", msg.message ?? "The interview could not be started. Please contact the hiring team.");
+                }
               }
               break;
           }
@@ -130,7 +139,7 @@ export function useAudioWebSocket({
 
     ws.onclose = () => {
       setConnectionState("disconnected");
-      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
+      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect or show error
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
         onStateChange("reconnecting");
@@ -139,7 +148,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("error", "Koneksi terputus. Silakan periksa jaringan internet Anda dan coba sambungkan kembali.");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
@@ -157,6 +166,7 @@ export function useAudioWebSocket({
   }, []);
 
   const disconnect = useCallback(() => {
+    sessionEndedRef.current = true;
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
     wsRef.current?.close();

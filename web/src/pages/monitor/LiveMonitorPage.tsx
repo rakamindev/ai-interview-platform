@@ -270,11 +270,11 @@ export default function LiveMonitorPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Live Transcript</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-h-[420px] overflow-y-auto custom-scrollbar">
           {transcript.length === 0 ? (
             <p className="text-sm text-muted-foreground">No transcript yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {transcript.map((turn) => (
                 <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
               ))}
