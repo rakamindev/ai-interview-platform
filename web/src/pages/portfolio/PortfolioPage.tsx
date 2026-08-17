@@ -4,17 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
-import SkillLevelChart from "@/components/portfolio/SkillLevelChart";
-import SkillRadarChart from "@/components/portfolio/SkillRadarChart";
+import PortfolioPanel from "@/components/portfolio/PortfolioPanel";
+import CompareCandidatePicker from "@/components/portfolio/CompareCandidatePicker";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { buildVerdict } from "@/utils/portfolioVerdict";
-import { VERDICT_BADGE_CLASSES, VERDICT_LABELS } from "@/utils/verdictBadge";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, MessageSquareText, ClipboardX } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import { ArrowLeft, Columns2, Download, FileText, Loader2, RefreshCw, X } from "lucide-react";
+import type { Portfolio, AssessorOverride, Vacancy, Candidate } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -27,6 +24,13 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareEntered, setCompareEntered] = useState(false);
+  const [compareCandidate, setCompareCandidate] = useState<Candidate | null>(null);
+  const [comparePortfolio, setComparePortfolio] = useState<Portfolio | null>(null);
+  const [compareOverrides, setCompareOverrides] = useState<Record<number, AssessorOverride>>({});
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -57,6 +61,54 @@ export default function PortfolioPage() {
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
+
+  // Entrance transition for the compare panel — mount off-screen, then
+  // flip the transform/opacity classes a tick later so CSS transitions run.
+  useEffect(() => {
+    if (compareOpen) {
+      const timer = setTimeout(() => setCompareEntered(true), 20);
+      return () => clearTimeout(timer);
+    }
+  }, [compareOpen]);
+
+  const toggleCompare = () => {
+    if (compareOpen) {
+      setCompareOpen(false);
+      setCompareEntered(false);
+      setCompareCandidate(null);
+      setComparePortfolio(null);
+      setCompareOverrides({});
+      setCompareError(false);
+    } else {
+      setCompareOpen(true);
+    }
+  };
+
+  const handleSelectCompareCandidate = async (candidate: Candidate) => {
+    setCompareCandidate(candidate);
+    setComparePortfolio(null);
+    setCompareOverrides({});
+    setCompareLoading(true);
+    setCompareError(false);
+    try {
+      const res = await sessionsApi.getPortfolio(candidate.session_id);
+      const data = res.data as any;
+      if (data.portfolio) {
+        setComparePortfolio(data.portfolio);
+        const overrideMap: Record<number, AssessorOverride> = {};
+        data.portfolio.overrides.forEach((o: AssessorOverride) => {
+          overrideMap[o.portfolio_skill_id] = o;
+        });
+        setCompareOverrides(overrideMap);
+      } else {
+        setCompareError(true);
+      }
+    } catch {
+      setCompareError(true);
+    } finally {
+      setCompareLoading(false);
+    }
+  };
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -109,7 +161,11 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-12">
+    <div
+      className={`mx-auto space-y-8 pb-12 transition-[max-width] duration-300 ${
+        compareOpen ? "max-w-7xl" : "max-w-2xl"
+      }`}
+    >
       {/* Header */}
       <div className="-mx-4 sm:mx-0 sm:rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b sm:border sm:border-primary/10 px-4 sm:px-6 py-6">
         <div className="flex items-start justify-between gap-3">
@@ -158,171 +214,158 @@ export default function PortfolioPage() {
                   {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                   JSON
                 </Button>
+                {portfolio.generation_status === "complete" && (
+                  <Button
+                    variant={compareOpen ? "secondary" : "outline"}
+                    size="sm"
+                    className={compareOpen ? "" : "bg-background"}
+                    onClick={toggleCompare}
+                  >
+                    <Columns2 className="h-3.5 w-3.5 mr-1" />
+                    Compare
+                  </Button>
+                )}
               </>
             )}
           </div>
         </div>
       </div>
 
-      <div className="px-4 sm:px-0 space-y-8">
-        {/* Generating state */}
-        {generating && (
-          <div className="border rounded-2xl p-12 text-center space-y-4 bg-gradient-to-b from-primary/5 to-transparent">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <div>
-              <p className="font-semibold">Generating portfolio…</p>
-              <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                The AI is analyzing the interview transcript. This takes about 2 minutes.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Failed state */}
-        {!generating && portfolio?.generation_status === "failed" && (
-          <div className="border border-destructive/30 bg-destructive/5 rounded-2xl p-8 text-center space-y-4">
-            <p className="text-sm font-medium text-destructive">Portfolio generation failed.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                await sessionsApi.regeneratePortfolio(Number(sessionId));
-                setGenerating(true);
-              }}
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-            </Button>
-          </div>
-        )}
-
-        {/* Ready state */}
-        {!generating && portfolio?.generation_status === "complete" && (
-          <>
-            {portfolio.skills.length === 0 ? (
-              <div className="rounded-2xl border border-dashed p-10 text-center space-y-3">
-                <ClipboardX className="h-8 w-8 text-muted-foreground mx-auto" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">No skills were assessed</p>
-                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    This interview didn't produce enough signal to rate any skill — it may have ended early
-                    or hit an error before the AI could probe the candidate. Check the transcript to see
-                    what happened.
-                  </p>
-                </div>
-                <Link
-                  to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                >
-                  <FileText className="h-3.5 w-3.5" /> View transcript
-                </Link>
-              </div>
-            ) : (
-              <>
-                {portfolio.verdict && (() => {
-                  const summary = buildVerdict(portfolio.skills, overrides);
-                  return (
-                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
-                      <MessageSquareText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold uppercase tracking-wider text-primary/80">Verdict</p>
-                          <span
-                            className={`text-xs font-semibold rounded-full px-2 py-0.5 ${VERDICT_BADGE_CLASSES[portfolio.verdict]}`}
-                          >
-                            {VERDICT_LABELS[portfolio.verdict]}
-                          </span>
-                        </div>
-                        {summary && <p className="text-sm text-foreground/90 leading-relaxed">{summary}</p>}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                <div className="grid sm:grid-cols-2 gap-4 items-stretch">
-                  <SkillLevelChart skills={portfolio.skills} overrides={overrides} />
-                  <SkillRadarChart skills={portfolio.skills} overrides={overrides} />
-                </div>
-
-                {/* Configured skills */}
-                <div className="space-y-4">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Configured Skills
-                  </h2>
-                  <div className="space-y-4">
-                    {portfolio.skills
-                      .filter((s) => !s.is_discovered)
-                      .map((skill) => (
-                        <SkillPortfolioCard
-                          key={skill.id}
-                          skill={skill}
-                          override={overrides[skill.id]}
-                          onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                        />
-                      ))}
-                  </div>
-                </div>
-
-                {/* Discovered skills */}
-                {portfolio.skills.some((s) => s.is_discovered) && (
-                  <>
-                    <Separator />
-                    <div className="space-y-4">
-                      <div>
-                        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                          <Zap className="h-3.5 w-3.5 text-amber-500" />
-                          Discovered Skills
-                        </h2>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Skills the AI probed that were not in the original assessment
-                        </p>
-                      </div>
-                      <div className="space-y-4">
-                        {portfolio.skills
-                          .filter((s) => s.is_discovered)
-                          .map((skill) => (
-                            <SkillPortfolioCard
-                              key={skill.id}
-                              skill={skill}
-                              override={overrides[skill.id]}
-                              onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                            />
-                          ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-
-            <Separator />
-
-            {/* Fit/Gap */}
-            <div className="rounded-2xl border bg-gradient-to-br from-primary/5 to-transparent p-5 space-y-3">
+      <div
+        className={`px-4 sm:px-0 grid gap-6 items-start ${
+          compareOpen ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+        }`}
+      >
+        <div className="min-w-0 space-y-8">
+          {/* Generating state */}
+          {generating && (
+            <div className="border rounded-2xl p-12 text-center space-y-4 bg-gradient-to-b from-primary/5 to-transparent">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
               <div>
-                <h2 className="text-sm font-semibold">Run a Fit/Gap Analysis</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Compare this candidate against a vacancy's requirements.
+                <p className="font-semibold">Generating portfolio…</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+                  The AI is analyzing the interview transcript. This takes about 2 minutes.
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-                  <SelectTrigger className="w-56 bg-background">
-                    <SelectValue placeholder="Choose vacancy..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vacancies.map((v) => (
-                      <SelectItem key={v.id} value={String(v.id)}>
-                        {v.role_title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-                  Run Fit/Gap Analysis →
-                </Button>
-              </div>
             </div>
-          </>
+          )}
+
+          {/* Failed state */}
+          {!generating && portfolio?.generation_status === "failed" && (
+            <div className="border border-destructive/30 bg-destructive/5 rounded-2xl p-8 text-center space-y-4">
+              <p className="text-sm font-medium text-destructive">Portfolio generation failed.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  await sessionsApi.regeneratePortfolio(Number(sessionId));
+                  setGenerating(true);
+                }}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+              </Button>
+            </div>
+          )}
+
+          {/* Ready state */}
+          {!generating && portfolio?.generation_status === "complete" && (
+            <>
+              <PortfolioPanel
+                portfolio={portfolio}
+                overrides={overrides}
+                transcriptHref={`/assessments/${id}/sessions/${sessionId}/transcript`}
+                onOverrideSaved={handleOverrideSaved}
+              />
+
+              <Separator />
+
+              {/* Fit/Gap */}
+              <div className="rounded-2xl border bg-gradient-to-br from-primary/5 to-transparent p-5 space-y-3">
+                <div>
+                  <h2 className="text-sm font-semibold">Run a Fit/Gap Analysis</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Compare this candidate against a vacancy's requirements.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                    <SelectTrigger className="w-56 bg-background">
+                      <SelectValue placeholder="Choose vacancy..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vacancies.map((v) => (
+                        <SelectItem key={v.id} value={String(v.id)}>
+                          {v.role_title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                    Run Fit/Gap Analysis →
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {compareOpen && (
+          <div
+            className={`min-w-0 rounded-2xl border bg-card p-4 transition-all duration-300 ease-out ${
+              compareEntered ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Comparing
+              </span>
+              <button
+                onClick={toggleCompare}
+                aria-label="Close compare"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {!compareCandidate ? (
+              <CompareCandidatePicker
+                assessmentId={Number(id)}
+                excludeSessionId={Number(sessionId)}
+                onSelect={handleSelectCompareCandidate}
+              />
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">{compareCandidate.candidate_name || `Candidate ${compareCandidate.candidate_id}`}</p>
+                  <button
+                    onClick={() => setCompareCandidate(null)}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Change
+                  </button>
+                </div>
+
+                {compareLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                  </div>
+                ) : compareError ? (
+                  <p className="text-xs text-destructive text-center py-8">
+                    Couldn't load this candidate's portfolio.
+                  </p>
+                ) : comparePortfolio ? (
+                  <PortfolioPanel
+                    portfolio={comparePortfolio}
+                    overrides={compareOverrides}
+                    transcriptHref={`/assessments/${id}/sessions/${compareCandidate.session_id}/transcript`}
+                    readOnly
+                  />
+                ) : null}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
