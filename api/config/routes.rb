@@ -36,9 +36,10 @@ Rails.application.routes.draw do
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
 
-      # Portfolio skills overrides
+      # Portfolio skills — assessor review + legacy override compatibility
       resources :portfolio_skills, only: [] do
         member do
+          put  :review
           post :override
         end
       end
@@ -61,4 +62,10 @@ Rails.application.routes.draw do
       end
     end
   end
+
+  # Catch-all: unknown paths return the JSON 404 contract instead of the Rails
+  # default HTML routing error (which leaks in development). Applies to any
+  # unmatched path, including direct API access and stray invite links that
+  # point at this server instead of the web client.
+  match '*path', to: 'errors#not_found', via: :all
 end

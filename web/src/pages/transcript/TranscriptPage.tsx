@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
@@ -8,10 +8,14 @@ import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
+  const [searchParams] = useSearchParams();
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // Deep-link: ?turn=N scrolls the referenced turn into view.
+  const focusTurn = Number(searchParams.get("turn") || 0);
 
   useEffect(() => {
     Promise.all([
@@ -25,6 +29,17 @@ export default function TranscriptPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  useEffect(() => {
+    if (!loading && focusTurn > 0) {
+      // Give the list a beat to render, then scroll the target turn into view.
+      const el = document.getElementById(`turn-${focusTurn}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-teal-500", "ring-offset-2");
+      }
+    }
+  }, [loading, focusTurn, turns]);
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -92,7 +107,8 @@ export default function TranscriptPage() {
             return (
               <div
                 key={turn.id}
-                className={`rounded-lg p-4 ${
+                id={`turn-${turn.turn_number}`}
+                className={`rounded-lg p-4 scroll-mt-4 transition-shadow ${
                   isAI
                     ? "bg-muted border"
                     : "bg-background border border-primary/20"

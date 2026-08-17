@@ -4,11 +4,19 @@ module Portfolios
   # N10: Generates a structured skill portfolio from the full transcript
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
+  #
+  # Hardening:
+  #  - Invalid/missing AI levels become nil ("not assessed"), NEVER coerced to L1.
+  #  - Evidence quotes are verified against candidate transcript turns; each quote
+  #    stores provenance (turn id/number, verification status). Untraceable quotes
+  #    are dropped and the evaluation flagged for review.
+  #  - Every configured skill omitted from a partial model response still gets a
+  #    visible "not assessed" evaluation.
   class Generator
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.5-flash'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -82,17 +90,20 @@ module Portfolios
 
         1. FIND THE EVIDENCE
            Read all transcript turns where this skill was discussed.
-           Identify the 2-3 most revealing quotes from the CANDIDATE (not the AI).
-           A quote is revealing if it shows HOW they think, not just WHAT they know.
+           Identify 2-3 of the most revealing EXACT QUOTES from the CANDIDATE (not the AI).
+           IMPORTANT: Each quote MUST be copied VERBATIM from the candidate's transcript turns above.
+           Do not paraphrase, translate, or invent quotes. If the transcript is in another language, quote it in that language.
+           If the candidate said little or nothing relevant, provide fewer quotes or an empty array.
 
         2. ASSIGN A LEVEL
            Compare the candidate's actual behavior to the L1-L5 anchors.
            Assign the highest level where you see CONSISTENT evidence, not just one strong moment.
            If evidence is mixed (mostly L2 with one L3 moment), assign L2.
+           If there is INSUFFICIENT signal to rate this skill, OMIT the "level" field entirely or set it to null.
+           Never invent a level without evidence.
 
         3. WRITE THE COMPETENCY SUMMARY
            2-3 sentences. Focus on patterns, not individual answers.
-           What does this person reliably do at this skill? What's the ceiling? What's missing?
 
         4. ASSIGN CONFIDENCE
            high — probe_count >= 3 AND state = covered
@@ -107,7 +118,7 @@ module Portfolios
               "skill_label": "React / Frontend Development",
               "level": 3,
               "confidence": "high",
-              "evidence": ["quote 1", "quote 2", "quote 3"],
+              "evidence": ["exact verbatim quote 1", "exact verbatim quote 2"],
               "competency_summary": "2-3 sentence summary"
             }
           ],
@@ -116,7 +127,7 @@ module Portfolios
               "skill_label": "Micro-frontend Architecture",
               "level": 2,
               "confidence": "low",
-              "evidence": ["quote 1"],
+              "evidence": ["exact verbatim quote 1"],
               "competency_summary": "2-3 sentence summary"
             }
           ]
@@ -153,29 +164,120 @@ module Portfolios
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      candidate_turns = @session.transcript_turns.where(speaker: 'candidate').order(:turn_number).to_a
+      coverage_by_key  = coverage_lookup
+
+      parsed_configured = Array(data['configured_skills'])
+      parsed_discovered = Array(data['discovered_skills'])
+
+      parsed_configured.each do |skill_data|
+        create_skill(portfolio, skill_data, is_discovered: false, candidate_turns: candidate_turns, coverage_by_key: coverage_by_key)
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
+      parsed_discovered.each do |skill_data|
+        create_skill(portfolio, skill_data, is_discovered: true, candidate_turns: candidate_turns, coverage_by_key: coverage_by_key)
+      end
+
+      # Partial output protection: every configured skill in the assessment that
+      # Gemini omitted entirely still gets a visible "not assessed" evaluation.
+      # Match by skill_id OR label (custom skills have nil skill_id).
+      covered_ids   = parsed_configured.map { |s| s['skill_id'] }.compact
+      covered_labels = parsed_configured.map { |s| normalize(s['skill_label']) }.compact
+      @session.assessment.assessment_skills.order(:display_order).each do |assessment_skill|
+        covered = covered_ids.include?(assessment_skill.skill_id) ||
+                  covered_labels.include?(normalize(assessment_skill.skill_label))
+        next if covered
+
         portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          skill_id:           assessment_skill.skill_id,
+          skill_label:        assessment_skill.skill_label,
+          is_discovered:      false,
+          ai_level:           nil,
+          ai_confidence:      nil,
+          evidence:           [],
+          evidence_provenance: [],
+          competency_summary: "Not assessed — the AI model produced no evaluation for this skill."
         )
       end
+    end
+
+    def create_skill(portfolio, skill_data, is_discovered:, candidate_turns:, coverage_by_key:)
+      evidence_quotes = Array(skill_data['evidence']).first(3).map(&:to_s)
+      provenance      = verify_evidence(evidence_quotes, candidate_turns)
+      coverage        = find_coverage(coverage_by_key, skill_data, is_discovered)
+      confidence      = Coverage::ConfidenceCalculator.call(
+        state:       coverage&.state,
+        probe_count: coverage&.probe_count
+      )
+
+      portfolio.portfolio_skills.create!(
+        skill_id:            skill_data['skill_id'],
+        skill_label:         skill_data['skill_label'].presence || "Unknown skill",
+        is_discovered:       is_discovered,
+        ai_level:            parse_level(skill_data['level']),
+        ai_confidence:       confidence,
+        evidence:            evidence_quotes,
+        evidence_provenance: provenance,
+        competency_summary:  skill_data['competency_summary'].presence || "No summary provided."
+      )
+    end
+
+    # Coverage map keyed by skill_id and normalized label for lookup.
+    def coverage_lookup
+      @session.coverage_maps.index_by do |m|
+        [m.skill_id, normalize(m.skill_label)]
+      end
+    end
+
+    def find_coverage(coverage_by_key, skill_data, is_discovered)
+      key = skill_data['skill_id']
+      coverage_by_key[[key, nil]] || coverage_by_key[[nil, normalize(skill_data['skill_label'])]]
+    end
+
+    # Strict level parsing: only an integer 1..5 is a valid AI level.
+    # Anything else (null, "unknown", arrays, out-of-range) → nil (not assessed).
+    def parse_level(raw)
+      return nil unless raw.is_a?(Integer) || raw.is_a?(String) && raw.match?(/\A\d+\z/)
+
+      value = raw.to_i
+      value.between?(1, 5) ? value : nil
+    end
+
+    # Verifies each evidence quote against candidate transcript turns.
+    # Returns provenance entries: [{ quote_index, transcript_turn_id, turn_number, verified }]
+    def verify_evidence(quotes, candidate_turns)
+      quotes.each_with_index.map do |quote, idx|
+        turn = find_matching_turn(quote, candidate_turns)
+        if turn
+          {
+            'quote_index'      => idx,
+            'transcript_turn_id' => turn.id,
+            'turn_number'      => turn.turn_number,
+            'verified'         => true
+          }
+        else
+          {
+            'quote_index'      => idx,
+            'transcript_turn_id' => nil,
+            'turn_number'      => nil,
+            'verified'         => false
+          }
+        end
+      end
+    end
+
+    def find_matching_turn(quote, candidate_turns)
+      normalized_quote = normalize(quote)
+      return nil if normalized_quote.length < 10
+
+      candidate_turns.find do |turn|
+        normalized_turn = normalize(turn.text)
+        normalized_turn.include?(normalized_quote)
+      end
+    end
+
+    def normalize(text)
+      text.to_s.downcase.gsub(/[^a-z0-9\s]/, '').gsub(/\s+/, ' ').strip
     end
   end
 end

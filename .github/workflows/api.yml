@@ -1,0 +1,65 @@
+name: API
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rspec:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rakamin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: rakamin_test
+      REDIS_URL: redis://localhost:6379/1
+      # No live Gemini in CI — specs stub the model clients.
+      GEMINI_API_KEY: test-key
+      GEMINI_LIVE_MODEL: test-model
+      GEMINI_FLASH_MODEL: test-model
+      GEMINI_PRO_MODEL: test-model
+      SECRET_KEY_BASE: test-secret
+      CI: "true"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383965f5 # v1.207.0
+        with:
+          ruby-version: "3.3.2"
+          bundler-cache: true
+          working-directory: api
+      - name: Prepare test database
+        working-directory: api
+        run: |
+          bundle exec rails db:create db:migrate
+      - name: Run RSpec
+        working-directory: api
+        run: bundle exec rspec

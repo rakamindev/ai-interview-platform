@@ -1,11 +1,26 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
+/** Parse "L3" → 3, passthrough number, null for invalid/absent (not assessed). */
+export function parseLevel(level: string | number | null | undefined): number | null {
+  if (level == null) return null;
+  if (typeof level === "number") return level >= 1 && level <= 5 ? level : null;
   const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+  return !isNaN(n) && n >= 1 && n <= 5 ? n : null;
 }
+
+// Review outcome display
+export const REVIEW_OUTCOME_LABELS: Record<string, string> = {
+  confirmed: "Confirmed",
+  adjusted: "Adjusted",
+  insufficient_evidence: "Insufficient evidence",
+};
+
+export const LEVEL_SOURCE_LABELS: Record<string, string> = {
+  ai_generated: "AI",
+  ai_confirmed: "AI (confirmed)",
+  human_adjusted: "Human (adjusted)",
+  not_assessed: "Not assessed",
+};
 
 export const LEVEL_LABELS: Record<number, string> = {
   1: "L1",

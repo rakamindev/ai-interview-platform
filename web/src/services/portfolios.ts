@@ -1,16 +1,27 @@
 import api from "./api";
-import type { Portfolio, AssessorOverride, FitGapReport } from "@/types";
+import type { Portfolio, AssessorReview, FitGapReport, ReviewOutcome } from "@/types";
 
 export const portfoliosApi = {
+  /** Legacy override — maps to 'adjusted' outcome (kept for compatibility). */
   getOverride: (portfolioSkillId: number, data: { override_level: number; assessor_notes: string }) =>
-    api.post<{ override: AssessorOverride }>(`/portfolio_skills/${portfolioSkillId}/override`, {
+    api.post<{ override: AssessorReview }>(`/portfolio_skills/${portfolioSkillId}/override`, {
       override: data,
     }),
 
-  triggerFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ report: FitGapReport } | { status: string; message: string }>(`/portfolios/${portfolioId}/fitgap`, {
-      fitgap: { vacancy_id: vacancyId },
+  /** Idempotent review upsert — confirmed | adjusted | insufficient_evidence. */
+  reviewSkill: (
+    portfolioSkillId: number,
+    data: { outcome: ReviewOutcome; reviewed_level?: number | null; rationale?: string }
+  ) =>
+    api.put<{ review: AssessorReview }>(`/portfolio_skills/${portfolioSkillId}/review`, {
+      review: data,
     }),
+
+  triggerFitGap: (portfolioId: number, vacancyId: number) =>
+    api.post<{ report?: FitGapReport; status?: string; message?: string }>(
+      `/portfolios/${portfolioId}/fitgap`,
+      { fitgap: { vacancy_id: vacancyId } }
+    ),
 
   getFitGap: (portfolioId: number, vacancyId: number) =>
     api.get<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),

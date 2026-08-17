@@ -43,6 +43,10 @@ gem 'bootsnap', require: false
 gem 'kaminari'
 gem 'listen', '~> 3.2'
 
+# Rails 7.0.10 references ActionView::Template::Handlers::ERB::ENCODING_FLAG,
+# removed in erubi 1.13 — pin below it (Rails 7.0 needs the constant).
+gem 'erubi', '< 1.13'
+
 group :development, :test do
   gem 'byebug', platforms: %i[mri mingw x64_mingw]
   gem 'factory_bot_rails'
