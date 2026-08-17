@@ -56,6 +56,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   const [runId, setRunId] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const monitorRafRef = useRef<number | null>(null);
+  // Track the mic/camera capture stream + monitoring AudioContext so retry /
+  // unmount can stop every track — previously only the camera stream was
+  // retained (via state), so the mic stream leaked on every retry.
+  const captureStreamRef = useRef<MediaStream | null>(null);
+  const monitorCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -83,6 +88,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   useEffect(() => {
     return () => {
       videoStream?.getTracks().forEach((t) => t.stop());
+      captureStreamRef.current?.getTracks().forEach((t) => t.stop());
+      captureStreamRef.current = null;
+      monitorCtxRef.current?.close();
+      monitorCtxRef.current = null;
       cancelMonitorRaf();
     };
   }, [videoStream, cancelMonitorRaf]);
@@ -118,6 +127,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
           (window as unknown as { webkitAudioContext: typeof AudioContext })
             .webkitAudioContext;
         const ctx = new AudioCtx();
+        monitorCtxRef.current?.close();
+        monitorCtxRef.current = ctx;
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 256;
@@ -196,6 +207,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     getStream.then((stream) => {
       if (cancelled) return;
       if (stream) {
+        captureStreamRef.current = stream;
         if (REQUIRE_CAMERA) setVideoStream(stream);
         startAudioLevelMonitoring(stream);
         setProgress((p) => ({
@@ -236,6 +248,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   const retryAll = () => {
     // Clean up the previous run: stop media tracks + level meter, drop results.
     videoStream?.getTracks().forEach((t) => t.stop());
+    captureStreamRef.current?.getTracks().forEach((t) => t.stop());
+    captureStreamRef.current = null;
+    monitorCtxRef.current?.close();
+    monitorCtxRef.current = null;
     cancelMonitorRaf();
     setVideoStream(null);
     setInternetResult(null);
