@@ -10,7 +10,11 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        # No portfolio at all = the candidate never interviewed — that is a
+        # definitive "none", not "generating".
+        return json_response({ status: "none" }) if @portfolio.nil?
+
+        if @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
 
@@ -134,7 +138,12 @@ module Api
         report = portfolio.fit_gap_reports.find_by(vacancy_id: vacancy.id)
 
         if report.nil?
-          return json_error("Fit/gap report not found", :not_found)
+          if portfolio.complete?
+            FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+            return render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+          else
+            return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
+          end
         end
 
         json_response(report: fit_gap_json(report))
@@ -163,6 +172,8 @@ module Api
       end
 
       def portfolio_json(portfolio)
+        coverage_maps = portfolio.session&.coverage_maps&.index_by(&:skill_label) || {}
+
         {
           id:                portfolio.id,
           session_id:        portfolio.session_id,
@@ -170,12 +181,14 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          skills:            portfolio.portfolio_skills.map { |s| portfolio_skill_json(s, coverage_maps) },
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
       end
 
-      def portfolio_skill_json(skill)
+      def portfolio_skill_json(skill, coverage_maps = {})
+        coverage = coverage_maps[skill.skill_label]
+
         {
           id:                skill.id,
           skill_id:          skill.skill_id,
@@ -183,8 +196,10 @@ module Api
           is_discovered:     skill.is_discovered,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
-          evidence:          skill.evidence_quotes,
-          competency_summary: skill.competency_summary
+          evidence:          normalize_evidence(skill.evidence),
+          competency_summary: skill.competency_summary,
+          probe_count:       coverage&.probe_count,
+          coverage_state:    coverage&.state
         }
       end
 
@@ -210,6 +225,18 @@ module Api
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at
         }
+      end
+
+      # Normalize evidence JSONB to a consistent [{ "text" => ..., "turn_number" => ... }] shape.
+      # Wraps legacy string entries so callers always get the same structure.
+      def normalize_evidence(raw)
+        Array(raw).map do |e|
+          if e.is_a?(Hash)
+            { 'text' => e['text'] || e[:text], 'turn_number' => e['turn_number'] || e[:turn_number] }
+          else
+            { 'text' => e, 'turn_number' => nil }
+          end
+        end
       end
 
       def build_export_json(portfolio, vacancy_id = nil)

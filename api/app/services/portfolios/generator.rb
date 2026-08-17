@@ -109,7 +109,10 @@ module Portfolios
               "skill_label": "React / Frontend Development",
               "level": 3,
               "confidence": "high",
-              "evidence": ["quote 1", "quote 2", "quote 3"],
+              "evidence": [
+                {"text": "exact quote from candidate", "turn_number": 12},
+                {"text": "another revealing quote", "turn_number": 15}
+              ],
               "competency_summary": "2-3 sentence summary"
             }
           ],
@@ -118,7 +121,9 @@ module Portfolios
               "skill_label": "Micro-frontend Architecture",
               "level": 2,
               "confidence": "low",
-              "evidence": ["quote 1"],
+              "evidence": [
+                {"text": "quote from candidate", "turn_number": 8}
+              ],
               "competency_summary": "2-3 sentence summary"
             }
           ]
@@ -162,7 +167,7 @@ module Portfolios
           is_discovered:      false,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
           ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
+          evidence:           normalize_evidence(skill_data['evidence']),
           competency_summary: skill_data['competency_summary']
         )
       end
@@ -174,10 +179,22 @@ module Portfolios
           is_discovered:      true,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
           ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
+          evidence:           normalize_evidence(skill_data['evidence']),
           competency_summary: skill_data['competency_summary']
         )
       end
+    end
+
+    # Normalize evidence to a consistent shape: [{ "text" => ..., "turn_number" => ... }].
+    # Handles both legacy string arrays and new object arrays from Gemini.
+    def normalize_evidence(raw)
+      Array(raw).map do |e|
+        if e.is_a?(Hash)
+          { 'text' => e['text'] || e[:text], 'turn_number' => e['turn_number'] || e[:turn_number] }
+        else
+          { 'text' => e, 'turn_number' => nil }
+        end
+      end.first(3)
     end
   end
 end
