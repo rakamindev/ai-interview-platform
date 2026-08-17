@@ -19,6 +19,11 @@ function result(overrides: Partial<ExportResult> = {}): ExportResult {
   return { candidate_id: 1, candidate_name: `Candidate ${overrides.candidate_id ?? 1}`, status: "ok", ...overrides };
 }
 
+const DESC_OPTS = (description: string | undefined) => ({
+  description,
+  descriptionClassName: "whitespace-pre-line",
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -38,7 +43,7 @@ describe("toastExportSummary", () => {
       result({ status: "ok", candidate_id: 2, candidate_name: "Bob" }),
     ]);
 
-    expect(successMock).toHaveBeenCalledWith("2 exported", { description: "Exported: Alice, Bob" });
+    expect(successMock).toHaveBeenCalledWith("2 exported", DESC_OPTS("Exported: Alice, Bob"));
     expect(warningMock).not.toHaveBeenCalled();
     expect(errorMock).not.toHaveBeenCalled();
   });
@@ -50,32 +55,86 @@ describe("toastExportSummary", () => {
       result({ status: "not_found", candidate_id: 3, candidate_name: undefined, error: "Candidate does not belong to this assessment" }),
     ]);
 
-    expect(warningMock).toHaveBeenCalledWith("1 exported, 1 failed, 1 not found", {
-      description:
-        "Exported: Alice\nFailed: Bob (Portfolio not available for this candidate)\nNot found: candidate #3",
-    });
+    expect(warningMock).toHaveBeenCalledWith(
+      "1 exported, 1 failed, 1 not found",
+      DESC_OPTS(
+        "Exported: Alice\n" +
+          "Failed (Portfolio not available for this candidate): Bob\n" +
+          "Not found (Candidate does not belong to this assessment): candidate #3"
+      )
+    );
+  });
+
+  it("groups failed candidates sharing the same reason onto one line instead of repeating it", () => {
+    toastExportSummary([
+      result({ status: "failed", candidate_id: 1, candidate_name: "Santoso", error: "Portfolio not available for this candidate" }),
+      result({ status: "failed", candidate_id: 2, candidate_name: "Dadan", error: "Portfolio not available for this candidate" }),
+      result({ status: "failed", candidate_id: 3, candidate_name: "Budi", error: "Portfolio not available for this candidate" }),
+    ]);
+
+    expect(errorMock).toHaveBeenCalledWith(
+      "3 failed",
+      DESC_OPTS("Failed (Portfolio not available for this candidate): Santoso, Dadan, Budi")
+    );
+  });
+
+  it("splits failed candidates into separate lines when reasons differ", () => {
+    toastExportSummary([
+      result({ status: "failed", candidate_id: 1, candidate_name: "Santoso", error: "Portfolio not available for this candidate" }),
+      result({ status: "failed", candidate_id: 2, candidate_name: "Dadan", error: "PDF generation failed for this candidate" }),
+    ]);
+
+    expect(errorMock).toHaveBeenCalledWith(
+      "2 failed",
+      DESC_OPTS(
+        "Failed (Portfolio not available for this candidate): Santoso\n" +
+          "Failed (PDF generation failed for this candidate): Dadan"
+      )
+    );
+  });
+
+  it("caps a long name list and shows a '+N more' tail instead of an unreadable wall of names", () => {
+    const many = Array.from({ length: 8 }, (_, i) =>
+      result({ status: "ok", candidate_id: i + 1, candidate_name: `Candidate ${i + 1}` })
+    );
+
+    toastExportSummary(many);
+
+    expect(successMock).toHaveBeenCalledWith(
+      "8 exported",
+      DESC_OPTS("Exported: Candidate 1, Candidate 2, Candidate 3, Candidate 4, Candidate 5, +3 more")
+    );
   });
 
   it("falls back to a candidate-id label when not_found results carry no name", () => {
-    toastExportSummary([result({ status: "not_found", candidate_id: 42, candidate_name: undefined })]);
+    toastExportSummary([
+      result({ status: "not_found", candidate_id: 42, candidate_name: undefined, error: "Candidate does not belong to this assessment" }),
+    ]);
 
-    expect(errorMock).toHaveBeenCalledWith("1 not found", { description: "Not found: candidate #42" });
+    expect(errorMock).toHaveBeenCalledWith(
+      "1 not found",
+      DESC_OPTS("Not found (Candidate does not belong to this assessment): candidate #42")
+    );
   });
 
   it("fires an error toast when nothing succeeded", () => {
     toastExportSummary([
       result({ status: "failed", candidate_id: 1, candidate_name: "Carol", error: "PDF generation failed for this candidate" }),
-      result({ status: "not_found", candidate_id: 2, candidate_name: undefined }),
+      result({ status: "not_found", candidate_id: 2, candidate_name: undefined, error: "Candidate does not belong to this assessment" }),
     ]);
 
-    expect(errorMock).toHaveBeenCalledWith("1 failed, 1 not found", {
-      description: "Failed: Carol (PDF generation failed for this candidate)\nNot found: candidate #2",
-    });
+    expect(errorMock).toHaveBeenCalledWith(
+      "1 failed, 1 not found",
+      DESC_OPTS(
+        "Failed (PDF generation failed for this candidate): Carol\n" +
+          "Not found (Candidate does not belong to this assessment): candidate #2"
+      )
+    );
   });
 
   it("fires an error toast with a fallback message for an empty result set", () => {
     toastExportSummary([]);
 
-    expect(errorMock).toHaveBeenCalledWith("Nothing to export", { description: undefined });
+    expect(errorMock).toHaveBeenCalledWith("Nothing to export", DESC_OPTS(undefined));
   });
 });

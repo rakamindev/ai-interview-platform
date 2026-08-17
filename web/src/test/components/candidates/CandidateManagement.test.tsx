@@ -144,6 +144,7 @@ describe("CandidateManagement", () => {
     await waitFor(() =>
       expect(toastSuccessMock).toHaveBeenCalledWith("1 exported", {
         description: "Exported: Alice Wonderland",
+        descriptionClassName: "whitespace-pre-line",
       })
     );
     expect(toastWarningMock).not.toHaveBeenCalled();
@@ -169,7 +170,10 @@ describe("CandidateManagement", () => {
     await waitFor(() =>
       expect(toastWarningMock).toHaveBeenCalledWith("1 exported, 1 failed, 1 not found", {
         description:
-          "Exported: Alice Wonderland\nFailed: Bob (Portfolio not available for this candidate)\nNot found: candidate #3",
+          "Exported: Alice Wonderland\n" +
+          "Failed (Portfolio not available for this candidate): Bob\n" +
+          "Not found (Candidate does not belong to this assessment): candidate #3",
+        descriptionClassName: "whitespace-pre-line",
       })
     );
   });
@@ -209,7 +213,9 @@ describe("CandidateManagement", () => {
     await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(toastWarningMock).toHaveBeenCalledWith("1 exported, 1 failed", {
-        description: "Exported: Alice Wonderland\nFailed: Bob (Portfolio not available for this candidate)",
+        description:
+          "Exported: Alice Wonderland\nFailed (Portfolio not available for this candidate): Bob",
+        descriptionClassName: "whitespace-pre-line",
       })
     );
 
