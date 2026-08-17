@@ -47,6 +47,8 @@ Rails.application.routes.draw do
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
       post 'sessions/:token/consent',        to: 'sessions#consent'
+      get  'sessions/:token/my_data',        to: 'sessions#my_data'
+      post 'sessions/:token/my_data/delete', to: 'sessions#delete_my_data'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do
