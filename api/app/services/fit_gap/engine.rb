@@ -20,7 +20,8 @@ module FitGap
 
       report = FitGapReport.find_or_initialize_by(
         portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
+        vacancy_id:   @vacancy.id,
+        tenant_id:    @portfolio.tenant_id
       )
 
       report.update!(
