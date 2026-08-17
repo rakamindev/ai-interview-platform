@@ -63,7 +63,9 @@ Rails.application.routes.draw do
     end
   end
 
-  # Catch-all: unknown API paths return the JSON 404 contract instead of the
-  # Rails default HTML routing error (which leaks in development).
-  match '*path', to: 'errors#not_found', via: :all, constraints: ->(req) { req.path.start_with?('/api/') }
+  # Catch-all: unknown paths return the JSON 404 contract instead of the Rails
+  # default HTML routing error (which leaks in development). Applies to any
+  # unmatched path, including direct API access and stray invite links that
+  # point at this server instead of the web client.
+  match '*path', to: 'errors#not_found', via: :all
 end
