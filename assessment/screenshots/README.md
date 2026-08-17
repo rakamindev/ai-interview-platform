@@ -1,9 +1,92 @@
 # Screenshot captions
 
-[VERIFIED-RUNTIME] `before-fitgap-table.png` caption: the fit/gap table receives `expected_level`, but its Required column is blank because the client reads `required_level`; seeded-data disclosure does not apply to this layout defect.
+Every image in this folder was captured on the local seeded dataset described in
+`../assumptions.md`, on 17 August 2026, **before any code change on this branch**.
+The commit that adds these files precedes every implementation commit, so the
+before/after comparison in the implementation PR is verifiable from git history
+rather than from assertion.
 
-[VERIFIED-RUNTIME] `before-portfolio-node-l1-high-confidence.png` caption: seeded data proves rendering only—given `ai_level=1`, `ai_confidence='high'`, and `evidence=[]`, the interface shows L1/Foundational and HIGH while silently omitting evidence; it does not prove a real Gemini response.
+---
 
-[VERIFIED-RUNTIME] `before-portfolio-database-nonnumeric.png` caption: seeded data proves rendering only—given a seeded L1 row intended to represent non-numeric output, the interface renders a level claim; it does not prove a real Gemini response.
+## `before-fitgap-table.png`
 
-[VERIFIED-RUNTIME] The referenced image assets were not present in this checkout, so no image was fabricated or copied.
+Fit/Gap Report for Session 1, Vacancy 1, at
+`/assessments/1/sessions/1/fitgap/1`. This single frame demonstrates five
+separate defects.
+
+1. **The Required column is blank on all five rows.** [VERIFIED-RUNTIME] The API
+   payload carries `expected_level`; `ComparisonTable.tsx` reads
+   `c.required_level`, so `LEVEL_LABELS[undefined]` renders as nothing. An
+   assessor sees candidate levels with no bar to compare them against. The
+   seeded-data disclosure below does not apply to this defect: it is a contract
+   mismatch between server and client, independent of what the values are.
+2. **`Node.js / Backend Development` shows `L1` and `⚠ Gap -3`.** [VERIFIED-RUNTIME]
+   This row is visually indistinguishable from a genuine low rating. Nothing on
+   this screen indicates that the level was never established.
+3. **The legend `✏ = human override applied` renders unconditionally.** [VERIFIED-RUNTIME]
+   `AssessorOverride.count` is 0 in this database. The legend is emitted whether
+   or not any override exists, and the payload carries no `is_override` field for
+   it to key off — `engine.rb` computes an `overridden` value and then omits it
+   from the serialized hash.
+4. **The footer counts four of five rows.** [VERIFIED-RUNTIME] `✅ Match: 1 skill`,
+   `⚠ Gap: 2 skills`, `⭐ Exceeds: 1 skill`. The `not_assessed` row is absent from
+   the totals, and the narrative repeats the same omission verbatim: *"Candidate
+   shows 1 skill matches, 1 exceeds, and 2 gaps against role requirements."*
+5. **`Culture & Competency Fit` renders with `culture_narrative: null`.** [VERIFIED-RUNTIME]
+   The card displays the skill-count sentence instead. Half of the stated analysis
+   is missing and the interface gives no indication of it.
+
+Also visible, and recorded as a narrowing rather than a defect:
+**`Discovered Skills (not in vacancy requirements)`** lists
+`Kubernetes Operations 3 (low confidence)`. [VERIFIED-RUNTIME] Discovered skills
+are therefore *not* dropped from this page — they are absent from
+`skill_comparisons`, from the footer counts, from the narrative and from the JSON
+export, but rendered on screen from a separate portfolio fetch. Compare the same
+skill in `before-portfolio-node-l1-high-confidence.png`, where it carries an
+`L3 Proficient` badge, a red `Confidence: LOW` marker, a yellow caveat banner, an
+evidence quote and a competency summary. On the decision screen all of that
+collapses to the bare string `3 (low confidence)`. See correction #12 in
+`../ai-verification.md`.
+
+---
+
+## `before-portfolio-node-l1-high-confidence.png`
+
+Portfolio Results for Session 1, at `/assessments/1/sessions/1/portfolio`,
+captured full-page so that four cards appear together for contrast.
+
+[VERIFIED-RUNTIME] **What this image proves is rendering behaviour.** Given a row
+with `ai_level = 1`, `ai_confidence = 'high'` and `evidence = []`, the interface
+shows an `L1 / Foundational` badge and a green `Confidence: HIGH` marker, and
+omits the `EVIDENCE FROM INTERVIEW` section entirely with no substitute state —
+no "no evidence recorded", no dimming, no warning. The `React / Frontend` card
+directly above it shows what the section looks like when evidence exists, which
+is why the absence reads as absence and not as a cropped screenshot.
+
+[VERIFIED-CODE] That data state is reachable in production: `save_skills` in
+`generator.rb` writes `ai_level: skill_data['level'].to_i.clamp(1, 5)`, which maps
+`""`, `"foo"` and `"L3"` to 1, and no validation requires evidence to be present
+for a rating of `high` confidence.
+
+**Disclosure.** This row was created by `api/db/seeds_local.rb`. The competency
+summary string *"Not covered during the interview."* was written by the report
+author to record the row's intent; it was **not** generated by the system. No
+Gemini API key was available, so no real model response was ever observed. The
+claim this image supports is about how the interface presents this data state,
+not about how often the model produces it.
+
+---
+
+## `before-portfolio-database-nonnumeric.png`
+
+The `Database Design & SQL` card from the same page.
+
+[VERIFIED-RUNTIME] The card displays `L1 / Foundational` with `Confidence: MEDIUM`
+while its own summary line reads *"Model returned a non-numeric competency
+level."* A system that states in prose that it could not read the model's output
+is, on the same card, presenting a competency level as fact. Nothing in the badge,
+the colour or the confidence marker distinguishes it from a measured rating.
+
+**Disclosure.** Same as above. The summary string was authored in
+`api/db/seeds_local.rb` to label the row's intent. What the image proves is that
+the interface renders a level claim for such a row without qualification.
