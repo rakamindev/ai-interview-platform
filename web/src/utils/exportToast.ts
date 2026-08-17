@@ -5,24 +5,37 @@ export function toastExportFailure(): void {
   toast.error("Export failed — please try again");
 }
 
-export function toastExportSummary(results: ExportResult[]): void {
-  const ok = results.filter((r) => r.status === "ok").length;
-  const failed = results.filter((r) => r.status === "failed").length;
-  const notFound = results.filter((r) => r.status === "not_found").length;
+function candidateLabel(result: ExportResult): string {
+  return result.candidate_name || `candidate #${result.candidate_id}`;
+}
 
-  const parts = [
-    ok > 0 && `${ok} exported`,
-    failed > 0 && `${failed} failed`,
-    notFound > 0 && `${notFound} not found`,
+export function toastExportSummary(results: ExportResult[]): void {
+  const ok = results.filter((r) => r.status === "ok");
+  const failed = results.filter((r) => r.status === "failed");
+  const notFound = results.filter((r) => r.status === "not_found");
+
+  const titleParts = [
+    ok.length > 0 && `${ok.length} exported`,
+    failed.length > 0 && `${failed.length} failed`,
+    notFound.length > 0 && `${notFound.length} not found`,
   ].filter(Boolean);
 
-  const message = parts.length > 0 ? parts.join(", ") : "Nothing to export";
+  const title = titleParts.length > 0 ? titleParts.join(", ") : "Nothing to export";
 
-  if (ok > 0 && failed === 0 && notFound === 0) {
-    toast.success(message);
-  } else if (ok === 0) {
-    toast.error(message);
+  const descriptionLines = [
+    ok.length > 0 && `Exported: ${ok.map(candidateLabel).join(", ")}`,
+    failed.length > 0 &&
+      `Failed: ${failed.map((r) => `${candidateLabel(r)}${r.error ? ` (${r.error})` : ""}`).join(", ")}`,
+    notFound.length > 0 && `Not found: ${notFound.map(candidateLabel).join(", ")}`,
+  ].filter(Boolean);
+
+  const description = descriptionLines.length > 0 ? descriptionLines.join("\n") : undefined;
+
+  if (ok.length > 0 && failed.length === 0 && notFound.length === 0) {
+    toast.success(title, { description });
+  } else if (ok.length === 0) {
+    toast.error(title, { description });
   } else {
-    toast.warning(message);
+    toast.warning(title, { description });
   }
 }

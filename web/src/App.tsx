@@ -20,7 +20,7 @@ import InterviewPage from "@/pages/interview/InterviewPage";
 export default function App() {
   return (
     <>
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-right" richColors duration={5000} />
       <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />

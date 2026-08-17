@@ -131,7 +131,7 @@ describe("CandidateManagement", () => {
 
   it("shows a success toast when every export result is ok", async () => {
     mockList([candidate()]);
-    mockExport([{ candidate_id: 1, status: "ok", data: { turns: [] } }]);
+    mockExport([{ candidate_id: 1, candidate_name: "Alice Wonderland", status: "ok", data: { turns: [] } }]);
     window.URL.createObjectURL = vi.fn(() => "blob:mock");
     window.URL.revokeObjectURL = vi.fn();
 
@@ -141,7 +141,11 @@ describe("CandidateManagement", () => {
     await selectFirstCandidateAndOpenExportMenu();
     fireEvent.click(await screen.findByText("Transcript (JSON)"));
 
-    await waitFor(() => expect(toastSuccessMock).toHaveBeenCalledWith("1 exported"));
+    await waitFor(() =>
+      expect(toastSuccessMock).toHaveBeenCalledWith("1 exported", {
+        description: "Exported: Alice Wonderland",
+      })
+    );
     expect(toastWarningMock).not.toHaveBeenCalled();
     expect(toastErrorMock).not.toHaveBeenCalled();
   });
@@ -149,8 +153,8 @@ describe("CandidateManagement", () => {
   it("shows a warning toast summarizing ok/failed/not_found counts on a mixed export", async () => {
     mockList([candidate()]);
     mockExport([
-      { candidate_id: 1, status: "ok", data: {} },
-      { candidate_id: 2, status: "failed", error: "Portfolio not available for this candidate" },
+      { candidate_id: 1, candidate_name: "Alice Wonderland", status: "ok", data: {} },
+      { candidate_id: 2, candidate_name: "Bob", status: "failed", error: "Portfolio not available for this candidate" },
       { candidate_id: 3, status: "not_found", error: "Candidate does not belong to this assessment" },
     ]);
     window.URL.createObjectURL = vi.fn(() => "blob:mock");
@@ -163,7 +167,10 @@ describe("CandidateManagement", () => {
     fireEvent.click(await screen.findByText("Portfolio data (JSON)"));
 
     await waitFor(() =>
-      expect(toastWarningMock).toHaveBeenCalledWith("1 exported, 1 failed, 1 not found")
+      expect(toastWarningMock).toHaveBeenCalledWith("1 exported, 1 failed, 1 not found", {
+        description:
+          "Exported: Alice Wonderland\nFailed: Bob (Portfolio not available for this candidate)\nNot found: candidate #3",
+      })
     );
   });
 
@@ -184,8 +191,8 @@ describe("CandidateManagement", () => {
     mockList([candidate()]);
     mockExport(
       [
-        { candidate_id: 1, status: "ok", data: { filename: "portfolio-1.pdf", pdf_base64: btoa("%PDF-fake") } },
-        { candidate_id: 2, status: "failed", error: "Portfolio not available for this candidate" },
+        { candidate_id: 1, candidate_name: "Alice Wonderland", status: "ok", data: { filename: "portfolio-1.pdf", pdf_base64: btoa("%PDF-fake") } },
+        { candidate_id: 2, candidate_name: "Bob", status: "failed", error: "Portfolio not available for this candidate" },
       ],
       "pdf"
     );
@@ -200,7 +207,11 @@ describe("CandidateManagement", () => {
     fireEvent.click(await screen.findByText("Portfolio report (PDF)"));
 
     await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(toastWarningMock).toHaveBeenCalledWith("1 exported, 1 failed"));
+    await waitFor(() =>
+      expect(toastWarningMock).toHaveBeenCalledWith("1 exported, 1 failed", {
+        description: "Exported: Alice Wonderland\nFailed: Bob (Portfolio not available for this candidate)",
+      })
+    );
 
     clickSpy.mockRestore();
   });
