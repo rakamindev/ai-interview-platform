@@ -144,7 +144,10 @@ class AudioWebSocketMiddleware
       on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
       on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
       on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
-      on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
+      on_error: ->(message) { 
+        Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}")
+        send_json(browser_ws, type: 'error', message: message, recoverable: false)
+      },
       on_resumption_token_update: build_on_resumption_token_update(state, session),
       on_ready: build_on_ready(browser_ws, state, session)
     )
@@ -254,7 +257,8 @@ class AudioWebSocketMiddleware
         end
 
         unless state.ending_scheduled
-          EM.add_timer(15) do
+          state.fallback_end_timer&.cancel
+          state.fallback_end_timer = EM.add_timer(15) do
             next if state.ending_scheduled
             Rails.logger.warn("[AudioWS] on_model_turn_complete delayed — finalizing via closing-phrase fallback (session=#{session.id})")
             state.ending_scheduled = true
@@ -372,10 +376,22 @@ class AudioWebSocketMiddleware
     old_client&.close
   end
 
-  # Handles unexpected Gemini WebSocket close (not GoAway). Audio is buffered during the gap and replayed.
   def handle_gemini_close(browser_ws, state, code:, reason:)
     # Normal close (1000) is intentional unless flagged as inactivity_close (which also uses 1000).
     return if code == 1000 && !state.gemini_client&.inactivity_close
+
+    # If we are in the middle of wrap-up, don't try to reconnect. Just force end.
+    if state.coverage_pending || state.wrap_up_injected || state.ending_scheduled
+      Rails.logger.info("[AudioWS] Gemini closed during wrap-up. Forcing session end.")
+      state.ending_scheduled = true
+      handle_session_end(state, state.session, 'all_covered')
+      return
+    end
+
+    if state.browser_disconnected_at
+      Rails.logger.info("[AudioWS] Gemini closed while browser disconnected. Not reconnecting.")
+      return
+    end
 
     state.proactive_reconnect_timer&.cancel
     state.reconnect_attempts ||= 0
@@ -384,10 +400,11 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
+      state.ending_scheduled = true
       Sessions::EndHandler.new(state.session).call(reason: 'error')
       send_json(browser_ws, type: 'session_ended', reason: 'error',
                             message: 'The session encountered a problem. Please contact the interviewer.')
-      browser_ws.close
+      EM::Timer.new(0.3) { close_gracefully(state) }
     end
   end
 
@@ -411,7 +428,12 @@ class AudioWebSocketMiddleware
       state.gemini_client&.supersede!
       build_gemini_client(browser_ws, state)
       token = state.latest_resumption_token || state.session.gemini_resumption_token.presence
-      state.gemini_client.connect(resumption_handle: token)
+      begin
+        state.gemini_client.connect(resumption_handle: token)
+      rescue StandardError => e
+        Rails.logger.error("[AudioWS] Reconnect failed synchronously: #{e.class}: #{e.message}")
+        handle_gemini_close(browser_ws, state, code: 1011, reason: e.message)
+      end
     end
   end
 
@@ -569,6 +591,7 @@ class AudioWebSocketMiddleware
   # Wait for candidate response before injecting wrap-up so silence pump doesn't fire premature close;
   # 20s fallback in case candidate stays silent.
   def wait_for_candidate_then_wrap_up(state, session)
+    state.fallback_end_timer&.cancel
     state.waiting_for_candidate_response = true
     Rails.logger.info("[AudioWS] AI ended with question — waiting for candidate response before wrap-up (session=#{session.id})")
 
@@ -705,29 +728,24 @@ class AudioWebSocketMiddleware
     state.sent_time_warnings.add(key)
   end
 
-  CLOSING_PHRASES = [
-    # English
-    'you\'ll hear back from the team',
-    'you\'ll hear from the team',
-    'thank you for your time',
-    'thanks for your time',
-    'that concludes our interview',
-    'that\'s all for today',
-    'good luck',
-    # Indonesian — formal (Anda) and informal (kamu), partial matches cover variations
-    'akan mendengar kabar',           # covers "Anda/kamu akan mendengar kabar dari tim / selanjutnya"
-    'terima kasih atas waktu',        # covers "waktumu", "waktunya", "waktu Anda"
-    'terima kasih banyak atas waktu',
-    'semoga sukses',
-    'sampai jumpa',
-    'sampai bertemu lagi',
-    'sesi wawancara ini telah selesai',
-    'wawancara kita sudah selesai'
-  ].freeze
+  CLOSING_PHRASES_REGEX = /
+    (thank\syou.*?(time|insights|participating|interview|coming)) |
+    (concludes?.*?(interview|session)) |
+    (hear\s(back\s)?from.*?(team|us)) |
+    ((have\s(a\s)?)?(great|good|wonderful)\s(day|afternoon|evening)) |
+    (best\sof\sluck) |
+    (good\sluck) |
+    (we(\s|')?re\sdone\shere) |
+    (that(\s|')?s\sall.*?(today|for\snow)?) |
+    (goodbye) |
+    (terima\skasih.*?(waktu|sesi|wawancara)) |
+    (semoga\ssukses) |
+    (sampai\s(jumpa|bertemu)) |
+    (wawancara.*?selesai)
+  /xi
 
   def ai_closing_detected?(text)
-    downcased = text.downcase
-    CLOSING_PHRASES.any? { |phrase| downcased.include?(phrase) }
+    CLOSING_PHRASES_REGEX.match?(text)
   end
 
   def authenticate_and_load(env, session_id)
@@ -776,6 +794,7 @@ class AudioWebSocketMiddleware
                   :latest_resumption_token,
                   :reconnecting, :last_token_persisted_at,
                   :ending_scheduled, :logged_not_ready,
+                  :fallback_end_timer,
                   :model_speaking, :last_coverage_digest,
                   :sent_time_warnings, :ai_audio_chunks,
                   :cached_coverage_text, :last_injected_digest,

@@ -17,6 +17,7 @@ module Sessions
         manual = %w[manual_candidate manual_assessor]
         if manual.include?(reason.to_s) && @session.end_reason == 'error'
           @session.update_column(:end_reason, reason.to_s)
+          enqueue_portfolio_generation if @session.portfolio&.generation_status == 'failed'
         end
         return @session
       end
