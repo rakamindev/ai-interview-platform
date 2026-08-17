@@ -161,8 +161,8 @@ export default function CandidateManagement({
 
   const copyLink = (candidateId: number) => {
     const session = sessionsById.get(candidateId);
-    if (!session?.invite_url) return;
-    navigator.clipboard.writeText(session.invite_url);
+    if (!session?.invite_token) return;
+    navigator.clipboard.writeText(`${window.location.origin}/interview/${session.invite_token}`);
     setCopiedId(candidateId);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -364,8 +364,14 @@ export default function CandidateManagement({
                       )}
                     </span>
                     <div className="w-32 flex justify-end gap-1.5">
-                      {c.interview_status === "pending" && session?.invite_url && (
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => copyLink(c.candidate_id)}>
+                      {c.interview_status === "pending" && session?.invite_token && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          aria-label="Copy invite link"
+                          onClick={() => copyLink(c.candidate_id)}
+                        >
                           {copiedId === c.candidate_id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                         </Button>
                       )}

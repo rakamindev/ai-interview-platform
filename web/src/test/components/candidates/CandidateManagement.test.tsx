@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CandidateManagement from "@/components/candidates/CandidateManagement";
 import { candidatesApi } from "@/services/candidates";
 import { toast } from "sonner";
-import type { Candidate } from "@/types";
+import type { Candidate, Session } from "@/types";
 import type { ExportResult } from "@/services/candidates";
 
 vi.mock("@/services/candidates", () => ({
@@ -234,5 +234,25 @@ describe("CandidateManagement", () => {
     fireEvent.change(screen.getByPlaceholderText("Search candidate name..."), { target: { value: "a" } });
 
     await waitFor(() => expect(screen.queryByText("1 selected")).not.toBeInTheDocument());
+  });
+
+  it("copies an invite link built from the frontend's own origin, not the backend's invite_url", async () => {
+    const writeText = vi.fn();
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    const session: Session = {
+      id: 1,
+      assessment_id: 1,
+      invite_token: "abc123",
+      invite_url: "http://backend-host:3001/interview/abc123",
+      status: "pending",
+    };
+    mockList([candidate({ interview_status: "pending" })]);
+    render(<CandidateManagement assessmentId={1} sessions={[session]} onMonitor={vi.fn()} onResults={vi.fn()} />);
+    await screen.findByText("Alice Wonderland");
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy invite link" }));
+
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/interview/abc123`);
   });
 });
