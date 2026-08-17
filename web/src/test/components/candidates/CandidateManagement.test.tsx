@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import CandidateManagement from "./CandidateManagement";
+import CandidateManagement from "@/components/candidates/CandidateManagement";
 import { candidatesApi } from "@/services/candidates";
 import { toast } from "sonner";
 import type { Candidate } from "@/types";

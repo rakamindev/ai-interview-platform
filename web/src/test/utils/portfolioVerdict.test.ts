@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildVerdict } from "./portfolioVerdict";
+import { buildVerdict } from "@/utils/portfolioVerdict";
 import type { PortfolioSkill } from "@/types";
 
 function skill(overrides: Partial<PortfolioSkill> = {}): PortfolioSkill {

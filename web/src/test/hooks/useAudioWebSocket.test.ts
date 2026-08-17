@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAudioWebSocket } from "./useAudioWebSocket";
+import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
