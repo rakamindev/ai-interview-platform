@@ -15,8 +15,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { candidatesApi, type CandidateQuery } from "@/services/candidates";
+import { candidatesApi, type CandidateQuery, type ExportFormat, type ExportResult } from "@/services/candidates";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { toastExportSummary, toastExportFailure } from "@/utils/exportToast";
 import type { Candidate, Session, Verdict } from "@/types";
 import {
   ArrowDown,
@@ -171,17 +172,44 @@ export default function CandidateManagement({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const runExport = async (format: "transcript" | "json") => {
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadPdfResults = (results: ExportResult[]) => {
+    results
+      .filter((r) => r.status === "ok" && r.data)
+      .forEach((r) => {
+        const base64 = r.data!.pdf_base64 as string;
+        const filename = (r.data!.filename as string) ?? `portfolio-${r.candidate_id}.pdf`;
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        downloadBlob(new Blob([bytes], { type: "application/pdf" }), filename);
+      });
+  };
+
+  const runExport = async (format: ExportFormat) => {
     setExporting(true);
     try {
       const res = await candidatesApi.export(assessmentId, format, Array.from(selectedIds));
-      const blob = new Blob([JSON.stringify(res.data.results, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `candidates-${format}-${Date.now()}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
+      const { results } = res.data;
+
+      if (format === "pdf") {
+        downloadPdfResults(results);
+      } else {
+        downloadBlob(
+          new Blob([JSON.stringify(results, null, 2)], { type: "application/json" }),
+          `candidates-${format}-${Date.now()}.json`
+        );
+      }
+
+      toastExportSummary(results);
+    } catch {
+      toastExportFailure();
     } finally {
       setExporting(false);
     }
@@ -266,6 +294,7 @@ export default function CandidateManagement({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => runExport("transcript")}>Transcript (JSON)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => runExport("json")}>Portfolio data (JSON)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => runExport("pdf")}>Portfolio report (PDF)</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedIds(new Set())}>

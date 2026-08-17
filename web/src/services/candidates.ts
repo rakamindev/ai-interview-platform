@@ -13,10 +13,12 @@ export interface CandidateQuery {
   per_page?: number;
 }
 
+export type ExportFormat = "transcript" | "json" | "pdf";
+
 export interface ExportResult {
   candidate_id: number;
   candidate_name?: string;
-  status: "ok" | "error";
+  status: "ok" | "failed" | "not_found";
   error?: string;
   data?: Record<string, unknown>;
 }
@@ -28,7 +30,7 @@ export const candidatesApi = {
       { params: query }
     ),
 
-  export: (assessmentId: number, format: "transcript" | "json", candidateIds: number[]) =>
+  export: (assessmentId: number, format: ExportFormat, candidateIds: number[]) =>
     api.post<{ exported_at: string; format: string; results: ExportResult[] }>(
       `/assessments/${assessmentId}/candidates/export`,
       { format, candidate_ids: candidateIds }
