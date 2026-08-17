@@ -26,11 +26,15 @@ module Sessions
       ActiveRecord::Base.transaction do
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
 
+        ended_at = Time.current
+        retention_days = ENV.fetch('CANDIDATE_DATA_RETENTION_DAYS', '90').to_i
+
         @session.update!(
           status:           'ended',
           end_reason:       reason.to_s,
-          ended_at:         Time.current,
-          duration_seconds: duration
+          ended_at:         ended_at,
+          duration_seconds: duration,
+          expires_at:       ended_at + retention_days.days
         )
 
         create_portfolio
