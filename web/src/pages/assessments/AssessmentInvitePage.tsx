@@ -35,6 +35,7 @@ function SessionRow({
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  const isFailed = session.status === "failed" || (isEnded && session.end_reason === "error");
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
@@ -66,13 +67,13 @@ function SessionRow({
             Live
           </span>
         )}
-        {isEnded && session.end_reason === "error" && (
+        {isFailed && (
           <span className="flex items-center gap-1 text-xs text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
             Failed
           </span>
         )}
-        {isEnded && session.end_reason !== "error" && (
+        {isEnded && !isFailed && (
           <span className="flex items-center gap-1 text-xs text-green-600">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
@@ -104,7 +105,7 @@ function SessionRow({
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
           )}
-          {isEnded && session.end_reason !== "error" && (
+          {isEnded && !isFailed && (
             <Button
               variant="outline"
               size="sm"
@@ -150,7 +151,7 @@ export default function AssessmentInvitePage() {
 
   // Poll while any session is live or pending
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
+    const hasActive = sessions.some((s) => s.status !== "ended" && s.status !== "failed");
     if (!hasActive) return;
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);

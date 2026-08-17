@@ -18,7 +18,7 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
       </span>
     );
 
-  if (session.status === "ended" && session.end_reason === "error")
+  if (session.status === "failed" || (session.status === "ended" && session.end_reason === "error"))
     return <span className="text-xs text-destructive">Last: failed</span>;
 
   if (session.status === "ended")
