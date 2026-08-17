@@ -82,6 +82,7 @@ export interface Portfolio {
   generated_at?: string;
   generation_error?: string;
   verdict: Verdict | null;
+  verdict_summary?: string | null;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }

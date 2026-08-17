@@ -3,7 +3,6 @@ import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import SkillLevelChart from "@/components/portfolio/SkillLevelChart";
 import SkillRadarChart from "@/components/portfolio/SkillRadarChart";
 import { Separator } from "@/components/ui/separator";
-import { buildVerdict } from "@/utils/portfolioVerdict";
 import { VERDICT_BADGE_CLASSES, VERDICT_LABELS } from "@/utils/verdictBadge";
 import { ClipboardX, FileText, MessageSquareText, Zap } from "lucide-react";
 import type { AssessorOverride, Portfolio } from "@/types";
@@ -47,25 +46,24 @@ export default function PortfolioPanel({
 
   return (
     <div className="space-y-8">
-      {portfolio.verdict && (() => {
-        const summary = buildVerdict(portfolio.skills, overrides);
-        return (
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
-            <MessageSquareText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary/80">Verdict</p>
-                <span
-                  className={`text-xs font-semibold rounded-full px-2 py-0.5 ${VERDICT_BADGE_CLASSES[portfolio.verdict]}`}
-                >
-                  {VERDICT_LABELS[portfolio.verdict]}
-                </span>
-              </div>
-              {summary && <p className="text-sm text-foreground/90 leading-relaxed">{summary}</p>}
+      {portfolio.verdict && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+          <MessageSquareText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-primary/80">Verdict</p>
+              <span
+                className={`text-xs font-semibold rounded-full px-2 py-0.5 ${VERDICT_BADGE_CLASSES[portfolio.verdict]}`}
+              >
+                {VERDICT_LABELS[portfolio.verdict]}
+              </span>
             </div>
+            {portfolio.verdict_summary && (
+              <p className="text-sm text-foreground/90 leading-relaxed">{portfolio.verdict_summary}</p>
+            )}
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-4 items-stretch">
         <SkillLevelChart skills={portfolio.skills} overrides={overrides} />
