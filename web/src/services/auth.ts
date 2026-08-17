@@ -22,4 +22,7 @@ export interface LoginResponse {
 export const authApi = {
   login: (data: LoginPayload) =>
     api.post<LoginResponse>("/auth/login", data),
+
+  changePassword: (data: { current_password: string; password: string }) =>
+    api.post<{ message: string }>("/auth/change_password", data),
 };
