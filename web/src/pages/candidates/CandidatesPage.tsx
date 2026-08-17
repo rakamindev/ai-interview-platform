@@ -15,7 +15,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "active", label: "In progress" },
   { key: "needs_review", label: "Ready to review" },
   { key: "ended", label: "Reviewed" },
-  { key: "failed", label: "Failed" },
+  { key: "failed", label: "Interview errors" },
 ];
 
 /**
@@ -68,7 +68,7 @@ function StatusPill({ row }: { row: CandidateRow }) {
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-destructive">
         <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-        Interview failed
+        Interview error
       </span>
     );
   }
@@ -195,8 +195,8 @@ export default function CandidatesPage() {
           </span>
           {counts.failed > 0 && (
             <span className="text-attention">
-              <span className="font-mono font-medium tabular-nums">{counts.failed}</span> failed and
-              never reviewed
+              <span className="font-mono font-medium tabular-nums">{counts.failed}</span>{" "}
+              {counts.failed === 1 ? "interview" : "interviews"} broke before finishing
             </span>
           )}
           <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">

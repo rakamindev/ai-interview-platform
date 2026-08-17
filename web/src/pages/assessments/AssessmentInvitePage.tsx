@@ -69,9 +69,12 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
+          /* "Failed" next to a person's name reads as the person failing. What
+             actually broke is the interview — a dropped connection, a model
+             error — so the label names that instead. */
           <span className="flex items-center gap-1 text-xs text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
+            Interview error
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (

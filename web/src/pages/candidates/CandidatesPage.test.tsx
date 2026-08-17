@@ -70,8 +70,10 @@ describe("CandidatesPage", () => {
     render(<CandidatesPage />);
 
     const summary = await screen.findByTestId("candidates-summary");
-    expect(summary).toHaveTextContent(/1\s*failed and never reviewed/);
-    expect(screen.getByText("Interview failed")).toBeInTheDocument();
+    expect(summary).toHaveTextContent(/1\s*interview broke before finishing/);
+    // Scoped to the row: the filter chip carries a similar word on purpose.
+    const candidateRow = screen.getByTestId("candidate-row");
+    expect(within(candidateRow).getByText("Interview error")).toBeInTheDocument();
     // A failed session still has a transcript, and it is the one worth reading.
     expect(screen.getByRole("link", { name: /transcript/i })).toBeInTheDocument();
   });
