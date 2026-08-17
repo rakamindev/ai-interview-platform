@@ -146,11 +146,22 @@ module Api
           return json_error("Assessment not found", :not_found)
         end
 
+        recent_turns = session.transcript_turns.ordered.last(25).map do |t|
+          {
+            turn_number: t.turn_number,
+            speaker:     t.speaker == 'ai' ? 'assessor' : t.speaker,
+            text:        t.text
+          }
+        end
+
         json_response(
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason,
+          started_at:      session.started_at,
+          recent_turns:    recent_turns
         )
       end
 

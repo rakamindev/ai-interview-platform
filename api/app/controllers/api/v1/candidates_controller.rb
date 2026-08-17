@@ -12,6 +12,7 @@ module Api
       def index
         scope = Session.includes(:assessment, :portfolio)
         scope = scope.where('candidate_name ILIKE ?', "%#{sanitize_like(query_params[:q])}%") if query_params[:q].present?
+        scope = scope.where(assessment_id: query_params[:assessment_id]) if query_params[:assessment_id].present?
         scope = filter_by_status(scope, query_params[:status]) if query_params[:status].present?
         scope = scope.order(sort_clause)
 
@@ -48,12 +49,15 @@ module Api
           id:               session.id,
           candidate_id:     session.candidate_id,
           candidate_name:   session.candidate_name,
+          invite_token:     session.invite_token,
           assessment_id:    session.assessment_id,
           assessment_name:  session.assessment.name,
           status:           session.status,
           end_reason:       session.end_reason,
+          portfolio_id:     session.portfolio&.id,
           portfolio_status: session.portfolio&.generation_status,
           started_at:       session.started_at,
+          ended_at:         session.ended_at,
           created_at:       session.created_at
         }
       end

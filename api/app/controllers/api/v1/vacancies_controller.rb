@@ -9,14 +9,14 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        scope = Vacancy
+        scope = Vacancy.includes(:vacancy_skills)
         scope = scope.where('role_title ILIKE ?', "%#{sanitize_like(query_params[:q])}%") if query_params[:q].present?
         scope = scope.order(sort_clause)
 
         vacancies = paginate(scope)
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
+          vacancies: vacancies.map(&method(:vacancy_with_skills_json)),
           meta: pagination_meta(vacancies)
         )
       end
