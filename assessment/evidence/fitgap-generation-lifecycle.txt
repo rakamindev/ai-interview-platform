@@ -1,0 +1,6 @@
+POST /api/v1/portfolios/1/fitgap
+{"status":"generating","message":"Fit/gap report generation queued"}
+
+GET /api/v1/portfolios/1/fitgap/1
+HTTP/1.1 404 Not Found
+{"error":"Fit/gap report not found"}

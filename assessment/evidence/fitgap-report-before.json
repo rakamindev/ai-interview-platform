@@ -1,0 +1,57 @@
+{
+  "report": {
+    "id": 1,
+    "portfolio_id": 1,
+    "vacancy_id": 1,
+    "skill_comparisons": [
+      {
+        "delta": 1,
+        "result": "exceed",
+        "skill_id": "SK-ENG-001",
+        "confidence": "high",
+        "skill_label": "React / Frontend Development Core",
+        "expected_level": 3,
+        "candidate_level": 4
+      },
+      {
+        "delta": -3,
+        "result": "gap",
+        "skill_id": "SK-ENG-002",
+        "confidence": "high",
+        "skill_label": "Node.js / Backend Development",
+        "expected_level": 4,
+        "candidate_level": 1
+      },
+      {
+        "delta": -2,
+        "result": "gap",
+        "skill_id": "SK-ENG-004",
+        "confidence": "medium",
+        "skill_label": "Database Design & SQL",
+        "expected_level": 3,
+        "candidate_level": 1
+      },
+      {
+        "delta": 0,
+        "result": "match",
+        "skill_id": "SK-SOFT-002",
+        "confidence": "medium",
+        "skill_label": "Problem Solving & Analytical Thinking",
+        "expected_level": 4,
+        "candidate_level": 4
+      },
+      {
+        "delta": null,
+        "result": "not_assessed",
+        "skill_id": "SK-PM-005",
+        "confidence": null,
+        "skill_label": "Technical Writing & Documentation",
+        "expected_level": 3,
+        "candidate_level": null
+      }
+    ],
+    "culture_narrative": null,
+    "overall_narrative": "Candidate shows 1 skill matches, 1 exceeds, and 2 gaps against role requirements.",
+    "generated_at": "2026-08-17T10:36:22.634Z"
+  }
+}

@@ -1,0 +1,2 @@
+NOT VERIFIED: local rerun could not connect to the intermittently exiting API on 127.0.0.1:3001.
+Requested command: curl -s -o /dev/null -w '%{http_code}\n' -H 'Authorization: Bearer ${TOKEN}XXX' http://localhost:3001/api/v1/portfolios/1/fitgap/1
