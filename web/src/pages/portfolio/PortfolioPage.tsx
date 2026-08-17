@@ -25,11 +25,17 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [noPortfolio, setNoPortfolio] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
+    if (data.status === "none") {
+      // The candidate never interviewed — definitive, not "generating".
+      setPortfolio(null);
+      setGenerating(false);
+      setNoPortfolio(true);
+    } else if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
@@ -65,6 +71,10 @@ export default function PortfolioPage() {
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
+  };
+
+  const handleQuoteClick = (turnNumber: number) => {
+    navigate(`/assessments/${id}/sessions/${sessionId}/transcript#turn-${turnNumber}`);
   };
 
   const handleRunFitGap = () => {
@@ -187,6 +197,19 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {/* No interview yet */}
+      {noPortfolio && !generating && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">
+            No interview yet — the candidate has not started. A portfolio is generated after
+            the interview finishes.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/invite`)}>
+            Back to invites
+          </Button>
+        </div>
+      )}
+
       {/* Generating state */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
@@ -231,6 +254,7 @@ export default function PortfolioPage() {
                   skill={skill}
                   override={overrides[skill.id]}
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  onQuoteClick={handleQuoteClick}
                 />
               ))}
           </div>
@@ -257,6 +281,7 @@ export default function PortfolioPage() {
                       skill={skill}
                       override={overrides[skill.id]}
                       onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      onQuoteClick={handleQuoteClick}
                     />
                   ))}
               </div>

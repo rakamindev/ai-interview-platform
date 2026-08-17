@@ -2,20 +2,59 @@ import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
-import { Zap } from "lucide-react";
+import { Zap, Microscope } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
+
+const COVERAGE_STATE_LABELS: Record<string, string> = {
+  covered: "covered",
+  partial: "partially explored",
+  initiated: "briefly explored",
+  not_yet: "not explored",
+};
+
+const COVERAGE_STATE_CLASSES: Record<string, string> = {
+  covered: "text-green-700 bg-green-50",
+  partial: "text-amber-700 bg-amber-50",
+  initiated: "text-muted-foreground bg-muted",
+  not_yet: "text-destructive bg-destructive/10",
+};
+
+function CoverageStrengthChip({
+  probes,
+  state,
+}: {
+  probes: number;
+  state?: string;
+}) {
+  const label = COVERAGE_STATE_LABELS[state ?? "not_yet"] ?? "unknown";
+  const classes = COVERAGE_STATE_CLASSES[state ?? "not_yet"] ?? "";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded",
+        classes
+      )}
+    >
+      <Microscope className="h-3 w-3" />
+      {probes} probe{probes !== 1 ? "s" : ""} · {label}
+    </span>
+  );
+}
 
 interface SkillPortfolioCardProps {
   skill: PortfolioSkill;
   override?: AssessorOverride;
   onOverrideSaved: (override: AssessorOverride) => void;
+  onQuoteClick?: (turnNumber: number) => void;
 }
 
 export default function SkillPortfolioCard({
   skill,
   override,
   onOverrideSaved,
+  onQuoteClick,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
 
@@ -35,7 +74,15 @@ export default function SkillPortfolioCard({
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <ConfidenceIndicator confidence={skill.ai_confidence} />
+                {skill.probe_count != null && (
+                  <CoverageStrengthChip
+                    probes={skill.probe_count}
+                    state={skill.coverage_state}
+                  />
+                )}
+              </div>
             </div>
           </div>
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
@@ -55,11 +102,28 @@ export default function SkillPortfolioCard({
               Evidence from interview
             </span>
             <ul className="space-y-1">
-              {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
-                </li>
-              ))}
+              {skill.evidence.map((item, i) => {
+                const text = typeof item === "string" ? item : item.text;
+                const turnNum =
+                  typeof item === "object" ? item.turn_number : null;
+                const clickable = turnNum != null && onQuoteClick;
+                return (
+                  <li key={i} className="text-sm text-foreground">
+                    •&nbsp;
+                    {clickable ? (
+                      <button
+                        type="button"
+                        onClick={() => onQuoteClick!(turnNum!)}
+                        className="text-primary hover:underline cursor-pointer text-left"
+                      >
+                        "{text}"
+                      </button>
+                    ) : (
+                      <span>"{text}"</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
