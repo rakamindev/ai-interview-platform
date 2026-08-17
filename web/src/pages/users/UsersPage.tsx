@@ -1,39 +1,62 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import { useAtomValue } from "jotai";
 import { authAtom } from "@/stores/authAtom";
 import { usersApi, type ManagedUser } from "@/services/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, UserPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight as ChevronNext, Loader2, Search, UserPlus } from "lucide-react";
+import type { PaginationMeta } from "@/types";
 
 export default function UsersPage() {
   const { user } = useAtomValue(authAtom);
   const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [qDebounced, setQDebounced] = useState("");
+  const [role, setRole] = useState<string>("all");
+  const [page, setPage] = useState(1);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "assessor">("assessor");
+  const [newRole, setNewRole] = useState<"admin" | "assessor">("assessor");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
-  const load = () => {
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQDebounced(q);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const load = useCallback(() => {
     setLoading(true);
     usersApi
-      .list()
-      .then((res) => setUsers(res.data.users))
+      .list({
+        page,
+        per_page: 20,
+        q: qDebounced || undefined,
+        role: role === "all" ? undefined : (role as "admin" | "assessor"),
+      })
+      .then((res) => {
+        setUsers(res.data.users);
+        setMeta(res.data.meta);
+      })
       .catch(() => setError("Failed to load users."))
       .finally(() => setLoading(false));
-  };
+  }, [page, qDebounced, role]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   // Admin-only page — defensive even though the route is admin-gated.
   if (user?.role !== "admin") {
@@ -50,7 +73,7 @@ export default function UsersPage() {
     }
     setCreating(true);
     try {
-      await usersApi.create({ email, password, role });
+      await usersApi.create({ email, password, role: newRole });
       setCreateSuccess(`Account created for ${email}.`);
       setEmail("");
       setPassword("");
@@ -63,9 +86,9 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold">User Management</h1>
+        <h1 className="text-xl font-semibold">User Management</h1>
         <p className="text-sm text-muted-foreground">
           Registration is invite-based: only admins can create accounts.
         </p>
@@ -79,7 +102,7 @@ export default function UsersPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="space-y-1.5 sm:col-span-1">
+          <div className="space-y-1.5">
             <Label htmlFor="user-email">Email</Label>
             <Input
               id="user-email"
@@ -90,18 +113,19 @@ export default function UsersPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="user-password">Password</Label>
-            <Input
+            <Label htmlFor="user-password">Temporary password</Label>
+            <PasswordInput
               id="user-password"
-              type="text"
               placeholder="Temporary password"
+              toggleLabel="temporary password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">The user can change it after first login.</p>
           </div>
           <div className="space-y-1.5">
             <Label>Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as "admin" | "assessor")}>
+            <Select value={newRole} onValueChange={(v) => setNewRole(v as "admin" | "assessor")}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -122,6 +146,27 @@ export default function UsersPage() {
         </Button>
       </form>
 
+      {/* Search & role filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search users..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="pl-8 w-56"
+          />
+        </div>
+        <Select value={role} onValueChange={(v) => { setRole(v); setPage(1); }}>
+          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All roles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="assessor">Assessor</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* User list */}
       <div className="border rounded-lg divide-y">
         {loading ? (
@@ -129,7 +174,9 @@ export default function UsersPage() {
         ) : error ? (
           <div className="p-6 text-center text-sm text-destructive">{error}</div>
         ) : users.length === 0 ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">No users yet.</div>
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {q || role !== "all" ? "No users match your filters." : "No users yet."}
+          </div>
         ) : (
           users.map((u) => (
             <div key={u.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
@@ -139,6 +186,28 @@ export default function UsersPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {meta && meta.total_pages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-muted-foreground">
+            Page {meta.current_page} of {meta.total_pages} · {meta.total_count} users
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= meta.total_pages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next <ChevronNext className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

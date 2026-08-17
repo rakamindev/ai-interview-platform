@@ -9,9 +9,17 @@ module Api
 
       # GET /api/v1/users
       def index
-        users = User.order(:email)
+        scope = User
+        scope = scope.where('email ILIKE ?', "%#{sanitize_like(query_params[:q])}%") if query_params[:q].present?
+        scope = scope.where(role: query_params[:role]) if query_params[:role].present?
+        scope = scope.order(sort_clause)
 
-        json_response(users: users.map(&method(:user_json)))
+        users = paginate(scope)
+
+        json_response(
+          users: users.map(&method(:user_json)),
+          meta: pagination_meta(users)
+        )
       end
 
       # POST /api/v1/users
@@ -38,6 +46,27 @@ module Api
           role:       user.role,
           created_at: user.created_at
         }
+      end
+
+      def sort_clause
+        case query_params[:sort]
+        when 'oldest' then { created_at: :asc }
+        when 'name'   then 'email ASC'
+        else              { created_at: :desc }
+        end
+      end
+
+      def pagination_meta(collection)
+        {
+          current_page: collection.current_page,
+          total_pages:  collection.total_pages,
+          total_count:  collection.total_count,
+          per_page:     collection.limit_value
+        }
+      end
+
+      def sanitize_like(value)
+        value.to_s.gsub(/[%_\\]/) { |m| "\\#{m}" }
       end
     end
   end
