@@ -92,5 +92,18 @@ RSpec.describe 'WebSocket Authorization', type: :request do
       expect(error).not_to be_nil
       expect(session).to be_nil
     end
+
+    it 'rejects connection if an authenticated JWT belongs to a candidate (role validation SEC-02)' do
+      middleware = AudioWebSocketMiddleware.new(nil)
+      env = {
+        'rack.input' => StringIO.new,
+        'HTTP_AUTHORIZATION' => "Bearer #{candidate_token_a}"
+      }
+      session, error = middleware.send(:authenticate_and_load, env, session_a.id.to_s)
+
+      expect(error).not_to be_nil
+      expect(error).to match(/Unauthorized role/)
+      expect(session).to be_nil
+    end
   end
 end
