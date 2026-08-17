@@ -35,6 +35,24 @@ describe("MyDataDialog", () => {
     expect(screen.getByText(/Hello there/)).toBeInTheDocument();
   });
 
+  it("shows a distinct failure message when transcript capture failed, not a generic empty state", async () => {
+    getMyDataMock.mockResolvedValue({
+      data: {
+        candidate_name: "Budi Santoso",
+        data_purged: false,
+        transcript: [],
+        transcript_capture_failed: true,
+        verdict: null,
+        skills: [],
+      },
+    } as any);
+
+    render(<MyDataDialog token="abc" open onOpenChange={vi.fn()} />);
+
+    expect(await screen.findByText(/Recording failed during this interview/)).toBeInTheDocument();
+    expect(screen.queryByText("No transcript recorded.")).not.toBeInTheDocument();
+  });
+
   it("shows an error message when the fetch fails", async () => {
     getMyDataMock.mockRejectedValue(new Error("network down"));
 
