@@ -2,7 +2,9 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    # Gemini Interactions API (successor to generateContent, which 404s for
+    # current models). See https://ai.google.dev/gemini-api/docs/migrate-to-interactions
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -24,7 +26,7 @@ module Gemini
       @connection = build_connection
     end
 
-    # Generates content using Gemini REST API.
+    # Generates content using the Gemini Interactions API.
     # Returns parsed JSON response body.
     def generate_content(prompt, temperature: 0.2)
       response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
@@ -38,7 +40,7 @@ module Gemini
     private
 
     def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+      "#{BASE_URL}/interactions"
     end
 
     def request_headers
@@ -47,8 +49,9 @@ module Gemini
 
     def request_body(prompt, temperature)
       {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: temperature }
+        model: @model,
+        input: prompt,
+        generation_config: { temperature: temperature }
       }.to_json
     end
 
@@ -80,7 +83,7 @@ module Gemini
       end
 
       data = JSON.parse(response.body)
-      text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
+      text = extract_text(data)
 
       raise ApiError.new("No content in Gemini response") unless text
 
@@ -92,6 +95,21 @@ module Gemini
       rescue JSON::ParserError
         cleaned
       end
+    end
+
+    # Interactions API returns an interaction resource with a `steps` timeline.
+    # The final output is the concatenated text of the `model_output` step(s).
+    def extract_text(data)
+      steps = data['steps']
+      return nil unless steps.is_a?(Array)
+
+      steps
+        .select { |s| s['type'] == 'model_output' }
+        .flat_map { |s| Array(s['content']) }
+        .select { |c| c['type'] == 'text' }
+        .map { |c| c['text'] }
+        .join
+        .presence
     end
   end
 end
