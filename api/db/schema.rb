@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_17_000000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_17_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -93,7 +93,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_17_000000) do
   create_table "fit_gap_reports", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.bigint "vacancy_id", null: false
-    t.jsonb "skill_comparisons", null: false
+    t.jsonb "skill_comparisons"
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }

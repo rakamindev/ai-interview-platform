@@ -7,7 +7,7 @@ class FitGapReport < ApplicationRecord
   belongs_to :portfolio
   belongs_to :vacancy
 
-  validates :skill_comparisons, presence: true
+  validates :skill_comparisons, presence: true, if: :complete?
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
   scope :complete,   -> { where(generation_status: 'complete') }

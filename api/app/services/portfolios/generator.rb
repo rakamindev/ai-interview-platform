@@ -16,7 +16,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.5-pro'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.5-flash'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end

@@ -132,7 +132,8 @@ module Api
             return render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
           end
         else
-          report.save!(generation_status: "pending")
+          report.generation_status = "pending"
+          report.save!
         end
 
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
