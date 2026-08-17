@@ -175,15 +175,21 @@ export default function PortfolioPage() {
 
       {/* State: Pending / Active */}
       {session && session.status !== "ended" && (
-        <div className="border border-slate-200 bg-slate-50 rounded-lg p-12 text-center space-y-2">
-          <p className="font-medium text-slate-900">
-            {session.status === "pending" ? "Session Not Started" : "Session In Progress"}
-          </p>
-          <p className="text-sm text-slate-500">
-            {session.status === "pending" 
-              ? "The candidate has not started this interview yet." 
-              : "The candidate is currently taking this interview."}
-          </p>
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100/50 backdrop-blur-md border border-slate-200/60 rounded-2xl p-12 text-center shadow-sm">
+          <div className="absolute inset-0 bg-grid-slate-100/[0.04] bg-[size:20px_20px]"></div>
+          <div className="relative z-10 space-y-3">
+            <div className="mx-auto w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center border border-slate-200/50 mb-4">
+              <Loader2 className={`h-6 w-6 text-slate-400 ${session.status === 'pending' ? '' : 'animate-spin'}`} />
+            </div>
+            <p className="font-semibold text-slate-900 tracking-tight text-lg">
+              {session.status === "pending" ? "Session Not Started" : "Session In Progress"}
+            </p>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+              {session.status === "pending" 
+                ? "The candidate has not started this interview yet. Results will appear here once completed." 
+                : "The candidate is currently taking this interview. Please wait for them to finish."}
+            </p>
+          </div>
         </div>
       )}
 
@@ -194,33 +200,47 @@ export default function PortfolioPage() {
 
       {/* Generating state */}
       {session?.status === "ended" && pageState === "generating" && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <div>
-            <p className="font-medium">Generating portfolio...</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
-            </p>
+        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50/50 to-white backdrop-blur-md border border-indigo-100/60 rounded-2xl p-12 text-center shadow-sm">
+          <div className="absolute inset-0 bg-grid-indigo-100/[0.04] bg-[size:20px_20px]"></div>
+          <div className="relative z-10 space-y-4">
+            <div className="mx-auto w-14 h-14 bg-indigo-100/50 rounded-full flex items-center justify-center border border-indigo-200/50 mb-2">
+              <Loader2 className="h-7 w-7 animate-spin text-indigo-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-indigo-950 tracking-tight text-lg">Generating portfolio...</p>
+              <p className="text-sm text-indigo-600/80 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                The AI is analyzing the interview transcript. This takes about 2 minutes to complete.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* Failed state */}
       {pageState === "ready" && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          {session?.audit_status !== "retake_approved" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                await sessionsApi.regeneratePortfolio(Number(sessionId));
-                setPageState("generating");
-              }}
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-            </Button>
-          )}
+        <div className="relative overflow-hidden bg-gradient-to-r from-rose-50/90 to-red-50/30 backdrop-blur-md border border-rose-200/80 rounded-2xl p-8 text-center shadow-sm transition-all hover:shadow-md">
+          <div className="relative z-10 space-y-4">
+            <div className="mx-auto w-12 h-12 bg-rose-100/50 rounded-full flex items-center justify-center border border-rose-200/50">
+              <span className="text-xl">⚠️</span>
+            </div>
+            <div className="space-y-1">
+              <p className="font-semibold text-rose-900 tracking-tight">Portfolio generation failed</p>
+              <p className="text-sm text-rose-800/80">An unexpected error occurred during AI analysis.</p>
+            </div>
+            {session?.audit_status !== "retake_approved" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white/80 backdrop-blur-sm border-rose-300 text-rose-800 hover:bg-rose-50 transition-all shadow-sm"
+                onClick={async () => {
+                  await sessionsApi.regeneratePortfolio(Number(sessionId));
+                  setPageState("generating");
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

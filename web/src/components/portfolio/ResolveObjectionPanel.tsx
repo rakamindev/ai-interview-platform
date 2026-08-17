@@ -81,42 +81,53 @@ export default function ResolveObjectionPanel({
 
   return (
     <>
-      <div className="bg-amber-50/80 backdrop-blur-md border border-amber-200 rounded-xl p-5 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-amber-900 flex items-center gap-1.5">
-            <span>⚠️</span> Technical Objection Filed
-          </h3>
-          <span className="px-2.5 py-0.5 bg-amber-200 border border-amber-300 text-amber-900 text-[10px] font-bold uppercase rounded-full tracking-wider animate-pulse">
-            Needs Review
-          </span>
+      <div className="bg-white border border-amber-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5">
+          <div className="flex-1 min-w-0 space-y-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Technical Objection Filed</h3>
+                <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-medium uppercase rounded-md tracking-wider">
+                  Needs Review • SLA 48H
+                </span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                The candidate reported a technical or network issue: 
+                <span className="font-mono text-xs bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded mx-1.5 border border-slate-200">"{session.candidate_objection_notes}"</span>
+              </p>
+              {session.end_reason === "error" && (
+                <p className="text-xs text-amber-700 mt-2 bg-amber-50/50 p-2 rounded-md border border-amber-100/50">
+                  <strong className="font-medium text-amber-900">Note:</strong> The system logs confirm an abnormal termination (e.g., network timeout) occurred. Any skills marked as <code className="text-[10px] bg-white text-amber-700 px-1 py-0.5 rounded border border-amber-200 mx-0.5">system_error</code> reflect this failure, not candidate performance.
+                </p>
+              )}
+            </div>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
+                <p className="text-xs text-slate-500">
+                  <strong className="text-slate-700 font-medium">Action Required:</strong> Review <code className="text-[10px] bg-amber-50 text-amber-700 px-1 py-0.5 rounded border border-amber-100">system_error</code> skills. You can override & resolve, or approve a retake.
+                </p>
+                
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50 h-8 text-xs px-3 shadow-none"
+                    onClick={() => handleOpenModal("resolve")}
+                  >
+                    Override & Resolve
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs px-3 shadow-none"
+                    onClick={() => handleOpenModal("retake")}
+                  >
+                    Approve Retake
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-amber-800 leading-relaxed">
-          The candidate reported a technical or network issue during this session.
-        </p>
-        <div className="bg-white/80 border border-amber-100 p-3 rounded-lg text-xs font-mono text-slate-700 italic break-words">
-          "{session.candidate_objection_notes}"
-        </div>
-        <p className="text-[10px] text-slate-500">
-          <strong>Resolution Guide:</strong> Review the unassessed skills marked with <em>"system_error"</em>. You can override scores and resolve, or approve a complete retake.
-        </p>
-        <div className="pt-2 flex gap-3">
-          <Button
-            size="sm"
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-            onClick={() => handleOpenModal("retake")}
-          >
-            Approve Retake
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100"
-            onClick={() => handleOpenModal("resolve")}
-          >
-            Override & Resolve
-          </Button>
-        </div>
-      </div>
 
       {/* Resolve Modal */}
       <Dialog open={activeModal === "resolve"} onOpenChange={(open) => !open && handleCloseModal()}>
