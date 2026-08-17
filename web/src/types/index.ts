@@ -164,6 +164,11 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  portfolio_summary?: {
+    status: "pending" | "generating" | "complete" | "failed";
+    strengths: string[];
+    gaps: string[];
+  } | null;
 }
 
 export interface PaginationMeta {
@@ -188,15 +193,15 @@ export type InterviewSpeaker = "ai" | "candidate" | null;
 
 export interface WsControlMessage {
   type:
-    | "session_started"
-    | "session_ended"
-    | "transcript"
-    | "transcription"
-    | "reconnecting"
-    | "reconnected"
-    | "speaker_changed"
-    | "preparing_to_end"
-    | "error";
+  | "session_started"
+  | "session_ended"
+  | "transcript"
+  | "transcription"
+  | "reconnecting"
+  | "reconnected"
+  | "speaker_changed"
+  | "preparing_to_end"
+  | "error";
   speaker?: "candidate" | "ai";
   role?: "candidate" | "ai";
   text?: string;

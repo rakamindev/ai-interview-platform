@@ -204,7 +204,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
 
     return (
-        <div className="rounded-lg border bg-card overflow-hidden">
+        <div className="w-full rounded-lg border bg-card overflow-hidden">
             {/* Camera preview */}
             {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
                 {videoStream ? (
@@ -233,7 +233,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             <span className="text-sm font-medium">{label}</span>
                             <div className="flex items-center gap-2">
                                 <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
+                                <span className={`text-xs text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
                                     progress[key] === ProctoringState.ERROR ? "text-destructive" :
                                         "text-muted-foreground"
                                     }`}>

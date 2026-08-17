@@ -146,10 +146,11 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:        session.id,
+          role_title:        assessment.name,
+          time_limit_min:    assessment.time_limit_min,
+          session_status:    session.status,
+          portfolio_summary: build_portfolio_summary(session, assessment)
         )
       end
 
@@ -159,6 +160,43 @@ module Api
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found)
+      end
+
+      # Builds a lightweight strengths/gaps summary from completed portfolio skills.
+      # Compares ai_level against assessment's expected_level per skill.
+      # Returns nil if portfolio is not yet complete (still generating).
+      def build_portfolio_summary(session, assessment)
+        portfolio = session.portfolio
+        return nil unless portfolio&.complete?
+
+        skills        = portfolio.portfolio_skills.where(is_discovered: false).to_a
+        expected_map  = assessment.assessment_skills
+                                  .pluck(:skill_label, :expected_level)
+                                  .to_h
+
+        strengths = []
+        gaps      = []
+
+        skills.each do |ps|
+          # Use assessor override level if present, otherwise AI level
+          override      = ps.assessor_override
+          effective_lvl = override ? override.override_level : ps.ai_level
+          expected_lvl  = expected_map[ps.skill_label]
+
+          next unless expected_lvl
+
+          if effective_lvl >= expected_lvl
+            strengths << ps.skill_label
+          else
+            gaps << ps.skill_label
+          end
+        end
+
+        {
+          status:    portfolio.generation_status,
+          strengths: strengths,
+          gaps:      gaps
+        }
       end
 
       def session_json(session)
