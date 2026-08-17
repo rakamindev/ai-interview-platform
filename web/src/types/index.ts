@@ -90,8 +90,8 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: string; // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_confidence: string; // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
 }
@@ -164,6 +164,16 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  consent_required: boolean;
+  consent_version: string;
+  has_consent: boolean;
+}
+
+export interface ConsentRecord {
+  version: string;
+  status: "granted" | "revoked";
+  granted_at?: string;
+  revoked_at?: string | null;
 }
 
 export interface PaginationMeta {

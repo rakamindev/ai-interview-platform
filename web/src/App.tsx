@@ -15,6 +15,7 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import DataPage from "@/pages/interview/DataPage";
 
 export default function App() {
   return (
@@ -24,37 +25,44 @@ export default function App() {
 
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>
-      <Route element={<AssessorLayout />}>
-        <Route path="/" element={<Navigate to="/assessments" replace />} />
-        <Route path="/assessments" element={<AssessmentListPage />} />
-        <Route path="/assessments/new" element={<AssessmentNewPage />} />
-        <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
-        <Route path="/assessments/:id/invite" element={<AssessmentInvitePage />} />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/monitor"
-          element={<LiveMonitorPage />}
-        />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/portfolio"
-          element={<PortfolioPage />}
-        />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/transcript"
-          element={<TranscriptPage />}
-        />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
-          element={<FitGapReportPage />}
-        />
-        <Route path="/vacancies" element={<VacancyListPage />} />
-        <Route path="/vacancies/new" element={<VacancyNewPage />} />
-        <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
-      </Route>
+        <Route element={<AssessorLayout />}>
+          <Route path="/" element={<Navigate to="/assessments" replace />} />
+          <Route path="/assessments" element={<AssessmentListPage />} />
+          <Route path="/assessments/new" element={<AssessmentNewPage />} />
+          <Route
+            path="/assessments/:id/edit"
+            element={<AssessmentEditPage />}
+          />
+          <Route
+            path="/assessments/:id/invite"
+            element={<AssessmentInvitePage />}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/monitor"
+            element={<LiveMonitorPage />}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/portfolio"
+            element={<PortfolioPage />}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/transcript"
+            element={<TranscriptPage />}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
+            element={<FitGapReportPage />}
+          />
+          <Route path="/vacancies" element={<VacancyListPage />} />
+          <Route path="/vacancies/new" element={<VacancyNewPage />} />
+          <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        </Route>
       </Route>
 
       {/* Candidate route (public) */}
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
+        <Route path="/interview/:token/data" element={<DataPage />} />
       </Route>
     </Routes>
   );
