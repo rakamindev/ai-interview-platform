@@ -31,9 +31,14 @@ WORKDIR /ai-interview
 COPY --from=builder /usr/local/bundle /usr/local/bundle
 COPY --from=builder /ai-interview /ai-interview
 
-ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+ENV LD_PRELOAD=libjemalloc.so.2
 
-RUN mkdir -p tmp/pids tmp/cache tmp/sockets log
+RUN mkdir -p tmp/pids tmp/cache tmp/sockets log && \
+    groupadd --system --gid 1000 app && \
+    useradd --system --uid 1000 --gid app --home-dir /ai-interview app && \
+    chown -R app:app /ai-interview
+
+USER app
 
 EXPOSE 3001
 
