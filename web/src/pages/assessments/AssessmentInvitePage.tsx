@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -27,6 +30,16 @@ import {
   UserRound,
 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
+
+const inviteFormSchema = z.object({
+  candidateName: z
+    .string()
+    .trim()
+    .max(120, "Candidate name is too long.")
+    .optional(),
+});
+
+type InviteForm = z.infer<typeof inviteFormSchema>;
 
 function SessionRow({
   session,
@@ -153,7 +166,16 @@ export default function AssessmentInvitePage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
-  const [candidateNameInput, setCandidateNameInput] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    reset: resetInviteForm,
+    formState: { errors: inviteErrors, isValid: inviteValid },
+  } = useForm<InviteForm>({
+    resolver: zodResolver(inviteFormSchema),
+    defaultValues: { candidateName: "" },
+  });
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -182,18 +204,18 @@ export default function AssessmentInvitePage() {
   }, [sessions, loadSessions]);
 
   const openInviteDialog = () => {
-    setCandidateNameInput("");
+    resetInviteForm();
     setShowInviteDialog(true);
   };
 
-  const handleInviteCandidate = async () => {
+  const handleInviteCandidate = async (values: InviteForm) => {
     setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
     try {
       const res = await assessmentsApi.createSession(
         Number(id),
-        candidateNameInput.trim() || undefined
+        values.candidateName?.trim() || undefined
       );
       const created = res.data.session;
       setNewSession(created);
@@ -272,29 +294,42 @@ export default function AssessmentInvitePage() {
           <DialogHeader>
             <DialogTitle>Invite Candidate</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="candidate-name">Candidate name</Label>
-            <Input
-              id="candidate-name"
-              placeholder="e.g. Budi Santoso"
-              value={candidateNameInput}
-              onChange={(e) => setCandidateNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
-              autoFocus
-            />
+          <form
+            onSubmit={handleSubmit(handleInviteCandidate)}
+            noValidate
+            className="space-y-2 py-2"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="candidate-name">Candidate name</Label>
+              <Input
+                id="candidate-name"
+                placeholder="e.g. Budi Santoso"
+                aria-invalid={!!inviteErrors.candidateName}
+                autoFocus
+                {...register("candidateName")}
+              />
+              {inviteErrors.candidateName && (
+                <p className="text-xs text-destructive" role="alert">
+                  {inviteErrors.candidateName.message}
+                </p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Optional — helps you identify this session later.
             </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowInviteDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleInviteCandidate}>Create Link</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowInviteDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!inviteValid || creatingSession}>
+                Create Link
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
