@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import { LayoutDashboard, ClipboardList, Briefcase, LogOut, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
@@ -105,6 +106,7 @@ export default function AssessorLayout() {
                 Tenant: {tenant.name}
               </span>
             )}
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="mr-1.5 h-4 w-4" aria-hidden />
               Logout

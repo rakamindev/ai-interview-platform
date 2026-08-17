@@ -16,8 +16,12 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import { useApplyTheme } from "@/components/layout/ThemeToggle";
 
 export default function App() {
+  // Every screen honours the theme, not just the ones with a header.
+  useApplyTheme();
+
   return (
     <Routes>
       {/* Auth routes */}

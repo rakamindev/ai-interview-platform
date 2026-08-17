@@ -18,6 +18,8 @@ vi.mock("react-router-dom", () => ({
 vi.mock("jotai", () => ({
   useAtomValue: () => ({ name: "Demo Tenant" }),
   useSetAtom: () => vi.fn(),
+  // ThemeToggle reads and writes, so the mock has to offer the pair form too.
+  useAtom: () => ["system", vi.fn()],
   atom: (v: unknown) => v,
 }));
 
