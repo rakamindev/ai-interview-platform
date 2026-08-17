@@ -30,6 +30,13 @@ FactoryBot.define do
     status { 'ended' }
   end
 
+  factory :transcript_turn do
+    session
+    sequence(:turn_number)
+    speaker { 'candidate' }
+    text    { 'I have five years of Ruby experience.' }
+  end
+
   factory :portfolio do
     session
     generation_status { 'complete' }
