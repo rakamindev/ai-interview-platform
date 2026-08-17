@@ -9,10 +9,10 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.includes(:vacancy_skills).order(created_at: :desc))
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
+          vacancies: vacancies.map(&method(:vacancy_list_json)),
           meta: pagination_meta(vacancies)
         )
       end
@@ -77,6 +77,24 @@ module Api
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
           updated_at:               vacancy.updated_at
+        }
+      end
+
+      # Lightweight list projection: includes skill label + expected level so the
+      # vacancy list can render skill chips and support search-by-skill, without
+      # the per-vacancy SkillTaxonomy lookup that vacancy_with_skills_json performs.
+      def vacancy_list_json(vacancy)
+        vacancy_json(vacancy).merge(
+          skills: vacancy.vacancy_skills.map(&method(:vacancy_skill_summary_json))
+        )
+      end
+
+      def vacancy_skill_summary_json(skill)
+        {
+          id:             skill.id,
+          skill_id:       skill.skill_id,
+          skill_label:    skill.skill_label,
+          expected_level: skill.expected_level
         }
       end
 

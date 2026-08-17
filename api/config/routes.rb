@@ -7,6 +7,8 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      post 'signup', to: 'authentication#signup'
+      get  'me', to: 'authentication#me'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
@@ -19,12 +21,17 @@ Rails.application.routes.draw do
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
+        get :system_prompt, on: :member
       end
 
       # Sessions
       resources :sessions, only: %i[show] do
+        collection do
+          get :live
+        end
         member do
           post :end_session
+          post :revoke
           get  :coverage
           get  :transcript
           get  :portfolio, to: 'portfolios#show'

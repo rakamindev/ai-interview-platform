@@ -77,6 +77,30 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Test user ────────────────────────────────────────────────────────────────
+#
+# Admin is required — the auth controller only signs in user.role == 'admin'.
+# Re-running seeds updates the password without duplicating the row.
+
+TEST_USER = {
+  email:    ENV.fetch('SEED_ADMIN_EMAIL', 'admin@test.com'),
+  password: ENV.fetch('SEED_ADMIN_PASSWORD') { SecureRandom.hex(16) },
+  role:     'admin'
+}.freeze
+
+puts ""
+puts "== Seeding test user =="
+
+test_user = User.find_or_initialize_by(email: TEST_USER[:email])
+test_user.assign_attributes(password: TEST_USER[:password], role: TEST_USER[:role])
+
+if test_user.save
+  action = test_user.previously_new_record? ? "Created" : "Updated"
+  puts "  #{action} test user: #{test_user.email} (role=#{test_user.role})"
+else
+  puts "  ERROR test user: #{test_user.errors.full_messages.join(', ')}"
+end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [

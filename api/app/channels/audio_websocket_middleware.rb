@@ -647,15 +647,38 @@ class AudioWebSocketMiddleware
   end
 
   def save_transcript_turn(session, turn_number, speaker, text)
-    session.transcript_turns.create!(
+    turn = session.transcript_turns.create!(
       turn_number: turn_number,
       speaker: speaker,
       text: text
     )
+
+    publish_transcript_turn(session.id, turn)
   rescue ActiveRecord::RecordNotUnique
     # Duplicate turn — skip silently (idempotent)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Failed to save transcript turn: #{e.message}")
+  end
+
+  # Streams the new turn to assessors on the coverage channel so the live
+  # monitor can append it without waiting for the 3s polling tick.
+  def publish_transcript_turn(session_id, turn)
+    payload = {
+      type: 'transcript_turn',
+      turn: {
+        id:             turn.id,
+        turn_number:    turn.turn_number,
+        speaker:        turn.speaker,
+        text:           turn.text,
+        audio_start_ms: turn.audio_start_ms,
+        audio_end_ms:   turn.audio_end_ms,
+        created_at:     turn.created_at
+      }
+    }.to_json
+
+    Sidekiq.redis { |conn| conn.publish("coverage:#{session_id}", payload) }
+  rescue StandardError => e
+    Rails.logger.error("[AudioWS] Failed to publish transcript turn: #{e.message}")
   end
 
   def check_time_ceiling(session, state, browser_ws)
