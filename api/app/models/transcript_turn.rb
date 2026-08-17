@@ -5,6 +5,11 @@ class TranscriptTurn < ApplicationRecord
 
   belongs_to :session
 
+  # Non-deterministic: this column is never queried by content (always loaded
+  # in full for coverage analysis, portfolio generation, or export), so there's
+  # no equality-search trade-off to make here.
+  encrypts :text
+
   validates :turn_number, presence: true,
                            numericality: { only_integer: true, greater_than: 0 }
   validates :speaker, inclusion: { in: SPEAKERS }
