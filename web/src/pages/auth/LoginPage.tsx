@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,18 +26,12 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    trigger,
     formState: { errors, isValid, isSubmitting },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: { email: "", password: "" },
   });
-
-  // Validate on mount so the submit button is disabled until fields are valid.
-  useEffect(() => {
-    void trigger();
-  }, [trigger]);
 
   const onSubmit = async (values: LoginForm) => {
     setServerError(null);
