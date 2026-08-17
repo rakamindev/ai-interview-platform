@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useNavigate, Link } from "react-router-dom";
 import {
   DndContext,
@@ -14,18 +16,24 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import { getApiErrorMessage } from "@/utils/apiError";
 import type { AssessmentSkill } from "@/types";
 
 export interface AssessmentFormValues {
@@ -35,6 +43,32 @@ export interface AssessmentFormValues {
   skills: Partial<AssessmentSkill>[];
 }
 
+const assessmentSkillSchema = z.object({
+  id: z.number().optional(),
+  skill_id: z.number().optional(),
+  skill_label: z.string().optional(),
+  is_custom: z.boolean().optional(),
+  expected_level: z.number().optional(),
+  display_order: z.number().optional(),
+  scope_include: z.string().optional(),
+  scope_exclude: z.string().optional(),
+  l1_anchor: z.string().optional(),
+  l2_anchor: z.string().optional(),
+  l3_anchor: z.string().optional(),
+  l4_anchor: z.string().optional(),
+  l5_anchor: z.string().optional(),
+  _destroy: z.boolean().optional(),
+});
+
+export const assessmentSchema = z.object({
+  name: z.string().trim().min(1, "Role title is required."),
+  time_limit_min: z.number(),
+  language: z.enum(["en", "id"]),
+  skills: z
+    .array(assessmentSkillSchema)
+    .min(1, "Add at least one skill to continue."),
+});
+
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -42,6 +76,8 @@ export default function AssessmentNewPage() {
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
+    resolver: zodResolver(assessmentSchema),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       time_limit_min: 45,
@@ -50,8 +86,17 @@ export default function AssessmentNewPage() {
     },
   });
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors, isValid },
+  } = form;
+  const { fields, append, remove, move } = useFieldArray({
+    control,
+    name: "skills",
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -81,10 +126,6 @@ export default function AssessmentNewPage() {
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
-      return;
-    }
     setError(null);
     setSubmitting(true);
     try {
@@ -99,8 +140,8 @@ export default function AssessmentNewPage() {
       };
       const res = await assessmentsApi.create(payload);
       navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Failed to save assessment."));
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +151,10 @@ export default function AssessmentNewPage() {
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link
+          to="/assessments"
+          className="text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -127,10 +171,13 @@ export default function AssessmentNewPage() {
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
+            aria-invalid={!!errors.name}
+            {...register("name")}
           />
           {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+            <p className="text-xs text-destructive" role="alert">
+              {errors.name.message}
+            </p>
           )}
         </div>
 
@@ -178,6 +225,11 @@ export default function AssessmentNewPage() {
         {/* Skills section */}
         <div className="space-y-3">
           <Label>Skills to assess</Label>
+          {errors.skills && (
+            <p className="text-xs text-destructive" role="alert">
+              {errors.skills.message}
+            </p>
+          )}
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
@@ -233,9 +285,7 @@ export default function AssessmentNewPage() {
 
         <Separator />
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
@@ -246,7 +296,7 @@ export default function AssessmentNewPage() {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={!isValid || submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save &amp; Create Session →
           </Button>

@@ -19,8 +19,16 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
 };
 
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
-  const { register, setValue, formState: { errors } } = form;
-  const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
+  const {
+    register,
+    setValue,
+    formState: { errors },
+  } = form;
+  const expectedLevel = useWatch({
+    control: form.control,
+    name: `skills.${index}.expected_level`,
+  });
+  const skillErrors = errors.skills?.[index];
 
   return (
     <div className="space-y-3 pt-1">
@@ -31,24 +39,49 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
         <Input
           id={`skills.${index}.skill_label`}
           placeholder="e.g. Communication"
-          {...register(`skills.${index}.skill_label`, { required: true })}
+          aria-invalid={!!skillErrors?.skill_label}
+          {...register(`skills.${index}.skill_label`, {
+            required: "Skill name is required.",
+          })}
         />
+        {skillErrors?.skill_label && (
+          <p className="text-xs text-destructive" role="alert">
+            {skillErrors.skill_label.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor={`skills.${index}.scope_include`}>
-          What counts (scope include) <span className="text-destructive">*</span>
+          What counts (scope include){" "}
+          <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id={`skills.${index}.scope_include`}
           placeholder="Clear technical explanation, stakeholder alignment, async written communication..."
           rows={2}
-          {...register(`skills.${index}.scope_include`, { required: true })}
+          aria-invalid={!!skillErrors?.scope_include}
+          {...register(`skills.${index}.scope_include`, {
+            required: "What counts is required.",
+          })}
         />
+        {skillErrors?.scope_include && (
+          <p className="text-xs text-destructive" role="alert">
+            {skillErrors.scope_include.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
-        {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map((key, i) => (
+        {(
+          [
+            "l1_anchor",
+            "l2_anchor",
+            "l3_anchor",
+            "l4_anchor",
+            "l5_anchor",
+          ] as const
+        ).map((key, i) => (
           <div key={key} className="space-y-1">
             <Label htmlFor={`skills.${index}.${key}`}>
               L{i + 1} anchor <span className="text-destructive">*</span>
@@ -57,8 +90,16 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
               id={`skills.${index}.${key}`}
               placeholder={LEVEL_PLACEHOLDERS[i + 1]}
               rows={2}
-              {...register(`skills.${index}.${key}`, { required: true })}
+              aria-invalid={!!skillErrors?.[key]}
+              {...register(`skills.${index}.${key}`, {
+                required: `L${i + 1} anchor is required.`,
+              })}
             />
+            {skillErrors?.[key] && (
+              <p className="text-xs text-destructive" role="alert">
+                {skillErrors[key].message}
+              </p>
+            )}
           </div>
         ))}
       </div>
