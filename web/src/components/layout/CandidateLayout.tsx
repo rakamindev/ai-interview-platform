@@ -2,17 +2,8 @@ import { Outlet } from "react-router-dom";
 
 export default function CandidateLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Minimal header — no nav */}
-      <header className="border-b bg-white">
-        <div className="max-w-2xl mx-auto px-4 h-12 flex items-center">
-          <span className="font-semibold text-sm text-muted-foreground">AI Interview</span>
-        </div>
-      </header>
-
-      {/* overflow-hidden: only the interview page renders here, and its inner
-          transcript area handles its own scrolling. */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+    <div className="h-screen w-full flex items-center justify-center p-3 sm:p-6 bg-slate-100/70 overflow-hidden">
+      <main className="w-full max-w-xl h-[640px] max-h-[92vh] flex flex-col overflow-hidden">
         <Outlet />
       </main>
     </div>

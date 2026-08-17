@@ -192,6 +192,9 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  started_at?: string | null;
+  recent_turns?: (Pick<TranscriptTurn, "speaker" | "text"> & { turn_number?: number })[];
 }
 
 export interface PaginationMeta {

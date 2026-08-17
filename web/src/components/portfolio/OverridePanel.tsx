@@ -93,10 +93,18 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       )}
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+          <span>Cancel</span>
+        </Button>
         <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-          Save override
+          {saving ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              <span>Saving...</span>
+            </>
+          ) : (
+            <span>Save override</span>
+          )}
         </Button>
       </div>
     </div>

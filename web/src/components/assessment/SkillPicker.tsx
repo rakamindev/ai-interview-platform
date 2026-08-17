@@ -42,14 +42,14 @@ export default function SkillPicker({ open, onOpenChange, onSelect, selectedLabe
     load();
   }, [open, load]);
 
-  const isSelected = (label: string) =>
-    selectedLabels.some((l) => l?.toLowerCase() === label.toLowerCase());
+  const isSelected = (label?: string) =>
+    Boolean(label && selectedLabels.some((l) => l?.toLowerCase() === label.toLowerCase()));
 
-  const filteredTaxonomy = skills.filter(
-    (s) => !isSelected(s.skill_label) && s.skill_label.toLowerCase().includes(query.toLowerCase())
+  const filteredTaxonomy = (skills || []).filter(
+    (s) => s?.skill_label && !isSelected(s.skill_label) && s.skill_label.toLowerCase().includes(query.toLowerCase())
   );
-  const filteredCustom = customSkills.filter(
-    (s) => !isSelected(s.skill_label) && s.skill_label.toLowerCase().includes(query.toLowerCase())
+  const filteredCustom = (customSkills || []).filter(
+    (s) => s?.skill_label && !isSelected(s.skill_label) && s.skill_label.toLowerCase().includes(query.toLowerCase())
   );
 
   const handleSelect = (s: SkillTaxonomy | CustomSkill) => {
