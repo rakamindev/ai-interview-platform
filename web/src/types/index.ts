@@ -85,6 +85,19 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+/**
+ * Response of GET /sessions/:id/portfolio.
+ * The portfolio row is created lazily, so "no portfolio yet" and "still
+ * generating" both surface as { status: "generating" } with HTTP 202.
+ */
+export type PortfolioResponse =
+  | { status: "generating" }
+  | { portfolio: Portfolio; error?: string };
+
+export type FitGapTriggerResponse =
+  | { report: FitGapReport }
+  | { status: string; message: string };
+
 export interface PortfolioSkill {
   id: number;
   skill_id?: number;

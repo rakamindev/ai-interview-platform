@@ -9,36 +9,39 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { AlertCircle, ArrowLeft, Download, FileText, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+
+type PortfolioStatus = "loading" | "generating" | "failed" | "ready" | "error";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<PortfolioStatus>("loading");
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [assessmentName, setAssessmentName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-      setGenerating(true);
-    } else if (data.portfolio) {
-      setPortfolio(data.portfolio);
-      setGenerating(false);
-      // Build overrides map
-      const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
-        overrideMap[o.portfolio_skill_id] = o;
-      });
-      setOverrides(overrideMap);
+    const data = res.data;
+    if (!("portfolio" in data)) {
+      setPortfolio(null);
+      setStatus("generating");
+      return;
     }
+    const p = data.portfolio;
+    setPortfolio(p);
+    setStatus(p.generation_status === "failed" ? "failed" : "ready");
+    const overrideMap: Record<number, AssessorOverride> = {};
+    p.overrides.forEach((o) => {
+      overrideMap[o.portfolio_skill_id] = o;
+    });
+    setOverrides(overrideMap);
   }, [sessionId]);
 
   useEffect(() => {
@@ -46,13 +49,13 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setAssessmentName(sRes.data.assessment.name);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => setStatus("error"))
+      .finally(() => setStatus((prev) => (prev === "loading" ? "error" : prev)));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  usePolling(fetchPortfolio, 5000, status === "generating");
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -61,6 +64,18 @@ export default function PortfolioPage() {
   const handleRunFitGap = () => {
     if (!selectedVacancy || !portfolio) return;
     navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`);
+  };
+
+  const handleRetry = () => {
+    setStatus("loading");
+    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
+      .then(([, vRes, sRes]) => {
+        setVacancies(vRes.data.vacancies);
+        setCandidateName(sRes.data.session.candidate_name ?? null);
+        setAssessmentName(sRes.data.assessment.name);
+      })
+      .catch(() => setStatus("error"))
+      .finally(() => setStatus((prev) => (prev === "loading" ? "error" : prev)));
   };
 
   const handleExport = async (format: "pdf" | "json") => {
@@ -94,7 +109,7 @@ export default function PortfolioPage() {
     }
   };
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
@@ -103,6 +118,24 @@ export default function PortfolioPage() {
       </div>
     );
   }
+
+  if (status === "error") {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="flex flex-col items-center gap-3 border border-destructive/40 rounded-lg p-12 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" />
+          <p className="text-sm">
+            Could not load this portfolio. The session may not exist or you may not have access to it.
+          </p>
+          <Button variant="outline" size="sm" onClick={handleRetry}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const generating = status === "generating";
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -117,6 +150,9 @@ export default function PortfolioPage() {
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}
+            {assessmentName && (
+              <p className="text-xs text-muted-foreground">{assessmentName}</p>
+            )}
           </div>
         </div>
 
@@ -128,7 +164,7 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {!generating && portfolio && status === "ready" && (
             <>
               <Button
                 variant="outline"
@@ -167,15 +203,21 @@ export default function PortfolioPage() {
       )}
 
       {/* Failed state */}
-      {!generating && portfolio?.generation_status === "failed" && (
+      {status === "failed" && portfolio && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          <AlertCircle className="h-6 w-6 text-destructive mx-auto" />
+          <div>
+            <p className="text-sm text-destructive font-medium">Portfolio generation failed.</p>
+            {portfolio.generation_error && (
+              <p className="text-xs text-muted-foreground mt-1">{portfolio.generation_error}</p>
+            )}
+          </div>
           <Button
             variant="outline"
             size="sm"
             onClick={async () => {
               await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
+              setStatus("generating");
             }}
           >
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
@@ -184,7 +226,7 @@ export default function PortfolioPage() {
       )}
 
       {/* Ready state */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {status === "ready" && portfolio && (
         <>
           {/* Configured skills */}
           <div className="space-y-3">
