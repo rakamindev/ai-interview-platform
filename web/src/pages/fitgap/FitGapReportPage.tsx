@@ -98,13 +98,16 @@ export default function FitGapReportPage() {
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
       const ext = format;
+      const nameSlug = portfolio.candidate_name
+        ? `-${portfolio.candidate_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+        : "";
       const blob = format === "pdf"
         ? new Blob([res.data as BlobPart], { type: "application/pdf" })
         : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
+      a.download = `fitgap${nameSlug}-session-${sessionId}-vacancy-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {

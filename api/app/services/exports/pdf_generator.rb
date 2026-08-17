@@ -98,7 +98,12 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each do |item|
+            text = item.is_a?(Hash) ? (item['text'] || item[:text]) : item.to_s
+            turn_number = item.is_a?(Hash) ? (item['turn_number'] || item[:turn_number]) : nil
+            prefix = turn_number.present? ? "  • [Turn #{turn_number}] " : "  • "
+            pdf.text "#{prefix}\"#{text}\""
+          end
         end
       end
 
@@ -118,6 +123,10 @@ module Exports
       pdf.start_new_page
 
       pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      pdf.move_down 4
+      pdf.font_size(10) do
+        pdf.text "Candidate: #{@session.candidate_name.presence || "Candidate ##{@session.id}"}  |  Assessment: #{@assessment.name}"
+      end
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons

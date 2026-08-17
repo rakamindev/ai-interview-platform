@@ -108,19 +108,26 @@ export default function SkillPortfolioCard({
                   typeof item === "object" ? item.turn_number : null;
                 const clickable = turnNum != null && onQuoteClick;
                 return (
-                  <li key={i} className="text-sm text-foreground">
-                    •&nbsp;
-                    {clickable ? (
-                      <button
-                        type="button"
-                        onClick={() => onQuoteClick!(turnNum!)}
-                        className="text-primary hover:underline cursor-pointer text-left"
-                      >
-                        "{text}"
-                      </button>
-                    ) : (
-                      <span>"{text}"</span>
-                    )}
+                  <li key={i} className="text-sm text-foreground flex items-start gap-1.5">
+                    <span className="text-muted-foreground select-none">•</span>
+                    <div className="flex-1">
+                      {turnNum != null && (
+                        <span className="inline-block bg-muted text-muted-foreground text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded mr-1.5 border">
+                          Turn #{turnNum}
+                        </span>
+                      )}
+                      {clickable ? (
+                        <button
+                          type="button"
+                          onClick={() => onQuoteClick!(turnNum!)}
+                          className="text-primary hover:underline cursor-pointer text-left inline font-normal italic"
+                        >
+                          "{text}"
+                        </button>
+                      ) : (
+                        <span className="italic text-foreground/90">"{text}"</span>
+                      )}
+                    </div>
                   </li>
                 );
               })}
