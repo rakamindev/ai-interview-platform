@@ -164,7 +164,7 @@ export default function PortfolioPage() {
   return (
     <Page width="document" className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1.5">
           <Breadcrumb
             crumbs={[
@@ -177,7 +177,7 @@ export default function PortfolioPage() {
           <h1 className="text-lg font-semibold">Portfolio Results</h1>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"

@@ -191,7 +191,7 @@ export default function LiveMonitorPage() {
   return (
     <Page width="board" className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1.5">
           <Breadcrumb
             crumbs={[

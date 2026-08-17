@@ -275,8 +275,11 @@ export default function CandidatesPage() {
       )}
 
       {!loading && !failed && rows.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border">
-          <div className="min-w-[42rem] divide-y">
+        /* Columns on a wide screen, stacked blocks on a phone. A fixed-width
+           row inside a horizontal scroller would technically fit, but reading
+           a queue by dragging it sideways is not reading it. */
+        <div className="rounded-lg border">
+          <div className="divide-y">
             {visible.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-muted-foreground">
                 No candidates in this state.
@@ -285,7 +288,7 @@ export default function CandidatesPage() {
               visible.map((row) => (
                 <div
                   key={row.id}
-                  className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/40"
+                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-4"
                   data-testid="candidate-row"
                 >
                   <div className="min-w-0 flex-1">
@@ -294,22 +297,24 @@ export default function CandidatesPage() {
                     </p>
                     <Link
                       to={`/assessments/${row.assessment_id}/invite`}
-                      className="truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
+                      className="block truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
                     >
                       {row.assessment?.name ?? "Unknown assessment"}
                     </Link>
                   </div>
 
-                  <div className="w-40 shrink-0">
-                    <StatusPill row={row} />
-                  </div>
+                  <div className="flex items-center justify-between gap-3 sm:contents">
+                    <div className="sm:w-40 sm:shrink-0">
+                      <StatusPill row={row} />
+                    </div>
 
-                  <div className="w-24 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                    {relativeTime(row.ended_at ?? row.started_at ?? row.created_at)}
-                  </div>
+                    <div className="font-mono text-xs tabular-nums text-muted-foreground sm:w-24 sm:shrink-0 sm:text-right">
+                      {relativeTime(row.ended_at ?? row.started_at ?? row.created_at)}
+                    </div>
 
-                  <div className="w-32 shrink-0 text-right">
-                    <RowAction row={row} />
+                    <div className="shrink-0 sm:w-32 sm:text-right">
+                      <RowAction row={row} />
+                    </div>
                   </div>
                 </div>
               ))

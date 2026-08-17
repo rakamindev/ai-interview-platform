@@ -28,53 +28,73 @@ export default function AssessorLayout() {
     navigate("/login");
   };
 
+  /**
+   * The same three links in both places the header can put them: inline beside
+   * the brand on a wide screen, and on their own row underneath on a narrow
+   * one. Rendering one list twice keeps the two from drifting apart.
+   */
+  const NavLinks = ({ className }: { className?: string }) => (
+    <nav className={cn("flex items-center gap-1", className)} aria-label="Main">
+      {navItems.map(({ href, label, icon: Icon }) => {
+        const active = location.pathname.startsWith(href);
+        return (
+          <Link
+            key={href}
+            to={href}
+            // The active section was signalled by colour alone. Every result
+            // screen sits several levels under one of these links, so which one
+            // is lit is the only thing telling an assessor which branch they
+            // are in.
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors sm:flex-none sm:justify-start",
+              active
+                ? "bg-primary/10 font-medium text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Top header */}
-      <header className="border-b bg-background sticky top-0 z-40">
-        <div className="flex h-14 w-full items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-6">
-            <Link to="/candidates" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="sticky top-0 z-40 border-b bg-background">
+        <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-6">
+            <Link to="/candidates" className="flex shrink-0 items-center gap-2">
+              <LayoutDashboard className="h-5 w-5 text-primary" aria-hidden />
+              {/* The wordmark is the first thing to go when space runs out —
+                  the icon still identifies the product, and the nav does not. */}
+              <span className="hidden text-sm font-semibold sm:inline">Rakamin AI Interview</span>
+              <span className="sr-only sm:hidden">Rakamin AI Interview</span>
             </Link>
-            <nav className="flex items-center gap-1" aria-label="Main">
-              {navItems.map(({ href, label, icon: Icon }) => {
-                const active = location.pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    to={href}
-                    // The active section was signalled by colour alone. Every
-                    // result screen sits several levels under one of these two
-                    // links, so which one is lit is the only thing telling an
-                    // assessor which branch they are in.
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                      active
-                        ? "bg-primary/10 font-medium text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden />
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
+            <NavLinks className="hidden sm:flex" />
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex shrink-0 items-center gap-3">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="hidden truncate rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground lg:inline">
                 Tenant: {tenant.name}
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+              <LogOut className="h-4 w-4 sm:mr-1.5" aria-hidden />
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sr-only sm:hidden">Logout</span>
             </Button>
           </div>
+        </div>
+
+        {/* Below sm the nav gets its own row rather than being hidden behind a
+            menu button. Three destinations do not earn a hamburger, and a
+            visible row costs one tap instead of two. */}
+        <div className="border-t px-2 py-1.5 sm:hidden">
+          <NavLinks />
         </div>
       </header>
 
