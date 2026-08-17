@@ -380,122 +380,136 @@ export default function InterviewPage() {
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
+  
+  const isPulsing = aiSpeaking || candidateSpeaking || interviewState === "connecting" || interviewState === "draining_audio";
+  const orbCoreColor = aiSpeaking ? "bg-[#b1c782]" : candidateSpeaking ? "bg-[#c8d4ad]" : "bg-slate-200";
+  const ringColor = aiSpeaking ? "border-[#d8e2c3]" : candidateSpeaking ? "border-[#e6ede2]" : "border-slate-100";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
-      {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
-        <span className="text-sm font-medium">AI Interview</span>
-        {candidateInfo && (
-          <InterviewTimer
-            totalSeconds={candidateInfo.time_limit_min * 60}
-            running={interviewState === "active"}
-            onExpired={endInterview}
-          />
-        )}
+    <div className="fixed inset-0 w-full h-full bg-slate-50 flex flex-col items-center justify-between overflow-hidden z-50">
+      
+      {/* Screen Reader Only Transcript for Accessibility */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {transcript.map((turn, i) => (
+          <p key={i}>{turn.speaker === "ai" ? "AI: " : "Candidate: "}{turn.text}</p>
+        ))}
       </div>
 
-      {/* Reconnecting banner */}
-      {interviewState === "reconnecting" && (
-        connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
-          </div>
-        )
-      )}
-
-      {/* Reconnected prompt */}
-      {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
-        </div>
-      )}
-
-      {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-        {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
-        ) : interviewState === "draining_audio" ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
-            <p className="text-xs text-muted-foreground">Wrapping up...</p>
-          </div>
-        ) : (
-          <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
-
-            {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
-            )}
-
-            {/* Transcript */}
-            {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
-                {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
-        <ConnectionStatus state={wsConnectionStatus} />
-
-        <div className="flex items-center gap-3">
-          <Button
-            variant={micMuted ? "destructive" : "outline"}
-            size="sm"
-            onClick={toggleMic}
-          >
-            {micMuted ? (
-              <><MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted</>
-            ) : (
-              <><Mic className="h-3.5 w-3.5 mr-1.5" /> Mic On</>
-            )}
-          </Button>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>End interview?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to end the interview early?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
-            onClick={() => sendJson({ type: "debug_force_reconnect" })}>
+      {/* Development Force Reconnect Tool */}
+      {import.meta.env.DEV && (
+        <div className="absolute top-4 left-4 z-50">
+          <Button variant="outline" size="sm" className="text-xs opacity-50 bg-white" onClick={() => sendJson({ type: "debug_force_reconnect" })}>
             ⚡ Force reconnect
           </Button>
-        )}
         </div>
+      )}
+
+      {/* Header */}
+      <div className="pt-16 pb-4 w-full flex flex-col items-center z-10 space-y-1.5 shrink-0">
+        <h1 className="text-3xl font-bold text-[#4a5338] tracking-tight flex items-center justify-center gap-3">
+          Rakamin AI
+          {candidateInfo && (
+            <span className="font-semibold tabular-nums text-3xl">
+              <InterviewTimer
+                totalSeconds={candidateInfo.time_limit_min * 60}
+                running={interviewState === "active"}
+                onExpired={endInterview}
+              />
+            </span>
+          )}
+        </h1>
+        <p className="text-sm text-[#9ca68b] font-medium tracking-wide">
+          by rakamin.com
+        </p>
+
+        {/* Network Banners */}
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 w-full max-w-sm px-4 flex flex-col items-center gap-2">
+          {interviewState === "reconnecting" && (
+            connectionLostLong ? (
+              <div className="flex items-center justify-center gap-2 text-xs bg-rose-50 border border-rose-200 text-rose-800 rounded-full px-4 py-2 shadow-sm">
+                <span className="animate-pulse">●</span>
+                <span>Connection taking too long to restore.</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-full px-4 py-2 shadow-sm">
+                <span className="animate-pulse">●</span>
+                <span>Briefly reconnecting...</span>
+              </div>
+            )
+          )}
+          {reconnectedPrompt && (
+            <div className="flex items-center justify-center gap-2 text-xs bg-blue-50 border border-blue-200 text-blue-800 rounded-full px-4 py-2 shadow-sm cursor-pointer hover:bg-blue-100" onClick={() => setReconnectedPrompt(false)}>
+              <span>Reconnected — say "check" to resume.</span>
+              <span className="ml-1 opacity-60">✕</span>
+            </div>
+          )}
+          {interviewState === "draining_audio" && (
+            <div className="flex items-center justify-center gap-2 text-xs bg-slate-100 border border-slate-200 text-slate-600 rounded-full px-4 py-2 shadow-sm">
+              <span>Wrapping up...</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* The Orb Visualizer */}
+      <div className="flex-1 flex items-center justify-center w-full relative z-0">
+        <div className="relative flex items-center justify-center w-[300px] h-[300px]">
+          {/* Outer Ring */}
+          <div className={`absolute inset-0 rounded-full border-[2px] ${ringColor} ${isPulsing ? "animate-pulse" : "opacity-30"} transition-colors duration-1000`} style={{ transform: "scale(1.45)" }}></div>
+          
+          {/* Middle Ring */}
+          <div className={`absolute inset-0 rounded-full border-[2px] ${ringColor} ${isPulsing ? "animate-pulse" : "opacity-50"} transition-colors duration-700`} style={{ transform: "scale(1.2)" }}></div>
+          
+          {/* Core Orb */}
+          <div className={`relative w-48 h-48 rounded-full ${orbCoreColor} shadow-inner transition-all duration-500 ease-in-out ${isPulsing ? "scale-105" : "scale-100"}`}></div>
+        </div>
+      </div>
+
+      {/* Floating Control Pill */}
+      <div className="pb-10 w-full flex flex-col items-center z-10 space-y-5 shrink-0">
+        <div className="flex items-center gap-2 bg-[#f4f7ee] p-2.5 rounded-3xl border border-[#e8efe0] shadow-sm">
+          
+          <Button
+            variant="ghost"
+            onClick={toggleMic}
+            className="hover:bg-black/5 rounded-2xl h-14 px-7 transition-colors"
+          >
+            {micMuted ? (
+              <MicOff className="h-5 w-5 text-[#4a5338]" />
+            ) : (
+              <Mic className="h-5 w-5 text-[#4a5338]" />
+            )}
+            <span className="font-semibold text-[#4a5338] ml-3 text-base">{micMuted ? "Muted" : "Mute"}</span>
+          </Button>
+          
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" className="hover:bg-black/5 rounded-2xl h-14 px-7 transition-colors">
+                <div className="w-4 h-4 bg-[#e85b5b] rounded-sm mr-3"></div>
+                <span className="font-semibold text-[#4a5338] text-base">End call</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl border-slate-200">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-slate-900">End interview?</AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-500">
+                  Are you sure you want to end the interview early?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="border-slate-200 rounded-xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={endInterview} className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl">
+                  End interview
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          
+        </div>
+        
+        <p className="text-xs text-[#a4ad96] font-medium tracking-wide">
+          Rakamin AI can make mistakes. Always double-check info.
+        </p>
       </div>
 
     </div>
