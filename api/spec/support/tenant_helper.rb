@@ -25,4 +25,5 @@ end
 RSpec.configure do |config|
   config.include TenantHelper, type: :request
   config.include TenantHelper, type: :model
+  config.include TenantHelper, type: :channel
 end
