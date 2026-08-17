@@ -123,10 +123,20 @@ module Exports
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
+        candidate_str = if c['candidate_level']
+                          if c['is_override'] && c['ai_level']
+                            "L#{c['candidate_level']} (AI: L#{c['ai_level']} → Override: L#{c['candidate_level']})"
+                          else
+                            "L#{c['candidate_level']}"
+                          end
+                        else
+                          '—'
+                        end
+
         table_data << [
           c['skill_label'],
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
+          candidate_str,
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
         ]
@@ -137,6 +147,17 @@ module Exports
         t.row(0).background_color = 'E5E7EB'
         t.cells.padding = [6, 8]
         t.cells.size = 10
+      end
+
+      overridden_items = comparisons.select { |c| c['is_override'] && c['assessor_notes'].present? }
+      if overridden_items.any?
+        pdf.move_down 8
+        pdf.font_size(9) do
+          pdf.text "Assessor Calibration Notes:", style: :bold
+          overridden_items.each do |c|
+            pdf.text "  • #{c['skill_label']}: #{c['assessor_notes']}"
+          end
+        end
       end
 
       if @fit_gap.culture_narrative.present?

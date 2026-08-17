@@ -13,7 +13,8 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Auth
-      post 'auth/login', to: 'authentication#authenticate'
+      post 'auth/login',           to: 'authentication#authenticate'
+      post 'auth/change_password', to: 'authentication#change_password'
 
       # Admin-only user management (no public signup)
       resources :users, only: %i[index create]
@@ -61,7 +62,14 @@ Rails.application.routes.draw do
       resources :custom_skills, only: %i[index create destroy]
 
       # Vacancies
-      resources :vacancies
+      resources :vacancies do
+        member do
+          get :matches
+        end
+      end
+
+      # Candidate-centric view
+      resources :candidates, only: %i[index]
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do

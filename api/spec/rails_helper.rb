@@ -9,6 +9,8 @@ abort('The Rails environment is running in production mode!') if Rails.env.produ
 
 require 'rspec/rails'
 require 'factory_bot_rails'
+require 'sidekiq/testing'
+Sidekiq::Testing.fake!
 
 # Ensures the test schema matches db/schema.rb. If this aborts with a pending
 # migration error, run: RAILS_ENV=test bin/rails db:schema:load
@@ -23,4 +25,9 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
   config.include FactoryBot::Syntax::Methods
+
+  config.before(:each) do
+    RequestStore.clear!
+    Sidekiq::Worker.clear_all
+  end
 end

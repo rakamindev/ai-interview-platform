@@ -93,6 +93,12 @@ FactoryBot.define do
     role { 'assessor' }
   end
 
+  factory :vacancy_skill do
+    vacancy
+    sequence(:skill_label) { |n| "Req Skill #{n}" }
+    expected_level { 3 }
+  end
+
   factory :assessor_override do
     portfolio_skill
     ai_level { 3 }
