@@ -44,7 +44,10 @@ RSpec.describe Sessions::EndHandler, type: :service do
       threads = 4.times.map do
         Thread.new do
           barrier.pop
-          with_tenant(org) { Sessions::EndHandler.new(session).call(reason: 'all_covered') }
+          # Mirror production: each concurrent request loads its own session
+          # instance. Sharing one AR object across threads would leave dirty
+          # in-memory attributes that break `with_lock`.
+          with_tenant(org) { Sessions::EndHandler.new(Session.find(session.id)).call(reason: 'all_covered') }
         rescue StandardError => e
           errors << e
         end
