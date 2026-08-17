@@ -52,7 +52,7 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
 
     it "lets a tenant override its own portfolio skill" do
       post "/api/v1/portfolio_skills/#{skill_a.id}/override",
-           params: { override: { override_level: 4 } }, headers: headers_a
+           params: { override: { override_level: 4, assessor_notes: 'Verified in transcript.' } }, headers: headers_a
 
       expect(response).to have_http_status(:created)
     end

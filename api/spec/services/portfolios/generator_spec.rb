@@ -40,7 +40,8 @@ RSpec.describe Portfolios::Generator do
     described_class.new(session: session, gemini_client: gemini).call
 
     skill = session.reload.portfolio.portfolio_skills.find_by(skill_label: 'React')
-    skill.create_assessor_override!(ai_level: skill.ai_level, override_level: 5, overridden_by: 1)
+    skill.create_assessor_override!(ai_level: skill.ai_level, override_level: 5, overridden_by: 1,
+                                    assessor_notes: 'Adjusted after review.')
 
     described_class.new(session: session, gemini_client: gemini).call
 
