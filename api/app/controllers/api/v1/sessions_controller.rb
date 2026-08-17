@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -149,8 +149,34 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          consent_given:   session.consent_given?
         )
+      end
+
+      # POST /sessions/:token/consent  — no JWT, invite token in URL
+      # Records (or withdraws) the candidate's consent to have their voice,
+      # transcript, and name processed — including by the third-party AI
+      # provider — before the interview is allowed to start (UU PDP).
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        given = ActiveModel::Type::Boolean.new.cast(params.dig(:consent, :given))
+        consent = session.consent || session.build_consent
+
+        consent.assign_attributes(
+          given:          given,
+          given_at:       given ? Time.current : nil,
+          policy_version: Consent::CURRENT_POLICY_VERSION,
+          ip_address:     request.remote_ip
+        )
+
+        if consent.save
+          json_response(consent_given: consent.given)
+        else
+          json_error(consent.errors.full_messages.first, :unprocessable_entity)
+        end
       end
 
       private
