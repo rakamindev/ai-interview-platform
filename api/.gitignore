@@ -27,3 +27,6 @@ vertex_ai_credentials.json
 
 # Ignore Public Docs
 /tech-docs
+
+# Local gems used when the host Ruby toolchain differs from the application.
+/vendor/
