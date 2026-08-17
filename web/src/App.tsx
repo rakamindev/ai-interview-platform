@@ -9,7 +9,7 @@ import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
 import AssessmentInvitePage from "@/pages/assessments/AssessmentInvitePage";
 import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
-import FitGapReportPage from "@/pages/fitgap/FitGapReportPage";
+import { FitGapReportPage } from "@/modules/fit-gap/pages/fit-gap-report.page";
 import TranscriptPage from "@/pages/transcript/TranscriptPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";

@@ -15,6 +15,7 @@ module FitGap
 
     # Returns the FitGapReport record.
     def call
+      ensure_same_tenant!
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
 
@@ -27,7 +28,9 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        generated_at:      Time.current,
+        generation_status: 'complete',
+        generation_error:  nil
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -45,12 +48,12 @@ module FitGap
 
         if portfolio_skill
           candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
+          required_level   = vacancy_skill.expected_level
+          delta            = candidate_level - required_level
           result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
           candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
+          required_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
         end
@@ -59,10 +62,12 @@ module FitGap
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
-          expected_level:  expected_level,
+          required_level:  required_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill&.dig(:overridden) || false,
+          evidence_count:  portfolio_skill&.dig(:evidence_count) || 0
         }
       end
 
@@ -80,7 +85,8 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          overridden:      override.present?,
+          evidence_count:  skill.evidence_quotes.count
         }
       end
     end
@@ -103,7 +109,9 @@ module FitGap
         data = response.is_a?(Hash) ? response : JSON.parse(response)
         { culture: data['culture_narrative'], overall: data['overall_narrative'] }
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
+        # Provider errors can echo prompt content. Log the class only so candidate
+        # assessment data is not copied into application logs.
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
       end
     end
@@ -122,8 +130,8 @@ module FitGap
 
         SKILL COMPARISON RESULTS:
         - Matches (#{matches.count}): #{matches.map { |c| "#{c[:skill_label]} (L#{c[:candidate_level]})" }.join(', ')}
-        - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (delta #{c[:delta]})" }.join(', ')}
-        - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (+#{c[:delta]})" }.join(', ')}
+        - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs required L#{c[:required_level]} (delta #{c[:delta]})" }.join(', ')}
+        - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs required L#{c[:required_level]} (+#{c[:delta]})" }.join(', ')}
         - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
 
         Write two short narrative paragraphs:
@@ -142,8 +150,21 @@ module FitGap
       gaps    = comparisons.count { |c| c[:result] == 'gap' }
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
+      low_confidence = comparisons.count { |c| c[:confidence] == 'low' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      summary = "Evidence shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      risks = []
+      risks << "#{not_assessed} required #{'skill was' if not_assessed == 1}#{'skills were' unless not_assessed == 1} not assessed" if not_assessed.positive?
+      risks << "#{low_confidence} #{'rating has' if low_confidence == 1}#{'ratings have' unless low_confidence == 1} low confidence" if low_confidence.positive?
+
+      risks.empty? ? summary : "#{summary} Human review is required because #{risks.join(' and ')}."
+    end
+
+    def ensure_same_tenant!
+      return if @portfolio.session.tenant_id == @vacancy.tenant_id
+
+      raise ArgumentError, 'Portfolio and vacancy must belong to the same tenant'
     end
   end
 end
