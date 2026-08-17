@@ -11,7 +11,8 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { buildVerdict } from "@/utils/portfolioVerdict";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, MessageSquareText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -196,6 +197,20 @@ export default function PortfolioPage() {
         {/* Ready state */}
         {!generating && portfolio?.generation_status === "complete" && (
           <>
+            {(() => {
+              const verdict = buildVerdict(portfolio.skills, overrides);
+              if (!verdict) return null;
+              return (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+                  <MessageSquareText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-primary/80 mb-1">Verdict</p>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{verdict}</p>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="grid sm:grid-cols-2 gap-4 items-stretch">
               <SkillLevelChart skills={portfolio.skills} overrides={overrides} />
               <SkillRadarChart skills={portfolio.skills} overrides={overrides} />
