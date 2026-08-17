@@ -124,3 +124,47 @@ describe("PortfolioPage verdict card", () => {
     expect(screen.getByText(/Strong across the board/)).toBeInTheDocument();
   });
 });
+
+describe("PortfolioPage zero-skills empty state", () => {
+  it("shows a unified empty state instead of a broken layout when no skills were assessed", async () => {
+    mockLoaded(portfolio({ verdict: null, skills: [] }));
+
+    renderPage();
+
+    expect(await screen.findByText("No skills were assessed")).toBeInTheDocument();
+    expect(screen.getByText("View transcript").closest("a")).toHaveAttribute(
+      "href",
+      "/assessments/1/sessions/9/transcript"
+    );
+  });
+
+  it("does not render the Verdict card, chart grid, or Configured Skills section when there are no skills", async () => {
+    mockLoaded(portfolio({ verdict: null, skills: [] }));
+
+    renderPage();
+
+    await screen.findByText("No skills were assessed");
+    expect(screen.queryByText("Verdict")).not.toBeInTheDocument();
+    expect(screen.queryByText("Skill Levels")).not.toBeInTheDocument();
+    expect(screen.queryByText("Skill Profile")).not.toBeInTheDocument();
+    expect(screen.queryByText("Configured Skills")).not.toBeInTheDocument();
+  });
+
+  it("still renders Fit/Gap below the empty state", async () => {
+    mockLoaded(portfolio({ verdict: null, skills: [] }));
+
+    renderPage();
+
+    await screen.findByText("No skills were assessed");
+    expect(screen.getByText("Run a Fit/Gap Analysis")).toBeInTheDocument();
+  });
+
+  it("renders the normal skills layout, not the empty state, when at least one skill exists", async () => {
+    mockLoaded(portfolio({ verdict: null, skills: [skill()] }));
+
+    renderPage();
+
+    await screen.findByText("Configured Skills");
+    expect(screen.queryByText("No skills were assessed")).not.toBeInTheDocument();
+  });
+});
