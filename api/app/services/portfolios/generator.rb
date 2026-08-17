@@ -20,18 +20,42 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      portfolio.with_lock do
+        # Idempotency / dedup: a sibling job may already be running (generating)
+        # or have finished (complete). Skipping here means we never run two
+        # Gemini generations for the same portfolio, and a stuck 'pending' that
+        # got re-enqueued is also caught by the normal 'complete'/'generating'
+        # guards once a sibling succeeds.
+        return portfolio if %w[complete generating].include?(portfolio.generation_status)
+
+        portfolio.update!(
+          generation_status:       'generating',
+          generation_attempted_at: Time.current
+        )
+      end
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(
+        generation_status:       'complete',
+        generated_at:            Time.current,
+        generation_attempted_at: nil
+      )
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # The savepoint rollback restores the DB rows, but the in-memory
+      # association still holds phantom skill records; drop them so the failure
+      # UPDATE below cannot re-insert a half-written skill list.
+      portfolio&.portfolio_skills&.reset
+      portfolio&.update!(
+        generation_status:       'failed',
+        generation_error:        e.message,
+        generation_attempted_at: nil
+      )
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -150,31 +174,37 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Swap the skill set atomically: destroy the old skills and insert the new
+      # ones inside a single transaction so a crash mid-save cannot leave a
+      # 'generating' portfolio with a half-written (or empty) skill list.
+      # requires_new -> a real savepoint, so the rollback works even when this
+      # runs inside an outer DB transaction (e.g. tests, or an orchestrated job).
+      Portfolio.transaction(requires_new: true) do
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+        (data['configured_skills'] || []).each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      false,
+            ai_level:           skill_data['level'].to_i.clamp(1, 5),
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        (data['discovered_skills'] || []).each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           nil,
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      true,
+            ai_level:           skill_data['level'].to_i.clamp(1, 5),
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
       end
     end
   end
