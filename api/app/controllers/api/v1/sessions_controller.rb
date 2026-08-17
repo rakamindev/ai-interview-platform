@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent_policy consent]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent_policy consent]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript review]
 
       # GET /api/v1/sessions
       #
@@ -93,6 +93,34 @@ module Api
         else
           json_error("Failed to end session", :unprocessable_entity)
         end
+      end
+
+      # PATCH /api/v1/sessions/:id/review
+      #
+      # A human signing off that they have looked at these results. The
+      # candidate list is a queue, and a queue nobody can clear stops carrying
+      # information — after fifty candidates "ready to review" would just mean
+      # "finished".
+      #
+      # Reviewing is only meaningful once there is something to read, so a
+      # session with no completed portfolio is refused rather than silently
+      # marked.
+      def review
+        reviewed = ActiveModel::Type::Boolean.new.cast(params[:reviewed])
+        reviewed = true if params[:reviewed].nil?
+
+        if reviewed
+          portfolio = Portfolio.find_by(session_id: @session.id)
+          unless portfolio&.generation_status == 'complete'
+            return json_error('There is no finished report to review yet', :unprocessable_entity)
+          end
+
+          @session.mark_reviewed!(current_user&.id)
+        else
+          @session.unmark_reviewed!
+        end
+
+        json_response(session: session_json(@session.reload))
       end
 
       # GET /api/v1/sessions/:id/coverage
@@ -262,6 +290,8 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          reviewed_at:      session.reviewed_at,
+          reviewed_by:      session.reviewed_by,
           created_at:       session.created_at
         }
       end

@@ -111,6 +111,35 @@ describe("CandidatesPage", () => {
     expect(screen.queryByText("Bagas Nurhadi")).toBeNull();
   });
 
+  it("takes a reviewed candidate out of the queue", async () => {
+    // A queue nobody can clear stops carrying information: after fifty
+    // candidates "ready to review" would just mean "everyone who finished".
+    respond([
+      row({ id: 1, candidate_name: "Rani Prameswari" }),
+      row({ id: 2, candidate_name: "Bagas Nurhadi", reviewed_at: new Date().toISOString() }),
+    ]);
+
+    render(<CandidatesPage />);
+
+    const summary = await screen.findByTestId("candidates-summary");
+    expect(summary).toHaveTextContent(/1\s*ready to review/);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reviewed" }));
+    expect(screen.getByText("Bagas Nurhadi")).toBeInTheDocument();
+    expect(screen.queryByText("Rani Prameswari")).toBeNull();
+  });
+
+  it("keeps a finished interview with no report out of both queues", async () => {
+    respond([row({ portfolio_status: "failed" })]);
+
+    render(<CandidatesPage />);
+
+    const summary = await screen.findByTestId("candidates-summary");
+    expect(summary).toHaveTextContent(/0\s*ready to review/);
+    const candidateRow = screen.getByTestId("candidate-row");
+    expect(within(candidateRow).getByText("No report")).toBeInTheDocument();
+  });
+
   it("says the load failed rather than showing an empty list", async () => {
     sessionsApi.listCandidates.mockRejectedValue(new Error("network"));
 

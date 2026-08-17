@@ -21,6 +21,23 @@ class Session < ApplicationRecord
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
   scope :ended,   -> { where(status: 'ended') }
+  scope :reviewed,     -> { where.not(reviewed_at: nil) }
+  scope :not_reviewed, -> { where(reviewed_at: nil) }
+
+  def reviewed? = reviewed_at.present?
+
+  # A human signing off that they have looked at this candidate's results.
+  # Idempotent on purpose: pressing the button twice must not rewrite the
+  # timestamp and make it look like a second, later review happened.
+  def mark_reviewed!(user_id)
+    return true if reviewed?
+
+    update!(reviewed_at: Time.current, reviewed_by: user_id)
+  end
+
+  def unmark_reviewed!
+    update!(reviewed_at: nil, reviewed_by: nil)
+  end
 
   def active?  = status == 'active'
   def ended?   = status == 'ended'

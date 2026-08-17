@@ -44,6 +44,8 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  reviewed_at?: string | null;
+  reviewed_by?: number | null;
   created_at?: string;
 }
 
@@ -59,6 +61,9 @@ export interface CandidateRow {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  /** Set once a human has signed off on the results. */
+  reviewed_at?: string | null;
+  reviewed_by?: number | null;
   assessment: { id: number; name?: string };
   /** null until the AI has produced something for this session. */
   portfolio_status: "pending" | "generating" | "complete" | "failed" | null;

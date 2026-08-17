@@ -51,6 +51,7 @@ Rails.application.routes.draw do
 
       resources :sessions, only: %i[show] do
         member do
+          patch :review
           post :end_session
           get  :coverage
           get  :transcript

@@ -4,33 +4,40 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Page, { PageHeader } from "@/components/layout/Page";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowRight, Eye, FileText, RefreshCw, UserRound } from "lucide-react";
+import { ArrowRight, Check, Eye, FileText, RefreshCw, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CandidateRow } from "@/types";
 
-type Filter = "all" | "active" | "needs_review" | "ended" | "failed";
+type Filter = "all" | "active" | "needs_review" | "reviewed" | "no_report" | "failed";
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "active", label: "In progress" },
   { key: "needs_review", label: "Ready to review" },
-  { key: "ended", label: "Reviewed" },
+  { key: "reviewed", label: "Reviewed" },
+  { key: "no_report", label: "No report" },
   { key: "failed", label: "Interview errors" },
 ];
 
 /**
  * Which bucket a candidate falls into.
  *
- * "Ready to review" is the one that matters: the interview finished and a
- * report exists, so a person now has to make a decision about someone. That
- * is the work this product creates, and until this screen existed there was
- * no way to see it without opening each assessment in turn.
+ * "Ready to review" is the one that matters: the interview finished, a report
+ * exists, and nobody has signed off on it yet. That last clause is what makes
+ * this a queue rather than a list — reviewed rows leave, so the count stays
+ * worth reading. Without it, after fifty candidates "ready to review" means
+ * nothing more than "everyone who finished".
+ *
+ * Order matters here. Reviewed wins over ready-to-review, and an interview
+ * that broke is reported as broken whatever else is true of it.
  */
 function bucket(row: CandidateRow): Filter {
   if (row.status === "active") return "active";
   if (row.status === "pending") return "all";
   if (row.end_reason === "error") return "failed";
-  return row.portfolio_status === "complete" ? "needs_review" : "ended";
+  if (row.reviewed_at) return "reviewed";
+  if (row.portfolio_status === "complete") return "needs_review";
+  return "no_report";
 }
 
 function relativeTime(iso?: string): string {
@@ -80,12 +87,20 @@ function StatusPill({ row }: { row: CandidateRow }) {
       </span>
     );
   }
+  if (b === "reviewed") {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+        <Check className="h-3 w-3" aria-hidden />
+        Reviewed
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
       <span className="h-1.5 w-1.5 rounded-full bg-border" />
       {row.portfolio_status === "generating" || row.portfolio_status === "pending"
         ? "Building report"
-        : "Finished"}
+        : "No report"}
     </span>
   );
 }

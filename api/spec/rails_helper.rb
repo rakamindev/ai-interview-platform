@@ -21,6 +21,9 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
 
+  # travel_to / freeze_time in specs that assert on timestamps.
+  config.include ActiveSupport::Testing::TimeHelpers
+
   # Load helper record builders before each spec run.
   Dir[Rails.root.join('spec/support/**/*.rb')].sort.each { |f| require f }
 end

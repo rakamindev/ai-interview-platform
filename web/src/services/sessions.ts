@@ -22,6 +22,10 @@ export const sessionsApi = {
       `/sessions/${id}`
     ),
 
+  /** Sign off (or undo) that a human has read this candidate's results. */
+  setReviewed: (id: number, reviewed: boolean) =>
+    api.patch<{ session: Session }>(`/sessions/${id}/review`, { reviewed }),
+
   endSession: (id: number, reason = "manual_assessor") =>
     api.post<{ session: Session }>(`/sessions/${id}/end_session`, {
       session: { reason },

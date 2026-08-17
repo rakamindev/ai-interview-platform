@@ -11,7 +11,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, ArrowRight, Download, FileText, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Download, FileText, Loader2, RefreshCw } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -27,6 +27,8 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [assessmentName, setAssessmentName] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [reviewedAt, setReviewedAt] = useState<string | null>(null);
+  const [savingReview, setSavingReview] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -56,6 +58,7 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
         setAssessmentName(sRes.data.assessment?.name ?? null);
+        setReviewedAt(sRes.data.session.reviewed_at ?? null);
       })
       .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
@@ -68,6 +71,18 @@ export default function PortfolioPage() {
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
+  };
+
+  // Signing off is what takes this candidate out of the review queue. The
+  // queue is only worth reading if it can be emptied.
+  const toggleReviewed = async () => {
+    setSavingReview(true);
+    try {
+      const res = await sessionsApi.setReviewed(Number(sessionId), !reviewedAt);
+      setReviewedAt(res.data.session.reviewed_at ?? null);
+    } finally {
+      setSavingReview(false);
+    }
   };
 
   const handleRunFitGap = () => {
@@ -170,6 +185,22 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
+          {!generating && portfolio?.generation_status === "complete" && (
+            <Button
+              variant={reviewedAt ? "outline" : "default"}
+              size="sm"
+              onClick={toggleReviewed}
+              disabled={savingReview}
+              data-testid="review-toggle"
+            >
+              {savingReview ? (
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Check className="mr-1 h-3.5 w-3.5" />
+              )}
+              {reviewedAt ? "Reviewed" : "Mark as reviewed"}
+            </Button>
+          )}
           {!generating && portfolio && (
             <>
               <Button
