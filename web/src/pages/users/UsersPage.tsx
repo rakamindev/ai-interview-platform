@@ -141,8 +141,14 @@ export default function UsersPage() {
         {createSuccess && <p className="text-xs text-green-600">{createSuccess}</p>}
 
         <Button type="submit" disabled={creating}>
-          {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Create account
+          {creating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <span>Creating account...</span>
+            </>
+          ) : (
+            <span>Create account</span>
+          )}
         </Button>
       </form>
 

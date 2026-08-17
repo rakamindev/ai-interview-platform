@@ -162,17 +162,17 @@ export default function FitGapReportPage() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
+              <span>{regenerating ? "Regenerating..." : "Regenerate"}</span>
             </Button>
             {report && (
               <>
                 <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
                   {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
+                  <span>PDF</span>
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
                   {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
+                  <span>JSON</span>
                 </Button>
               </>
             )}

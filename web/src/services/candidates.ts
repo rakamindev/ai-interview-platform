@@ -5,12 +5,15 @@ export interface CandidateSummary {
   id: number;
   candidate_id?: number;
   candidate_name?: string | null;
+  invite_token?: string;
   assessment_id: number;
   assessment_name: string;
   status: "pending" | "active" | "ended";
   end_reason?: string | null;
+  portfolio_id?: number | null;
   portfolio_status?: string | null;
   started_at?: string;
+  ended_at?: string;
   created_at?: string;
 }
 
@@ -34,6 +37,7 @@ export interface CandidateListParams {
   page?: number;
   per_page?: number;
   q?: string;
+  assessment_id?: number;
   status?: "awaiting" | "live" | "completed" | "failed";
   sort?: "newest" | "oldest" | "name";
 }

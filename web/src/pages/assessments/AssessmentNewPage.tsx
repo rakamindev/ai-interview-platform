@@ -265,11 +265,17 @@ export default function AssessmentNewPage() {
             variant="outline"
             onClick={() => navigate("/assessments")}
           >
-            Cancel
+            <span>Cancel</span>
           </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <span>Save &amp; Create Session →</span>
+            )}
           </Button>
         </div>
       </form>

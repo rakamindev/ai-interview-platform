@@ -70,8 +70,14 @@ export default function ChangePasswordPage() {
         {success && <p className="text-sm text-green-600">{success}</p>}
 
         <Button type="submit" disabled={loading}>
-          {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Update password
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <span>Updating password...</span>
+            </>
+          ) : (
+            <span>Update password</span>
+          )}
         </Button>
       </form>
     </div>

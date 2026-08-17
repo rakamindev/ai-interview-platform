@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
-import { Plus, Briefcase, ChevronRight, Search, LayoutGrid, List, ChevronLeft, ChevronRight as ChevronNext } from "lucide-react";
+import { Plus, ChevronRight, Search, LayoutGrid, List, ChevronLeft, ChevronRight as ChevronNext } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Vacancy, PaginationMeta } from "@/types";
 
@@ -44,10 +44,11 @@ export default function VacancyListPage() {
         q: qDebounced || undefined,
         sort: sort === "newest" ? undefined : (sort as "oldest" | "name"),
       });
-      setVacancies(res.data.vacancies);
-      setMeta(res.data.meta);
+      setVacancies(res.data.vacancies ?? []);
+      setMeta(res.data.meta ?? null);
     } catch {
       setError(true);
+      setVacancies([]);
     } finally {
       setLoading(false);
     }
@@ -69,6 +70,7 @@ export default function VacancyListPage() {
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-semibold">Vacancies</h1>
         <div className="flex items-center gap-2">
@@ -125,7 +127,7 @@ export default function VacancyListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
       ) : vacancies.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
@@ -138,39 +140,88 @@ export default function VacancyListPage() {
         </div>
       ) : view === "card" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {vacancies.map((v) => (
-            <Card
-              key={v.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/vacancies/${v.id}/edit`)}
-            >
-              <CardContent className="p-4 flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="font-medium text-sm">{v.role_title}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </CardContent>
-            </Card>
-          ))}
+          {vacancies.map((v) => {
+            const skillList = v.skills ?? [];
+            const displaySkills = skillList.slice(0, 3);
+            const remaining = skillList.length - displaySkills.length;
+
+            return (
+              <Card
+                key={v.id}
+                className="cursor-pointer hover:border-primary/40 transition-colors"
+                onClick={() => navigate(`/vacancies/${v.id}/edit`)}
+              >
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-sm">{v.role_title}</p>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{skillList.length} skills</span>
+                    {v.created_at && (
+                      <>
+                        <span>·</span>
+                        <span>{new Date(v.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      </>
+                    )}
+                  </div>
+                  {skillList.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {displaySkills.map((s) => (
+                        <span
+                          key={s.id ?? s.skill_label}
+                          className="bg-muted px-1.5 py-0.5 rounded text-xs text-foreground"
+                        >
+                          {s.skill_label} <span className="text-primary font-medium">L{s.expected_level}</span>
+                        </span>
+                      ))}
+                      {remaining > 0 && (
+                        <span className="text-xs text-muted-foreground self-center">
+                          +{remaining}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-2">
-          {vacancies.map((v) => (
-            <Card
-              key={v.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/vacancies/${v.id}/edit`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium text-sm">{v.role_title}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          ))}
+          {vacancies.map((v) => {
+            const skillList = v.skills ?? [];
+
+            return (
+              <Card
+                key={v.id}
+                className="cursor-pointer hover:border-primary/40 transition-colors"
+                onClick={() => navigate(`/vacancies/${v.id}/edit`)}
+              >
+                <CardContent className="py-3 px-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">{v.role_title}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <span>{skillList.length} skills</span>
+                      {v.created_at && (
+                        <>
+                          <span>·</span>
+                          <span>{new Date(v.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        </>
+                      )}
+                      {skillList.length > 0 && (
+                        <>
+                          <span>·</span>
+                          <span className="truncate max-w-xs">{skillList.map((s) => s.skill_label).join(", ")}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

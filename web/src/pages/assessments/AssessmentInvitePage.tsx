@@ -56,7 +56,7 @@ function SessionRow({
       <div className="flex items-center gap-3">
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             Awaiting candidate
           </span>
         )}
@@ -134,23 +134,32 @@ export default function AssessmentInvitePage() {
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
+    try {
+      const res = await assessmentsApi.getSessions(Number(id));
+      setSessions(res.data.sessions ?? []);
+    } catch {
+      // keep current sessions
+    }
   }, [id]);
 
   useEffect(() => {
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    ])
+      .then(([aRes, sRes]) => {
+        setAssessment(aRes.data.assessment ?? null);
+        setSessions(sRes.data.sessions ?? []);
+      })
+      .catch(() => {
+        setSessions([]);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
+    const hasActive = (sessions || []).some((s) => s.status !== "ended");
     if (!hasActive) return;
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);

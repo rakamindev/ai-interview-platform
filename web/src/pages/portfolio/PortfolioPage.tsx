@@ -174,7 +174,7 @@ export default function PortfolioPage() {
                 disabled={!!exporting}
               >
                 {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                PDF
+                <span>PDF</span>
               </Button>
               <Button
                 variant="outline"
@@ -183,7 +183,7 @@ export default function PortfolioPage() {
                 disabled={!!exporting}
               >
                 {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                JSON
+                <span>JSON</span>
               </Button>
             </>
           )}

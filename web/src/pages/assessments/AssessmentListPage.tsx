@@ -77,10 +77,11 @@ export default function AssessmentListPage() {
         language: language === "all" ? undefined : (language as "en" | "id"),
         sort: sort === "newest" ? undefined : (sort as "oldest" | "name"),
       });
-      setAssessments(res.data.assessments);
-      setMeta(res.data.meta);
+      setAssessments(res.data.assessments ?? []);
+      setMeta(res.data.meta ?? null);
     } catch {
       setError(true);
+      setAssessments([]);
     } finally {
       setLoading(false);
     }
