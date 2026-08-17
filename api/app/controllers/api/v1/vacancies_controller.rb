@@ -53,6 +53,19 @@ module Api
         json_response(message: "Vacancy deleted")
       end
 
+      # GET /api/v1/vacancies/:id/matches
+      # Candidate match ranking for this vacancy (rule-based fit score).
+      def matches
+        vacancy = Vacancy.find(params[:id])
+
+        json_response(
+          vacancy: { id: vacancy.id, role_title: vacancy.role_title },
+          matches: Candidates::Ranking.new(vacancy).call
+        )
+      rescue ActiveRecord::RecordNotFound
+        json_error('Vacancy not found', :not_found)
+      end
+
       private
 
       def set_vacancy
