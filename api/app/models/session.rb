@@ -32,6 +32,7 @@ class Session < ApplicationRecord
 
   def consent_given? = consent&.given == true
   def data_purged?   = data_purged_at.present?
+  def transcript_capture_failed? = transcript_capture_failed_at.present?
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')

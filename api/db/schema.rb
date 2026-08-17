@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_18_030001) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -159,6 +159,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_030001) do
     t.string "candidate_name", limit: 255
     t.datetime "expires_at"
     t.datetime "data_purged_at"
+    t.datetime "transcript_capture_failed_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["expires_at"], name: "index_sessions_on_expires_at"

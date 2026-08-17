@@ -108,7 +108,8 @@ module Api
               created_at:     t.created_at
             }
           end,
-          total: turns.count
+          total: turns.count,
+          transcript_capture_failed: @session.transcript_capture_failed?
         )
       end
 
@@ -192,6 +193,7 @@ module Api
         json_response(
           candidate_name: session.candidate_name,
           data_purged:    session.data_purged?,
+          transcript_capture_failed: session.transcript_capture_failed?,
           transcript:     session.transcript_turns.ordered.map { |t| { speaker: t.speaker, text: t.text } },
           verdict:        portfolio&.verdict,
           skills:         portfolio&.portfolio_skills&.map { |s| { skill_label: s.skill_label, ai_level: s.ai_level } } || []
