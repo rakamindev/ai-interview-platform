@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import SkillLevelChart from "@/components/portfolio/SkillLevelChart";
+import SkillRadarChart from "@/components/portfolio/SkillRadarChart";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
@@ -195,7 +196,10 @@ export default function PortfolioPage() {
         {/* Ready state */}
         {!generating && portfolio?.generation_status === "complete" && (
           <>
-            <SkillLevelChart skills={portfolio.skills} overrides={overrides} />
+            <div className="grid sm:grid-cols-2 gap-4 items-stretch">
+              <SkillLevelChart skills={portfolio.skills} overrides={overrides} />
+              <SkillRadarChart skills={portfolio.skills} overrides={overrides} />
+            </div>
 
             {/* Configured skills */}
             <div className="space-y-4">
