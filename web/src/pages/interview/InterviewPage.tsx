@@ -277,20 +277,28 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
-        <button
-          className="text-xs text-muted-foreground underline hover:text-foreground"
-          onClick={() => setMyDataOpen(true)}
-        >
-          View or delete your data
-        </button>
+      <div className="max-w-md mx-auto px-4 py-16">
+        <div className="rounded-2xl border bg-card shadow-sm px-8 py-10 text-center space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50 ring-8 ring-green-50/50">
+            <CheckCircle className="h-7 w-7 text-green-600" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-semibold tracking-tight">Interview Complete</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Thank you. Your responses have been recorded.
+              <br />
+              The hiring team will review your results and follow up with you.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setMyDataOpen(true)}
+          >
+            View or delete your data
+          </Button>
+        </div>
         {token && <MyDataDialog token={token} open={myDataOpen} onOpenChange={setMyDataOpen} />}
       </div>
     );
