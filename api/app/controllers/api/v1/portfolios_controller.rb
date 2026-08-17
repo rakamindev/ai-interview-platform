@@ -10,7 +10,22 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @portfolio.nil?
+          # A missing portfolio on a consent-revoked session means the
+          # candidate's data was deleted (AC-B3) — surface an explicit
+          # "unavailable" state instead of a "generating" placeholder that
+          # would poll forever.
+          if @session && !@session.consent_granted?
+            return json_response(
+              status: "unavailable",
+              message: "Portfolio is unavailable because the candidate's consent was revoked."
+            )
+          end
+
+          return render json: { status: "generating" }, status: :accepted
+        end
+
+        if @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
 

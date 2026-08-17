@@ -3,22 +3,44 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  Loader2,
+  RefreshCw,
+  Zap,
+  FileText,
+} from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+
+// GET /sessions/:id/portfolio returns either a synthetic status
+// (generating / unavailable) or the full portfolio document.
+type PortfolioResponse =
+  | { status: "generating" | "unavailable"; message?: string }
+  | { portfolio: Portfolio; error?: string };
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
+  const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>(
+    {}
+  );
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
@@ -26,10 +48,13 @@ export default function PortfolioPage() {
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-      setGenerating(true);
+    const data = res.data as PortfolioResponse;
+    if ("status" in data) {
+      // Synthetic status response: unavailable (data deleted) or generating.
+      setUnavailable(data.status === "unavailable");
+      setGenerating(data.status === "generating");
     } else if (data.portfolio) {
+      setUnavailable(false);
       setPortfolio(data.portfolio);
       setGenerating(false);
       // Build overrides map
@@ -42,7 +67,11 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
+    Promise.all([
+      fetchPortfolio(),
+      vacanciesApi.list(),
+      sessionsApi.get(Number(sessionId)),
+    ])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
@@ -60,7 +89,9 @@ export default function PortfolioPage() {
 
   const handleRunFitGap = () => {
     if (!selectedVacancy || !portfolio) return;
-    navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`);
+    navigate(
+      `/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`
+    );
   };
 
   const handleExport = async (format: "pdf" | "json") => {
@@ -73,7 +104,9 @@ export default function PortfolioPage() {
         selectedVacancy ? Number(selectedVacancy) : undefined
       );
       if (format === "json") {
-        const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+        const blob = new Blob([JSON.stringify(res.data, null, 2)], {
+          type: "application/json",
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -81,7 +114,9 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
+        const blob = new Blob([res.data as BlobPart], {
+          type: "application/pdf",
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -109,7 +144,10 @@ export default function PortfolioPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+          <Link
+            to={`/assessments/${id}/invite`}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
@@ -136,7 +174,11 @@ export default function PortfolioPage() {
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
               >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "pdf" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                )}
                 PDF
               </Button>
               <Button
@@ -145,13 +187,30 @@ export default function PortfolioPage() {
                 onClick={() => handleExport("json")}
                 disabled={!!exporting}
               >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "json" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                )}
                 JSON
               </Button>
             </>
           )}
         </div>
       </div>
+
+      {/* Unavailable state (consent revoked / data deleted) */}
+      {!generating && !portfolio && unavailable && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <div>
+            <p className="font-medium">Portfolio unavailable</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              The candidate revoked consent, so the interview data and portfolio
+              were deleted.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Generating state */}
       {generating && (
@@ -160,7 +219,8 @@ export default function PortfolioPage() {
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              The AI is analyzing the interview transcript. This takes about 2
+              minutes.
             </p>
           </div>
         </div>
@@ -169,7 +229,9 @@ export default function PortfolioPage() {
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          <p className="text-sm text-destructive">
+            Portfolio generation failed.
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -212,7 +274,8 @@ export default function PortfolioPage() {
                     Discovered Skills
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
+                    Skills the AI probed that were not in the original
+                    assessment
                   </p>
                 </div>
                 {portfolio.skills
