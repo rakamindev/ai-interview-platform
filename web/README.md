@@ -59,6 +59,7 @@ The app will be available at **http://localhost:5173**.
 | `VITE_DEV_TENANT_NAME`     | Yes      | Tenant display name                                 |
 | `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint for hardware check speed test  |
 | `VITE_SPEED_TEST_UPLOAD_URL`| No      | Custom upload endpoint for speed test               |
+| `VITE_SPEED_TEST_DOWNLOAD_URL`| No    | Custom download endpoint for speed test             |
 | `VITE_REQUIRE_CAMERA`      | No       | Set to `"true"` to enforce camera check (default: `"false"`) |
 
 ## Tech Stack

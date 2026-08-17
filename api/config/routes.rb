@@ -16,6 +16,12 @@ Rails.application.routes.draw do
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
       }
 
+      # Download speed test — returns a fixed-size payload for throughput measurement
+      get 'speed_test/download', to: proc { |_env|
+        payload = SecureRandom.random_bytes(2 * 1024 * 1024)
+        [200, { 'Content-Type' => 'application/octet-stream' }, [payload]]
+      }
+
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
