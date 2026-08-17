@@ -11,27 +11,29 @@ import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import ResolveObjectionPanel from "@/components/portfolio/ResolveObjectionPanel";
+import SystemHealthPanel from "@/components/portfolio/SystemHealthPanel";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [pageState, setPageState] = useState<"loading" | "ready" | "generating" | "error">("loading");
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [session, setSession] = useState<any | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-      setGenerating(true);
+      setPageState("generating");
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
-      setGenerating(false);
+      setPageState("ready");
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -46,13 +48,13 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setSession(sRes.data.session);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => setPageState("error"));
   }, [fetchPortfolio, sessionId]);
 
   // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  usePolling(fetchPortfolio, 5000, pageState === "generating");
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -89,12 +91,25 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch (err) {
+      console.error(err);
     } finally {
       setExporting(null);
     }
   };
 
-  if (loading) {
+  const handleStatusChange = async (newStatus: "pending" | "ended") => {
+    try {
+      if (newStatus === "ended") {
+        const res = await sessionsApi.endSession(Number(sessionId), "manual_assessor");
+        setSession(res.data.session);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (pageState === "loading") {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
@@ -128,7 +143,7 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {pageState === "ready" && portfolio && (
             <>
               <Button
                 variant="outline"
@@ -153,8 +168,32 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {/* Resolve Panel for Recruiters */}
+      {session && (
+        <ResolveObjectionPanel session={session} onResolved={setSession} />
+      )}
+
+      {/* State: Pending / Active */}
+      {session && session.status !== "ended" && (
+        <div className="border border-slate-200 bg-slate-50 rounded-lg p-12 text-center space-y-2">
+          <p className="font-medium text-slate-900">
+            {session.status === "pending" ? "Session Not Started" : "Session In Progress"}
+          </p>
+          <p className="text-sm text-slate-500">
+            {session.status === "pending" 
+              ? "The candidate has not started this interview yet." 
+              : "The candidate is currently taking this interview."}
+          </p>
+        </div>
+      )}
+
+      {/* System Health / Audit Status Panel */}
+      {session && session.status === "ended" && (
+        <SystemHealthPanel session={session} />
+      )}
+
       {/* Generating state */}
-      {generating && (
+      {session?.status === "ended" && pageState === "generating" && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
@@ -167,24 +206,26 @@ export default function PortfolioPage() {
       )}
 
       {/* Failed state */}
-      {!generating && portfolio?.generation_status === "failed" && (
+      {pageState === "ready" && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-          </Button>
+          {session?.audit_status !== "retake_approved" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await sessionsApi.regeneratePortfolio(Number(sessionId));
+                setPageState("generating");
+              }}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+            </Button>
+          )}
         </div>
       )}
 
       {/* Ready state */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {pageState === "ready" && portfolio?.generation_status === "complete" && (
         <>
           {/* Configured skills */}
           <div className="space-y-3">
