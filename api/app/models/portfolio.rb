@@ -6,12 +6,16 @@ class Portfolio < ApplicationRecord
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
+  has_many :fit_gap_reports, dependent: :destroy
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
+  scope :for_tenant,  ->(tenant_id) {
+    joins(:session).where(sessions: { tenant_id: tenant_id })
+  }
 
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'

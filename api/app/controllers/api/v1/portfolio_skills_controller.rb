@@ -41,15 +41,33 @@ module Api
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
         FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          queued = false
+          report.with_lock do
+            next if report.pending? || report.generating?
+
+            report.update!(
+              generation_status: 'pending',
+              generation_error: nil,
+              generated_at: nil
+            )
+            queued = true
+          end
+          next unless queued
+
+          FitGapGeneratorWorker.perform_async(
+            portfolio.id,
+            report.vacancy_id,
+            current_tenant_id,
+            report.id
+          )
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = PortfolioSkill
+                           .joins(portfolio: :session)
+                           .where(sessions: { tenant_id: current_tenant_id })
+                           .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

@@ -58,7 +58,7 @@ module Api
         end
 
         if format == "pdf"
-          vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
+          vacancy = params[:vacancy_id].present? ? Vacancy.find(params[:vacancy_id]) : nil
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = find_current_tenant_portfolio!(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -91,8 +91,29 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        report = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+
+        if report&.pending? || report&.generating?
+          return render json: {
+            status: report.generation_status,
+            message: "Fit/gap report generation is already in progress"
+          }, status: :accepted
+        end
+
+        report ||= FitGapReport.new(
+          portfolio: portfolio,
+          vacancy: vacancy,
+          skill_comparisons: []
+        )
+        report.update!(
+          generation_status: 'pending',
+          generation_error: nil,
+          skill_comparisons: [],
+          culture_narrative: nil,
+          overall_narrative: nil,
+          generated_at: nil
+        )
+        enqueue_fit_gap!(report, portfolio, vacancy)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
@@ -101,7 +122,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = find_current_tenant_portfolio!(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -113,13 +134,46 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
+        if existing&.complete?
+          if queue_if_stale!(existing, portfolio)
+            return render json: {
+              status: 'generating',
+              report: fit_gap_json(existing),
+              message: 'Fit/gap report is refreshing after a human override'
+            }, status: :accepted
+          end
+
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        if existing&.failed?
+          return json_response(report: fit_gap_json(existing))
+        end
+
+        if existing
+          return render json: {
+            status: existing.generation_status,
+            report: fit_gap_json(existing)
+          }, status: :accepted
+        end
+
+        created = false
+        report = begin
+          record = FitGapReport.create!(
+            portfolio: portfolio,
+            vacancy: vacancy,
+            skill_comparisons: [],
+            generation_status: 'pending',
+            generated_at: nil
+          )
+          created = true
+          record
+        rescue ActiveRecord::RecordNotUnique
+          FitGapReport.find_by!(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+        end
+
+        enqueue_fit_gap!(report, portfolio, vacancy) if created
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -127,14 +181,19 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = find_current_tenant_portfolio!(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
         end
 
-        json_response(report: fit_gap_json(report))
+        if report.complete? && queue_if_stale!(report, portfolio)
+          return render json: { report: fit_gap_json(report) }, status: :accepted
+        end
+
+        status = report.complete? || report.failed? ? :ok : :accepted
+        render json: { report: fit_gap_json(report) }, status: status
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
@@ -153,7 +212,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = find_current_tenant_portfolio!(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -205,7 +264,10 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          generated_at:      report.generated_at,
+          generation_status: report.generation_status,
+          generation_error:  report.generation_error,
+          review_summary:     review_summary(report.skill_comparisons)
         }
       end
 
@@ -221,6 +283,69 @@ module Api
         end
 
         data
+      end
+
+      def find_current_tenant_portfolio!(id)
+        Portfolio.for_tenant(current_tenant_id).find(id)
+      end
+
+      def enqueue_fit_gap!(report, portfolio, vacancy)
+        FitGapGeneratorWorker.perform_async(
+          portfolio.id,
+          vacancy.id,
+          current_tenant_id,
+          report.id
+        )
+      rescue StandardError
+        report.update(
+          generation_status: 'failed',
+          generation_error: 'The report could not be queued. Please try again.'
+        )
+        raise
+      end
+
+      def queue_if_stale!(report, portfolio)
+        queued = false
+        report.with_lock do
+          next unless report.complete? && report_stale?(report, portfolio)
+
+          report.update!(
+            generation_status: 'pending',
+            generation_error: nil,
+            generated_at: nil
+          )
+          queued = true
+        end
+        enqueue_fit_gap!(report, portfolio, report.vacancy) if queued
+        queued
+      end
+
+      def report_stale?(report, portfolio)
+        return true if report.generated_at.nil?
+
+        portfolio.assessor_overrides
+                 .where('overridden_at > ?', report.generated_at)
+                 .exists?
+      end
+
+      def review_summary(comparisons)
+        rows = Array(comparisons).map(&:with_indifferent_access)
+        counts = FitGapReport::FIT_RESULTS.index_with do |result|
+          rows.count { |row| row[:result] == result }
+        end
+        low_confidence = rows.count { |row| row[:confidence] == 'low' }
+        human_overrides = rows.count { |row| row[:is_override] == true }
+
+        {
+          total_skills: rows.count,
+          match: counts['match'],
+          gap: counts['gap'],
+          exceed: counts['exceed'],
+          not_assessed: counts['not_assessed'],
+          low_confidence: low_confidence,
+          human_overrides: human_overrides,
+          decision_status: (counts['not_assessed'].positive? || low_confidence.positive?) ? 'review_required' : 'evidence_ready'
+        }
       end
     end
   end

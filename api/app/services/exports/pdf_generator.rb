@@ -118,14 +118,21 @@ module Exports
 
       pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
       pdf.move_down 8
+      pdf.font_size(9) do
+        pdf.fill_color '666666'
+        pdf.text 'AI-assisted evidence summary. Human review is required before any hiring decision.'
+        pdf.fill_color '000000'
+      end
+      pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
+        required_level = c['required_level'] || c['expected_level']
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
+          required_level ? "L#{required_level}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
