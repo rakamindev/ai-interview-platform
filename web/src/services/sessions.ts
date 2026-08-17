@@ -36,4 +36,17 @@ export const sessionsApi = {
     api.post<{ consent_given: boolean }>(`/sessions/${token}/consent`, {
       consent: { given },
     }),
+
+  getMyData: (token: string) => api.get<MyData>(`/sessions/${token}/my_data`),
+
+  deleteMyData: (token: string) =>
+    api.post<{ deleted: boolean }>(`/sessions/${token}/my_data/delete`),
 };
+
+export interface MyData {
+  candidate_name: string | null;
+  data_purged: boolean;
+  transcript: { speaker: string; text: string }[];
+  verdict: string | null;
+  skills: { skill_label: string; ai_level: number | string }[];
+}

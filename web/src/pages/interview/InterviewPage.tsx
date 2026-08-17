@@ -22,6 +22,7 @@ import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import ConsentDialog from "@/components/interview/ConsentDialog";
+import MyDataDialog from "@/components/interview/MyDataDialog";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -41,6 +42,7 @@ export default function InterviewPage() {
   const micMutedRef = useRef(false);
   const [consentStatus, setConsentStatus] = useState<"loading" | "pending" | "given" | "declined">("loading");
   const [consentSubmitting, setConsentSubmitting] = useState(false);
+  const [myDataOpen, setMyDataOpen] = useState(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -283,6 +285,13 @@ export default function InterviewPage() {
           <br />
           The hiring team will review your results and follow up with you.
         </p>
+        <button
+          className="text-xs text-muted-foreground underline hover:text-foreground"
+          onClick={() => setMyDataOpen(true)}
+        >
+          View or delete your data
+        </button>
+        {token && <MyDataDialog token={token} open={myDataOpen} onOpenChange={setMyDataOpen} />}
       </div>
     );
   }
