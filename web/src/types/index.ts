@@ -81,6 +81,7 @@ export interface Portfolio {
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
+  verdict: Verdict | null;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }

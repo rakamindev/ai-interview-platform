@@ -18,7 +18,8 @@ import {
 import { candidatesApi, type CandidateQuery, type ExportFormat, type ExportResult } from "@/services/candidates";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toastExportSummary, toastExportFailure } from "@/utils/exportToast";
-import type { Candidate, Session, Verdict } from "@/types";
+import { VERDICT_BADGE_CLASSES } from "@/utils/verdictBadge";
+import type { Candidate, Session } from "@/types";
 import {
   ArrowDown,
   ArrowUp,
@@ -52,12 +53,6 @@ const SORT_OPTIONS: { value: CandidateQuery["sort"]; label: string }[] = [
   { value: "interview_status", label: "Interview status" },
   { value: "verdict", label: "Verdict" },
 ];
-
-const VERDICT_BADGE: Record<Verdict, string> = {
-  pass: "bg-green-100 text-green-700",
-  consider: "bg-amber-100 text-amber-700",
-  failed: "bg-red-100 text-red-700",
-};
 
 const STATUS_BADGE: Record<string, string> = {
   pending: "bg-amber-50 text-amber-600",
@@ -363,7 +358,7 @@ export default function CandidateManagement({
                     </span>
                     <span className="w-20 text-center text-xs">
                       {c.verdict ? (
-                        <span className={`rounded-full px-2 py-0.5 ${VERDICT_BADGE[c.verdict]}`}>{c.verdict}</span>
+                        <span className={`rounded-full px-2 py-0.5 ${VERDICT_BADGE_CLASSES[c.verdict]}`}>{c.verdict}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

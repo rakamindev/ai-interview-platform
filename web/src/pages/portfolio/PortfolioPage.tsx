@@ -12,6 +12,7 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { buildVerdict } from "@/utils/portfolioVerdict";
+import { VERDICT_BADGE_CLASSES, VERDICT_LABELS } from "@/utils/verdictBadge";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, MessageSquareText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
@@ -197,15 +198,21 @@ export default function PortfolioPage() {
         {/* Ready state */}
         {!generating && portfolio?.generation_status === "complete" && (
           <>
-            {(() => {
-              const verdict = buildVerdict(portfolio.skills, overrides);
-              if (!verdict) return null;
+            {portfolio.verdict && (() => {
+              const summary = buildVerdict(portfolio.skills, overrides);
               return (
                 <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
                   <MessageSquareText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-primary/80 mb-1">Verdict</p>
-                    <p className="text-sm text-foreground/90 leading-relaxed">{verdict}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-primary/80">Verdict</p>
+                      <span
+                        className={`text-xs font-semibold rounded-full px-2 py-0.5 ${VERDICT_BADGE_CLASSES[portfolio.verdict]}`}
+                      >
+                        {VERDICT_LABELS[portfolio.verdict]}
+                      </span>
+                    </div>
+                    {summary && <p className="text-sm text-foreground/90 leading-relaxed">{summary}</p>}
                   </div>
                 </div>
               );
