@@ -21,6 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import ConsentDialog from "@/components/interview/ConsentDialog";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -38,6 +39,8 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [consentStatus, setConsentStatus] = useState<"loading" | "pending" | "given" | "declined">("loading");
+  const [consentSubmitting, setConsentSubmitting] = useState(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -46,9 +49,32 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        setConsentStatus(res.data.consent_given ? "given" : "pending");
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
+  }, [token]);
+
+  const handleConsentAccept = useCallback(async () => {
+    if (!token) return;
+    setConsentSubmitting(true);
+    try {
+      await sessionsApi.submitConsent(token, true);
+      setConsentStatus("given");
+    } finally {
+      setConsentSubmitting(false);
+    }
+  }, [token]);
+
+  const handleConsentDecline = useCallback(async () => {
+    if (!token) return;
+    setConsentSubmitting(true);
+    try {
+      await sessionsApi.submitConsent(token, false);
+    } finally {
+      setConsentSubmitting(false);
+      setConsentStatus("declined");
+    }
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -189,8 +215,28 @@ export default function InterviewPage() {
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
+    if (consentStatus === "declined") {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <h2 className="text-xl font-semibold">Consent required</h2>
+          <p className="text-sm text-muted-foreground">
+            The interview can't proceed without your consent to process your voice and transcript
+            data. If you'd like to reconsider, refresh this page. Otherwise, please contact the
+            hiring team.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+        <ConsentDialog
+          open={consentStatus === "pending"}
+          onAccept={handleConsentAccept}
+          onDecline={handleConsentDecline}
+          submitting={consentSubmitting}
+        />
+
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
@@ -200,7 +246,7 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {consentStatus !== "given" ? null : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>

@@ -16,6 +16,7 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import PrivacyPolicyPage from "@/pages/legal/PrivacyPolicyPage";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
       <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>

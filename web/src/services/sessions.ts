@@ -31,4 +31,9 @@ export const sessionsApi = {
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+
+  submitConsent: (token: string, given: boolean) =>
+    api.post<{ consent_given: boolean }>(`/sessions/${token}/consent`, {
+      consent: { given },
+    }),
 };
