@@ -9,6 +9,11 @@ export default defineConfig({
             "@": path.resolve(__dirname, "./src"),
         },
     },
+    test: {
+        environment: "jsdom",
+        globals: true,
+        setupFiles: "./src/test/setup.ts",
+    },
     build: {
         rollupOptions: {
             output: {
