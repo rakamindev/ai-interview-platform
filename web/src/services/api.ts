@@ -1,8 +1,17 @@
 import axios from "axios";
 import { getDevToken, clearAuth } from "@/stores/authAtom";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api/v1";
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3001";
+function requiredEnv(name: string, devFallback: string): string {
+  const value = import.meta.env[name] as string | undefined;
+  if (value) return value;
+  if (import.meta.env.PROD) {
+    throw new Error(`[config] ${name} must be set in production`);
+  }
+  return devFallback;
+}
+
+const BASE_URL = requiredEnv("VITE_API_BASE_URL", "http://localhost:3001/api/v1");
+const WS_BASE_URL = requiredEnv("VITE_WS_BASE_URL", "ws://localhost:3001");
 
 export const WS_URL = WS_BASE_URL;
 
