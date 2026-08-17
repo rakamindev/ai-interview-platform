@@ -185,21 +185,51 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
+          {/* Once reviewed, the state stops being a button. A control labelled
+              "Reviewed" reads as a status, and clicking a status to silently
+              undo it is a trap — so the status becomes text and undoing gets
+              its own small, clearly-labelled action. */}
           {!generating && portfolio?.generation_status === "complete" && (
-            <Button
-              variant={reviewedAt ? "outline" : "default"}
-              size="sm"
-              onClick={toggleReviewed}
-              disabled={savingReview}
-              data-testid="review-toggle"
-            >
-              {savingReview ? (
-                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Check className="mr-1 h-3.5 w-3.5" />
-              )}
-              {reviewedAt ? "Reviewed" : "Mark as reviewed"}
-            </Button>
+            reviewedAt ? (
+              <span
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-sm"
+                data-testid="review-state"
+              >
+                <Check className="h-3.5 w-3.5 text-ok" aria-hidden />
+                <span className="text-muted-foreground">
+                  Reviewed{" "}
+                  <span className="font-mono text-xs tabular-nums">
+                    {new Date(reviewedAt).toLocaleDateString(undefined, {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={toggleReviewed}
+                  disabled={savingReview}
+                  className="rounded-sm text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                  data-testid="review-undo"
+                >
+                  {savingReview ? "Undoing…" : "Undo"}
+                </button>
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                onClick={toggleReviewed}
+                disabled={savingReview}
+                data-testid="review-toggle"
+              >
+                {savingReview ? (
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="mr-1 h-3.5 w-3.5" />
+                )}
+                Mark as reviewed
+              </Button>
+            )
           )}
           {!generating && portfolio && (
             <>
