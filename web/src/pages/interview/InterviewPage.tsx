@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, FileWarningIcon, Mic, MicOff } from "lucide-react";
+import { CheckCircle, FileWarningIcon, Mic, MicOff, Clock, AlertTriangle } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -32,7 +32,6 @@ export default function InterviewPage() {
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<(Pick<TranscriptTurn, "speaker" | "text"> & { turn_number?: number })[]>([]);
-  const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -211,45 +210,71 @@ export default function InterviewPage() {
       ? "connected"
       : "reconnecting";
 
-  // ── State A: Pre-start ──────────────────────────────────────────────────
+  // ── State A: Welcome ────────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
       <div className="max-w-2xl w-full mx-auto px-4 py-8 space-y-6 flex-1 content-center">
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
-            <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
-            </p>
+            <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{candidateInfo.time_limit_min} menit</span>
+            </div>
           )}
         </div>
 
         {candidateInfoLoading ? (
           <p className="text-center text-sm text-muted-foreground animate-pulse">
-            Loading your interview...
+            Memuat informasi wawancara...
           </p>
-        ) : !hardwareCheckDone ? (
-          <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
-          </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-              <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
+            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2 text-muted-foreground">
+              <p>Ini adalah wawancara berbasis suara dengan AI. AI akan menilai kemampuanmu berdasarkan percakapan yang terjadi.</p>
+              <p>Tidak ada soal tertulis — cukup jawab pertanyaan dengan suara seperti wawancara biasa.</p>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
-              <Mic className="h-4 w-4 mr-2" />
-              Start Interview
+
+            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
+              <p className="font-medium text-foreground">Yang perlu disiapkan:</p>
+              <p>• Ruangan yang tenang dan minim gangguan</p>
+              <p>• Koneksi internet yang stabil</p>
+              <p>• Perangkat dengan mikrofon yang berfungsi</p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm space-y-1.5 text-amber-800">
+              <div className="flex items-center gap-1.5 font-medium">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>Penting</span>
+              </div>
+              <p>• Jangan gunakan headphone</p>
+              <p>• Jangan ada orang lain di ruangan</p>
+            </div>
+
+            <Button className="w-full" size="lg" onClick={() => setInterviewState("hardware_check")}>
+              Lanjutkan
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State A2: Hardware check ────────────────────────────────────────────
+  if (interviewState === "hardware_check") {
+    return (
+      <div className="max-w-2xl w-full mx-auto px-4 py-8 space-y-6 flex-1 content-center">
+        <div className="text-center space-y-1">
+          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
+          {candidateInfo && (
+            <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{candidateInfo.time_limit_min} menit</span>
+            </div>
+          )}
+        </div>
+
+        <HardwareCheck onStart={startInterview} />
       </div>
     );
   }
