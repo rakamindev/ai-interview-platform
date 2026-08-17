@@ -91,7 +91,7 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
+        FitGapReport.where(portfolio_id: portfolio.id, vacancy_id: vacancy.id).destroy_all
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
@@ -113,10 +113,26 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
-        existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
-          return json_response(report: fit_gap_json(existing))
+        # Atomic claim via unique (portfolio_id, vacancy_id): create the pending
+        # report first so duplicate triggers find it and skip enqueueing.
+        report = FitGapReport.find_or_initialize_by(
+          portfolio_id: portfolio.id,
+          vacancy_id:   vacancy.id
+        )
+
+        if report.persisted?
+          if report.complete?
+            return json_response(report: fit_gap_json(report))
+          elsif report.generating? || report.pending?
+            return json_response(status: "generating", message: "Fit/gap report is already generating", report: fit_gap_json(report))
+          elsif report.failed?
+            # Retry a failed report: reset to pending and enqueue.
+            report.update!(generation_status: "pending", generation_error: nil)
+            FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+            return render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+          end
+        else
+          report.save!(generation_status: "pending")
         end
 
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
@@ -205,6 +221,8 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          generation_status: report.generation_status,
+          generation_error:  report.generation_error,
           generated_at:      report.generated_at
         }
       end
