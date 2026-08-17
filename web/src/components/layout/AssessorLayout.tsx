@@ -63,8 +63,8 @@ export default function AssessorLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6">
+      <header className="border-b bg-background">
+        <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between gap-3 border-b bg-background px-4 sm:border-b-0 sm:px-6">
           <div className="flex min-w-0 items-center gap-6">
             <Link to="/candidates" className="flex shrink-0 items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" aria-hidden />
@@ -90,10 +90,15 @@ export default function AssessorLayout() {
           </div>
         </div>
 
-        {/* Below sm the nav gets its own row rather than being hidden behind a
-            menu button. Three destinations do not earn a hamburger, and a
-            visible row costs one tap instead of two. */}
-        <div className="border-t px-2 py-1.5 sm:hidden">
+        {/* Below sm the nav gets its own row rather than hiding behind a menu
+            button: three destinations do not earn a hamburger, and a visible
+            row costs one tap instead of two.
+
+            It deliberately does not pin. Pinned, the header would hold 96px of
+            a ~570px phone viewport — a sixth of the screen, permanently, to
+            repeat something you already read. Scrolling it away gives that back
+            while you read, and it returns the moment you scroll up. */}
+        <div className="px-2 py-1.5 sm:hidden">
           <NavLinks />
         </div>
       </header>

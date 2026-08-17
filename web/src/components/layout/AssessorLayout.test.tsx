@@ -64,6 +64,19 @@ describe("AssessorLayout header", () => {
     expect(other).not.toHaveAttribute("aria-current");
   });
 
+  it("does not pin the mobile nav row", () => {
+    // Pinned, the header would hold 96px of a ~570px phone viewport — a sixth
+    // of the screen, permanently, to repeat something already read.
+    const { container } = render(<AssessorLayout />);
+
+    const mobileRow = container.querySelector(".sm\\:hidden");
+    expect(mobileRow).not.toBeNull();
+    expect(mobileRow?.className).not.toContain("sticky");
+
+    // The bar carrying the brand and logout does stay put.
+    expect(container.querySelector(".sticky")).not.toBeNull();
+  });
+
   it("hides the tenant chip on narrow screens rather than letting it squeeze the nav", () => {
     render(<AssessorLayout />);
 
