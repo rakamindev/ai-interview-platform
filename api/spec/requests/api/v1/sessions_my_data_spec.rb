@@ -38,6 +38,14 @@ RSpec.describe "Api::V1::Sessions#my_data", type: :request do
 
       expect(response).to have_http_status(:not_found)
     end
+
+    it "flags transcript_capture_failed when turn persistence failed during the interview" do
+      session_record.update_column(:transcript_capture_failed_at, Time.current)
+
+      get "/api/v1/sessions/#{session_record.invite_token}/my_data"
+
+      expect(JSON.parse(response.body)["transcript_capture_failed"]).to eq(true)
+    end
   end
 
   describe "POST /sessions/:token/my_data/delete" do

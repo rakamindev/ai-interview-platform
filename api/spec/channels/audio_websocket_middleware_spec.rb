@@ -37,4 +37,32 @@ RSpec.describe AudioWebSocketMiddleware, type: :channel do
       expect(error).to eq("Consent required before starting the interview")
     end
   end
+
+  describe "#save_transcript_turn" do
+    it "flags the session once when persistence fails, instead of silently losing every turn" do
+      allow(TranscriptTurn).to receive(:new).and_raise(StandardError, "boom")
+      allow(session_record.transcript_turns).to receive(:create!).and_raise(StandardError, "boom")
+
+      middleware.send(:save_transcript_turn, session_record, 1, "candidate", "hello")
+
+      expect(session_record.reload.transcript_capture_failed_at).to be_present
+    end
+
+    it "does not overwrite the original failure timestamp on subsequent failures" do
+      allow(session_record.transcript_turns).to receive(:create!).and_raise(StandardError, "boom")
+
+      middleware.send(:save_transcript_turn, session_record, 1, "candidate", "hello")
+      first_failure_at = session_record.reload.transcript_capture_failed_at
+
+      middleware.send(:save_transcript_turn, session_record, 2, "candidate", "world")
+
+      expect(session_record.reload.transcript_capture_failed_at).to eq(first_failure_at)
+    end
+
+    it "does not flag the session when the turn saves successfully" do
+      middleware.send(:save_transcript_turn, session_record, 1, "candidate", "hello")
+
+      expect(session_record.reload.transcript_capture_failed_at).to be_nil
+    end
+  end
 end
