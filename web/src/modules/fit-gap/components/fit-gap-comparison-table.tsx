@@ -5,12 +5,14 @@ import {
   CircleHelp,
   TriangleAlert,
 } from "lucide-react";
-import { LEVEL_LABELS } from "@/utils/constants";
-import { requiredLevel } from "@/lib/fitGap";
-import { cn } from "@/lib/utils";
-import type { SkillComparison } from "@/types";
 
-interface ComparisonTableProps {
+import { cn } from "@/lib/utils";
+import { LEVEL_LABELS } from "@/utils/constants";
+
+import { requiredLevel } from "../lib/fit-gap";
+import type { SkillComparison } from "../types/fit-gap.types";
+
+interface FitGapComparisonTableProps {
   comparisons: SkillComparison[];
 }
 
@@ -69,13 +71,15 @@ function Confidence({ comparison }: { comparison: SkillComparison }) {
     <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
       <span className="capitalize">{confidence} confidence</span>
       <span aria-hidden="true">·</span>
-      <span>{evidence} evidence quote{evidence === 1 ? "" : "s"}</span>
-      {comparison.is_override && (
+      <span>
+        {evidence} evidence quote{evidence === 1 ? "" : "s"}
+      </span>
+      {comparison.is_override ? (
         <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
           <BadgeCheck className="h-3 w-3" aria-hidden="true" />
           Human reviewed
         </span>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -90,7 +94,7 @@ function LevelCell({ level }: { level?: number }) {
   );
 }
 
-export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
+export function FitGapComparisonTable({ comparisons }: FitGapComparisonTableProps) {
   if (comparisons.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-8 text-center text-sm text-slate-500">
@@ -108,24 +112,41 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
           </caption>
           <thead>
             <tr className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <th scope="col" className="px-5 py-3 font-semibold">Skill and evidence</th>
-              <th scope="col" className="px-4 py-3 text-center font-semibold">Required</th>
-              <th scope="col" className="px-4 py-3 text-center font-semibold">Observed</th>
-              <th scope="col" className="px-5 py-3 font-semibold">Outcome</th>
+              <th scope="col" className="px-5 py-3 font-semibold">
+                Skill and evidence
+              </th>
+              <th scope="col" className="px-4 py-3 text-center font-semibold">
+                Required
+              </th>
+              <th scope="col" className="px-4 py-3 text-center font-semibold">
+                Observed
+              </th>
+              <th scope="col" className="px-5 py-3 font-semibold">
+                Outcome
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {comparisons.map((comparison) => (
-              <tr key={`${comparison.skill_label}-${comparison.result}`} className="align-middle hover:bg-slate-50/60">
+              <tr
+                key={`${comparison.skill_label}-${comparison.result}`}
+                className="align-middle hover:bg-slate-50/60"
+              >
                 <th scope="row" className="px-5 py-4 text-left font-medium">
                   <div className="space-y-1.5">
                     <p className="font-semibold text-slate-900">{comparison.skill_label}</p>
                     <Confidence comparison={comparison} />
                   </div>
                 </th>
-                <td className="px-4 py-4 text-center"><LevelCell level={requiredLevel(comparison)} /></td>
-                <td className="px-4 py-4 text-center"><LevelCell level={comparison.candidate_level} /></td>
-                <td className="px-5 py-4"><ResultBadge comparison={comparison} /></td>
+                <td className="px-4 py-4 text-center">
+                  <LevelCell level={requiredLevel(comparison)} />
+                </td>
+                <td className="px-4 py-4 text-center">
+                  <LevelCell level={comparison.candidate_level} />
+                </td>
+                <td className="px-5 py-4">
+                  <ResultBadge comparison={comparison} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -141,18 +162,28 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
               <div>
                 <h3 className="font-semibold text-slate-900">{comparison.skill_label}</h3>
-                <div className="mt-1.5"><Confidence comparison={comparison} /></div>
+                <div className="mt-1.5">
+                  <Confidence comparison={comparison} />
+                </div>
               </div>
               <ResultBadge comparison={comparison} />
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3">
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Required</dt>
-                <dd className="mt-1"><LevelCell level={requiredLevel(comparison)} /></dd>
+                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Required
+                </dt>
+                <dd className="mt-1">
+                  <LevelCell level={requiredLevel(comparison)} />
+                </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Observed</dt>
-                <dd className="mt-1"><LevelCell level={comparison.candidate_level} /></dd>
+                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Observed
+                </dt>
+                <dd className="mt-1">
+                  <LevelCell level={comparison.candidate_level} />
+                </dd>
               </div>
             </dl>
           </article>
