@@ -8,6 +8,8 @@ abort('The Rails environment is running in production mode!') if Rails.env.produ
 require 'rspec/rails'
 require 'factory_bot'
 require 'database_cleaner/active_record'
+require 'sidekiq/testing'
+Sidekiq::Testing.fake!
 
 # Load all spec support files (helpers + factories support)
 Dir[Rails.root.join('spec/support/**/*.rb')].sort.each { |file| require file }
