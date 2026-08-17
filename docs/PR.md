@@ -15,8 +15,8 @@ Every change ships with RSpec and/or Vitest coverage, a migration where the sche
 | P0 | 4 | Breaks a core workflow, a compliance requirement, or shows wrong data to a real decision-maker |
 | P1 | 6 | Real workflow or maintainability impact, not yet broken in production |
 | P2 | 4 | Moderate UX or code-health improvement |
-| P3 | 1 | Cosmetic polish |
-| **Total** | **15** | |
+| P3 | 2 | Cosmetic polish |
+| **Total** | **16** | |
 
 ## Improvements in this branch
 
@@ -35,6 +35,7 @@ Every change ships with RSpec and/or Vitest coverage, a migration where the sche
 | 11 | Encryption at rest for transcript text (UU PDP) | `transcript_turn.rb`, `config/application.rb`, `config/initializers/active_record_encryption.rb` | Adds (partial — see doc) | P2 |
 | 12 | "Skills assessed" list sat disconnected at the page bottom | `AssessmentInvitePage.tsx` | Fixed | P3 |
 | 13 | Transcript-save failures were silently swallowed — a candidate could finish an interview with zero transcript saved and no signal anywhere | `audio_websocket_middleware.rb`, `session.rb`, `sessions_controller.rb`, `TranscriptPage.tsx`, `MyDataDialog.tsx` | Fixed | P0 |
+| 14 | Interview-complete screen and "Your data" dialog had no visual hierarchy — plain emoji, unstyled text, uncolored verdict | `InterviewPage.tsx`, `MyDataDialog.tsx` | Fixed | P3 |
 
 ## Specification files
 
@@ -55,6 +56,7 @@ Each row above has its own specification document under `docs/assessments/`, fol
 | 11 | Encryption at rest | `assessments/12-encryption-at-rest.md` |
 | 12 | Skills assessed reposition | `assessments/09-skills-assessed-reposition.md` |
 | 13 | Silent transcript capture failure | `assessments/13-silent-transcript-capture-failure.md` |
+| 14 | Candidate-facing view revamp | `assessments/14-candidate-facing-view-revamp.md` |
 
 ## Constraint signal
 
