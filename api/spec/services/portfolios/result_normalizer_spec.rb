@@ -71,4 +71,36 @@ RSpec.describe Portfolios::ResultNormalizer do
       ).call
     }.to raise_error(Portfolios::ResultNormalizer::InvalidResponse)
   end
+
+  it "bounds long summaries and evidence without accepting non-string quotes" do
+    result = described_class.new(
+      assessment_skills: [assessment_skills.first],
+      response: {
+        "configured_skills" => [{
+          "skill_id" => "react",
+          "level" => 3,
+          "confidence" => "high",
+          "evidence" => ["a" * 600, 12, "b" * 600, "c" * 600, "d" * 600],
+          "competency_summary" => "summary" * 500
+        }]
+      }
+    ).call
+
+    expect(result.first[:evidence]).to eq(["a" * 500, "b" * 500, "c" * 500])
+    expect(result.first[:competency_summary].length).to eq(2000)
+  end
+
+  it "deduplicates discovered skills after label normalization" do
+    result = described_class.new(
+      assessment_skills: [],
+      response: {
+        "discovered_skills" => [
+          { "skill_label" => " GraphQL ", "level" => 2, "competency_summary" => "First." },
+          { "skill_label" => "graphql", "level" => 4, "competency_summary" => "Second." }
+        ]
+      }
+    ).call
+
+    expect(result.map { |skill| skill[:skill_label] }).to eq(["GraphQL"])
+  end
 end
