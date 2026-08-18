@@ -25,6 +25,8 @@ import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
+  type CandidateLoadError = "invalid_invitation" | "unavailable";
+
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
@@ -38,18 +40,43 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [candidateLoading, setCandidateLoading] = useState(true);
+  const [candidateError, setCandidateError] = useState<"invalid_invitation" | "unavailable" | null>(null);
 
   // Fetch candidate info
-  useEffect(() => {
-    if (!token) return;
-    sessionsApi.getCandidateInfo(token)
-      .then((res) => {
-        setCandidateInfo(res.data);
-        setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
-      })
-      .catch(() => setInterviewState("complete"));
+  const loadCandidateInfo = useCallback(async () => {
+    if (!token) {
+      setCandidateLoading(false);
+      setCandidateError("invalid_invitation");
+      return;
+    }
+
+    setCandidateLoading(true);
+    setCandidateError(null);
+
+    try {
+      const res = await sessionsApi.getCandidateInfo(token);
+
+      setCandidateInfo(res.data);
+      setSessionId(res.data.session_id);
+
+      if (res.data.session_status === "ended") {
+        setInterviewState("complete");
+      }
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setCandidateError("invalid_invitation");
+      } else {
+        setCandidateError("unavailable");
+      }
+    } finally {
+      setCandidateLoading(false);
+    }
   }, [token]);
+
+  useEffect(() => {
+    loadCandidateInfo();
+  }, [loadCandidateInfo]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -186,6 +213,49 @@ export default function InterviewPage() {
       : connectionState === "connected"
       ? "connected"
       : "reconnecting";
+
+  if (candidateLoading) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-3">
+        <div className="text-xl font-semibold">Loading interview...</div>
+        <p className="text-sm text-muted-foreground">
+          Preparing your interview session.
+        </p>
+      </div>
+    );
+  }
+
+  if (candidateError === "invalid_invitation") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Invalid or expired invitation</h2>
+        <p className="text-sm text-muted-foreground">
+          This interview invitation is no longer valid. Please ask the hiring
+          team for a new invitation.
+        </p>
+        <Button onClick={() => window.location.reload()}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (candidateError === "unavailable") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Unable to load your interview</h2>
+        <p className="text-sm text-muted-foreground">
+          We couldn't connect to the interview service. Please check your
+          connection and try again.
+        </p>
+        <Button onClick={loadCandidateInfo}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
