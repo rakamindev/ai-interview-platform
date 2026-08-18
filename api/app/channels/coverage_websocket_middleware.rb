@@ -27,6 +27,7 @@ class CoverageWebSocketMiddleware
     ws = Faye::WebSocket.new(env, nil, ping: 30)
 
     redis_sub = nil  # track subscription Redis instance for cleanup
+    auth_timeout = nil  # track auth timeout thread
 
     ws.on :open do |_event|
       # Try header-based auth first (assessor dashboard with JWT in header).
@@ -34,8 +35,17 @@ class CoverageWebSocketMiddleware
       # message — this matches the pattern used by the audio WS for browser clients
       # that can't set WebSocket headers.
       session, error = authenticate_assessor(env, session_id)
-      next if error  # wait for auth message
 
+      if error
+        # Close unauthenticated sockets on a timeout rather than leaving them open
+        auth_timeout = Thread.new do
+          sleep 10
+          ws.close(4401, 'Authentication timeout') unless redis_sub
+        end
+        next  # wait for auth message
+      end
+
+      auth_timeout&.kill
       send_current_state(ws, session)
       redis_sub = subscribe_to_coverage_updates(ws, session_id)
     end
@@ -48,6 +58,8 @@ class CoverageWebSocketMiddleware
 
       # Already authenticated via header — ignore
       next if redis_sub
+
+      auth_timeout&.kill
 
       token   = message['token'].to_s
       session, error = authenticate_assessor_by_token(token, session_id)
@@ -125,6 +137,12 @@ class CoverageWebSocketMiddleware
   def authenticate_assessor_by_token(token, session_id)
     payload = JsonWebToken.decode(token)
 
+    # AC-4.9: reject non-assessor roles on the WebSocket
+    result = AuthorizeApiRequest.new(
+      { 'Authorization' => "Bearer #{token}" },
+      %w[admin assessor]
+    ).call
+
     org = Organization.find_by(scheme: payload[:scheme])
     return [nil, 'Invalid tenant'] unless org
 
@@ -132,6 +150,8 @@ class CoverageWebSocketMiddleware
     return [nil, 'Session not found'] unless session
 
     [session, nil]
+  rescue ExceptionHandler::Unauthorized
+    [nil, 'Unauthorized: assessor role required']
   rescue => e
     [nil, "Authentication failed: #{e.message}"]
   end

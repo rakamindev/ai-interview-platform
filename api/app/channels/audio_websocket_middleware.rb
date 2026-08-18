@@ -743,6 +743,13 @@ class AudioWebSocketMiddleware
         return [nil, 'Missing authorization'] unless auth_header.present?
 
         token = auth_header.split(' ').last
+
+        # AC-4.9: enforce role on the assessor path
+        result = AuthorizeApiRequest.new(
+          { 'Authorization' => "Bearer #{token}" },
+          %w[admin assessor]
+        ).call
+
         payload = JsonWebToken.decode(token)
         tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
         return [nil, 'Invalid tenant'] unless tenant_id
