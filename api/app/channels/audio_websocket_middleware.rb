@@ -102,9 +102,9 @@ class AudioWebSocketMiddleware
   def connect_to_gemini(browser_ws, state)
     session = state.session
 
-    ensure_system_prompt(session)
+    state.compiled_system_prompt = compile_session_system_prompt(session)
 
-    unless session.assessment.system_prompt.present?
+    unless state.compiled_system_prompt.present?
       send_json(browser_ws, type: 'error', code: 'no_system_prompt',
                             message: 'Assessment configuration is incomplete.', recoverable: false)
       browser_ws.close
@@ -124,12 +124,28 @@ class AudioWebSocketMiddleware
     state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
   end
 
-  def ensure_system_prompt(session)
-    return if session.assessment.system_prompt.present?
-
-    Rails.logger.warn("[AudioWS] system_prompt missing for assessment #{session.assessment.id} — regenerating")
-    Assessments::SystemPromptCompiler.new(session.assessment).call.tap do |prompt|
-      session.assessment.update_column(:system_prompt, prompt)
+  # Compiled fresh per session from the assessment_version stamped at invite time
+  # (Sessions::Creator) — never from assessment.system_prompt, which is a single
+  # cache column shared by every session for that assessment and kept live-updated
+  # by SystemPromptGeneratorWorker (see assessments_controller.rb, for the
+  # recruiter-facing prompt preview only). Sharing that cache here was the actual
+  # mechanism behind F1: editing an assessment after inviting a candidate would
+  # silently change what every not-yet-connected session for it got interviewed on.
+  # Compilation is pure string interpolation — no LLM call — so recomputing it on
+  # every connect costs nothing worth caching.
+  def compile_session_system_prompt(session)
+    if session.assessment_version
+      Assessments::SystemPromptCompiler.new(
+        language: session.assessment_version.language,
+        skills:   session.assessment_version.skills_snapshot
+      ).call
+    else
+      # Legacy session created before Phase 2's version backfill — fall back to the
+      # assessment's live current state rather than failing to connect.
+      Assessments::SystemPromptCompiler.new(
+        language: session.assessment.language,
+        skills:   session.assessment.assessment_skills.order(:display_order)
+      ).call
     end
   end
 
@@ -137,7 +153,7 @@ class AudioWebSocketMiddleware
     session = state.session
 
     state.gemini_client = Gemini::LiveClient.new(
-      system_prompt: session.assessment.system_prompt,
+      system_prompt: state.compiled_system_prompt,
       on_audio: build_on_audio(browser_ws, state),
       on_input_transcription: build_on_input_transcription(browser_ws, state, session),
       on_output_transcription: build_on_output_transcription(browser_ws, state, session),
@@ -783,7 +799,7 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response, :compiled_system_prompt
 
     def initialize
       @turn_counter = 0

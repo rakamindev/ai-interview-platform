@@ -7,7 +7,10 @@ class SystemPromptGeneratorWorker
 
   def perform(assessment_id)
     assessment = Assessment.find(assessment_id)
-    prompt = Assessments::SystemPromptCompiler.new(assessment).call
+    prompt = Assessments::SystemPromptCompiler.new(
+      language: assessment.language,
+      skills:   assessment.assessment_skills.order(:display_order)
+    ).call
     assessment.update!(system_prompt: prompt)
     Rails.logger.info("[N2] System prompt generated for assessment #{assessment_id}")
   rescue ActiveRecord::RecordNotFound

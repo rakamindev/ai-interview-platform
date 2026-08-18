@@ -28,7 +28,7 @@ class Assessment < ApplicationRecord
       name: name,
       time_limit_min: time_limit_min,
       language: language,
-      skills_snapshot: assessment_skills.reload.map do |skill|
+      skills_snapshot: assessment_skills.reload.sort_by(&:display_order).map do |skill|
         {
           skill_id: skill.skill_id,
           skill_label: skill.skill_label,

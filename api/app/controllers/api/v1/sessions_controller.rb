@@ -22,13 +22,14 @@ module Api
       def create
         assessment = Assessment.find(params[:assessment_id])
 
-        session = assessment.sessions.new(
+        session = Sessions::Creator.new(
+          assessment:     assessment,
+          tenant_id:      current_tenant_id,
           candidate_id:   params.dig(:session, :candidate_id),
-          candidate_name: params.dig(:session, :candidate_name).presence,
-          tenant_id:      current_tenant_id
-        )
+          candidate_name: params.dig(:session, :candidate_name).presence
+        ).call
 
-        if session.save
+        if session.persisted?
           json_response(
             {
               session:    session_json(session),
