@@ -16,23 +16,34 @@ module Portfolios
     # Returns the Portfolio record with skills populated.
     def call
       portfolio = @session.portfolio || @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
+        candidate_id: @session.candidate_id,
         generation_status: 'pending'
       )
-
+    
       portfolio.update!(generation_status: 'generating')
-
+    
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
-
+    
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
-
+    
+      portfolio.update!(
+        generation_status: 'complete',
+        generated_at: Time.current
+      )
+    
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      portfolio&.reload
+      portfolio&.update!(
+        generation_status: 'failed',
+        generation_error: e.message
+      )
+    
+      Rails.logger.error(
+        "[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}"
+      )
       raise
     end
 
@@ -149,33 +160,48 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+    
+      new_skills = build_portfolio_skills(portfolio, data)
+    
+      # Validate everything before touching existing skills.
+      new_skills.each(&:validate!)
+      
+      PortfolioSkill.transaction do
+        portfolio.portfolio_skills.destroy_all
+        new_skills.each(&:save!)
+      end
+    end
+    
+    def build_portfolio_skills(portfolio, data)
+      configured = (data['configured_skills'] || []).map do |skill_data|
+        build_portfolio_skill(
+          portfolio,
+          skill_data,
+          is_discovered: false
         )
       end
-
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+    
+      discovered = (data['discovered_skills'] || []).map do |skill_data|
+        build_portfolio_skill(
+          portfolio,
+          skill_data,
+          is_discovered: true
         )
       end
+    
+      configured + discovered
+    end
+    
+    def build_portfolio_skill(portfolio, skill_data, is_discovered:)
+      portfolio.portfolio_skills.build(
+        skill_id: skill_data['skill_id'],
+        skill_label: skill_data['skill_label'],
+        is_discovered: is_discovered,
+        ai_level: skill_data['level'].to_i.clamp(1, 5),
+        ai_confidence: skill_data['confidence'],
+        evidence: Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary']
+      )
     end
   end
 end
