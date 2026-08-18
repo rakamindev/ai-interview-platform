@@ -6,9 +6,9 @@ module Portfolios
     PARTIAL_COVERAGE = %w[initiated partial].freeze
 
     SkillView = Struct.new(
-      :skill_id, :skill_label, :state, :effective_level, :ai_level, :ai_confidence,
-      :coverage_state, :probe_count, :evidence, :competency_summary, :expected_level,
-      :is_discovered, :override,
+      :portfolio_skill_id, :skill_id, :skill_label, :state, :effective_level, :ai_level,
+      :ai_confidence, :coverage_state, :probe_count, :evidence, :competency_summary,
+      :expected_level, :is_discovered, :override,
       keyword_init: true
     )
 
@@ -101,6 +101,7 @@ module Portfolios
       state = derive_state(coverage: coverage, ps: ps, discovered: discovered)
 
       SkillView.new(
+        portfolio_skill_id: ps&.id,
         skill_id:           skill_id,
         skill_label:        skill_label,
         state:              state,
