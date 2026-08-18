@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, RefreshCw, Loader2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -24,18 +25,35 @@ function SessionRow({
   assessmentId,
   onCopy,
   copiedId,
+  onSessionUpdated,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
   copiedId: number | null;
+  onSessionUpdated?: (updatedSession: Session) => void;
 }) {
   const navigate = useNavigate();
+  const [reinviting, setReinviting] = useState(false);
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
-  const isPending = session.status === "pending";
+  const isExpired = session.status === "expired" || (session.status === "pending" && !!session.expires_at && new Date(session.expires_at) <= new Date());
+  const isPending = session.status === "pending" && !isExpired;
   const displayName = session.candidate_name || `Candidate ${index}`;
+
+  const handleReinvite = async () => {
+    setReinviting(true);
+    try {
+      const res = await sessionsApi.regenerateLink(session.id);
+      onSessionUpdated?.(res.data.session);
+      onCopy(session.id);
+    } catch (err) {
+      console.error("Failed to reinvite:", err);
+    } finally {
+      setReinviting(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-between py-3 px-4">
@@ -58,6 +76,12 @@ function SessionRow({
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
+          </span>
+        )}
+        {isExpired && (
+          <span className="flex items-center gap-1 text-xs text-destructive font-medium">
+            <Clock className="w-3.5 h-3.5" />
+            Expired
           </span>
         )}
         {isLive && (
@@ -92,6 +116,22 @@ function SessionRow({
               ) : (
                 <><Copy className="h-3 w-3 mr-1" /> Copy link</>
               )}
+            </Button>
+          )}
+          {isExpired && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleReinvite}
+              disabled={reinviting}
+            >
+              {reinviting ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              Re-invite
             </Button>
           )}
           {isLive && (
@@ -313,6 +353,11 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onSessionUpdated={(updatedSession) => {
+                    setSessions((prev) =>
+                      prev.map((s) => (s.id === updatedSession.id ? updatedSession : s))
+                    );
+                  }}
                 />
               ))}
             </CardContent>
