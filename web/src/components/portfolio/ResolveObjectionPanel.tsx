@@ -131,10 +131,10 @@ export default function ResolveObjectionPanel({
 
       {/* Resolve Modal */}
       <Dialog open={activeModal === "resolve"} onOpenChange={(open) => !open && handleCloseModal()}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md sm:max-w-[450px] p-5 sm:p-6 overflow-hidden rounded-xl">
           <DialogHeader>
-            <DialogTitle>Mark as Resolved</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Mark as Resolved</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Confirm that you have reviewed the objection and made any necessary manual overrides.
             </DialogDescription>
           </DialogHeader>
@@ -143,7 +143,7 @@ export default function ResolveObjectionPanel({
               placeholder="Resolution Notes (e.g. 'Overrides applied based on partial answers')"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="col-span-4"
+              className="w-full text-sm resize-none"
               rows={3}
               disabled={resolveState === "submitting" || resolveState === "success"}
             />
@@ -154,16 +154,17 @@ export default function ResolveObjectionPanel({
               </p>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={handleCloseModal}
               disabled={resolveState === "submitting"}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
               onClick={onConfirmResolve}
               disabled={!notes.trim() || resolveState === "submitting" || resolveState === "success"}
             >
@@ -176,27 +177,42 @@ export default function ResolveObjectionPanel({
 
       {/* Retake Modal */}
       <Dialog open={activeModal === "retake"} onOpenChange={(open) => !open && handleCloseModal()}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md sm:max-w-[450px] p-5 sm:p-6 overflow-hidden rounded-xl">
           <DialogHeader>
-            <DialogTitle>Approve Retake</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Approve Retake</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               This will mark the current session as void and generate a new interview link for the candidate.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 min-w-0">
             {errorMsg && <p className="text-sm text-destructive mb-4">{errorMsg}</p>}
             
             {retakeState === "success" && newInviteUrl ? (
-              <div className="space-y-3">
-                <p className="text-sm text-emerald-600 font-medium">
-                  New session generated successfully!
+              <div className="space-y-3 min-w-0">
+                <p className="text-sm text-emerald-600 font-medium flex items-center gap-1.5">
+                  <Check className="w-4 h-4 shrink-0" /> New session generated successfully!
                 </p>
-                <div className="p-3 bg-slate-50 border rounded-md flex items-center gap-2">
-                  <span className="text-xs font-mono text-slate-600 truncate flex-1">
+                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 min-w-0 w-full overflow-hidden">
+                  <span className="text-xs font-mono text-slate-700 truncate min-w-0 flex-1 select-all bg-white sm:bg-transparent p-2 sm:p-0 rounded border sm:border-0 border-slate-200/60 break-all sm:break-normal">
                     {newInviteUrl}
                   </span>
-                  <Button size="icon" variant="ghost" onClick={handleCopyLink} className="h-8 w-8 shrink-0">
-                    {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                  <Button 
+                    size="sm" 
+                    variant={copied ? "default" : "outline"} 
+                    onClick={handleCopyLink} 
+                    className={`h-8 px-3 shrink-0 text-xs font-medium transition-all w-full sm:w-auto shadow-none ${
+                      copied ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "border-slate-200 bg-white hover:bg-slate-50"
+                    }`}
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 mr-1.5" /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Copy Link
+                      </>
+                    )}
                   </Button>
                 </div>
                 <p className="text-xs text-slate-500">
@@ -204,25 +220,26 @@ export default function ResolveObjectionPanel({
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-slate-700 leading-relaxed">
                 Are you sure you want to approve a retake? The AI data for this current session will be kept for auditing but the status will be changed to "retake_approved".
               </p>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
             {retakeState === "success" ? (
-              <Button onClick={handleCloseModal}>Close</Button>
+              <Button onClick={handleCloseModal} className="w-full sm:w-auto">Close</Button>
             ) : (
               <>
                 <Button
                   variant="outline"
                   onClick={handleCloseModal}
                   disabled={retakeState === "submitting"}
+                  className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  className="bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto shadow-none"
                   onClick={onConfirmRetake}
                   disabled={retakeState === "submitting"}
                 >
