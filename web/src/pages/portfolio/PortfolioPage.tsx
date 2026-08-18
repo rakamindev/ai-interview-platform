@@ -18,6 +18,7 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
@@ -29,9 +30,11 @@ export default function PortfolioPage() {
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
+      setFetchError(false);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
+      setFetchError(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -42,12 +45,17 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
+    setLoading(true);
+    setFetchError(false);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error(err);
+        setFetchError(true);
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -93,6 +101,15 @@ export default function PortfolioPage() {
       setExporting(null);
     }
   };
+
+  if (fetchError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4 text-center mt-12">
+        <p className="text-destructive font-medium">Failed to load portfolio.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">Retry</Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

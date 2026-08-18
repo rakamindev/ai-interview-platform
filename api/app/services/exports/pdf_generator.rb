@@ -36,8 +36,19 @@ module Exports
 
     private
 
+    def sanitize(text)
+      return '' unless text
+      text.to_s
+          .gsub('—', '-')
+          .gsub('–', '-')
+          .gsub('→', '->')
+          .gsub(/[“”]/, '"')
+          .gsub(/[‘’]/, "'")
+          .encode('Windows-1252', invalid: :replace, undef: :replace, replace: '?')
+    end
+
     def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
+      pdf.font_size(22) { pdf.text sanitize(@assessment.name), style: :bold }
       pdf.move_down 4
       pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
       pdf.move_down 4
@@ -79,7 +90,7 @@ module Exports
       effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text sanitize(skill.skill_label), style: :bold
 
         level_label = effective_level ? LEVEL_LABELS[effective_level] : 'Not Assessed'
         level_text = "Level: #{level_label}"
@@ -88,20 +99,20 @@ module Exports
           level_text += " (AI: #{ai_label} → Override: #{LEVEL_LABELS[override.override_level]})"
         end
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        pdf.text sanitize(level_text)
       end
 
       pdf.move_down 4
 
       if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
+        pdf.font_size(10) { pdf.text sanitize(skill.competency_summary) }
       end
 
       if skill.evidence.any?
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each { |quote| pdf.text sanitize("  • #{quote}") }
         end
       end
 
@@ -109,7 +120,7 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
+          pdf.text sanitize("  #{override.assessor_notes}")
         end
       end
 
@@ -120,7 +131,7 @@ module Exports
     def render_fit_gap_section(pdf)
       pdf.start_new_page
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      pdf.font_size(16) { pdf.text sanitize("Fit/Gap Analysis - #{@vacancy.role_title}"), style: :bold }
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
@@ -128,11 +139,11 @@ module Exports
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
         table_data << [
-          c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
+          sanitize(c['skill_label']),
+          c['expected_level'] ? "L#{c['expected_level']}" : '-',
+          c['candidate_level'] ? "L#{c['candidate_level']}" : '-',
           RESULT_LABELS[c['result']] || c['result'],
-          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
+          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '-'
         ]
       end
 
@@ -147,14 +158,14 @@ module Exports
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
+        pdf.font_size(10) { pdf.text sanitize(@fit_gap.culture_narrative) }
       end
 
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
         pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
+        pdf.font_size(10) { pdf.text sanitize(@fit_gap.overall_narrative) }
       end
     end
 
