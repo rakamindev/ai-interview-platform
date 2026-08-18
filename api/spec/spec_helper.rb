@@ -1,4 +1,4 @@
-require "rspec"
+require "rspec/core"
 
 RSpec.configure do |config|
   config.disable_monkey_patching!

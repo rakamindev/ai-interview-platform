@@ -91,12 +91,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_000001) do
     t.datetime "generated_at", default: -> { "now()" }
     t.string "generation_status", default: "pending", null: false
     t.text "generation_error"
-    t.datetime "generation_started_at", precision: 6
+    t.datetime "generation_started_at"
     t.string "generation_token", limit: 64
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
-    t.check_constraint "generation_status IN ('pending', 'generating', 'complete', 'failed')", name: "chk_fit_gap_reports_generation_status"
+    t.check_constraint "generation_status::text = ANY (ARRAY['pending'::character varying, 'generating'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_fit_gap_reports_generation_status"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -124,7 +124,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_000001) do
     t.string "rating_status", default: "rated", null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
-    t.check_constraint "rating_status IN ('rated', 'not_assessed')", name: "chk_portfolio_skills_rating_status"
+    t.check_constraint "rating_status::text = ANY (ARRAY['rated'::character varying, 'not_assessed'::character varying]::text[])", name: "chk_portfolio_skills_rating_status"
   end
 
   create_table "portfolios", force: :cascade do |t|

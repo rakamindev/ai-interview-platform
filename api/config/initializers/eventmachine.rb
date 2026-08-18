@@ -2,7 +2,7 @@
 
 # faye-websocket requires EventMachine to be running for its callbacks to fire.
 # Puma does not start EM automatically, so we start it in a background thread.
-unless EventMachine.reactor_running?
+unless ENV['PUMA_PRELOAD_APP'] == '1' || EventMachine.reactor_running?
   ready = Queue.new
 
   Thread.new do

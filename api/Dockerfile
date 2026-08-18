@@ -15,6 +15,7 @@ RUN bundle config set --local without 'development test' && \
     bundle install --deployment --frozen --jobs 4
 
 COPY . .
+RUN sed -i 's/\r$//' bin/*
 
 # ============================================================================
 
