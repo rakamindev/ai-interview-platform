@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: rakamin_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: rakamin_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      REDIS_URL: redis://localhost:6379/1
+      SECRET_KEY_BASE: ci-test-secret
+      GEMINI_STUB: "true"
+      GEMINI_LIVE_MODEL: stub
+      GEMINI_FLASH_MODEL: stub
+      GEMINI_PRO_MODEL: stub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.2"
+          bundler-cache: true
+          working-directory: api
+      - name: Prepare database
+        working-directory: api
+        run: bundle exec rails db:prepare
+      - name: Run RSpec
+        working-directory: api
+        run: bundle exec rspec --format documentation
+      - name: RuboCop
+        working-directory: api
+        run: bundle exec rubocop --parallel
+      - name: Migration round-trip
+        working-directory: api
+        run: |
+          bundle exec rails db:migrate:down VERSION=20260411000000
+          bundle exec rails db:migrate:up VERSION=20260411000000
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+      - name: Type check
+        working-directory: web
+        run: npx tsc --noEmit
+      - name: Vitest
+        working-directory: web
+        run: npm run test
+      - name: Build
+        working-directory: web
+        run: npm run build
