@@ -9,4 +9,12 @@ class AssessmentSkill < ApplicationRecord
   validates :expected_level, numericality: { only_integer: true,
                                               in: 1..5,
                                               allow_nil: true }
+
+  before_validation :set_tenant_id_from_assessment, on: :create
+
+  private
+
+  def set_tenant_id_from_assessment
+    self.tenant_id ||= assessment&.tenant_id
+  end
 end
