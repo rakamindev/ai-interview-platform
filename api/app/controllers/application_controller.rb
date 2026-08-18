@@ -75,7 +75,7 @@ class ApplicationController < ActionController::API
 
   def paginate(scope)
     page     = (query_params[:page] || 1).to_i
-    per_page = [(query_params[:per_page] || 20).to_i, 100].min
+    per_page = [(query_params[:per_page] || 10).to_i, 100].min
     scope.page(page).per(per_page)
   end
 end

@@ -9,14 +9,34 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        # assessments = paginate(
+        #   Assessment.includes(:sessions).order(created_at: :desc)
+        # )
 
-        json_response(
-          assessments: assessments.map(&method(:assessment_json)),
-          meta: pagination_meta(assessments)
-        )
+        # json_response(
+        #   assessments: assessments.map(&method(:assessment_json)),
+        #   meta: pagination_meta(assessments)
+        # )
+
+        scope = Assessment
+            .includes(:sessions)
+            .order(created_at: :desc)
+
+  if params[:q].present?
+    search = ActiveRecord::Base.sanitize_sql_like(params[:q].strip)
+
+    scope = scope.where(
+      "assessments.name ILIKE ?",
+      "%#{search}%"
+    )
+  end
+
+  assessments = paginate(scope)
+
+  json_response(
+    assessments: assessments.map(&method(:assessment_json)),
+    meta: pagination_meta(assessments)
+  )
       end
 
       # GET /api/v1/assessments/:id
@@ -49,9 +69,22 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
-      end
+  if @assessment.sessions.exists?
+    return json_error(
+      "Assessment cannot be deleted while it still has candidate sessions",
+      :unprocessable_entity
+    )
+  end
+
+  if @assessment.destroy
+    json_response(message: "Assessment deleted")
+  else
+    json_error(
+      @assessment.errors.full_messages.first || "Failed to delete assessment",
+      :unprocessable_entity
+    )
+  end
+end
 
       private
 

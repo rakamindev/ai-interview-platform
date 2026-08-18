@@ -9,12 +9,29 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        # vacancies = paginate(Vacancy.order(created_at: :desc))
 
-        json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
-          meta: pagination_meta(vacancies)
-        )
+        # json_response(
+        #   vacancies: vacancies.map(&method(:vacancy_json)),
+        #   meta: pagination_meta(vacancies)
+        # )
+        scope = Vacancy.order(created_at: :desc)
+
+  if params[:q].present?
+    search = ActiveRecord::Base.sanitize_sql_like(params[:q].strip)
+
+    scope = scope.where(
+      "vacancies.role_title ILIKE ?",
+      "%#{search}%"
+    )
+  end
+
+  vacancies = paginate(scope)
+
+  json_response(
+    vacancies: vacancies.map(&method(:vacancy_json)),
+    meta: pagination_meta(vacancies)
+  )
       end
 
       # GET /api/v1/vacancies/:id
@@ -45,9 +62,15 @@ module Api
 
       # DELETE /api/v1/vacancies/:id
       def destroy
-        @vacancy.destroy
-        json_response(message: "Vacancy deleted")
-      end
+  if @vacancy.destroy
+    json_response(message: "Vacancy deleted")
+  else
+    json_error(
+      @vacancy.errors.full_messages.first || "Failed to delete vacancy",
+      :unprocessable_entity
+    )
+  end
+end
 
       private
 

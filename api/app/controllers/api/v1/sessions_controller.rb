@@ -6,17 +6,47 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[
+  show
+  destroy
+  end_session
+  coverage
+  transcript
+]
 
       # GET /api/v1/assessments/:assessment_id/sessions
-      def index
-        assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+      # def index
+      #   assessment = Assessment.find(params[:assessment_id])
+      #   sessions = assessment.sessions.order(created_at: :desc)
 
-        json_response(sessions: sessions.map(&method(:session_json)))
-      rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
-      end
+      #   json_response(sessions: sessions.map(&method(:session_json)))
+      # rescue ActiveRecord::RecordNotFound
+      #   json_error("Assessment not found", :not_found)
+      # end
+
+      def index
+  assessment = Assessment.find(params[:assessment_id])
+
+  scope = assessment.sessions.order(created_at: :desc)
+
+  if params[:q].present?
+    search = ActiveRecord::Base.sanitize_sql_like(params[:q].strip)
+
+    scope = scope.where(
+      "sessions.candidate_name ILIKE ?",
+      "%#{search}%"
+    )
+  end
+
+  sessions = paginate(scope)
+
+  json_response(
+    sessions: sessions.map(&method(:session_json)),
+    meta: pagination_meta(sessions)
+  )
+rescue ActiveRecord::RecordNotFound
+  json_error("Assessment not found", :not_found)
+end
 
       # POST /api/v1/assessments/:assessment_id/sessions
       def create
@@ -55,6 +85,25 @@ module Api
           )
         )
       end
+
+      # DELETE /api/v1/sessions/:id
+def destroy
+  if @session.active?
+    return json_error(
+      "Active candidate session cannot be deleted",
+      :unprocessable_entity
+    )
+  end
+
+  if @session.destroy
+    json_response(message: "Candidate session deleted")
+  else
+    json_error(
+      @session.errors.full_messages.first || "Failed to delete candidate session",
+      :unprocessable_entity
+    )
+  end
+end
 
       # POST /api/v1/sessions/:id/end
       def end_session
@@ -191,6 +240,16 @@ module Api
           updated_at:    map.updated_at
         }
       end
+
+      def pagination_meta(collection)
+  {
+    current_page: collection.current_page,
+    total_pages:  collection.total_pages,
+    total_count:  collection.total_count,
+    per_page:     collection.limit_value
+  }
+end
+
     end
   end
 end

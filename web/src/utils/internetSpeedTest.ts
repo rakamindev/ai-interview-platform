@@ -84,25 +84,114 @@ async function measureDownloadSpeed(): Promise<number> {
 
 async function measureUploadSpeed(): Promise<number> {
     const uploadSizeMB = 0.5;
-    const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
-        type: "application/octet-stream",
-    });
+
+    const uploadData = new Blob(
+        [new ArrayBuffer(uploadSizeMB * 1024 * 1024)],
+        {
+            type: "application/octet-stream",
+        }
+    );
+
     const endpoints = SPEED_TEST_UPLOAD_URL
         ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        : [
+              "https://httpbin.org/post",
+              "https://www.httpbin.org/post",
+              "https://postman-echo.com/post",
+          ];
+
     for (const endpoint of endpoints) {
         try {
-            const formData = new FormData();
-            formData.append("test", uploadData);
-            const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
-            const seconds = (performance.now() - start) / 1000;
-            return uploadSizeMB / seconds;
+            const speed = await measureUploadWithXHR(
+                endpoint,
+                uploadData,
+                uploadSizeMB
+            );
+
+            if (speed > 0) {
+                return speed;
+            }
         } catch {
             continue;
         }
     }
-    return 0.5; // conservative fallback
+
+    return 0;
+}
+
+function measureUploadWithXHR(
+    endpoint: string,
+    data: Blob,
+    sizeMB: number
+): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        let startTime = 0;
+        let uploadCompleted = false;
+
+        xhr.open("POST", endpoint, true);
+
+        xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+        xhr.timeout = 15000;
+
+        xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) {
+                return;
+            }
+
+            if (event.loaded >= event.total && !uploadCompleted) {
+                uploadCompleted = true;
+
+                const seconds = (performance.now() - startTime) / 1000;
+
+                if (seconds <= 0) {
+                    reject(new Error("Invalid upload duration"));
+                    return;
+                }
+
+                const mbps = (sizeMB / seconds) * 8;
+
+                resolve(mbps);
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status < 200 || xhr.status >= 300) {
+                reject(new Error(`Upload failed with status ${xhr.status}`));
+                return;
+            }
+
+            // Some browsers may not emit the final upload progress event.
+            // In that case, use the completed request duration as fallback.
+            if (!uploadCompleted) {
+                const seconds = (performance.now() - startTime) / 1000;
+
+                if (seconds <= 0) {
+                    reject(new Error("Invalid upload duration"));
+                    return;
+                }
+
+                resolve((sizeMB / seconds) * 8);
+            }
+        };
+
+        xhr.onerror = () => {
+            reject(new Error("Network error"));
+        };
+
+        xhr.ontimeout = () => {
+            reject(new Error("Upload timeout"));
+        };
+
+        xhr.onabort = () => {
+            reject(new Error("Upload aborted"));
+        };
+
+        startTime = performance.now();
+        xhr.send(data);
+    });
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {

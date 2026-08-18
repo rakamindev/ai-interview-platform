@@ -354,7 +354,7 @@ export default function InterviewPage() {
           </AlertDialogContent>
         </AlertDialog>
         {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
+          <Button variant="outline" size="sm" className="text-xs" disabled={interviewState === "reconnecting"}
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
             ⚡ Force reconnect
           </Button>

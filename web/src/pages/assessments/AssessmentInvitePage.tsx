@@ -15,20 +15,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
-import type { Assessment, Session } from "@/types";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import type {
+  Assessment,
+  Session,
+  PaginationMeta,
+} from "@/types";
+import { sessionsApi } from "@/services/sessions";
 
 function SessionRow({
   session,
   index,
   assessmentId,
   onCopy,
+  onDelete,
   copiedId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onDelete: (session: Session) => void;
   copiedId: number | null;
 }) {
   const navigate = useNavigate();
@@ -114,6 +135,21 @@ function SessionRow({
               Results
             </Button>
           )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+            disabled={isLive}
+            title={
+              isLive
+                ? "Active candidate cannot be deleted"
+                : "Delete candidate"
+            }
+            onClick={() => onDelete(session)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </div>
@@ -133,43 +169,176 @@ export default function AssessmentInvitePage() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
-  const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
-  }, [id]);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState(false);
+
+  const [meta, setMeta] = useState<PaginationMeta>({
+    current_page: 1,
+    total_pages: 1,
+    total_count: 0,
+    per_page: 10,
+  });
+
+  const [sessionToDelete, setSessionToDelete] =
+    useState<Session | null>(null);
+
+  const [deletingSession, setDeletingSession] =
+    useState(false);
+
+  const [deleteError, setDeleteError] =
+    useState<string | null>(null);
+
+  const loadSessions = useCallback(
+    async (showLoading = false) => {
+      if (!id) return;
+
+      if (showLoading) {
+        setSessionsLoading(true);
+      }
+
+      setSessionsError(false);
+
+      try {
+        const res = await assessmentsApi.getSessions(
+          Number(id),
+          page,
+          debouncedSearch
+        );
+
+        setSessions(res.data.sessions);
+        setMeta(res.data.meta);
+      } catch {
+        setSessionsError(true);
+      } finally {
+        if (showLoading) {
+          setSessionsLoading(false);
+        }
+      }
+    },
+    [id, page, debouncedSearch]
+  );
+
+  const handleDeleteSession = async () => {
+    if (!sessionToDelete) return;
+
+    setDeletingSession(true);
+    setDeleteError(null);
+
+    try {
+      await sessionsApi.delete(sessionToDelete.id);
+
+      if (newSession?.id === sessionToDelete.id) {
+        setNewSession(null);
+      }
+
+      setSessionToDelete(null);
+
+      await loadSessions(true);
+    } catch (error: any) {
+      setDeleteError(
+        error?.response?.data?.error ??
+        error?.response?.data?.message ??
+        "Failed to delete candidate."
+      );
+    } finally {
+      setDeletingSession(false);
+    }
+  };
 
   useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    loadSessions(true);
+  }, [loadSessions]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    setLoading(true);
+
+    assessmentsApi
+      .get(Number(id))
+      .then((res) => {
+        setAssessment(res.data.assessment);
+      })
+      .catch(() => { })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [id]);
 
   // Poll while any session is live or pending
+  // useEffect(() => {
+  //   const hasActive = sessions.some((s) => s.status !== "ended");
+  //   if (!hasActive) return;
+  //   const interval = setInterval(loadSessions, 5000);
+  //   return () => clearInterval(interval);
+  // }, [sessions, loadSessions]);
+
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
-    if (!hasActive) return;
-    const interval = setInterval(loadSessions, 5000);
+    const interval = setInterval(() => {
+      loadSessions(false);
+    }, 5000);
+
     return () => clearInterval(interval);
-  }, [sessions, loadSessions]);
+  }, [loadSessions]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
     setShowInviteDialog(true);
   };
 
+  // const handleInviteCandidate = async () => {
+  //   setCreatingSession(true);
+  //   setShowInviteDialog(false);
+  //   setNewSession(null);
+  //   try {
+  //     const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
+  //     const created = res.data.session;
+  //     setNewSession(created);
+  //     setSessions((prev) => [created, ...prev]);
+  //   } finally {
+  //     setCreatingSession(false);
+  //   }
+  // };
+
   const handleInviteCandidate = async () => {
     setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
+
     try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
+      const res = await assessmentsApi.createSession(
+        Number(id),
+        candidateNameInput.trim() || undefined
+      );
+
       const created = res.data.session;
+
       setNewSession(created);
-      setSessions((prev) => [created, ...prev]);
+
+      setSearch("");
+      setDebouncedSearch("");
+      setPage(1);
+
+      const sessionsRes = await assessmentsApi.getSessions(
+        Number(id),
+        1,
+        ""
+      );
+
+      setSessions(sessionsRes.data.sessions);
+      setMeta(sessionsRes.data.meta);
     } finally {
       setCreatingSession(false);
     }
@@ -251,6 +420,69 @@ export default function AssessmentInvitePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete session dialog */}
+      <Dialog
+        open={!!sessionToDelete}
+        onOpenChange={(open) => {
+          if (!open && !deletingSession) {
+            setSessionToDelete(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete candidate?</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <p className="text-sm text-muted-foreground">
+              Candidate{" "}
+              <span className="font-medium text-foreground">
+                {sessionToDelete?.candidate_name || "Unnamed candidate"}
+              </span>{" "}
+              and the related interview session will be deleted.
+            </p>
+
+            <p className="text-xs text-muted-foreground">
+              This action cannot be undone.
+            </p>
+
+            {deleteError && (
+              <p className="text-sm text-destructive">
+                {deleteError}
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deletingSession}
+              onClick={() => {
+                setSessionToDelete(null);
+                setDeleteError(null);
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletingSession}
+              onClick={handleDeleteSession}
+            >
+              {deletingSession && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Newly created session invite link */}
       {newSession && (
         <Card className="border-primary/30 bg-primary/5">
@@ -279,44 +511,221 @@ export default function AssessmentInvitePage() {
       <Separator />
 
       {/* Sessions list */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">
             Candidates
-            {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
+            {meta.total_count > 0 && (
+              <span className="ml-1.5 text-muted-foreground font-normal">
+                ({meta.total_count})
+              </span>
             )}
           </h2>
         </div>
 
-        {sessions.length === 0 ? (
-          <div className="border rounded-lg p-10 text-center space-y-3">
-            <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
-            <div>
-              <p className="text-sm font-medium">No candidates yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click "Invite Candidate" to generate an interview link.
-              </p>
-            </div>
+        {/* Search candidate */}
+        <div className="relative">
+          <Search
+            className="
+        absolute left-3 top-1/2
+        -translate-y-1/2
+        h-4 w-4
+        text-muted-foreground
+      "
+          />
+
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search candidates..."
+            className="pl-9"
+          />
+        </div>
+
+        {/* Error */}
+        {sessionsError && (
+          <div
+            className="
+        border border-destructive/40
+        rounded-lg p-4
+        text-sm text-destructive
+      "
+          >
+            Failed to load candidates. Please try again.
           </div>
+        )}
+
+        {/* Loading initial/search/page */}
+        {sessionsLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton
+                key={i}
+                className="h-14 w-full"
+              />
+            ))}
+          </div>
+        ) : sessions.length === 0 ? (
+          /* Empty state */
+          debouncedSearch ? (
+            <div className="border rounded-lg p-10 text-center space-y-2">
+              <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
+
+              <div>
+                <p className="text-sm font-medium">
+                  No candidates found
+                </p>
+
+                <p className="text-xs text-muted-foreground mt-1">
+                  No candidates match "{debouncedSearch}".
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="border rounded-lg p-10 text-center space-y-3">
+              <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
+
+              <div>
+                <p className="text-sm font-medium">
+                  No candidates yet
+                </p>
+
+                <p className="text-xs text-muted-foreground mt-1">
+                  Click "Invite Candidate" to generate an interview link.
+                </p>
+              </div>
+            </div>
+          )
         ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
-              {sessions.map((session, i) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  index={sessions.length - i}
-                  assessmentId={id!}
-                  onCopy={(sid) => {
-                    const s = sessions.find((x) => x.id === sid);
-                    if (s) copyLink(s, sid);
-                  }}
-                  copiedId={copiedId}
-                />
-              ))}
-            </CardContent>
-          </Card>
+          <>
+            {/* Candidate rows */}
+            <Card>
+              <CardContent className="p-0 divide-y">
+                {sessions.map((session, i) => {
+                  const globalIndex =
+                    meta.total_count -
+                    (
+                      (meta.current_page - 1) *
+                      meta.per_page
+                    ) -
+                    i;
+
+                  return (
+                    <SessionRow
+                      key={session.id}
+                      session={session}
+                      index={globalIndex}
+                      assessmentId={id!}
+                      onCopy={(sid) => {
+                        const currentSession =
+                          sessions.find(
+                            (item) => item.id === sid
+                          );
+
+                        if (currentSession) {
+                          copyLink(
+                            currentSession,
+                            sid
+                          );
+                        }
+                      }}
+                      onDelete={(session) => {
+                        setDeleteError(null);
+                        setSessionToDelete(session);
+                      }}
+                      copiedId={copiedId}
+                    />
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Pagination information */}
+            {meta.total_count > 0 && (
+              <div
+                className="
+            flex flex-col
+            sm:flex-row
+            sm:items-center
+            justify-between
+            gap-3
+            pt-2
+          "
+              >
+                <p className="text-xs text-muted-foreground">
+                  Showing{" "}
+                  {(meta.current_page - 1) *
+                    meta.per_page +
+                    1}
+                  {"–"}
+                  {Math.min(
+                    meta.current_page *
+                    meta.per_page,
+                    meta.total_count
+                  )}{" "}
+                  of {meta.total_count}
+                </p>
+
+                {meta.total_pages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        page <= 1 ||
+                        sessionsLoading
+                      }
+                      onClick={() =>
+                        setPage((current) =>
+                          Math.max(
+                            1,
+                            current - 1
+                          )
+                        )
+                      }
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+
+                    <span
+                      className="
+                  text-xs
+                  text-muted-foreground
+                  px-2
+                "
+                    >
+                      Page {meta.current_page} of{" "}
+                      {meta.total_pages}
+                    </span>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        page >= meta.total_pages ||
+                        sessionsLoading
+                      }
+                      onClick={() =>
+                        setPage((current) =>
+                          Math.min(
+                            meta.total_pages,
+                            current + 1
+                          )
+                        )
+                      }
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -26,6 +26,9 @@ export const sessionsApi = {
   regeneratePortfolio: (id: number) =>
     api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),
 
+  delete: (id: number) =>
+    api.delete<{ message: string }>(`/sessions/${id}`),
+
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
 
