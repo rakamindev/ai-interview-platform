@@ -72,6 +72,15 @@ src/
 └── utils/              # Utility functions
 ```
 
+## Authentication in development
+
+A seeded demo user is available for local development:
+
+- **Email:** `dev@test-corp.local`
+- **Password:** `password`
+
+Log in through the UI — no environment variable or manual JWT required.
+
 ## Notes
 
 - The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
