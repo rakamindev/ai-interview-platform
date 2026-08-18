@@ -1,5 +1,25 @@
-import api from "./api";
+import api, { parseResponse } from "./api";
+import { PortfolioSchema, AssessorOverrideSchema } from "@/schemas/portfolio";
+import { FitGapReportSchema } from "@/schemas/fitgap";
 import type { Portfolio, AssessorOverride, FitGapReport } from "@/types";
+
+const EMPTY_PORTFOLIO: Portfolio = {
+  id: 0,
+  session_id: 0,
+  generation_status: "pending",
+  skills: [],
+  overrides: [],
+};
+
+const EMPTY_FITGAP: FitGapReport = {
+  id: 0,
+  portfolio_id: 0,
+  vacancy_id: 0,
+  skill_comparisons: [],
+  culture_narrative: "",
+  overall_narrative: "",
+  generated_at: "",
+};
 
 export const portfoliosApi = {
   getOverride: (portfolioSkillId: number, data: { override_level: number; assessor_notes: string }) =>
@@ -13,7 +33,10 @@ export const portfoliosApi = {
     }),
 
   getFitGap: (portfolioId: number, vacancyId: number) =>
-    api.get<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
+    api.get(`/portfolios/${portfolioId}/fitgap/${vacancyId}`).then((res) => ({
+      ...res,
+      data: { report: parseResponse((res.data as any)?.report, FitGapReportSchema, EMPTY_FITGAP) },
+    })),
 
   regenerateFitGap: (portfolioId: number, vacancyId: number) =>
     api.post<{ status: string; message: string }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {
