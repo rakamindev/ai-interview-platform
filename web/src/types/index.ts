@@ -85,13 +85,25 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export type ConfidenceLevel = "high" | "medium" | "low";
+
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  /** Taxonomy id such as "SK-ENG-001"; null for discovered skills. */
+  skill_id?: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /**
+   * 1-5, or null when the interview produced no assessable evidence.
+   *
+   * Previously typed `string` with a comment claiming "L1".."L5". The API
+   * serialises the integer column directly, so consumers that trusted the
+   * annotation rendered a bare "3" where they meant "L3". Nullable since
+   * migration 20260819000000 — an unassessed skill has no level, and the
+   * generator no longer invents one.
+   */
+  ai_level: number | null;
+  ai_confidence: ConfidenceLevel;
   evidence: string[];
   competency_summary: string;
 }
@@ -127,22 +139,45 @@ export interface VacancySkill {
 
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+/** Why a skill has no candidate level. */
+export type NotAssessedReason = "not_covered" | "insufficient_evidence";
+
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  /**
+   * The level the vacancy requires.
+   *
+   * This was previously declared as `required_level`, which the API has never
+   * emitted — the field is `expected_level`, matching the vacancy_skills
+   * column. Every row therefore rendered an empty Required cell. Renaming the
+   * client to match the server (rather than the reverse) also repairs every
+   * fit/gap report already persisted, since skill_comparisons is stored JSONB.
+   */
+  expected_level: number;
+  /** null when the skill was never assessed. */
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: ConfidenceLevel | null;
+  /** True when an assessor overrode the model's level. */
   is_override?: boolean;
+  /** The model's original level, retained when an override is applied. */
+  ai_level?: number | null;
+  not_assessed_reason?: NotAssessedReason | null;
 }
+
+/** 'fallback' means the AI narrative failed and this is a mechanical summary. */
+export type NarrativeStatus = "complete" | "fallback";
 
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  narrative_status?: NarrativeStatus;
   generated_at: string;
 }
 

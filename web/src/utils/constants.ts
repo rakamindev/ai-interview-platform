@@ -1,10 +1,20 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
+/**
+ * Parse "L3" → 3, passthrough number, `null` when there is no level.
+ *
+ * This used to fall back to 1 on anything unparseable — the same coercion the
+ * API performed with `.to_i.clamp(1, 5)`. Both ends independently turned "we
+ * don't know" into "L1 — cannot apply independently", so an unassessed skill
+ * appeared as a documented weakness no matter which layer you looked at.
+ * Unknown is now a value the UI has to handle, not one it can paper over.
+ */
+export function parseLevel(level: string | number | null | undefined): number | null {
+  if (level == null) return null;
+  if (typeof level === "number") return Number.isFinite(level) ? level : null;
+
   const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+  return Number.isNaN(n) ? null : n;
 }
 
 export const LEVEL_LABELS: Record<number, string> = {
