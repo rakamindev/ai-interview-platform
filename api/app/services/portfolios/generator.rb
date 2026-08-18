@@ -20,26 +20,43 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      # Duplicate-job guard: flip to 'generating' under an exclusive row lock so
+      # two workers (or a regenerate racing the original job) can't both run for
+      # the same portfolio and burn Gemini quota on the same transcript.
+      portfolio.with_lock do
+        return portfolio if portfolio.complete? || portfolio.generating?
+        portfolio.update!(generation_status: 'generating', generation_error: nil)
+      end
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
-      save_skills(portfolio, response)
-      # Never mark a portfolio complete without any assessed skills/evidence.
-      raise 'Portfolio rejected: generation returned zero skills — refusing to mark complete without evidence' if portfolio.portfolio_skills.empty?
-
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      persist_result(portfolio, response)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # Reload before marking failed: after a rolled-back savepoint, the in-memory
+      # record still holds child skills from the torn write; updating it directly
+      # re-persists those stale rows. A reloaded record reflects the DB truth.
+      portfolio&.reload&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
 
     private
+
+    # Saves skills and flips to 'complete' inside one transaction so a failure
+    # mid-way rolls back all partial skill rows instead of leaving a torn write.
+    def persist_result(portfolio, response)
+      ActiveRecord::Base.transaction do
+        save_skills(portfolio, response)
+        # Never mark a portfolio complete without any assessed skills/evidence.
+        raise 'Portfolio rejected: generation returned zero skills — refusing to mark complete without evidence' if portfolio.portfolio_skills.empty?
+
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      end
+    end
 
     def build_prompt
       assessment       = @session.assessment
