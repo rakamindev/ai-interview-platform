@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    Ascii85 (2.0.1)
     actioncable (7.0.10)
       actionpack (= 7.0.10)
       activesupport (= 7.0.10)
@@ -76,6 +77,7 @@ GEM
       tzinfo (~> 2.0)
     addressable (2.8.9)
       public_suffix (>= 2.0.2, < 8.0)
+    afm (1.0.0)
     ast (2.4.3)
     aws-eventstream (1.4.0)
     aws-partitions (1.1281.0)
@@ -154,6 +156,7 @@ GEM
     globalid (1.3.0)
       activesupport (>= 6.1)
     hashdiff (1.2.1)
+    hashery (2.1.2)
     i18n (1.14.8)
       concurrent-ruby (~> 1.0)
     io-console (0.8.2)
@@ -236,6 +239,11 @@ GEM
       ast (~> 2.4.1)
       racc
     pdf-core (0.9.0)
+    pdf-reader (2.16.0)
+      Ascii85 (>= 1.0, < 3.0, != 2.0.0)
+      afm (>= 0.2.1, < 2)
+      hashery (~> 2.0)
+      ttfunk
     pg (1.6.3)
     pg (1.6.3-aarch64-linux)
     pg (1.6.3-aarch64-linux-musl)
@@ -351,6 +359,7 @@ GEM
       lint_roller (~> 1.1)
       rubocop (~> 1.81)
     ruby-progressbar (1.13.0)
+    rubyzip (2.4.1)
     securerandom (0.4.1)
     sidekiq (7.3.10)
       base64
@@ -404,7 +413,10 @@ DEPENDENCIES
   jwt
   kaminari
   listen (~> 3.2)
+  marcel
   matrix
+  nokogiri
+  pdf-reader (~> 2.12)
   pg (~> 1.3)
   prawn (~> 2.4)
   prawn-table (~> 0.2)
@@ -419,6 +431,7 @@ DEPENDENCIES
   rubocop
   rubocop-rails
   rubocop-rspec
+  rubyzip (~> 2.3)
   sidekiq (~> 7.0)
   timecop
   webmock

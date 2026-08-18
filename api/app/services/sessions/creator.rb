@@ -7,7 +7,7 @@ module Sessions
   # Sessions::StartHandler and Assessments::SystemPromptCompiler, which read from
   # the stamped version instead of the live assessment).
   #
-  # Shared by SessionsController#create and, later, CvScreening::Inviter — one
+  # Shared by SessionsController#create and, later, CvScreenings::Inviter — one
   # invite path instead of duplicating this logic.
   class Creator
     def initialize(assessment:, tenant_id:, candidate_id: nil, candidate_name: nil)

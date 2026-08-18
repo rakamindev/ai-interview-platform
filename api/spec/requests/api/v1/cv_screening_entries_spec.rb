@@ -44,6 +44,12 @@ RSpec.describe 'CV Screening Entries API', type: :request do
 
     it 'rejects the candidate' do
       entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review')
+      # The controller constructs its own Gemini::HttpClient (no request-level DI
+      # seam) to generate CvScreenings::FeedbackGenerator's rejection copy —
+      # allow_any_instance_of is the pragmatic stub here, unlike unit specs on the
+      # service itself, which inject a double via gemini_client:.
+      allow_any_instance_of(Gemini::HttpClient).to receive(:generate_content)
+        .and_return({ 'feedback' => 'Thanks for applying.' })
 
       post "/api/v1/cv_screening_entries/#{entry.id}/review", params: { action: 'reject' }, headers: headers
 

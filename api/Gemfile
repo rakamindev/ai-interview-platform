@@ -46,6 +46,12 @@ gem 'listen', '~> 3.2'
 # File storage (ActiveStorage on Cloudflare R2, S3-compatible)
 gem 'aws-sdk-s3', require: false
 
+# CV text extraction (pure Ruby, no native deps)
+gem 'marcel'   # magic-byte content-type sniffing — was only a transitive dep
+gem 'nokogiri' # DOCX XML parsing — was only a transitive dep
+gem 'pdf-reader', '~> 2.12'
+gem 'rubyzip', '~> 2.3', require: 'zip' # pin 2.x — 3.0 changed the API
+
 group :development, :test do
   gem 'byebug', platforms: %i[mri mingw x64_mingw]
   gem 'factory_bot_rails'

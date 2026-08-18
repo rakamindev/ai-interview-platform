@@ -23,12 +23,9 @@ module Api
         entries = files.map do |file|
           entry = batch.cv_screening_entries.create!
           entry.cv_file.attach(file)
+          CvScreeningProcessEntryWorker.perform_async(entry.id)
           entry
         end
-
-        # Phase 6 hooks in here: CvScreeningProcessEntryWorker.perform_async(entry.id)
-        # per entry, once that worker exists. Entries are created with the DB default
-        # decision: 'pending' and just sit there until then.
 
         json_response(
           {

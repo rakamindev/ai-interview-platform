@@ -26,13 +26,18 @@ module Api
       def review
         case request_body[:action]
         when 'invite'
-          # Phase 4's Sessions::Creator / Phase 6's CvScreening::Inviter hook in here
-          # once that shared invite path is wired up for the manual-review case too.
+          # No detected_email is fine — Session#candidate_name / SessionRow already
+          # render a nameless auto-invited session safely (see Phase 8 in the plan
+          # doc), so a recruiter can still manually invite without one.
+          CvScreenings::Inviter.new(entry: @entry).call
           @entry.update!(decision: 'invited', decision_reason: 'recruiter_invited')
         when 'reject'
-          # Phase 7's CvScreening::FeedbackGenerator hooks in here to actually send
-          # the candidate feedback email.
-          @entry.update!(decision: 'not_advanced', decision_reason: 'recruiter_rejected')
+          feedback = CvScreenings::FeedbackGenerator.new(
+            public_requirement_text: @entry.cv_screening_batch.vacancy_version&.public_requirement_text ||
+                                      @entry.cv_screening_batch.vacancy.public_requirement_text
+          ).call
+          @entry.update!(decision: 'not_advanced', decision_reason: 'recruiter_rejected', feedback_text: feedback)
+          # Phase 7's mailer hooks in here to actually send @entry.feedback_text.
         else
           return json_error("action must be 'invite' or 'reject'", :unprocessable_entity)
         end

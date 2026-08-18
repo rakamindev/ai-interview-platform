@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_18_100003) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_200001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -146,6 +146,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_100003) do
     t.string "decision_reason", limit: 50
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "feedback_text"
     t.index ["cv_screening_batch_id"], name: "index_cv_screening_entries_on_cv_screening_batch_id"
     t.index ["detected_email"], name: "index_cv_screening_entries_on_detected_email"
     t.index ["tenant_id"], name: "index_cv_screening_entries_on_tenant_id"
