@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight as ChevronNext, Loader2, Search, UserPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Search, UserPlus } from "lucide-react";
 import type { PaginationMeta } from "@/types";
 
 export default function UsersPage() {
@@ -209,7 +209,7 @@ export default function UsersPage() {
               disabled={page >= meta.total_pages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next <ChevronNext className="h-3.5 w-3.5 ml-1" />
+              Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           </div>
         </div>

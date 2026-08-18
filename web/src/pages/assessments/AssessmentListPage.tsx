@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight, Search, LayoutGrid, List, ChevronLeft, ChevronRight as ChevronNext } from "lucide-react";
+import { Plus, Clock, ChevronRight, Search, LayoutGrid, List, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Assessment, PaginationMeta } from "@/types";
 
@@ -260,7 +260,7 @@ export default function AssessmentListPage() {
               disabled={page >= meta.total_pages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next <ChevronNext className="h-3.5 w-3.5 ml-1" />
+              Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           </div>
         </div>
