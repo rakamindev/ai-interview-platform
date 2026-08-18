@@ -23,6 +23,21 @@ Dokumen ini mencatat apa yang benar-benar dialami selama eksekusi — bukan retr
 | 4 | Filter parameter sensitif/PII dari log (UU PDP) | `api/config/initializers/filter_parameter_logging.rb` | `2f5068d` |
 | 5 | UI portfolio 4 status (ready/generating/failed/unverifiable) + manual override | `web/src/pages/portfolio/PortfolioPage.tsx` dkk. | `9bf5d60` |
 | 6 | Dokumen ini | `docs/execution.md` | — |
+| 7 | Migrasi enum + seeded-fault test `EndHandler` (menemukan bug enum PG) | `db/migrate/20260819000001_*`, `spec/services/sessions/end_handler_spec.rb` | *commit terakhir* |
+
+### 2.7 Penemuan bug oleh seeded-fault test
+
+Pengujian *seeded fault* (mengalirkan transkrip rusak `응水 水응…` ke `Sessions::EndHandler`)
+tidak lolos pada percobaan pertama dan justru menangkap cacat produksi:
+
+- `PG::InvalidTextRepresentation: invalid input value for enum generation_status: "unverifiable"`.
+- Penyebab: kolom `generation_status` adalah **PostgreSQL enum**, bukan string — nilai `unverifiable`
+  belum ada di tipe enum, sehingga seluruh path penjaga integritas akan **crash saat write**.
+- Perbaikan: migrasi `ALTER TYPE generation_status ADD VALUE ... 'unverifiable'` (`disable_ddl_transaction!`
+  karena PG tidak boleh `ADD VALUE` dalam transaksi). Migrasi ini irreversibel oleh desain (PG tidak
+  mendukung `DROP VALUE`).
+- Ini contoh konkret mengapa *seeded fault test* diwajibkan: bug hanya muncul ketika fault benar-benar
+  dialirkan melalui jalur produksi, bukan unit test.
 
 ### 2.1 Momen verifikasi AI (transcript integrity guard)
 
@@ -75,9 +90,10 @@ diwawancarai ulang.
 
 ## 3. Verifikasi
 
-- `bundle exec rspec` → **14 examples, 0 failures** (spec pertama yang ada di repositori):
+- `bundle exec rspec` → **16 examples, 0 failures** (spec pertama yang ada di repositori):
   - `spec/services/transcript_integrity_spec.rb` — guard + alasan berbahasa Indonesia
   - `spec/models/portfolio_spec.rb` — status `unverifiable`
+  - `spec/services/sessions/end_handler_spec.rb` — **seeded fault test**: transkrip rusak → `unverifiable` + skip enqueue; transkrip sehat → `pending` + enqueue
   - `spec/clients/gemini/http_client_spec.rb` — 429 tanpa retry / 400 langsung / 200 ter-parse
   - `spec/services/exports/pdf_generator_spec.rb` — PDF dengan karakter non-WinAnsi
   - `spec/services/portfolios/generator_spec.rb` — 0 skill → `failed`; skill valid → `complete`
@@ -90,7 +106,8 @@ diwawancarai ulang.
 - Manual override tetap menjalankan generasi dari transkrip yang sama — risiko hasil tidak bermakna ditanggung
   asseor yang menekan konfirmasi; ini disengaja sebagai jalan keluar manusia.
 - Tidak dilakukan penjadwalan ulang percakapan (retake) karena tidak mungkin secara praktik.
-- Migrasi DB tidak diperlukan untuk status `unverifiable` (disimpan sebagai string, kompatibel dengan data lama).
+- Migrasi enum `unverifiable` **dibutuhkan** dan sudah diterapkan (lihat §2.7). Sebelumnya diasumsikan tidak
+  perlu migrasi — klaim itu salah dan dipatahkan oleh seeded-fault test.
 
 ## 5. Cara menjalankan ulang
 

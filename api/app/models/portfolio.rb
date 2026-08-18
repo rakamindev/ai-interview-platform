@@ -9,11 +9,13 @@ class Portfolio < ApplicationRecord
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
+  scope :pending,     -> { where(generation_status: 'pending') }
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
   scope :unverifiable, -> { where(generation_status: 'unverifiable') }
 
+  def pending?     = generation_status == 'pending'
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
