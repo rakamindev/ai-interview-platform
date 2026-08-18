@@ -44,6 +44,8 @@ module Api
       end
 
       # DELETE /api/v1/vacancies/:id
+      # Vacancy depends on :destroy (not :restrict_with_error) for all associations,
+      # so destroy always succeeds. No return-value guard needed.
       def destroy
         @vacancy.destroy
         json_response(message: "Vacancy deleted")
