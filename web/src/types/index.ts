@@ -16,7 +16,7 @@ export interface Assessment {
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -87,7 +87,7 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
   expected_level?: number;
@@ -120,7 +120,7 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
