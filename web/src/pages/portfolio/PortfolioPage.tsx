@@ -9,10 +9,11 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Mail } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
+
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
@@ -23,6 +24,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [candidateEmail, setCandidateEmail] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -34,8 +36,10 @@ export default function PortfolioPage() {
       setGenerating(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
-        overrideMap[o.portfolio_skill_id] = o;
+      data.portfolio.skills.forEach((s: PortfolioSkill) => {
+        if (s.assessor_override) {
+          overrideMap[s.skill_id] = s.assessor_override;
+        }
       });
       setOverrides(overrideMap);
     }
@@ -46,6 +50,7 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setCandidateEmail(sRes.data.session.candidate_email ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -96,7 +101,7 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="w-full space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -105,7 +110,8 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -114,9 +120,17 @@ export default function PortfolioPage() {
           </Link>
           <div>
             <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+              {candidateName && <span className="font-medium text-foreground">{candidateName}</span>}
+              {candidateName && candidateEmail && <span>·</span>}
+              {candidateEmail && (
+                <span className="flex items-center gap-1 font-mono text-slate-500 dark:text-slate-400">
+                  <Mail className="h-3 w-3 text-slate-400" />
+                  {candidateEmail}
+                </span>
+              )}
+            </div>
+
           </div>
         </div>
 

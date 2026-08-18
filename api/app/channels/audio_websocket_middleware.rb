@@ -102,7 +102,19 @@ class AudioWebSocketMiddleware
   def connect_to_gemini(browser_ws, state)
     session = state.session
 
+    api_key = ENV['GEMINI_API_KEY']
+    if api_key.blank? || api_key == 'your_gemini_api_key'
+      Rails.logger.error("[AudioWS] Gemini API Key is missing or set to default placeholder 'your_gemini_api_key'")
+      send_json(browser_ws, type: 'error', code: 'invalid_api_key',
+                            message: 'Gemini API key is not configured in api/config/application.yml', recoverable: false)
+      browser_ws.close
+      return
+    end
+
+
+
     ensure_system_prompt(session)
+
 
     unless session.assessment.system_prompt.present?
       send_json(browser_ws, type: 'error', code: 'no_system_prompt',
@@ -507,8 +519,10 @@ class AudioWebSocketMiddleware
           next if state.session.reload.ended?
 
           Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
+          reason = state.session.transcript_turns.exists? ? 'manual_candidate' : 'error'
+          Sessions::EndHandler.new(state.session).call(reason: reason)
           EM.schedule { state.gemini_client&.close }
+
         end
       rescue StandardError => e
         Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")

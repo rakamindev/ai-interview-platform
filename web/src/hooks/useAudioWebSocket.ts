@@ -103,8 +103,12 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                onStateChange("complete");
+              }
               break;
+
           }
         } catch {
           // Non-JSON text frame — ignore

@@ -22,6 +22,7 @@ module Sessions
       end
 
       reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
+      reason = 'manual_candidate' if reason.to_s == 'error' && @session.transcript_turns.exists?
 
       ActiveRecord::Base.transaction do
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
@@ -32,6 +33,7 @@ module Sessions
           ended_at:         Time.current,
           duration_seconds: duration
         )
+
 
         create_portfolio
       end

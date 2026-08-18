@@ -77,6 +77,23 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Users ─────────────────────────────────────────────────────────────────────
+
+admin_user = User.find_or_initialize_by(email: "admin@testcorp.com")
+admin_user.update!(
+  password: "password123",
+  role: "admin"
+)
+puts "  Seeded Admin User: email=admin@testcorp.com password=password123"
+
+candidate_user = User.find_or_initialize_by(email: "candidate@testcorp.com")
+candidate_user.update!(
+  password: "password123",
+  role: "user"
+)
+puts "  Seeded Candidate User: email=candidate@testcorp.com password=password123"
+
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [

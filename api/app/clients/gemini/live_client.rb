@@ -7,7 +7,8 @@ require 'base64'
 module Gemini
   # Manages a persistent WebSocket connection to Gemini Live API.
   class LiveClient
-    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
+    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent'
+
 
     INACTIVITY_TIMEOUT = 30 # reconnect if Gemini produces no meaningful response
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop

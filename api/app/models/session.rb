@@ -14,8 +14,11 @@ class Session < ApplicationRecord
   validates :invite_token, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
   validates :end_reason, inclusion: { in: END_REASONS }, allow_nil: true
+  validates :candidate_name, presence: true
+  validates :candidate_email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP, message: "is not a valid email address" }
 
   before_validation :generate_invite_token, on: :create
+
 
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
@@ -26,9 +29,10 @@ class Session < ApplicationRecord
   def pending? = status == 'pending'
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('APP_BASE_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
+
 
   private
 

@@ -33,11 +33,16 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
   return (
     <span
       className={cn(
-        "font-mono text-sm font-medium tabular-nums",
-        isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground"
+        "font-mono text-sm font-semibold tabular-nums px-2.5 py-1 rounded-full border shadow-2xs",
+        isUrgent
+          ? "bg-rose-500/20 text-rose-300 border-rose-500/30"
+          : isWarning
+          ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+          : "bg-slate-900 text-slate-200 border-slate-800"
       )}
     >
       ⏱ {formatTime(remaining)}
     </span>
   );
+
 }

@@ -34,7 +34,8 @@ export default function VoiceBars({ active, label, variant = "ai", className }: 
           />
         ))}
       </div>
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold text-slate-300">{label}</span>
     </div>
   );
 }
+

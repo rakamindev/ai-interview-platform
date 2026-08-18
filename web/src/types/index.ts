@@ -37,7 +37,9 @@ export interface Session {
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
+  candidate_email?: string;
   invite_token: string;
+
   invite_url: string;
   status: "pending" | "active" | "ended";
   end_reason?: string;

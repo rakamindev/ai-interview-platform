@@ -201,21 +201,21 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
 
     return (
-        <div className="rounded-lg border bg-card overflow-hidden">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/90 shadow-2xl overflow-hidden backdrop-blur-xl">
             {/* Camera preview */}
             {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
                 {videoStream ? (
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                        <svg className="w-10 h-10 opacity-30" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-2">
+                        <svg className="w-10 h-10 opacity-40" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                         </svg>
                         <p className="text-xs">Camera not active</p>
                     </div>
                 )}
                 {progress.camera === ProctoringState.PASSED && videoStream && (
-                    <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
+                    <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full font-medium shadow-xs">
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                         LIVE
                     </span>
@@ -223,16 +223,16 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             </div>}
 
             {/* Checklist */}
-            <div className="divide-y">
+            <div className="divide-y divide-slate-800/80">
                 {rows.map(({ key, label }) => (
-                    <div key={key} className="px-4 py-3">
+                    <div key={key} className="px-5 py-3.5 hover:bg-slate-800/30 transition-colors">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{label}</span>
+                            <span className="text-sm font-semibold text-slate-100">{label}</span>
                             <div className="flex items-center gap-2">
                                 <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
-                                    progress[key] === ProctoringState.ERROR ? "text-destructive" :
-                                        "text-muted-foreground"
+                                <span className={`text-xs font-semibold w-20 text-right ${progress[key] === ProctoringState.PASSED ? "text-emerald-400" :
+                                    progress[key] === ProctoringState.ERROR ? "text-rose-400" :
+                                        "text-slate-400"
                                     }`}>
                                     {stateLabel(progress[key])}
                                 </span>
@@ -241,14 +241,14 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                            <div className="mt-2 flex gap-3 text-xs font-mono font-medium">
+                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-emerald-400" : "text-rose-400"}>
                                     ↓ {internetResult.download} Mbps
                                 </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-emerald-400" : "text-rose-400"}>
                                     ↑ {internetResult.upload} Mbps
                                 </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-emerald-400" : "text-rose-400"}>
                                     {internetResult.ping} ms
                                 </span>
                             </div>
@@ -256,14 +256,14 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Mic level bar */}
                         {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
-                            <div className="mt-2 flex items-center gap-2">
-                                <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div className="mt-2.5 flex items-center gap-2">
+                                <div className="flex-1 bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
                                     <div
-                                        className="h-full bg-green-500 transition-all duration-150"
-                                        style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
+                                        className="h-full bg-emerald-400 transition-all duration-150 rounded-full"
+                                        style={{ width: `${Math.min(audioLevel * 2.5, 100)}%` }}
                                     />
                                 </div>
-                                <span className="text-xs text-muted-foreground w-8 text-right">{audioLevel}</span>
+                                <span className="text-xs font-mono font-semibold text-slate-300 w-8 text-right">{audioLevel}</span>
                             </div>
                         )}
                     </div>
@@ -271,16 +271,16 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
+            <div className="px-5 py-4 border-t border-slate-800 flex items-center justify-between gap-3 bg-slate-950/70 backdrop-blur-md">
                 {hasError && (
-                    <Button variant="outline" size="sm" onClick={retryAll}>
+                    <Button variant="outline" size="sm" onClick={retryAll} className="bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800">
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Retry
+                        Retry Checks
                     </Button>
                 )}
                 <Button
                     size="sm"
-                    className="ml-auto"
+                    className="ml-auto font-semibold px-5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white shadow-lg shadow-teal-500/20 disabled:opacity-50"
                     disabled={!allPassed}
                     onClick={onStart}
                 >
@@ -289,6 +289,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             </div>
         </div>
     );
+
 };
 
 export default HardwareCheck;

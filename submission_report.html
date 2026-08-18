@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Laporan Submission Fullstack Product Engineer - AI Interview Platform</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      background-color: #ffffff;
+      line-height: 1.55;
+      font-size: 13px;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Cover / Header Section */
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%);
+      color: #ffffff;
+      padding: 32px;
+      border-radius: 12px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+    }
+
+    .header-banner h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .header-banner h2 {
+      font-size: 15px;
+      font-weight: 500;
+      color: #99f6e4;
+      margin: 0 0 18px 0;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 20px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      padding: 14px 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 12px;
+    }
+
+    .meta-item strong {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .meta-item a {
+      color: #5eead4;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    /* Section Styling */
+    .section {
+      margin-bottom: 26px;
+    }
+
+    .section-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px solid #0d9488;
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title span.number {
+      background-color: #0d9488;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+      color: #334155;
+    }
+
+    ul, ol {
+      margin: 0 0 12px 0;
+      padding-left: 20px;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 5px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 12px;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+    }
+
+    td {
+      padding: 9px 12px;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-p0 { background-color: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
+    .badge-p1 { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .badge-p2 { background-color: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+    .badge-p3 { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-success { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+    /* Cards / Callouts */
+    .callout {
+      background-color: #f0fdf4;
+      border-left: 4px solid #10b981;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+      font-size: 12px;
+    }
+
+    .callout-warning {
+      background-color: #fffbe6;
+      border-left: 4px solid #f59e0b;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+      font-size: 12px;
+    }
+
+    /* Code blocks */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      overflow-x: auto;
+      margin: 12px 0;
+      line-height: 1.45;
+    }
+
+    /* Screenshots Grid */
+    .image-container {
+      margin: 16px 0;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+
+    .image-container img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .image-caption {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover Header -->
+  <div class="header-banner">
+    <h1>CASE STUDY REPORT: FULLSTACK PRODUCT ENGINEER</h1>
+    <h2>AI Interview Platform — Monozukuri Engineering & Product Revamp</h2>
+    <div class="meta-grid">
+      <div class="meta-item"><strong>Author:</strong> Rossi Pahlevi</div>
+      <div class="meta-item"><strong>Date:</strong> 19 Agustus 2026</div>
+      <div class="meta-item"><strong>Repository:</strong> <a href="https://github.com/LeeVonks/ai-interview-platform">github.com/LeeVonks/ai-interview-platform</a></div>
+      <div class="meta-item"><strong>Feature Branch:</strong> <a href="https://github.com/LeeVonks/ai-interview-platform/tree/feature/monozukuri-revamp"><code>feature/monozukuri-revamp</code></a></div>
+      <div class="meta-item" style="grid-column: span 2;">
+        <strong>Video Walkthrough:</strong> <a href="https://drive.google.com/drive/folders/1dBDpsxhKRiZuk6bnkfaERkpKoPiXTO84?usp=sharing">Google Drive Video Walkthrough Link</a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Section 1: Executive Summary & Monozukuri Philosophy -->
+  <div class="section">
+    <div class="section-title"><span class="number">01</span> Executive Summary & Monozukuri Philosophy</div>
+    <p>
+      Laporan ini menyajikan hasil rekonstruksi dan penyempurnaan menyeluruh (<em>fullstack revamp</em>) dari platform <strong>AI Interview Platform</strong>. Berlandaskan prinsip <strong>Monozukuri (Pengembangan Produk Berorientasi Kualitas & Keterampilan Terbaik)</strong>, proyek ini menyelesaikan seluruh masalah mendasar (<em>baseline bugs</em>), meningkatkan UX/UI hingga standar enterprise modern, menambahkan fitur seleksi kandidat yang aman sesuai aturan privasi data, serta membangun harness pengujian otomatis (<em>Automated Testing Harness</em>) pada backend Rails dan frontend React.
+    </p>
+    <div class="callout">
+      <strong>Poin Kunci Keberhasilan Rekayasa (Fullstack Slice Shipped):</strong>
+      <ul>
+        <li><strong>Perbaikan Real-time Live Audio AI:</strong> Mengubah endpoint WebSocket dari <code>v1beta</code> ke <code>v1alpha</code> BidiGenerateContent pada model <code>gemini-2.5-flash-native-audio-latest</code>.</li>
+        <li><strong>Perbaikan Evaluasi Portofolio AI:</strong> Memperbarui model REST evaluasi ke <code>gemini-3.6-flash</code> pada <code>v1beta</code> dengan penanganan eksponensial untuk <em>HTTP 429 Rate Limits</em>.</li>
+        <li><strong>Fitur Penyimpan Email & Nama Kandidat:</strong> Menambahkan migrasi database, validasi RFC format email, serta tampilan visual PII kandidat.</li>
+        <li><strong>Desain Antarmuka Modern (Frozen Glassmorphism):** Menata ulang antarmuka admin dengan navigasi header <code>h-20</code>, backdrop blur, active pill tab, serta layout container responsif <code>max-w-6xl</code>.</li>
+        <li><strong>Harness Pengujian Otomatis:** Menjalankan Vitest (Frontend React) dan RSpec (Backend Rails) dengan 100% tes lulus (<em>0 failures</em>).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Section 2: Product Context Analysis & UU PDP Compliance -->
+  <div class="section">
+    <div class="section-title"><span class="number">02</span> Context Analysis & UU PDP Compliance</div>
+    <p><strong>Analisis Pengguna & Kebutuhan Industri:</strong></p>
+    <p>
+      Di pasar rekrutmen Indonesia yang bergerak cepat, penguji (<em>assessors</em>) dan <em>recruiter</em> memerlukan data evaluasi kompetensi kandidat yang presisi, cepat, dan objektif. Tanpa fitur identifikasi kandidat (nama & email) serta pemantauan wawancara live yang stabil, platform berisiko kehilangan konteks rekrutmen.
+    </p>
+    <p><strong>Kepatuhan UU PDP (Undang-Undang Perlindungan Data Pribadi No. 27 Tahun 2022):</strong></p>
+    <ul>
+      <li><strong>Prinsip Kebutuhan Data (Data Minimization):</strong> Hanya mengumpulkan Nama Lengkap dan Alamat Email kandidat yang relevan untuk kebutuhan seleksi.</li>
+      <li><strong>Isolasi Multi-tenant & Autentikasi:</strong> Data kandidat diproteksi secara ketat menggunakan scope <code>tenant_id</code> dan token undangan aman (<code>invite_token</code> 64-character hex).</li>
+      <li><strong>Perlindungan Log PII:</strong> Email dan data sensitif kandidat dipastikan tidak bocor ke dalam log server atau prompt publik Gemini.</li>
+    </ul>
+  </div>
+
+  <!-- Section 3: Severity-Ranked Problem & Gap Analysis -->
+  <div class="section">
+    <div class="section-title"><span class="number">03</span> Severity-Ranked Problem & Gap Analysis (P0 - P3)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>Komponen</th>
+          <th>Masalah (Defect / Missing Spec)</th>
+          <th>Dampak terhadap Pengguna</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-p0">P0 Critical</span></td>
+          <td>Backend / Live WS</td>
+          <td>Koneksi WebSocket audio terputus dengan error code <code>1008</code> karena URL <code>v1beta</code>.</td>
+          <td>Kandidat tidak dapat melakukan wawancara audio AI real-time.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p0">P0 Critical</span></td>
+          <td>Backend / REST API</td>
+          <td>Generasi Portofolio gagal (<code>404 NOT_FOUND</code> / status <code>failed</code>) karena model Gemini lama.</td>
+          <td>Assessor tidak dapat melihat hasil evaluasi kandidat.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p1">P1 High</span></td>
+          <td>Frontend UI</td>
+          <td>Teks tombol "Mic On" pada halaman wawancara memiliki kontras sangat rendah dan sulit dibaca.</td>
+          <td>Kandidat bingung apakah mikrofon sedang aktif atau mati.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p2">P2 Medium</span></td>
+          <td>Database & UI</td>
+          <td>Email kandidat tidak tersimpan dan nama kandidat opsional/hilang pada modal undangan.</td>
+          <td>Recruiter kesulitan melacak kandidat mana yang memiliki hasil portofolio tersebut.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p3">P3 Low</span></td>
+          <td>Admin Navigation</td>
+          <td>Navbar admin sangat kecil, layout sempit (<code>max-w-2xl</code>), tanpa efek frozen glass.</td>
+          <td>Pengalaman pengguna admin terasa seperti MVP sederhana dan kurang profesional.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Constraint Signal:</strong> Keterbatasan kuota Gemini API Free Tier (RPM Rate Limits) menyebabkan error transient <code>HTTP 429</code> ketika regenerasi portofolio dipanggil beruntun. Hal ini ditangani dengan algoritma <em>exponential backoff retry</em> pada Faraday HTTP Client.</p>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- Section 4: Option Evaluation & Trade-Off Matrix -->
+  <div class="section">
+    <div class="section-title"><span class="number">04</span> Technical Option Evaluation & Trade-Off Matrix</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Kriteria Evaluasi</th>
+          <th>Option A: Quick Patch (Minimalist Fix)</th>
+          <th>Option B: Monozukuri Fullstack Arch (Chosen)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Deskripsi Rencana</strong></td>
+          <td>Mengganti string URL model secara langsung dan menambahkan inline CSS pada view.</td>
+          <td>Arsitektur Faraday Retry, migrasi DB kandidat, validasi RFC, dan Redesain Glassmorphism.</td>
+        </tr>
+        <tr>
+          <td><strong>Product Impact</strong></td>
+          <td>Rendah — Hanya memperbaiki bug tanpa meningkatkan estetika UI atau efisiensi seleksi.</td>
+          <td>Tinggi — Pengalaman Admin premium, informasi kandidat lengkap, dan koneksi audio stabil.</td>
+        </tr>
+        <tr>
+          <td><strong>Ketahanan (Resilience)</strong></td>
+          <td>Rendah — Langsung <em>crash</em> saat terjadi 429 Rate Limit dari Google Gemini API.</td>
+          <td>Tinggi — 5x percobaaan retry otomatis dengan penundaan eksponensial (3-30s).</td>
+        </tr>
+        <tr>
+          <td><strong>Maintainability</strong></td>
+          <td>Sulit diubah di masa depan, tidak ada pengujian otomatis.</td>
+          <td>Sangat Mudah — Terintegrasi dengan Vitest dan RSpec test suite.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 5: Self-Derived Acceptance Criteria & Edge Cases -->
+  <div class="section">
+    <div class="section-title"><span class="number">05</span> Self-Derived Acceptance Criteria & Edge Cases</div>
+    <ul>
+      <li><strong>Undangan Kandidat Wajib Nama & Email:</strong> Modal undangan menolak input kosong dan email yang tidak sesuai format RFC <code>URI::MailTo::EMAIL_REGEXP</code>.</li>
+      <li><strong>Handling Unassessed Skills & Empty Ratings:</strong> Jika portofolio memiliki skill tanpa penilaian, UI menampilkan indikator netral tanpa memecahkan visual layout.</li>
+      <li><strong>Resiliensi Rate Limit API 429/503:</strong> Ketika Google Gemini mengalami lonjakan beban, Faraday HTTP client di Rails akan mencoba ulang hingga 5 kali secara otomatis sebelum menandai gagal.</li>
+      <li><strong>High Contrast Mic Badge:</strong> Tombol mikrofon kandidat memiliki background emerald high-contrast (<code>bg-emerald-950/80 text-emerald-300</code>) lengkap dengan indikator animasi dot menyala.</li>
+    </ul>
+  </div>
+
+  <!-- Section 6: Test Coverage & AI Verification Moment -->
+  <div class="section">
+    <div class="section-title"><span class="number">06</span> Test Coverage Evidence & AI Verification Notes</div>
+    <p><strong>Bukti Pengujian Otomatis:</strong></p>
+    <pre>
+# Backend Rails RSpec Test Suite:
+Finished in 1.05 seconds (files took 6.56 seconds to load)
+8 examples, 0 failures
+
+# Frontend React Vitest Test Suite:
+✓ src/components/portfolio/SkillPortfolioCard.test.tsx (2 tests)
+Test Files  1 passed (1) | Tests  2 passed (2)
+    </pre>
+    <div class="callout-warning">
+      <strong>Proof of Seeded Fault Test (Bukti Uji Kelayakan Tes):</strong>
+      <p>
+        Logika validasi email di <code>Session.rb</code> sengaja dirusak pada cabang eksperimen untuk memastikan testsuite menangkap kegagalan tersebut (<em>Red state</em>). Setelah terverifikasi, kode dikembalikan ke kondisi stabil (<em>Green state</em>).
+      </p>
+    </div>
+    <p><strong>AI Verification Moment:</strong></p>
+    <p>
+      Saat AI merekomendasikan URL WebSocket <code>wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent</code>, pengujian menunjukkan error <code>1008 Close Code</code>. Berdasarkan dokumen Google Gemini Live API, koneksi streaming dua arah (<em>bidirectional audio</em>) wajib menggunakan <code>v1alpha</code>. Rekomendasi AI tersebut langsung dikoreksi.
+    </p>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- Section 7: End-to-End User Flow Narrative & Video Walkthrough Screenshots -->
+  <div class="section">
+    <div class="section-title"><span class="number">07</span> End-to-End User Flow Narrative (Login hingga Logout)</div>
+    <p>
+      Berikut adalah alur perjalanan pengguna (<em>End-to-End User Flow Narrative</em>) secara lengkap dan runtut, mulai dari otentikasi awal, manajemen asesmen, wawancara kandidat, evaluasi AI, hingga terminasi sesi/logout:
+    </p>
+
+    <!-- Step 1: Login -->
+    <div class="image-container">
+      <img src="report_assets/step1_login.png" alt="Step 1: Login Page">
+      <div class="image-caption">Langkah 1: Halaman Autentikasi Login Assessor / Recruiter (Email & Password aman).</div>
+    </div>
+    <p>
+      <strong>Langkah 1 — Autentikasi Login Assessor & Recruiter:</strong><br>
+      Pengguna (Recruiter/Assessor) melakukan login menggunakan kredensial terotentikasi. Sistem memvalidasi akun, menginisialisasi sesi terisolasi berbasis <code>tenant_id</code>, dan menyimpan JWT token aman.
+    </p>
+
+    <!-- Step 2: Assessments Dashboard -->
+    <div class="image-container">
+      <img src="report_assets/step2_assessments_dashboard.png" alt="Step 2: Assessments Dashboard">
+      <div class="image-caption">Langkah 2: Dashboard Assessor dengan Navigasi Header Frozen Glassmorphism (h-20) & Tab Menu Active Pill.</div>
+    </div>
+    <p>
+      <strong>Langkah 2 — Dashboard Utama Assessor:</strong><br>
+      Setelah berhasil login, Assessor diarahkan ke Dashboard Asesmen yang dilengkapi header <em>frozen glassmorphism</em> (<code>backdrop-blur-xl bg-white/75</code>, tinggi <code>h-20</code>), tab menu navigasi aktif, dan daftar seluruh modul wawancara yang tersedia.
+    </p>
+
+    <!-- Step 3: New Assessment Creation -->
+    <div class="image-container">
+      <img src="report_assets/step3_new_assessment.png" alt="Step 3: New Assessment Page">
+      <div class="image-caption">Langkah 3: Form Konfigurasi Asesmen Baru (Nama, Batas Waktu, Bahasa, dan Skill Radar L1-L5).</div>
+    </div>
+    <p>
+      <strong>Langkah 3 — Konfigurasi & Pembuatan Asesmen Baru:</strong><br>
+      Assessor menentukan spesifikasi asesmen baru: nama posisi pekerjaan, durasi wawancara (menit), bahasa pengantar (Bahasa Indonesia / Inggris), serta memilih deretan skill teknis beserta target ekspektasi level kompetensi (L1 hingga L5).
+    </p>
+
+    <div class="page-break"></div>
+
+    <!-- Step 4: Candidate Invite -->
+    <div class="image-container">
+      <img src="report_assets/step4_invite_candidate.png" alt="Step 4: Invite Candidate Modal">
+      <div class="image-caption">Langkah 4: Modal Undangan Kandidat dengan Pengisian Wajib Nama Lengkap & Email (Kepatuhan UU PDP).</div>
+    </div>
+    <p>
+      <strong>Langkah 4 — Penyiapan Sesi Undangan Kandidat (Penyimpanan Nama & Email):</strong><br>
+      Assessor membuka modal *"Undang Kandidat"*. Pada tahap ini, pengisian **Nama Lengkap** dan **Email Kandidat** diwajibkan (<em>mandatory</em>) dengan validasi format RFC email. Sistem menghasilkan <em>invite link</em> unik (<code>/interview/:token</code>) untuk kandidat dan merekam data identitas kandidat untuk keperluan screening rekrutmen.
+    </p>
+
+    <!-- Step 5: Candidate Interview -->
+    <div class="image-container">
+      <img src="report_assets/step5_candidate_interview.png" alt="Step 5: Candidate Live Audio Interview">
+      <div class="image-caption">Langkah 5: Antarmuka Wawancara Kandidat Real-Time AI Gemini dengan Tombol "Mic On" High-Contrast Emerald Badge.</div>
+    </div>
+    <p>
+      <strong>Langkah 5 — Sesi Wawancara Audio Real-Time Kandidat:</strong><br>
+      Kandidat membuka link undangan dan memulai wawancara audio AI interaktif. AI Gemini berkomunikasi secara dua arah menggunakan WebSocket endpoint <code>v1alpha</code> BidiGenerateContent. Antarmuka kandidat dilengkapi indikator status mikrofon "Mic On" kontras tinggi (<code>bg-emerald-950/80 text-emerald-300</code>) dan visualisasi gelombang suara live.
+    </p>
+
+    <!-- Step 6: Portfolio Results -->
+    <div class="image-container">
+      <img src="report_assets/step6_portfolio_results.png" alt="Step 6: Portfolio Results Page">
+      <div class="image-caption">Langkah 6: Halaman Hasil Portofolio AI Gemini dengan Rekap Identitas Kandidat, Skor Kompetensi, & Ekspor PDF.</div>
+    </div>
+    <p>
+      <strong>Langkah 6 — Evaluasi Portofolio Skill AI & Penilaian Assessor:</strong><br>
+      Setelah wawancara selesai, sistem secara otomatis mengevaluasi hasil percakapan menggunakan model AI REST <code>gemini-3.6-flash</code>. Assessor dapat melihat skor kemampuan per skill, kutipan ucapan kandidat, memberikan penyesuaian nilai (<em>assessor override</em>), serta mengunduh hasil dalam bentuk dokumen PDF.
+    </p>
+
+    <!-- Step 7: Fit/Gap Analysis -->
+    <div class="image-container">
+      <img src="report_assets/step7_fitgap_analysis.png" alt="Step 7: Fit/Gap Analysis">
+      <div class="image-caption">Langkah 7: Analisis Kesesuaian Posisi Pekerjaan (Fit/Gap Matching Report) Kandidat terhadap Syarat Vacancy.</div>
+    </div>
+    <p>
+      <strong>Langkah 7 — Analisis Kesesuaian Posisi Pekerjaan (Fit/Gap Match):</strong><br>
+      Assessor membandingkan profil kompetensi kandidat terhadap syarat posisi pekerjaan tertentu (<em>vacancy</em>). Sistem menghitung skor kesesuaian (<em>Fit Percentage</em>) dan menampilkan analisis keunggulan serta area pengembangan kandidat.
+    </p>
+
+    <p>
+      <strong>Langkah 8 — Terminisasi Sesi & Logout Aman:</strong><br>
+      Setelah seluruh rangkaian seleksi dan evaluasi selesai, Assessor menekan tombol *Logout* pada header navigasi. Sistem menghapus token otentikasi lokal (JWT session) secara aman untuk mencegah akses tanpa izin.
+    </p>
+  </div>
+
+
+
+  <!-- Section 8: Final Pull Request & Submission Links -->
+  <div class="section">
+    <div class="section-title"><span class="number">08</span> Final Submission Links</div>
+    <div class="callout">
+      <ul>
+        <li><strong>GitHub Candidate Repository:</strong> <a href="https://github.com/LeeVonks/ai-interview-platform">github.com/LeeVonks/ai-interview-platform</a></li>
+        <li><strong>Active Feature Branch Code:</strong> <a href="https://github.com/LeeVonks/ai-interview-platform/tree/feature/monozukuri-revamp">github.com/LeeVonks/ai-interview-platform/tree/feature/monozukuri-revamp</a></li>
+        <li><strong>Upstream Assignment Target:</strong> <a href="https://github.com/rakamindev/ai-interview-platform">github.com/rakamindev/ai-interview-platform</a></li>
+        <li><strong>Video Walkthrough (3-5 min):</strong> <a href="https://drive.google.com/drive/folders/1dBDpsxhKRiZuk6bnkfaERkpKoPiXTO84?usp=sharing">Google Drive Video Walkthrough Link</a></li>
+      </ul>
+    </div>
+  </div>
+
+
+</body>
+</html>

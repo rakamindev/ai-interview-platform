@@ -7,24 +7,25 @@ interface ConnectionStatusProps {
 export default function ConnectionStatus({ state }: ConnectionStatusProps) {
   if (state === "connected") {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-green-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
         Connected
       </div>
     );
   }
   if (state === "reconnecting") {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-amber-600">
-        <Loader2 className="h-3 w-3 animate-spin" />
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
         Reconnecting...
       </div>
     );
   }
   return (
-    <div className="flex items-center gap-1.5 text-xs text-destructive">
-      <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-      Connection lost
+    <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-400">
+      <span className="h-2 w-2 rounded-full bg-rose-500" />
+      Connection Lost
     </div>
   );
 }
+

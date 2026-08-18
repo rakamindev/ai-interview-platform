@@ -2,7 +2,8 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
+
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -55,14 +56,14 @@ module Gemini
     def build_connection
       Faraday.new do |f|
         f.request :retry, {
-          max: 3,
-          interval: 1,
+          max: 5,
+          interval: 3,
           interval_randomness: 0.5,
           backoff_factor: 2,
           retry_statuses: [429, 500, 502, 503],
           retry_block: ->(env, _opts, retries, exc) {
             retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
+            sleep([retry_after || 3, 30].min) if env&.status == 429
             Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
           }
         }
@@ -71,6 +72,7 @@ module Gemini
         f.adapter Faraday.default_adapter
       end
     end
+
 
     def parse_response(response)
       unless response.success?
