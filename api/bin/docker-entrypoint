@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+
+# Bind-mounted worktrees don't carry the image's pre-created runtime dirs.
+mkdir -p tmp/pids tmp/cache tmp/sockets log
+
+echo "== waiting for Postgres =="
+until pg_isready -h "${DB_HOST:-postgres}" -p "${DB_PORT:-5432}" -U "${DB_USERNAME:-postgres}" >/dev/null 2>&1; do
+  sleep 1
+done
+
+echo "== db:prepare =="
+bundle exec rails db:prepare
+
+# Seed only when the database is empty. Idempotent: db:seed uses
+# find_or_initialize, so a concurrent api/sidekiq double-run is safe.
+if ! bundle exec rails runner 'exit(Organization.count.positive? ? 0 : 1)' >/dev/null 2>&1; then
+  echo "== empty database — seeding =="
+  bundle exec rails db:seed
+fi
+
+exec "$@"

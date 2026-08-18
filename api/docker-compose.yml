@@ -1,0 +1,79 @@
+name: ai-interview-platform
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rakamin_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      target: dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment: &app_env
+      RAILS_ENV: development
+      SECRET_KEY_BASE: compose-development-secret
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: rakamin_development
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      REDIS_URL: redis://redis:6379/1
+      GEMINI_STUB: "true"
+      ALLOWED_ORIGINS: "http://localhost:5173"
+      APP_BASE_URL: "http://localhost:3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - bundle:/usr/local/bundle
+      - .:/ai-interview
+    command: ["bundle", "exec", "puma", "-C", "config/puma.rb"]
+
+  sidekiq:
+    build:
+      context: .
+      target: dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment: *app_env
+    volumes:
+      - bundle:/usr/local/bundle
+      - .:/ai-interview
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+
+volumes:
+  pgdata:
+  bundle:
