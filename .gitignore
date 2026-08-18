@@ -17,3 +17,8 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Audit artifacts and evidence
+/assessment/gate3-audit/
+/api/spec/examples.txt
+/assessment/gate3-audit/*.zip
