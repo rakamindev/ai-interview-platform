@@ -1,12 +1,14 @@
 interface ConfidenceIndicatorProps {
-  confidence: string; // "high" | "medium" | "low" from API
+  confidence: string | undefined; // "high" | "medium" | "low" from API
 }
 
-function getLabel(c: string): "high" | "medium" | "low" {
-  const normalized = c?.toLowerCase();
+function getLabel(c: string | undefined): "high" | "medium" | "low" | null {
+  if (c == null || c === "") return null;
+  const normalized = c.toLowerCase();
   if (normalized === "high") return "high";
   if (normalized === "medium") return "medium";
-  return "low";
+  if (normalized === "low") return "low";
+  return null;
 }
 
 export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
@@ -28,10 +30,13 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
       </span>
     );
   }
-  return (
-    <span className="flex items-center gap-1 text-xs text-verdict-unknown">
-      <span className="h-2 w-2 rounded-full bg-verdict-unknown" />
-      Low confidence
-    </span>
-  );
+  if (label === "low") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-verdict-unknown">
+        <span className="h-2 w-2 rounded-full bg-verdict-unknown" />
+        Low confidence
+      </span>
+    );
+  }
+  return null;
 }

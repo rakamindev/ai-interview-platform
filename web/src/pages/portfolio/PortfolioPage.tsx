@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, AlertTriangle } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -23,6 +23,8 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -42,12 +44,15 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
+    setError(null);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => {
+        setError("Failed to load portfolio data. Please try again.");
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -66,6 +71,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -81,14 +87,27 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
+        // PDF: verify the response is actually a PDF (not a JSON error blob)
+        const contentType = res.headers?.["content-type"] ?? "";
+        const data = res.data;
+        if (data instanceof Blob && data.type.includes("application/pdf")) {
+          const url = URL.createObjectURL(data);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `portfolio-${sessionId}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else if (data instanceof Blob && data.type.includes("application/json")) {
+          // Server returned JSON error inside a Blob response — read it
+          const text = await data.text();
+          const parsed = JSON.parse(text);
+          setExportError(parsed.message ?? parsed.error ?? "Export failed");
+        } else {
+          setExportError("Export returned an unexpected response. Please try again.");
+        }
       }
+    } catch {
+      setExportError("Export failed. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -153,8 +172,27 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {/* Export error */}
+      {exportError && (
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {exportError}
+          <button onClick={() => setExportError(null)} className="ml-auto text-muted-foreground hover:text-foreground">&times;</button>
+        </div>
+      )}
+
+      {/* API error */}
+      {error && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">{error}</p>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Generating state */}
-      {generating && (
+      {!error && generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
