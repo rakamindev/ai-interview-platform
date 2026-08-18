@@ -28,19 +28,21 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
-            </Link>
-            <nav className="flex items-center gap-1">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-0 sm:h-14 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+            <div className="flex items-center justify-between">
+              <Link to="/assessments" className="flex items-center gap-2">
+                <LayoutDashboard className="h-5 w-5 text-primary" />
+                <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              </Link>
+            </div>
+            <nav className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 w-full">
               {navItems.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
                   to={href}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors whitespace-nowrap",
                     location.pathname.startsWith(href)
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -52,13 +54,13 @@ export default function AssessorLayout() {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 truncate max-w-[150px] sm:max-w-none">
                 Tenant: {tenant.name}
               </span>
             )}
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="shrink-0">
               <LogOut className="h-4 w-4 mr-1.5" />
               Logout
             </Button>

@@ -107,7 +107,7 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
@@ -143,7 +143,7 @@ export default function AssessmentNewPage() {
             defaultValue="45"
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-64">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -163,7 +163,7 @@ export default function AssessmentNewPage() {
             defaultValue="en"
             onValueChange={(v) => setValue("language", v as "en" | "id")}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-64">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -180,9 +180,9 @@ export default function AssessmentNewPage() {
           <Label>Skills to assess</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              <p className="mb-1">No skills added yet.</p>
-              <p>Add at least one skill to continue.</p>
+            <div className="border border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1 text-base">No skills added yet</p>
+              <p>Add at least one skill to evaluate candidates effectively.</p>
             </div>
           ) : (
             <DndContext
@@ -209,12 +209,13 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setPickerOpen(true)}
+              className="w-full sm:w-auto"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add from Skill Taxonomy
@@ -224,8 +225,9 @@ export default function AssessmentNewPage() {
               variant="outline"
               size="sm"
               onClick={addCustomSkill}
+              className="w-full sm:w-auto"
             >
-              <Plus className="h-3.5 w-3.5 mr-1" />
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add custom skill
             </Button>
           </div>
@@ -238,15 +240,16 @@ export default function AssessmentNewPage() {
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() => navigate("/assessments")}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save &amp; Create Session →
           </Button>

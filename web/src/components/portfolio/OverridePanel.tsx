@@ -43,10 +43,10 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
   if (!open) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         {hasOverride ? (
           <>
-            <div className="flex items-center gap-1.5 text-sm">
+            <div className="flex flex-wrap items-center gap-1.5 text-sm">
               <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
