@@ -48,7 +48,11 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        # PortfolioSkill has no tenant_id column of its own — scope through
+        # portfolio -> session, which is tenant-scoped (see
+        # api/app/models/concerns/tenant_scoped.rb).
+        @portfolio_skill = PortfolioSkill.joins(portfolio: :session)
+                                         .where(sessions: { tenant_id: Current.tenant_id })
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
