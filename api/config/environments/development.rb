@@ -20,8 +20,24 @@ Rails.application.configure do
   config.active_storage.service = ENV.fetch('ACTIVE_STORAGE_SERVICE', 'local').to_sym
 
   # Built into Rails, no gem, reviewable with `cat tmp/mails/*` — letter_opener
-  # needs a desktop browser and is useless in Docker or over SSH.
-  config.action_mailer.delivery_method = :file
+  # needs a desktop browser and is useless in Docker or over SSH. Switchable to
+  # real SMTP (e.g. a Mailtrap sandbox inbox) via MAIL_ENABLED, to see an actual
+  # rendered email instead of just the raw .eml file — same settings shape as
+  # production.rb's SMTP block.
+  if ENV.fetch('MAIL_ENABLED', 'false') == 'true'
+    config.action_mailer.delivery_method = :smtp
+    config.action_mailer.smtp_settings = {
+      address:              ENV['SMTP_ADDRESS'],
+      port:                 ENV.fetch('SMTP_PORT', 587).to_i,
+      domain:               ENV['SMTP_DOMAIN'],
+      user_name:            ENV['SMTP_USERNAME'],
+      password:             ENV['SMTP_PASSWORD'],
+      authentication:       'plain',
+      enable_starttls_auto: true
+    }
+  else
+    config.action_mailer.delivery_method = :file
+  end
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
 
