@@ -3,7 +3,7 @@
 class FitGapReport < ApplicationRecord
   include TenantScoped
 
-  FIT_RESULTS = %w[match gap exceed not_assessed].freeze
+  FIT_RESULTS = %w[match gap exceed not_assessed insufficient_evidence].freeze
 
   belongs_to :portfolio
   belongs_to :vacancy

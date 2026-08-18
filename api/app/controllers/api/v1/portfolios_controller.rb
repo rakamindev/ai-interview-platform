@@ -199,13 +199,15 @@ module Api
 
       def fit_gap_json(report)
         {
-          id:                report.id,
-          portfolio_id:      report.portfolio_id,
-          vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
-          culture_narrative: report.culture_narrative,
-          overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          id:                 report.id,
+          portfolio_id:       report.portfolio_id,
+          vacancy_id:         report.vacancy_id,
+          skill_comparisons:  report.skill_comparisons,
+          additional_strengths: report.additional_strengths,
+          culture_narrative:  report.culture_narrative,
+          overall_narrative:  report.overall_narrative,
+          generated_at:       report.generated_at,
+          schema_version:     report.skill_comparisons&.first&.dig(:schema_version)
         }
       end
 
