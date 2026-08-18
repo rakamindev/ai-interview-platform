@@ -40,6 +40,11 @@ Gap ke kondisi ideal: produk belum layak dipercaya sebagai alat penilaian karyaw
 - Bukti: (a) `session_json` expose `invite_token` penuh; (b) `audio_complete` (tanpa JWT) dengan hanya token → sesi berakhir `all_covered` padahal interview belum pernah terjadi (verified: session 1 ended tanpa interview).
 - Impact: siapa pun dengan link bisa mengakhiri sesi & memicu penilaian kosong → data hasil kandidat korup.
 
+**F-18 | Password & data pribadi ditulis ke log produksi dalam bentuk terbaca** [MISSING SPEC]
+- Bukti: `config.filter_parameters` kosong — Rails membuat `config/initializers/filter_parameter_logging.rb` di setiap aplikasi baru, dan repo ini tidak pernah punya. `ActionController::LogSubscriber#start_processing` menulis hash parameter pada level INFO (`return unless logger.info?`), sementara `production.rb:31` menjalankan `log_level = :info`. Diverifikasi dengan menghapus perbaikannya dan menjalankan spec: `expected "[FILTERED]", got "Password123!"`.
+- Impact: setiap login menulis password assessor apa adanya ke log; setiap permintaan kandidat menulis `invite_token` — kunci yang sendirian cukup untuk mengakhiri sesi (F-05). Log dikirim ke stdout dan biasanya diteruskan ke agregator pihak ketiga, sehingga jangkauan pembacanya jauh lebih luas daripada database. Data pribadi tanpa dasar pemrosesan = UU PDP Pasal 5 & 29.
+- Catatan: yang tertutup adalah hash parameter, bukan baris permintaan. Rails hanya menyaring query string pada `filtered_path`, jadi token pada segmen path masih muncul di `Started POST /api/v1/sessions/<token>/consent`. Menutupnya berarti memindahkan token keluar dari URL — perubahan routing dengan migrasi untuk link undangan yang sudah beredar, jadi didaftarkan sebagai follow-up dan diikat oleh satu test agar tidak terlupa.
+
 ### P2 — Seam data menyebabkan hasil salah & kontrak rusak
 
 **F-06 | Contract mismatch fit-gap: `required_level` vs `expected_level`** [DEFECTIVE]
@@ -98,7 +103,7 @@ Gap ke kondisi ideal: produk belum layak dipercaya sebagai alat penilaian karyaw
 
 | Kategori | Temuan |
 |---|---|
-| **Missing spec (tidak pernah didefinisikan)** | F-03 consent/privasi UU PDP; F-11 bootstrap user/signup; F-17 test & CI; error contract (sebagian); hak akses/hapus kandidat |
+| **Missing spec (tidak pernah didefinisikan)** | F-03 consent/privasi UU PDP; F-11 bootstrap user/signup; F-17 test & CI; F-18 higienitas log; error contract (sebagian); hak akses/hapus kandidat |
 | **Defective implementation (didefinisikan tapi rusak)** | F-01, F-02, F-04, F-05, F-06, F-07, F-08, F-09, F-10, F-12, F-13, F-14, F-15, F-16 |
 
 ---
