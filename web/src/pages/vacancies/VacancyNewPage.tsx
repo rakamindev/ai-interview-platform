@@ -50,7 +50,7 @@ export default function VacancyNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -128,10 +128,18 @@ export default function VacancyNewPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>
+            <span>Cancel</span>
+          </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Vacancy
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <span>Save Vacancy</span>
+            )}
           </Button>
         </div>
       </form>
@@ -140,6 +148,7 @@ export default function VacancyNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        selectedLabels={fields.map((f) => f.skill_label).filter((l): l is string => Boolean(l))}
       />
     </div>
   );

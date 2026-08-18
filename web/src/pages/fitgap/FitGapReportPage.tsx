@@ -24,13 +24,19 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
+      if (res.status === 202 || (res.data as any).status === "generating") {
+        setGenerating(true);
+      } else if (res.data.report) {
+        setReport(res.data.report);
+        setGenerating(false);
+      }
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
@@ -38,7 +44,10 @@ export default function FitGapReportPage() {
           setGenerating(true);
         } catch {
           setGenerating(false);
+          setActionError("Failed to start fit/gap generation.");
         }
+      } else {
+        setActionError("Failed to load fit/gap report. Please try again.");
       }
     }
   }, [portfolio, vacancyId]);
@@ -51,6 +60,14 @@ export default function FitGapReportPage() {
         if (data.portfolio) {
           setPortfolio(data.portfolio);
         }
+      })
+      .catch((e: any) => {
+        const status = e?.response?.status;
+        setLoadError(
+          status === 404 || status === 403
+            ? "Portfolio not found or you don't have access to it."
+            : "Failed to load the portfolio. Please refresh the page."
+        );
       })
       .finally(() => setLoading(false));
   }, [sessionId]);
@@ -68,6 +85,8 @@ export default function FitGapReportPage() {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+    } catch {
+      setActionError("Failed to regenerate the report. Please try again.");
     } finally {
       setRegenerating(false);
     }
@@ -79,15 +98,20 @@ export default function FitGapReportPage() {
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
       const ext = format;
+      const nameSlug = portfolio.candidate_name
+        ? `-${portfolio.candidate_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+        : "";
       const blob = format === "pdf"
         ? new Blob([res.data as BlobPart], { type: "application/pdf" })
         : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
+      a.download = `fitgap${nameSlug}-session-${sessionId}-vacancy-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setActionError("Export failed. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -95,15 +119,34 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+        </div>
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">{loadError}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -122,23 +165,30 @@ export default function FitGapReportPage() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
+              <span>{regenerating ? "Regenerating..." : "Regenerate"}</span>
             </Button>
             {report && (
               <>
                 <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
                   {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
+                  <span>PDF</span>
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
                   {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
+                  <span>JSON</span>
                 </Button>
               </>
             )}
           </div>
         )}
       </div>
+
+      {/* Action error */}
+      {actionError && (
+        <div className="border border-destructive/40 rounded-lg p-4 text-center">
+          <p className="text-sm text-destructive">{actionError}</p>
+        </div>
+      )}
 
       {/* Generating */}
       {generating && (

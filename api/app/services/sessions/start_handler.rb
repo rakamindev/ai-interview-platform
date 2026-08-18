@@ -14,12 +14,22 @@ module Sessions
         initialize_coverage_maps
       end
 
+      schedule_time_ceiling
       publish_status_update
       Rails.logger.info("[N5/StartHandler] Session #{@session.id} activated")
       @session
     end
 
     private
+
+    # Watchdog: the WebSocket ceiling check only runs on transcription events,
+    # so a silent candidate would never hit the advertised limit. The +60s
+    # grace matches the WebSocket wrap-up path.
+    def schedule_time_ceiling
+      return unless @session.assessment.time_limit_min
+
+      SessionTimeCeilingWorker.perform_in(@session.assessment.time_limit_min * 60 + 60, @session.id)
+    end
 
     def publish_status_update
       redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))

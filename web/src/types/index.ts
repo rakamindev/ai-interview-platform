@@ -78,11 +78,17 @@ export interface Portfolio {
   id: number;
   session_id: number;
   candidate_id?: number;
+  candidate_name?: string;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+}
+
+export interface EvidenceItem {
+  text: string;
+  turn_number?: number | null;
 }
 
 export interface PortfolioSkill {
@@ -92,8 +98,10 @@ export interface PortfolioSkill {
   is_discovered: boolean;
   ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
   ai_confidence: string;  // "high" | "medium" | "low"
-  evidence: string[];
+  evidence: EvidenceItem[];
   competency_summary: string;
+  probe_count?: number;
+  coverage_state?: string;
 }
 
 export interface AssessorOverride {
@@ -130,10 +138,19 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 export interface SkillComparison {
   skill_label: string;
   required_level: number;
+  expected_level?: number;
   candidate_level?: number;
+  ai_level?: number;
+  override_level?: number;
+  assessor_notes?: string;
   result: SkillComparisonResult;
   delta?: number;
   is_override?: boolean;
+  confidence?: string;
+  evidence?: EvidenceItem[];
+  competency_summary?: string;
+  probe_count?: number;
+  coverage_state?: string;
 }
 
 export interface FitGapReport {
@@ -159,11 +176,26 @@ export interface SkillTaxonomy {
   l5_anchor: string;
 }
 
+export interface CustomSkill {
+  id: number;
+  skill_label: string;
+  scope_include?: string;
+  scope_exclude?: string;
+  l1_anchor: string;
+  l2_anchor: string;
+  l3_anchor: string;
+  l4_anchor: string;
+  l5_anchor: string;
+}
+
 export interface CandidateInfo {
   session_id: number;
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  started_at?: string | null;
+  recent_turns?: (Pick<TranscriptTurn, "speaker" | "text"> & { turn_number?: number })[];
 }
 
 export interface PaginationMeta {
@@ -182,7 +214,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -204,4 +237,5 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+  turn_number?: number;
 }

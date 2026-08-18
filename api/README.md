@@ -22,12 +22,12 @@ Fill in the required values in `config/application.yml`:
 | `SECRET_KEY_BASE` | Must match `rakamin-api` — JWT tokens are shared |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | Shared PostgreSQL instance |
 | `GEMINI_API_KEY` | Google AI Studio API key |
-| `GEMINI_LIVE_MODEL` | e.g. `gemini-3.1-flash-live-preview` |
-| `GEMINI_ANALYSIS_MODEL` | e.g. `gemini-2.0-flash-001` |
-| `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
+| `GEMINI_LIVE_MODEL` | e.g. `gemini-2.5-flash-native-audio-latest` (must support `bidiGenerateContent`) |
+| `GEMINI_FLASH_MODEL` | e.g. `gemini-3.5-flash` (must support `generateContent` for this API key) |
+| `GEMINI_PRO_MODEL` | e.g. `gemini-3.5-flash` (new-user keys: 2.x models return 404; pro models are rate-limited) |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `WEB_BASE_URL` | Frontend (SPA) origin, e.g. `http://localhost:5173` — used to build candidate invite links |
 
 ---
 
@@ -78,7 +78,7 @@ Runs on **port 3001** by default.
 ## 7. Start the frontend
 
 ```bash
-cd ../ai-interview-web
+cd ../web
 npm install
 npm run dev
 ```

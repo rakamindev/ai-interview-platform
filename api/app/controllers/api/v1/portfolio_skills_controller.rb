@@ -40,7 +40,7 @@ module Api
 
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
+        portfolio.fit_gap_reports.each do |report|
           vacancy_id = report.vacancy_id
           report.destroy
           FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
@@ -48,7 +48,10 @@ module Api
       end
 
       def set_portfolio_skill
+        # Explicit tenant filter — the skill id is global, so it must be joined
+        # back to a portfolio of the current tenant.
         @portfolio_skill = PortfolioSkill.joins(:portfolio)
+                                         .where(portfolios: { tenant_id: Current.tenant_id })
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

@@ -17,3 +17,9 @@ web/.vite/
 
 # OS
 .DS_Store
+
+/.zcode/
+/assessment/
+**/AGENTS.md
+/docker-compose.*
+/INDEX.md

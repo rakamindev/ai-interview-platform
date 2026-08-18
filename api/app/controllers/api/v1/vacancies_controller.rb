@@ -9,10 +9,14 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        scope = Vacancy.includes(:vacancy_skills)
+        scope = scope.where('role_title ILIKE ?', "%#{sanitize_like(query_params[:q])}%") if query_params[:q].present?
+        scope = scope.order(sort_clause)
+
+        vacancies = paginate(scope)
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
+          vacancies: vacancies.map(&method(:vacancy_with_skills_json)),
           meta: pagination_meta(vacancies)
         )
       end
@@ -47,6 +51,19 @@ module Api
       def destroy
         @vacancy.destroy
         json_response(message: "Vacancy deleted")
+      end
+
+      # GET /api/v1/vacancies/:id/matches
+      # Candidate match ranking for this vacancy (rule-based fit score).
+      def matches
+        vacancy = Vacancy.find(params[:id])
+
+        json_response(
+          vacancy: { id: vacancy.id, role_title: vacancy.role_title },
+          matches: Candidates::Ranking.new(vacancy).call
+        )
+      rescue ActiveRecord::RecordNotFound
+        json_error('Vacancy not found', :not_found)
       end
 
       private
@@ -113,6 +130,18 @@ module Api
           total_count:  collection.total_count,
           per_page:     collection.limit_value
         }
+      end
+
+      def sort_clause
+        case query_params[:sort]
+        when 'oldest' then { created_at: :asc }
+        when 'name'   then 'role_title ASC'
+        else              { created_at: :desc }
+        end
+      end
+
+      def sanitize_like(value)
+        value.to_s.gsub(/[%_\\]/) { |m| "\\#{m}" }
       end
     end
   end

@@ -25,6 +25,7 @@ import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { customSkillsApi } from "@/services/customSkills";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
@@ -74,6 +75,26 @@ export default function AssessmentEditPage() {
     setError(null);
     setSubmitting(true);
     try {
+      // Save reusable custom skills to the tenant library so they appear in
+      // the picker of future assessments. Duplicates are ignored.
+      await Promise.all(
+        data.skills
+          .filter((s) => s.is_custom && s.skill_label?.trim())
+          .map((s) =>
+            customSkillsApi
+              .create({
+                skill_label: s.skill_label,
+                scope_include: s.scope_include,
+                l1_anchor: s.l1_anchor,
+                l2_anchor: s.l2_anchor,
+                l3_anchor: s.l3_anchor,
+                l4_anchor: s.l4_anchor,
+                l5_anchor: s.l5_anchor,
+              })
+              .catch(() => null)
+          )
+      );
+
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
@@ -89,7 +110,7 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
@@ -99,7 +120,7 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -163,15 +184,23 @@ export default function AssessmentEditPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>
+            <span>Cancel</span>
+          </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Changes
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <span>Save Changes</span>
+            )}
           </Button>
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} selectedLabels={fields.map((f) => f.skill_label).filter((l): l is string => Boolean(l))} />
     </div>
   );
 }

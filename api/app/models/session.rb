@@ -25,8 +25,10 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # WEB_BASE_URL is the web app (SPA) origin — candidate invite links must
+  # point there, not at this API host. Default matches the Vite dev server.
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('WEB_BASE_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
 

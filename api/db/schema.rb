@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_15_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -39,6 +39,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "l5_anchor", null: false
     t.integer "expected_level"
     t.integer "display_order", default: 0, null: false
+    t.index ["assessment_id", "skill_label"], name: "idx_assessment_skills_unique_label", unique: true
     t.index ["assessment_id"], name: "index_assessment_skills_on_assessment_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_assessment_skills_expected_level"
   end
@@ -80,6 +81,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["session_id", "skill_label"], name: "index_coverage_maps_on_session_id_and_skill_label", unique: true
     t.index ["session_id"], name: "idx_coverage_session"
     t.index ["session_id"], name: "index_coverage_maps_on_session_id"
+  end
+
+  create_table "custom_skills", force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.bigint "created_by", null: false
+    t.string "skill_label", limit: 255, null: false
+    t.text "scope_include"
+    t.text "scope_exclude"
+    t.text "l1_anchor", null: false
+    t.text "l2_anchor", null: false
+    t.text "l3_anchor", null: false
+    t.text "l4_anchor", null: false
+    t.text "l5_anchor", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "skill_label"], name: "idx_custom_skills_unique_label", unique: true
+    t.index ["tenant_id"], name: "index_custom_skills_on_tenant_id"
   end
 
   create_table "fit_gap_reports", force: :cascade do |t|
@@ -126,8 +144,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.bigint "tenant_id", null: false
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -201,6 +221,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.integer "expected_level", null: false
+    t.index ["vacancy_id", "skill_label"], name: "idx_vacancy_skills_unique_label", unique: true
     t.index ["vacancy_id"], name: "index_vacancy_skills_on_vacancy_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end

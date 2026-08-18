@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
+import { authAtom, saveToken, saveUser } from "@/stores/authAtom";
+import { tenantAtom } from "@/stores/tenantAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useSetAtom(authAtom);
+  const setTenant = useSetAtom(tenantAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,9 +25,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authApi.login({ email, password });
-      const token = res.data.token;
+      const { token, user, organization } = res.data;
       saveToken(token);
-      setAuth({ token });
+      saveUser(user);
+      setAuth({ token, user });
+      setTenant({ id: organization ? String(organization.id) : null, name: organization?.name ?? null });
       navigate("/assessments");
     } catch {
       setError("Invalid email or password.");
@@ -56,10 +61,10 @@ export default function LoginPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
+              toggleLabel="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -69,8 +74,14 @@ export default function LoginPage() {
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign in
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <span>Sign in</span>
+            )}
           </Button>
         </form>
 

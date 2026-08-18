@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 interface InterviewTimerProps {
   totalSeconds: number;
+  startedAt?: string | null;
   onExpired?: () => void;
   running: boolean;
 }
@@ -13,19 +14,36 @@ function formatTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
-  const [remaining, setRemaining] = useState(totalSeconds);
+export default function InterviewTimer({ totalSeconds, startedAt, onExpired, running }: InterviewTimerProps) {
+  const calculateRemaining = useCallback(() => {
+    if (!startedAt) return totalSeconds;
+    const startTime = new Date(startedAt).getTime();
+    if (isNaN(startTime)) return totalSeconds;
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+    return Math.max(0, totalSeconds - elapsedSeconds);
+  }, [totalSeconds, startedAt]);
+
+  const [remaining, setRemaining] = useState(calculateRemaining);
 
   useEffect(() => {
-    setRemaining(totalSeconds);
-  }, [totalSeconds]);
+    setRemaining(calculateRemaining());
+  }, [calculateRemaining]);
 
   useEffect(() => {
     if (!running) return;
-    if (remaining <= 0) { onExpired?.(); return; }
-    const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
-    return () => clearTimeout(id);
-  }, [running, remaining, onExpired]);
+
+    const tick = () => {
+      const currentRemaining = calculateRemaining();
+      setRemaining(currentRemaining);
+      if (currentRemaining <= 0) {
+        onExpired?.();
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [running, calculateRemaining, onExpired]);
 
   const isWarning = remaining <= 300; // ≤5 min
   const isUrgent = remaining <= 60;

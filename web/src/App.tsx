@@ -3,6 +3,7 @@ import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/auth/LoginPage";
+import ChangePasswordPage from "@/pages/auth/ChangePasswordPage";
 import AssessmentListPage from "@/pages/assessments/AssessmentListPage";
 import AssessmentNewPage from "@/pages/assessments/AssessmentNewPage";
 import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
@@ -14,6 +15,9 @@ import TranscriptPage from "@/pages/transcript/TranscriptPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
+import UsersPage from "@/pages/users/UsersPage";
+import CandidatesPage from "@/pages/candidates/CandidatesPage";
+import CandidateDetailPage from "@/pages/candidates/CandidateDetailPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 
 export default function App() {
@@ -49,6 +53,10 @@ export default function App() {
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/account" element={<ChangePasswordPage />} />
+        <Route path="/candidates" element={<CandidatesPage />} />
+        <Route path="/candidates/:sessionId" element={<CandidateDetailPage />} />
       </Route>
       </Route>
 

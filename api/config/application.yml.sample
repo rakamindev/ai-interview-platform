@@ -13,12 +13,19 @@ DB_PASSWORD: ""
 
 # AI Interview specific
 GEMINI_API_KEY: "your_gemini_api_key"
-GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
-GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
-GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
+GEMINI_LIVE_MODEL: "gemini-2.5-flash-native-audio-latest"
+# REST generation models. NOTE: older models (2.x) return 404 for new-user
+# API keys — verify with the models list before changing.
+GEMINI_FLASH_MODEL: "gemini-3.5-flash"
+GEMINI_PRO_MODEL: "gemini-3.5-flash"
 
-# App URL (for invite links)
-APP_BASE_URL: "http://localhost:3001"
+# Dev-only password for seeded users (seeds.rb reads this; leave unset for a
+# random password printed at seed time). Never commit real passwords here.
+DEV_USER_PASSWORD: "change-me"
+
+# Frontend (SPA) origin — used to build candidate invite links.
+# Must point at the web app, NOT this API host.
+WEB_BASE_URL: "http://localhost:5173"
 
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds

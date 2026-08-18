@@ -23,11 +23,19 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [noPortfolio, setNoPortfolio] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
+    if (data.status === "none") {
+      // The candidate never interviewed — definitive, not "generating".
+      setPortfolio(null);
+      setGenerating(false);
+      setNoPortfolio(true);
+    } else if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
@@ -47,7 +55,14 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch((e: any) => {
+        const status = e?.response?.status;
+        setLoadError(
+          status === 404 || status === 403
+            ? "Portfolio not found or you don't have access to it."
+            : "Failed to load the portfolio. Please refresh the page."
+        );
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -56,6 +71,10 @@ export default function PortfolioPage() {
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
+  };
+
+  const handleQuoteClick = (turnNumber: number) => {
+    navigate(`/assessments/${id}/sessions/${sessionId}/transcript#turn-${turnNumber}`);
   };
 
   const handleRunFitGap = () => {
@@ -72,12 +91,16 @@ export default function PortfolioPage() {
         format,
         selectedVacancy ? Number(selectedVacancy) : undefined
       );
+      const nameSlug = portfolio.candidate_name
+        ? `-${portfolio.candidate_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+        : "";
+
       if (format === "json") {
         const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
+        a.download = `portfolio${nameSlug}-session-${sessionId}.json`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -85,10 +108,12 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
+        a.download = `portfolio${nameSlug}-session-${sessionId}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch {
+      setExportError("Export failed. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -96,7 +121,7 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -104,8 +129,24 @@ export default function PortfolioPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center gap-2">
+          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="text-lg font-semibold">Portfolio Results</h1>
+        </div>
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">{loadError}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -137,7 +178,7 @@ export default function PortfolioPage() {
                 disabled={!!exporting}
               >
                 {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                PDF
+                <span>PDF</span>
               </Button>
               <Button
                 variant="outline"
@@ -146,12 +187,32 @@ export default function PortfolioPage() {
                 disabled={!!exporting}
               >
                 {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                JSON
+                <span>JSON</span>
               </Button>
             </>
           )}
         </div>
       </div>
+
+      {/* Export error */}
+      {exportError && (
+        <div className="border border-destructive/40 rounded-lg p-4 text-center">
+          <p className="text-sm text-destructive">{exportError}</p>
+        </div>
+      )}
+
+      {/* No interview yet */}
+      {noPortfolio && !generating && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">
+            No interview yet — the candidate has not started. A portfolio is generated after
+            the interview finishes.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/invite`)}>
+            Back to invites
+          </Button>
+        </div>
+      )}
 
       {/* Generating state */}
       {generating && (
@@ -197,6 +258,7 @@ export default function PortfolioPage() {
                   skill={skill}
                   override={overrides[skill.id]}
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  onQuoteClick={handleQuoteClick}
                 />
               ))}
           </div>
@@ -223,6 +285,7 @@ export default function PortfolioPage() {
                       skill={skill}
                       override={overrides[skill.id]}
                       onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      onQuoteClick={handleQuoteClick}
                     />
                   ))}
               </div>

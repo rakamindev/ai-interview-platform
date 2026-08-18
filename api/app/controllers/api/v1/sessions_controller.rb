@@ -114,17 +114,18 @@ module Api
 
       # POST /sessions/:token/audio_complete  — no JWT, invite token in URL
       # Called by the frontend when the audio queue drains after a preparing_to_end signal.
-      # Ends the session if all coverage is complete; idempotent if already ended.
+      # Ends the session; idempotent if already ended. The end reason is derived
+      # from the persisted coverage maps so an incomplete interview is never
+      # labelled as fully covered (which would rate a partial portfolio as complete).
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
+        return json_error("Session is not active", :unprocessable_entity) unless %w[active pending].include?(session.status)
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
-        Sessions::EndHandler.new(session).call(reason: 'all_covered')
+        reason = Coverage::MapInjector.new(session).all_covered? ? 'all_covered' : 'manual_candidate'
+        Sessions::EndHandler.new(session).call(reason: reason)
         json_response(ended: true, message: "Session ended")
       end
 
@@ -145,11 +146,22 @@ module Api
           return json_error("Assessment not found", :not_found)
         end
 
+        recent_turns = session.transcript_turns.ordered.last(25).map do |t|
+          {
+            turn_number: t.turn_number,
+            speaker:     t.speaker == 'ai' ? 'assessor' : t.speaker,
+            text:        t.text
+          }
+        end
+
         json_response(
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason,
+          started_at:      session.started_at,
+          recent_turns:    recent_turns
         )
       end
 

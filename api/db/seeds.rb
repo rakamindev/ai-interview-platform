@@ -369,6 +369,30 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Dev users (login is the only auth path — no dev-token bypass) ────────────
+#
+# The dev password is NOT hardcoded here (secrets must never live in committed
+# code): set DEV_USER_PASSWORD in config/application.yml (gitignored) for a
+# fixed dev password, or leave it unset to generate a random one printed below.
+
+DEV_USERS = [
+  { email: 'admin@test-corp.dev',    role: 'admin' },
+  { email: 'assessor@test-corp.dev', role: 'assessor' }
+].freeze
+
+dev_password = ENV['DEV_USER_PASSWORD'] || SecureRandom.alphanumeric(12)
+
+DEV_USERS.each do |attrs|
+  user = User.find_or_initialize_by(email: attrs[:email])
+  user.password = dev_password
+  user.role = attrs[:role]
+  user.save!
+  action = user.created_at == user.updated_at ? 'Created' : 'Synced'
+  puts "  #{action} user: #{attrs[:email]} (role=#{attrs[:role]})"
+end
+
+puts "  Dev login password: #{dev_password} (from DEV_USER_PASSWORD, or random)"
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(
@@ -382,7 +406,13 @@ puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
+puts "To log in via the web app, use one of the seeded dev users:"
+puts ""
+puts "  admin@test-corp.dev    (admin — can manage users)"
+puts "  assessor@test-corp.dev (assessor)"
+puts "  Password: see 'Dev login password' printed above (DEV_USER_PASSWORD in config/application.yml)"
+puts ""
+puts "To mint a JWT for API testing, open the Rails console:"
 puts ""
 puts "  bundle exec rails console"
 puts ""
@@ -390,10 +420,6 @@ puts "Then run:"
 puts ""
 puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
 puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
 puts "  puts token"
 puts ""
 puts "Then hit the API:"

@@ -56,7 +56,7 @@ function SessionRow({
       <div className="flex items-center gap-3">
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             Awaiting candidate
           </span>
         )}
@@ -134,23 +134,32 @@ export default function AssessmentInvitePage() {
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
+    try {
+      const res = await assessmentsApi.getSessions(Number(id));
+      setSessions(res.data.sessions ?? []);
+    } catch {
+      // keep current sessions
+    }
   }, [id]);
 
   useEffect(() => {
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    ])
+      .then(([aRes, sRes]) => {
+        setAssessment(aRes.data.assessment ?? null);
+        setSessions(sRes.data.sessions ?? []);
+      })
+      .catch(() => {
+        setSessions([]);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
+    const hasActive = (sessions || []).some((s) => s.status !== "ended");
     if (!hasActive) return;
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);
@@ -190,7 +199,7 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -199,7 +208,7 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">

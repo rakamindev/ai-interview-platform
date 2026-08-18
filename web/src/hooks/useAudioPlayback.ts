@@ -69,12 +69,16 @@ export function useAudioPlayback() {
     onDrainedRef.current = null;
   }, []);
 
-  const scheduleAfterPlayback = useCallback((fn: () => void) => {
+  // Registers a one-shot callback that fires when the audio queue drains.
+  // Returns a cancel function so callers can drop a stale callback (e.g. a
+  // "candidate turn" timer when a new AI turn starts before it fires).
+  const scheduleAfterPlayback = useCallback((fn: () => void): (() => void) => {
     const ctx = audioCtxRef.current;
-    if (!ctx) { fn(); return; }
+    if (!ctx) { fn(); return () => {}; }
     const remaining = (nextPlayTimeRef.current - ctx.currentTime) * 1000;
-    if (remaining <= 0) { fn(); return; }
-    setTimeout(fn, remaining);
+    if (remaining <= 0) { fn(); return () => {}; }
+    const timer = setTimeout(fn, remaining);
+    return () => clearTimeout(timer);
   }, []);
 
   const stop = useCallback(() => {

@@ -6,8 +6,8 @@ interface UseAudioWebSocketOptions {
   sessionId: number;
   token?: string;
   onAudioChunk: (buffer: ArrayBuffer) => void;
-  onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text">) => void;
-  onStateChange: (state: InterviewState) => void;
+  onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text"> & { turn_number?: number }) => void;
+  onStateChange: (state: InterviewState, message?: string) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
 }
@@ -47,6 +47,7 @@ export function useAudioWebSocket({
       setConnectionState("connected");
       reconnectAttemptsRef.current = 0;
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
+      onStateChange("active");
     };
 
     // Only signal AI speaking once per turn (first binary chunk).
@@ -70,7 +71,11 @@ export function useAudioWebSocket({
             case "transcription":
             case "transcript":
               if (msg.speaker && msg.text) {
-                onTranscript({ speaker: msg.speaker === "candidate" ? "candidate" : "assessor", text: msg.text });
+                onTranscript({
+                  speaker: msg.speaker === "candidate" ? "candidate" : "assessor",
+                  text: msg.text,
+                  turn_number: msg.turn_number,
+                });
               }
               break;
             case "speaker_changed":
@@ -99,11 +104,27 @@ export function useAudioWebSocket({
               break;
             case "session_ended":
               sessionEndedRef.current = true;
+              if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              // reason "error" = the SYSTEM failed (e.g. Gemini unreachable) —
+              // never show the success screen for that.
+              if (msg.reason === "error") {
+                onStateChange("error", msg.message ?? "The interview could not be completed due to a technical problem.");
+              } else {
+                onStateChange("complete");
+              }
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+                if (msg.message === "Session has ended" || msg.code === "session_ended" || msg.code === "auth_failed") {
+                  onStateChange("complete");
+                } else {
+                  onStateChange("error", msg.message ?? "The interview could not be started. Please contact the hiring team.");
+                }
+              }
               break;
           }
         } catch {
@@ -118,7 +139,7 @@ export function useAudioWebSocket({
 
     ws.onclose = () => {
       setConnectionState("disconnected");
-      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
+      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect or show error
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
         onStateChange("reconnecting");
@@ -127,7 +148,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("error", "Koneksi terputus. Silakan periksa jaringan internet Anda dan coba sambungkan kembali.");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
@@ -145,6 +166,7 @@ export function useAudioWebSocket({
   }, []);
 
   const disconnect = useCallback(() => {
+    sessionEndedRef.current = true;
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
     wsRef.current?.close();
