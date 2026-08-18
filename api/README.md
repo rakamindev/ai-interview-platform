@@ -23,8 +23,8 @@ Fill in the required values in `config/application.yml`:
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | Shared PostgreSQL instance |
 | `GEMINI_API_KEY` | Google AI Studio API key |
 | `GEMINI_LIVE_MODEL` | e.g. `gemini-3.1-flash-live-preview` |
-| `GEMINI_ANALYSIS_MODEL` | e.g. `gemini-2.0-flash-001` |
-| `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
+| `GEMINI_FLASH_MODEL` | e.g. `gemini-3.6-flash` |
+| `GEMINI_PRO_MODEL` | e.g. `gemini-3.1-pro-preview` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
 | `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |

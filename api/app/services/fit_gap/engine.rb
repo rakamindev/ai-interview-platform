@@ -9,7 +9,7 @@ module FitGap
       @report = report
       @generation_token = generation_token
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model: ENV.fetch("GEMINI_FLASH_MODEL", "gemini-2.0-flash-001"),
+        model: ENV.fetch("GEMINI_FLASH_MODEL", "gemini-3.6-flash"),
         timeout: 30
       )
     end
