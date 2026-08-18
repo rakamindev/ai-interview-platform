@@ -4,7 +4,7 @@ class Vacancy < ApplicationRecord
   include TenantScoped
 
   has_many :vacancy_skills, dependent: :destroy
-  has_many :fit_gap_reports, dependent: :destroy
+  has_many :fit_gap_reports, dependent: :restrict_with_error
 
   validates :role_title, presence: true
   validate :required_skills_are_present_and_unique
