@@ -1,0 +1,21 @@
+{
+  "configured_skills": [
+    {
+      "skill_id": "SK-ENG-001",
+      "skill_label": "React / Frontend Development Core",
+      "level": 0,
+      "confidence": "high",
+      "evidence": ["A sub-1 rating is outside the L1-L5 scale."],
+      "competency_summary": "Out-of-range low."
+    },
+    {
+      "skill_id": "SK-ENG-002",
+      "skill_label": "Node.js / Backend Development",
+      "level": 9,
+      "confidence": "high",
+      "evidence": ["A rating above 5 is outside the L1-L5 scale."],
+      "competency_summary": "Out-of-range high."
+    }
+  ],
+  "discovered_skills": []
+}

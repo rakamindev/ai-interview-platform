@@ -1,0 +1,12 @@
+{
+  "configured_skills": [
+    {
+      "skill_id": "SK-ENG-001",
+      "skill_label": "React / Frontend Development Core",
+      "confidence": "high",
+      "evidence": ["The candidate described a complex feature build."],
+      "competency_summary": "Appears capable, but the model omitted the level."
+    }
+  ],
+  "discovered_skills": []
+}
