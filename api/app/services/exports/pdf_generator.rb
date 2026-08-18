@@ -16,6 +16,14 @@ module Exports
       'not_assessed' => 'Not Assessed'
     }.freeze
 
+    FONT_DIR = Rails.root.join('app', 'assets', 'fonts')
+    NOTO_SANS = {
+      normal:      FONT_DIR.join('NotoSans-Regular.ttf'),
+      bold:        FONT_DIR.join('NotoSans-Bold.ttf'),
+      italic:      FONT_DIR.join('NotoSans-Italic.ttf'),
+      bold_italic: FONT_DIR.join('NotoSans-BoldItalic.ttf')
+    }.freeze
+
     def initialize(portfolio:, vacancy: nil)
       @portfolio   = portfolio
       @vacancy     = vacancy
@@ -27,6 +35,8 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        pdf.font_families.update("NotoSans" => NOTO_SANS)
+        pdf.font "NotoSans"
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
