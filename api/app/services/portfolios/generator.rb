@@ -26,6 +26,9 @@ module Portfolios
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
+      # Never mark a portfolio complete without any assessed skills/evidence.
+      raise 'Portfolio rejected: generation returned zero skills — refusing to mark complete without evidence' if portfolio.portfolio_skills.empty?
+
       portfolio.update!(generation_status: 'complete', generated_at: Time.current)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
