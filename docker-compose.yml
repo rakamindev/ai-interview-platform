@@ -1,0 +1,107 @@
+services:
+  redis:
+    image: redis:alpine
+    container_name: ai_interview_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: ai_interview_api
+    restart: unless-stopped
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec puma -C config/puma.rb"
+    ports:
+      - "3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./api:/ai-interview
+      - bundle_cache:/usr/local/bundle
+    environment:
+      TZ: Asia/Jakarta
+      RAILS_ENV: development
+      PORT: 3001
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-rakamin_development}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-ubee}
+      REDIS_URL: redis://redis:6379/1
+      APP_BASE_URL: http://localhost:5173
+      ALLOWED_ORIGINS: "*"
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-your_secret_key_base_here}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-AQ.Ab8RN6LomRw86rIAMtViTh5XkJjeXPoYditchkXDNquJHWp21g}
+      GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL:-gemini-3.1-flash-live-preview}
+      GEMINI_FLASH_MODEL: ${GEMINI_FLASH_MODEL:-gemini-3.5-flash}
+      GEMINI_PRO_MODEL: ${GEMINI_PRO_MODEL:-gemini-3.5-flash}
+      INVITE_EXPIRY_MINUTES: ${INVITE_EXPIRY_MINUTES:-5}
+      TOKEN_EXPIRATION_TIME: "259200"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: ai_interview_sidekiq
+    restart: unless-stopped
+    command: bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./api:/ai-interview
+      - bundle_cache:/usr/local/bundle
+    environment:
+      TZ: Asia/Jakarta
+      RAILS_ENV: development
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-rakamin_development}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-ubee}
+      REDIS_URL: redis://redis:6379/1
+      APP_BASE_URL: http://localhost:5173
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-your_secret_key_base_here}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-AQ.Ab8RN6LomRw86rIAMtViTh5XkJjeXPoYditchkXDNquJHWp21g}
+      GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL:-gemini-3.1-flash-live-preview}
+      GEMINI_FLASH_MODEL: ${GEMINI_FLASH_MODEL:-gemini-3.5-flash}
+      GEMINI_PRO_MODEL: ${GEMINI_PRO_MODEL:-gemini-3.5-flash}
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: ai_interview_web
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:3001/api/v1
+      - VITE_WS_BASE_URL=ws://localhost:3001
+      - VITE_SPEED_TEST_PING_URL=http://localhost:3001/api/v1/health
+      - VITE_SPEED_TEST_UPLOAD_URL=http://localhost:3001/api/v1/speed_test
+    depends_on:
+      - api
+
+volumes:
+  redis_data:
+  bundle_cache:
