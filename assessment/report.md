@@ -7,11 +7,11 @@
 - Base: `main`
 - Verification date: 18 August 2026, 14:21 WIB
 - Submission mode: Option A, one comprehensive pull request
-- Pull request link: pending remote publication
-- External video link: pending external upload
+- Pull request link: https://github.com/rakamindev/ai-interview-platform/pull/43
+- External video link: https://drive.google.com/file/d/1B5ORotRxn2UXJpe4hSTUHfNw1W_o_Epv/view?usp=sharing
 - Local video artifact: [`assessment-review-walkthrough.mp4`](../output/video/assessment-review-walkthrough.mp4)
 
-This report documents the complete local implementation and verification record. The brief names an existing repository and asks for a pull request against it, so a new repository was not created. No remote push, pull request creation, or external video upload has been performed in this local phase.
+This report documents the complete implementation and verification record. The brief names an existing repository and asks for a pull request against it, so a new standalone repository was not created. The branch was published to a contributor fork, an open draft pull request was created against the upstream repository, and the walkthrough video was uploaded to Google Drive.
 
 ## Executive summary
 
@@ -126,7 +126,7 @@ The main constraints escalated during implementation were:
 - Gemini model availability changes over time. The initial stale model defaults were rejected by the current catalog/API and had to be corrected.
 - Gemini Pro quota for the supplied account was zero, so the final provider smoke used a supported Flash model for deterministic service validation.
 - Ruby EventMachine on native Windows did not provide TLS for the Live client. The Docker Linux image did, so Live verification was completed there.
-- The branch cannot claim a public PR or external video URL until remote publication is explicitly authorized.
+- Direct upstream write access was unavailable, so remote publication used the contributor fork `michaellesmana/ai-interview-platform` and the cross-repository PR linked above.
 
 ## Step 4 - Revamp strategy, acceptance criteria, and trade-offs
 
@@ -238,7 +238,7 @@ The local walkthrough is 4 minutes 15 seconds, 1280x720 H.264 with narrated audi
 
 [`assessment-review-walkthrough.mp4`](../output/video/assessment-review-walkthrough.mp4)
 
-An external hosting URL is intentionally not invented. The artifact must be uploaded to Loom, YouTube Unlisted, Google Drive, or another approved platform before the final hiring-portal submission.
+The walkthrough is hosted externally at [Google Drive](https://drive.google.com/file/d/1B5ORotRxn2UXJpe4hSTUHfNw1W_o_Epv/view?usp=sharing) for reviewer access before the final hiring-portal submission.
 
 ## Security and protected data review
 
@@ -269,11 +269,11 @@ Remaining production review items are secret rotation after any accidental expos
 - Four-minute-plus local walkthrough artifact.
 - Updated report source and generated PDF.
 
-### Pending remote actions
+### Remote publication completed
 
-- Push `feat/assessment-review-revamp` to `origin`.
-- Open the single comprehensive GitHub pull request.
-- Replace the pending PR line with the real URL.
-- Upload the local MP4 to an external platform and replace the pending video line with the real URL.
+- Pushed `feat/assessment-review-revamp` to the contributor fork `michaellesmana/ai-interview-platform`.
+- Opened the single comprehensive draft pull request at https://github.com/rakamindev/ai-interview-platform/pull/43.
+- Uploaded the walkthrough to Google Drive and linked it above.
+- Replaced the pending PR and video placeholders with the verified URLs.
 
-These actions are intentionally separated from local verification because they create external state and may expose the submitted artifacts. No remote publication is claimed until those actions are explicitly authorized and independently verified.
+The pull request remains open as a draft for review. No merge or production deployment was performed.
