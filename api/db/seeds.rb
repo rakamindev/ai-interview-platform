@@ -402,4 +402,12 @@ puts "  curl -s http://localhost:3001/api/v1/health"
 puts ""
 puts "  curl -s -H 'Authorization: Bearer <your_token>' \\"
 puts "       http://localhost:3001/api/v1/assessments"
+
+# Demo fixtures — development and test only.
+# Uses `load` so demo.rb runs in its own top-level context; re-run idempotent
+# because demo.rb skips when any portfolio already exists. Reset with
+# `rails db:seed:replant`.
+if (Rails.env.development? || Rails.env.test?) && !Portfolio.exists?
+  load Rails.root.join('db/seeds/demo.rb')
+end
 puts ""
