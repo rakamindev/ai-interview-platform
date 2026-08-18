@@ -78,17 +78,48 @@ sebelum scope final dipilih.
 
 **Yang masih perlu ditelusuri sebelum problem map bisa disebut lengkap** (per journey map di
 atas): Coverage/Live Monitor real-time dengan key baru (⚪, butuh interview baru + audio —
-di luar kemampuan saya, mic browser otomatis diblokir sistem, lihat STEP 01), Confidence sebagai
-halaman berdiri sendiri (belum dicek), Hiring Decision (⚪ NOT TESTED sama sekali), dan yang
-paling penting per diskusi ini: **sapuan sengaja lintas produk untuk pola "dead-end/incomplete-
-state guidance"** yang dihipotesiskan dari B-03 — sejauh ini sudah kelihatan sekilas beberapa
-instance lain tanpa dicatat sistematis (kotak merah "Portfolio generation failed" di STEP 03,
-spinner "Generating fit/gap report..." saat regenerasi) tapi belum di-treat sebagai satu tema.
+di luar kemampuan saya, mic browser otomatis diblokir sistem, lihat STEP 01).
 
-**Keputusan proses ke depan:** lanjutkan walkthrough dulu (PRD + code + audit yang sudah ada +
-browser testing + observasi baru), setiap temuan baru masuk ke tabel ini, baru §4.1 dipilih
-setelah problem map ini terasa cukup lengkap — bukan dikunci lebih awal cuma karena audit sudah
-menuliskan A/B/C duluan.
+### ✅ RESOLVED — dua pertanyaan lama di journey map, bukan gap, ternyata batas produk yang disengaja
+- **Confidence sebagai halaman berdiri sendiri**: dicek langsung ke `web/src/App.tsx` (semua
+  route, 1 file, pendek) — tidak ada route terpisah, cuma badge inline di Portfolio/Fit-Gap.
+  Dicek juga ke `codebase-audit.md` §2 (tabel 11 item PRD, dibaca langsung dari wiki asli) —
+  tidak ada requirement PRD untuk halaman terpisah. Bukan gap.
+- **Hiring Decision**: sama, tidak ada route/field/kolom DB apa pun (`grep` schema.rb nihil).
+  §2 audit berhenti di item #11 (WebSocket reconnection) dan #10 (PDF export/N14) — tidak ada
+  item ke-12 soal keputusan hiring. Kesimpulan: **produk ini sengaja berhenti di "hasilkan
+  sinyal (PDF/JSON export)"** — keputusan hire/reject sungguhan terjadi di luar sistem (ATS/
+  email/diskusi manusia), pakai laporan itu sebagai input. Bukan fitur hilang, itu batas
+  scope produk yang benar.
+
+### 🎯 SAPUAN dead-end-state — hipotesis B-03 terkonfirmasi, tapi lebih presisi dari dugaan awal
+`grep` sistematis semua state kosong/gagal di tiap halaman (`web/src/pages/**/*.tsx`) —
+bukan cuma lihat sekilas. Hasilnya BUKAN "semua tempat berantakan" — polanya justru lebih
+tajam dari itu:
+
+| Halaman | State | Kualitas | Detail |
+|---|---|---|---|
+| AssessmentListPage | "No assessments yet." | ✅ Bagus | Ikon-less tapi ada CTA "Create your first assessment" |
+| AssessmentInvitePage | "No candidates yet" | ✅ Bagus | Ikon + judul + subteks arahkan ke tombol "Invite Candidate" yang sudah ada di halaman |
+| VacancyListPage | "No vacancies yet." | ✅ Bagus | Ikon + CTA (dikonfirmasi ulang STEP 04) |
+| LiveMonitorPage | "Waiting for interview to begin...", "No transcript yet." | ✅ Bagus (tanpa CTA, tapi memang tidak perlu — assessor tidak bisa berbuat apa-apa selain nunggu kandidat) | Konteksnya jelas dari kalimat + posisi |
+| **TranscriptPage** | "No transcript available for this session." | 🔴 **Dead-end asli** | Tidak jelasin KENAPA (belum mulai? crash? gagal simpan?), tidak ada aksi apa pun |
+| **PortfolioPage (failed)** | "Portfolio generation failed." + tombol Retry | 🟡 **Dead-end sebagian** | Ada aksi, tapi nol info kenapa gagal — sudah dianalisis detail di STEP 03 (retry kemungkinan besar gagal lagi kalau akar masalahnya sistemik, assessor tidak tahu harus eskalasi ke mana) |
+
+**Kesimpulan tajam** (bukan "empty state di mana-mana konsisten buruk" seperti dugaan awal):
+produk ini **sudah punya pola empty-state yang bagus & konsisten untuk "belum ada apa-apa
+karena belum dibuat"** (assessment/candidate/vacancy kosong — 3 dari 3 dicek, semuanya baik).
+Yang **benar-benar lemah** khusus pada **"proses AI/background sudah coba jalan dan tidak
+selesai/gagal"** — Transcript kosong tanpa penjelasan, Portfolio gagal tanpa penjelasan. Ini
+tema yang jauh lebih presisi dan langsung nyambung ke inti Opsi C (trust ke sinyal AI) dari
+sisi yang berbeda: bukan cuma "apakah confidence score-nya benar secara matematis", tapi
+"kalau AI pipeline-nya gagal/timeout/error, apakah assessor tahu itu terjadi dan harus
+ngapain" — satu tema produk, dua sisi (backend correctness + frontend transparency).
+
+**Keputusan proses ke depan:** lanjutkan walkthrough dulu (masih perlu interview baru + audio
+untuk Coverage/Live Monitor real-time — butuh partisipasi Fadhil, saya tidak bisa akses mic),
+setiap temuan baru masuk ke tabel ini, baru §4.1 dipilih setelah problem map ini terasa cukup
+lengkap — bukan dikunci lebih awal cuma karena audit sudah menuliskan A/B/C duluan.
 
 ---
 
