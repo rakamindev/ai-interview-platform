@@ -47,4 +47,9 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Never let a test run rewrite schema.rb — it already can't reconstruct the
+  # ai_interview Postgres schema (see rails_helper.rb), so it must not be trusted
+  # as a source of truth.
+  config.active_record.dump_schema_after_migration = false
 end

@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -e
+
+if git diff --cached --name-only | grep -q '^api/'; then
+  echo "Running API test suite..."
+  (cd api && RAILS_ENV=test bundle exec rspec)
+fi
+
+if git diff --cached --name-only | grep -q '^web/'; then
+  echo "Running web typecheck + tests..."
+  (cd web && npm run typecheck && npm test)
+fi
