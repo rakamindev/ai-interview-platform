@@ -25,9 +25,12 @@ export default function FitGapReportPage() {
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
+  const [triggerError, setTriggerError] = useState<string | null>(null);
+
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
     try {
+      setTriggerError(null);
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
@@ -38,7 +41,11 @@ export default function FitGapReportPage() {
           setGenerating(true);
         } catch {
           setGenerating(false);
+          setTriggerError("Failed to trigger fit/gap report generation. Please try again.");
         }
+      } else {
+        setGenerating(false);
+        setTriggerError("Failed to load fit/gap report.");
       }
     }
   }, [portfolio, vacancyId]);
@@ -146,6 +153,16 @@ export default function FitGapReportPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
         </div>
+      )}
+
+      {/* Error state */}
+      {triggerError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="p-4 flex items-center justify-between">
+            <span className="text-sm text-destructive font-medium">{triggerError}</span>
+            <Button size="sm" variant="outline" onClick={fetchReport}>Retry</Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Report ready */}
