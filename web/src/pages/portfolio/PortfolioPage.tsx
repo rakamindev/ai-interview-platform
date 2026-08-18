@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Briefcase, Plus } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -232,23 +232,38 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
-          </div>
+          {vacancies.length === 0 ? (
+            <div className="border rounded-lg p-6 text-center space-y-3">
+              <Briefcase className="h-6 w-6 text-muted-foreground mx-auto" />
+              <div>
+                <p className="text-sm font-medium">No vacancies to compare against</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Create a vacancy with expected skills to run a Fit/Gap analysis for this candidate.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => navigate("/vacancies/new")}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Create your first vacancy
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Choose vacancy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancies.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.role_title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                Run Fit/Gap Analysis →
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>
