@@ -33,7 +33,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="text-left px-4 py-2.5 font-medium">Skill</th>
