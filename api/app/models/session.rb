@@ -16,6 +16,7 @@ class Session < ApplicationRecord
   validates :end_reason, inclusion: { in: END_REASONS }, allow_nil: true
 
   before_validation :generate_invite_token, on: :create
+  before_validation :set_invite_expiry, on: :create
 
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
@@ -24,6 +25,11 @@ class Session < ApplicationRecord
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+
+  # 14-day expiry is a default and a product parameter.
+  def invite_valid?
+    invite_expires_at.present? && invite_expires_at > Time.current
+  end
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
@@ -34,5 +40,9 @@ class Session < ApplicationRecord
 
   def generate_invite_token
     self.invite_token ||= SecureRandom.hex(32)
+  end
+
+  def set_invite_expiry
+    self.invite_expires_at ||= 14.days.from_now
   end
 end

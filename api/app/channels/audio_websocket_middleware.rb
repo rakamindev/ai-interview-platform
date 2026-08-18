@@ -737,7 +737,9 @@ class AudioWebSocketMiddleware
       invite_token = request.params['token']
 
       if invite_token.present?
-        Session.unscoped.find_by(invite_token: invite_token)
+        session = Session.unscoped.find_by(invite_token: invite_token)
+        return [nil, 'Invite token has expired'] if session && !session.invite_valid?
+        session
       else
         auth_header = env['HTTP_AUTHORIZATION']
         return [nil, 'Missing authorization'] unless auth_header.present?
