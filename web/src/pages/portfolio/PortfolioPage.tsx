@@ -94,6 +94,9 @@ export default function PortfolioPage() {
     }
   };
 
+  const selectedVacancyObj = vacancies.find(v => String(v.id) === selectedVacancy);
+  const hasExistingReport = portfolio?.fit_gap_report_vacancy_ids?.includes(Number(selectedVacancy));
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
@@ -232,22 +235,36 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
+          <div className="flex flex-col gap-4">
+            <h2 className="text-sm font-semibold">Fit/Gap Analysis</h2>
+            
+            <div className="flex items-center gap-3">
+              <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Choose a vacancy to compare..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancies.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.role_title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                {hasExistingReport ? "View existing report →" : "Run Analysis →"}
+              </Button>
+            </div>
+            
+            {/* Vacancy Preview */}
+            {selectedVacancyObj && (
+              <div className="bg-muted/30 border rounded-md p-4 mt-2">
+                <h3 className="text-sm font-medium mb-1">Competency Expectations</h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {selectedVacancyObj.competency_expectations || "No expectations provided."}
+                </p>
+              </div>
+            )}
           </div>
         </>
       )}
