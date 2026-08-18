@@ -25,7 +25,15 @@ export default function SkillPortfolioCard({
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
+            <div className="flex items-center gap-2">
+              <LevelBadge level={effectiveLevel} />
+              {skill.expected_level != null && (
+                <div className="text-xs text-muted-foreground flex flex-col items-center">
+                  <span className="text-[10px]">Expected</span>
+                  <LevelBadge level={skill.expected_level} size="sm" />
+                </div>
+              )}
+            </div>
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>

@@ -182,14 +182,18 @@ module Api
       end
 
       def portfolio_skill_json(skill)
+        assessment_skills = skill.portfolio.session.assessment.assessment_skills
+        exp_skill = assessment_skills.find { |as| (skill.skill_id.present? && as.skill_id == skill.skill_id) || as.skill_label.downcase == skill.skill_label.downcase }
+
         {
-          id:                skill.id,
-          skill_id:          skill.skill_id,
-          skill_label:       skill.skill_label,
-          is_discovered:     skill.is_discovered,
-          ai_level:          skill.ai_level,
-          ai_confidence:     skill.ai_confidence,
-          evidence:          skill.evidence_quotes,
+          id:                 skill.id,
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          is_discovered:      skill.is_discovered,
+          expected_level:     exp_skill&.expected_level,
+          ai_level:           skill.ai_level,
+          ai_confidence:      skill.ai_confidence,
+          evidence:           skill.evidence_quotes,
           competency_summary: skill.competency_summary
         }
       end
