@@ -27,6 +27,11 @@ export const portfoliosApi = {
       override: data,
     }),
 
+  getOverrideHistory: (portfolioSkillId: number) =>
+    api.get<{ override_events: AssessorOverride[] }>(
+      `/portfolio_skills/${portfolioSkillId}/override_events`,
+    ),
+
   triggerFitGap: (portfolioId: number, vacancyId: number) =>
     api.post<{ report: FitGapReport } | { status: string; message: string }>(`/portfolios/${portfolioId}/fitgap`, {
       fitgap: { vacancy_id: vacancyId },
