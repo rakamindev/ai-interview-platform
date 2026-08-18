@@ -5,6 +5,7 @@ class ApplicationController < ActionController::API
   include ExceptionHandler
 
   before_action :require_tenant!
+  before_action :verify_scheme_claim!, if: -> { Current.user.present? && Current.organization.present? }
 
   # Declarative auth helper — mirrors rakamin-api's authorize_auth_token! pattern.
   # Usage:
@@ -25,6 +26,16 @@ class ApplicationController < ActionController::API
     return if tenant_resolved?
 
     raise ExceptionHandler::TenantNotFound, Message.tenant_not_found
+  end
+
+  # AC-4.6: reject when the JWT scheme claim disagrees with the resolved org.
+  # This is a mitigation, not a repair — the scheme claim is unverifiable
+  # inside this service because no user↔organisation membership exists (C1).
+  def verify_scheme_claim!
+    return unless Current.user.scheme.present?
+    return if Current.user.scheme == Current.organization.scheme
+
+    raise ExceptionHandler::Unauthorized, 'Token scheme does not match the resolved organisation'
   end
 
   def tenant_resolved?
