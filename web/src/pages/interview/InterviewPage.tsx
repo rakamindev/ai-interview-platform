@@ -29,6 +29,7 @@ export default function InterviewPage() {
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
+  const interviewStateRef = useRef<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
@@ -55,7 +56,19 @@ export default function InterviewPage() {
   const unmuteRef = useRef<(() => void) | null>(null);
 
   const handleStateChange = useCallback((state: InterviewState) => {
-    setInterviewState(state);
+    setInterviewState((prev) => {
+      // Once complete, never go back
+      if (prev === "complete") return prev;
+      
+      // We must handle side-effects carefully. Since we can't easily break out
+      // of the callback if prev === complete, we'll rely on a ref to track if we're complete.
+      return state;
+    });
+
+    if (interviewStateRef.current === "complete") return;
+    if (state === "complete") {
+      interviewStateRef.current = "complete";
+    }
 
     if (state === "draining_audio") {
       // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
@@ -111,6 +124,9 @@ export default function InterviewPage() {
     const attempt = async (delay: number) => {
       try {
         await sessionsApi.audioComplete(token);
+        // If API call succeeds, we can safely assume the session is ended,
+        // even if the WebSocket drops before sending session_ended.
+        handleStateChange("complete");
       } catch {
         setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
       }

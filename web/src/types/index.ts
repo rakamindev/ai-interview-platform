@@ -140,6 +140,7 @@ export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
+  vacancy_role_title?: string;
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
