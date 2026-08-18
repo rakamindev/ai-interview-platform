@@ -17,12 +17,29 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const rawLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const effectiveLevel = rawLevel || 1; // fallback to L1 when level is 0 (garbage input)
 
   return (
     <Card>
       <CardContent className="p-4 space-y-4">
-        {/* Skill header */}
+        {/* Evidence (top — evidence-first hierarchy) */}
+        {skill.evidence.length > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Evidence from interview
+            </span>
+            <ul className="space-y-1">
+              {skill.evidence.map((quote, i) => (
+                <li key={i} className="text-sm text-foreground line-clamp-3">
+                  • "{quote}"
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Skill header with level badge */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <LevelBadge level={effectiveLevel} />
@@ -48,29 +65,13 @@ export default function SkillPortfolioCard({
           </div>
         )}
 
-        {/* Evidence */}
-        {skill.evidence.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Evidence from interview
-            </span>
-            <ul className="space-y-1">
-              {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* Competency summary */}
         {skill.competency_summary && (
           <div className="space-y-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Competency summary
             </span>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
               {skill.competency_summary}
             </p>
           </div>
