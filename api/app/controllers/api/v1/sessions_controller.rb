@@ -3,10 +3,28 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent_policy consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent_policy consent]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript review]
+
+      # GET /api/v1/sessions
+      #
+      # Every candidate in this tenant, newest first, regardless of which
+      # assessment they sat. An assessor arrives holding a person's name, not
+      # an assessment id, and until now the only way in was to already know
+      # which assessment to open.
+      #
+      # Session is TenantScoped, so the default scope does the isolation; the
+      # specs assert it rather than trusting it, because a listing endpoint
+      # that spans parents is exactly the shape the earlier cross-tenant leak
+      # took.
+      def all_sessions
+        sessions = Session.includes(:assessment, :portfolio).order(created_at: :desc)
+        sessions = sessions.where(status: params[:status]) if Session::STATUSES.include?(params[:status])
+
+        json_response(sessions: sessions.map { |s| candidate_row_json(s) })
+      end
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -77,6 +95,34 @@ module Api
         end
       end
 
+      # PATCH /api/v1/sessions/:id/review
+      #
+      # A human signing off that they have looked at these results. The
+      # candidate list is a queue, and a queue nobody can clear stops carrying
+      # information — after fifty candidates "ready to review" would just mean
+      # "finished".
+      #
+      # Reviewing is only meaningful once there is something to read, so a
+      # session with no completed portfolio is refused rather than silently
+      # marked.
+      def review
+        reviewed = ActiveModel::Type::Boolean.new.cast(params[:reviewed])
+        reviewed = true if params[:reviewed].nil?
+
+        if reviewed
+          portfolio = Portfolio.find_by(session_id: @session.id)
+          unless portfolio&.generation_status == 'complete'
+            return json_error('There is no finished report to review yet', :unprocessable_entity)
+          end
+
+          @session.mark_reviewed!(current_user&.id)
+        else
+          @session.unmark_reviewed!
+        end
+
+        json_response(session: session_json(@session.reload))
+      end
+
       # GET /api/v1/sessions/:id/coverage
       def coverage
         maps       = @session.coverage_maps.configured.order(:id)
@@ -115,15 +161,23 @@ module Api
       # POST /sessions/:token/audio_complete  — no JWT, invite token in URL
       # Called by the frontend when the audio queue drains after a preparing_to_end signal.
       # Ends the session if all coverage is complete; idempotent if already ended.
+      #
+      # Hijack protection: anyone holding the invite link must not be able to
+      # fabricate an "all covered" end for an interview that never happened —
+      # that would persist an empty assessment as the candidate's official
+      # result. We therefore require (a) explicit consent and (b) evidence the
+      # session actually ran (active + at least one transcript turn). The error
+      # message stays generic so no internal state leaks to the caller.
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
+        unless session.consent_given? && session.active? && session.transcript_turns.exists?
+          return json_error("Session cannot be completed at this time", :unprocessable_entity)
+        end
+
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
       end
@@ -145,12 +199,74 @@ module Api
           return json_error("Assessment not found", :not_found)
         end
 
+        consent = session.candidate_consent
+
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:       session.id,
+          role_title:       assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          session_status:   session.status,
+          language:         assessment.language.presence || 'en',
+          consent_required: true,
+          consent_status:   consent&.status || 'pending',
+          policy_version:   ConsentPolicy::POLICY_VERSION
         )
+      end
+
+      # GET /sessions/:token/consent — UU PDP disclosure shown to the candidate.
+      def consent_policy
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        assessment = Assessment.unscoped
+                               .where(tenant_id: session.tenant_id)
+                               .find_by(id: session.assessment_id)
+        language = assessment&.language.presence || 'en'
+
+        json_response(
+          policy_version: ConsentPolicy::POLICY_VERSION,
+          language:       language,
+          consent_status: session.candidate_consent&.status || 'pending',
+          policy:         ConsentPolicy.content(language)
+        )
+      end
+
+      # POST /sessions/:token/consent — record acceptance or refusal (UU PDP).
+      # Idempotent: re-submitting updates the single per-session record.
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.ended?
+          return json_error("Session has ended", :unprocessable_entity)
+        end
+
+        status = params.dig(:consent, :status).to_s
+        unless %w[accepted declined].include?(status)
+          return json_error("Invalid consent status", :unprocessable_entity)
+        end
+
+        consent = session.candidate_consent || session.build_candidate_consent(
+          policy_version: ConsentPolicy::POLICY_VERSION
+        )
+
+        consent.status = status
+        consent.consent_ip = request.remote_ip
+        consent.consent_user_agent = request.user_agent.to_s.truncate(512)
+
+        if status == 'accepted'
+          consent.accepted_at = Time.current
+          consent.declined_at = nil
+        else
+          consent.declined_at = Time.current
+          consent.accepted_at = nil
+        end
+
+        if consent.save
+          json_response(consent: consent_json(consent))
+        else
+          json_error(consent.errors.full_messages.first, :unprocessable_entity)
+        end
       end
 
       private
@@ -168,14 +284,37 @@ module Api
           tenant_id:        session.tenant_id,
           candidate_id:     session.candidate_id,
           candidate_name:   session.candidate_name,
-          invite_token:     session.invite_token,
           invite_url:       session.invite_url,
           status:           session.status,
           end_reason:       session.end_reason,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          reviewed_at:      session.reviewed_at,
+          reviewed_by:      session.reviewed_by,
           created_at:       session.created_at
+        }
+      end
+
+      # One row on the candidate list. Carries just enough for the list to
+      # decide which action to offer without a second request per row —
+      # the assessment it belongs to, and whether a report is ready.
+      def candidate_row_json(session)
+        session_json(session).except(:invite_url).merge(
+          assessment: {
+            id:   session.assessment_id,
+            name: session.assessment&.name
+          },
+          portfolio_status: session.portfolio&.generation_status
+        )
+      end
+
+      def consent_json(consent)
+        {
+          policy_version: consent.policy_version,
+          status:         consent.status,
+          accepted_at:    consent.accepted_at,
+          declined_at:    consent.declined_at
         }
       end
 

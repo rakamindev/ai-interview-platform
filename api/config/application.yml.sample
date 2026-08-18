@@ -13,12 +13,23 @@ DB_PASSWORD: ""
 
 # AI Interview specific
 GEMINI_API_KEY: "your_gemini_api_key"
-GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
-GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
-GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
+
+# Model ids move. Check what your key can actually reach before assuming:
+#   curl "https://generativelanguage.googleapis.com/v1beta/models?key=$KEY"
+#
+# The gemini-2.0-* ids this file used to name are retired and now 404.
+#
+# GEMINI_PRO_MODEL points at a flash model on purpose: the AI Studio free tier
+# grants no quota for any Pro model, so portfolio generation answers 429 with a
+# free key. Point it back at a Pro id if yours is billed.
+GEMINI_LIVE_MODEL: "gemini-3.1-flash-live-preview"
+GEMINI_FLASH_MODEL: "gemini-2.5-flash"
+GEMINI_PRO_MODEL: "gemini-2.5-flash"
 
 # App URL (for invite links)
 APP_BASE_URL: "http://localhost:3001"
+# Frontend URL — used to build candidate invite links
+WEB_BASE_URL: "http://localhost:5173"
 
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds

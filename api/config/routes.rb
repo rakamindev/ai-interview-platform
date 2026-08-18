@@ -10,7 +10,29 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
+      # Speed test, both directions, served from our own origin.
+      #
+      # The candidate runs this seconds before an interview, so measuring their
+      # line against a public CDN would hand their IP and timing to third
+      # parties we never named in the consent notice — and would measure the
+      # route to that CDN rather than the route to the service they are about
+      # to talk to. Both problems disappear when the bytes come from here.
+
+      # Download: a fixed, incompressible payload. `?bytes=` is clamped so the
+      # endpoint cannot be turned into an outbound bandwidth amplifier.
+      get 'speed_test', to: proc { |env|
+        requested = Rack::Request.new(env).params['bytes'].to_i
+        bytes = requested.clamp(64 * 1024, 2 * 1024 * 1024)
+        bytes = 512 * 1024 if requested.zero?
+
+        [200, {
+          'Content-Type' => 'application/octet-stream',
+          'Cache-Control' => 'no-store, no-cache, must-revalidate',
+          'Content-Length' => bytes.to_s
+        }, [SecureRandom.bytes(bytes)]]
+      }
+
+      # Upload: accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
@@ -22,8 +44,14 @@ Rails.application.routes.draw do
       end
 
       # Sessions
+      # Declared before `resources :sessions` so the literal path wins over the
+      # :id segment — otherwise /sessions/candidates would look like a lookup
+      # for a session whose id is "candidates".
+      get 'sessions/candidates', to: 'sessions#all_sessions'
+
       resources :sessions, only: %i[show] do
         member do
+          patch :review
           post :end_session
           get  :coverage
           get  :transcript
@@ -35,6 +63,8 @@ Rails.application.routes.draw do
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      get  'sessions/:token/consent',        to: 'sessions#consent_policy'
+      post 'sessions/:token/consent',        to: 'sessions#consent'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

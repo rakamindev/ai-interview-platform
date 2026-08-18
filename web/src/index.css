@@ -1,3 +1,14 @@
+/* Self-hosted so no request leaves the browser for a third party while a
+   candidate is being assessed (see the speed-test finding in the gap analysis).
+   Latin subsets only: the app ships English and Indonesian, so the Cyrillic,
+   Greek and Vietnamese subsets would be dead weight in every bundle. */
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/source-serif-4/latin-400.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,6 +46,28 @@
         --ring: 184 99% 31%;
 
         --radius: 0.5rem;
+
+        /* Assessment result palette.
+           Red is reserved for system failure: a candidate scoring below a
+           requirement is not an error, and colouring it like one pushes
+           reviewers toward rejection. A gap reads as clay; a met requirement is
+           deliberately quiet; an unassessed skill has no colour at all, because
+           no measurement was ever taken. */
+        --result-exceed: 184 60% 26%;
+        --result-match: 215 16% 35%;
+        --result-gap: 14 65% 45%;
+        --result-none: 215 16% 47%;
+
+        /* Attention text. The brand yellow is a fill colour — at small text
+           sizes it fails contrast — so caution copy uses this darkened partner
+           while the yellow itself stays for dots, rules and fills. */
+        --attention: 32 84% 28%;
+
+        /* Healthy state: connection up, hardware check passed, topic covered.
+           Held apart from the result palette on purpose — "the microphone
+           works" and "the candidate exceeds the requirement" are unrelated
+           claims and should not share a variable. */
+        --ok: 164 62% 26%;
     }
 
     .dark {
@@ -65,6 +98,14 @@
         --border: 217 33% 17%;
         --input: 217 33% 17%;
         --ring: 184 99% 31%;
+
+        --result-exceed: 184 60% 62%;
+        --result-match: 215 20% 72%;
+        --result-gap: 14 65% 62%;
+        --result-none: 215 20% 65%;
+
+        --attention: 43 90% 66%;
+        --ok: 164 55% 58%;
     }
 }
 

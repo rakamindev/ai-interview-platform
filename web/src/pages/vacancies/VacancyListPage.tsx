@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
+import Page from "@/components/layout/Page";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
 import type { Vacancy } from "@/types";
 
@@ -21,7 +22,7 @@ export default function VacancyListPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <Page width="board" className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Vacancies</h1>
         <Button onClick={() => navigate("/vacancies/new")}>
@@ -36,8 +37,8 @@ export default function VacancyListPage() {
       )}
 
       {loading ? (
-        <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
       ) : vacancies.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
@@ -47,7 +48,7 @@ export default function VacancyListPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {vacancies.map((v) => (
             <Card
               key={v.id}
@@ -55,9 +56,9 @@ export default function VacancyListPage() {
               onClick={() => navigate(`/vacancies/${v.id}/edit`)}
             >
               <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium text-sm">{v.role_title}</p>
+                  <p className="truncate text-sm font-medium">{v.role_title}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </CardContent>
@@ -65,6 +66,6 @@ export default function VacancyListPage() {
           ))}
         </div>
       )}
-    </div>
+    </Page>
   );
 }

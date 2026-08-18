@@ -14,8 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import Breadcrumb from "@/components/layout/Breadcrumb";
+import Page from "@/components/layout/Page";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, FileText, RefreshCw } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -55,8 +57,8 @@ function SessionRow({
 
       <div className="flex items-center gap-3">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span className="flex items-center gap-1 text-xs text-attention">
+            <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
             Awaiting candidate
           </span>
         )}
@@ -67,14 +69,17 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
+          /* "Failed" next to a person's name reads as the person failing. What
+             actually broke is the interview — a dropped connection, a model
+             error — so the label names that instead. */
           <span className="flex items-center gap-1 text-xs text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
+            Interview error
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span className="flex items-center gap-1 text-xs text-ok">
+            <span className="w-1.5 h-1.5 rounded-full bg-ok" />
             Completed
           </span>
         )}
@@ -114,6 +119,19 @@ function SessionRow({
               Results
             </Button>
           )}
+          {/* A failed session is the one an assessor most needs to look at, and
+              it used to render no button at all — its transcript existed but
+              nothing in the interface led there. */}
+          {isEnded && session.end_reason === "error" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/transcript`)}
+            >
+              <FileText className="h-3 w-3 mr-1" /> Transcript
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -132,21 +150,29 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
     setSessions(res.data.sessions);
   }, [id]);
 
-  useEffect(() => {
+  // A swallowed error used to render as an assessment with no candidates,
+  // which reads as "nobody has been invited" — the opposite of "we could not
+  // find out". An assessor acts on that difference.
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadFailed(false);
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => setLoadFailed(true)).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(load, [load]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -190,22 +216,47 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <Page width="board" className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
-      </div>
+      </Page>
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+  if (loadFailed) {
+    return (
+      <Page width="board" className="space-y-4" data-testid="invite-load-failed">
         <div className="flex items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
+          <h1 className="text-lg font-semibold">Couldn't load this assessment</h1>
+        </div>
+        <div className="rounded-lg border border-destructive/40 p-5">
+          <p className="text-sm">
+            The candidate list could not be fetched, so this page cannot show who has been
+            invited. Nothing has been changed or deleted.
+          </p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={load}>
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Try again
+          </Button>
+        </div>
+      </Page>
+    );
+  }
+
+  return (
+    <Page width="board" className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="min-w-0 space-y-1.5">
+          <Breadcrumb
+            crumbs={[
+              { label: "Assessments", to: "/assessments" },
+              { label: assessment?.name ?? "Assessment" },
+            ]}
+          />
           <div>
             <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
@@ -260,7 +311,7 @@ export default function AssessmentInvitePage() {
                 ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
                 : <>New invite link ready — share with your candidate:</>}
             </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-background">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>
@@ -278,7 +329,9 @@ export default function AssessmentInvitePage() {
 
       <Separator />
 
-      {/* Sessions list */}
+      {/* Candidates carry the page; what the assessment is made of sits beside
+          them rather than below, so a wide window shows both at once. */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">
@@ -322,22 +375,25 @@ export default function AssessmentInvitePage() {
 
       {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold">Skills assessed</h2>
+          <ul className="divide-y rounded-lg border">
+            {assessment.skills.map((s) => (
+              <li
+                key={s.id ?? s.skill_label}
+                className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 [overflow-wrap:anywhere]">{s.skill_label}</span>
+                <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                  {LEVEL_LABELS[s.expected_level]}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground">Level the role expects for each skill.</p>
+        </div>
       )}
-    </div>
+      </div>
+    </Page>
   );
 }

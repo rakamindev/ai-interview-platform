@@ -44,7 +44,29 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  reviewed_at?: string | null;
+  reviewed_by?: number | null;
   created_at?: string;
+}
+
+/** One row on the cross-assessment candidate list. */
+export interface CandidateRow {
+  id: number;
+  assessment_id: number;
+  candidate_id?: number;
+  candidate_name?: string;
+  status: "pending" | "active" | "ended";
+  end_reason?: string;
+  started_at?: string;
+  ended_at?: string;
+  duration_seconds?: number;
+  created_at?: string;
+  /** Set once a human has signed off on the results. */
+  reviewed_at?: string | null;
+  reviewed_by?: number | null;
+  assessment: { id: number; name?: string };
+  /** null until the AI has produced something for this session. */
+  portfolio_status: "pending" | "generating" | "complete" | "failed" | null;
 }
 
 export interface CoverageSkill {
@@ -90,7 +112,7 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: number;
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
@@ -129,7 +151,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -164,6 +186,32 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  language?: string;
+  consent_required?: boolean;
+  consent_status?: "pending" | "accepted" | "declined";
+  policy_version?: string;
+}
+
+export interface ConsentPolicyContent {
+  data_collected: string[];
+  purposes: string[];
+  retention: string;
+  rights: string[];
+  contact: string;
+}
+
+export interface ConsentPolicy {
+  policy_version: string;
+  language: string;
+  consent_status: "pending" | "accepted" | "declined";
+  policy: ConsentPolicyContent;
+}
+
+export interface ConsentRecord {
+  policy_version: string;
+  status: "pending" | "accepted" | "declined";
+  accepted_at?: string;
+  declined_at?: string;
 }
 
 export interface PaginationMeta {

@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same PR cancels the run still in flight. Nobody reads a
+# result for a commit that has already been replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API — RSpec
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Matches the version the app runs against locally. The migrations
+        # enable pgcrypto and declare native enum types, both of which need a
+        # real PostgreSQL — this suite cannot fall back to SQLite.
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rakamin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        # Rack::Attack builds its throttle store while the app boots, so Rails
+        # will not start at all without Redis reachable — even for specs that
+        # never touch a queue.
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rakamin_test
+      REDIS_URL: redis://localhost:6379/1
+      # config/application.yml is gitignored (it holds the shared JWT secret), so CI
+      # supplies the same keys as environment variables. None of these are real
+      # credentials — the suite never calls Gemini. SECRET_KEY_BASE is generated per
+      # run in the step below rather than written here: the token specs only need a
+      # signing key that stays stable within one run, and a fresh one leaves no static
+      # value in the repository to mistake for a real secret.
+      ALLOWED_ORIGINS: "*"
+      APP_BASE_URL: http://localhost:3001
+      WEB_BASE_URL: http://localhost:5173
+      TOKEN_EXPIRATION_TIME: "259200"
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          # Resolved against working-directory below, so the Ruby version lives
+          # in api/.ruby-version only.
+          ruby-version-file: .ruby-version
+          bundler-cache: true
+          working-directory: api
+
+      - name: Generate a throwaway signing key
+        # Scoped to this job only, and discarded with the runner.
+        run: echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> "$GITHUB_ENV"
+
+      - name: Prepare database
+        # db:migrate rather than db:schema:load — the ai_interview schema is
+        # created by a migration and does not appear in schema.rb, so a load
+        # would put every table in public and the search path would miss them.
+        run: bundle exec rails db:create db:migrate
+
+      - name: RSpec
+        run: bundle exec rspec
+
+  web:
+    name: Web — types, tests, build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        # Run before the tests so a type error reports as a type error rather
+        # than as a pile of failing renders.
+        run: npx tsc --noEmit
+
+      - name: Vitest
+        run: npm run test
+
+      - name: Build
+        run: npm run build

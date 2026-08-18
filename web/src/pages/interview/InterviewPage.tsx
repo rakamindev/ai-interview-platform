@@ -21,8 +21,9 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
-import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { AlertTriangle, CheckCircle, Mic, MicOff, Loader2, X, Zap } from "lucide-react";
+import ConsentScreen from "@/components/interview/ConsentScreen";
+import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn, ConsentPolicy } from "@/types";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -38,6 +39,54 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [consentPolicy, setConsentPolicy] = useState<ConsentPolicy | null>(null);
+  const [consentRequired, setConsentRequired] = useState(false);
+  const [consentStatus, setConsentStatus] = useState<"pending" | "accepted" | "declined" | undefined>();
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [consentError, setConsentError] = useState(false);
+  const [consentSubmitting, setConsentSubmitting] = useState(false);
+  // The session could not be closed from the candidate's side (see callAudioComplete).
+  const [endFailed, setEndFailed] = useState(false);
+
+  const fetchConsent = useCallback(async () => {
+    if (!token) return;
+    setConsentLoading(true);
+    setConsentError(false);
+    try {
+      const res = await sessionsApi.getConsent(token);
+      setConsentPolicy(res.data);
+    } catch {
+      setConsentError(true);
+    } finally {
+      setConsentLoading(false);
+    }
+  }, [token]);
+
+  const handleAcceptConsent = useCallback(async () => {
+    if (!token) return;
+    setConsentSubmitting(true);
+    setConsentError(false);
+    try {
+      await sessionsApi.submitConsent(token, "accepted");
+      setConsentStatus("accepted");
+      setConsentPolicy((prev) => (prev ? { ...prev, consent_status: "accepted" } : prev));
+      setHardwareCheckDone(false);
+    } catch {
+      setConsentError(true);
+    } finally {
+      setConsentSubmitting(false);
+    }
+  }, [token]);
+
+  const handleDeclineConsent = useCallback(async () => {
+    if (!token) return;
+    try {
+      await sessionsApi.submitConsent(token, "declined");
+      setConsentStatus("declined");
+    } catch {
+      // non-blocking — the decline screen is shown regardless
+    }
+  }, [token]);
 
   // Fetch candidate info
   useEffect(() => {
@@ -46,10 +95,19 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        setConsentRequired(!!res.data.consent_required);
+        setConsentStatus(res.data.consent_status);
         if (res.data.session_status === "ended") setInterviewState("complete");
+        if (
+          res.data.consent_required &&
+          res.data.consent_status !== "accepted" &&
+          res.data.session_status !== "ended"
+        ) {
+          fetchConsent();
+        }
       })
       .catch(() => setInterviewState("complete"));
-  }, [token]);
+  }, [token, fetchConsent]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -106,16 +164,36 @@ export default function InterviewPage() {
       clearTimeout(audioCompleteSafetyTimerRef.current);
       audioCompleteSafetyTimerRef.current = null;
     }
-    // Retry until success — endpoint now always returns ended:true or an error.
-    // ended:false is no longer a valid response; any success means the session ended.
-    const attempt = async (delay: number) => {
+    // Retry transient failures only. The endpoint refuses to end a session that
+    // cannot be verified (no consent, no evidence it ran) with a 4xx — retrying
+    // that forever would trap the candidate on a spinner while the session never
+    // closes. Network errors and 5xx/429 are worth retrying; other 4xx are not,
+    // and a bounded number of attempts guarantees we always reach a final state.
+    const MAX_ATTEMPTS = 5;
+
+    const isRetryable = (err: unknown) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === undefined) return true; // network/timeout — no response reached us
+      return status === 429 || status >= 500;
+    };
+
+    const attempt = async (delay: number, attemptsLeft: number) => {
       try {
         await sessionsApi.audioComplete(token);
-      } catch {
-        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
+        setEndFailed(false);
+      } catch (err) {
+        if (attemptsLeft > 1 && isRetryable(err)) {
+          setTimeout(() => attempt(Math.min(delay * 2, 8000), attemptsLeft - 1), delay);
+          return;
+        }
+        // Give up: the interview itself is over, so show the candidate a final
+        // screen instead of an endless spinner. The assessor can close the
+        // session from their side.
+        setEndFailed(true);
+        setInterviewState("complete");
       }
     };
-    attempt(2000);
+    attempt(2000, MAX_ATTEMPTS);
   }, [token, cancelDrain]);
 
   const handleSpeakerChange = useCallback((newSpeaker: InterviewSpeaker) => {
@@ -187,6 +265,44 @@ export default function InterviewPage() {
       ? "connected"
       : "reconnecting";
 
+  // ── Consent gate (UU PDP) ────────────────────────────────────────────────
+  // An ended session never asks for consent: sessions created before this
+  // feature shipped have no consent record, and the server rejects consent on
+  // an ended session. Showing the completion screen is the correct terminal
+  // state for them.
+  if (consentRequired && consentStatus !== "accepted" && interviewState !== "complete") {
+    if (consentLoading) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading data protection notice...</p>
+        </div>
+      );
+    }
+
+    if (consentError || !consentPolicy) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <p className="text-sm text-destructive">Couldn't load the data protection notice.</p>
+          <Button variant="outline" size="lg" onClick={fetchConsent}>
+            Try again
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <ConsentScreen
+        roleTitle={candidateInfo?.role_title ?? "AI Interview"}
+        policy={consentPolicy.policy}
+        policyVersion={consentPolicy.policy_version}
+        submitting={consentSubmitting}
+        onAccept={handleAcceptConsent}
+        onDecline={handleDeclineConsent}
+      />
+    );
+  }
+
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
@@ -202,18 +318,18 @@ export default function InterviewPage() {
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
+            <ul className="list-outside list-disc space-y-1.5 rounded-lg bg-muted/50 p-4 pl-8 text-sm text-muted-foreground">
+              <li>This is a voice interview. Make sure you're in a quiet place.</li>
+              <li>The AI will ask follow-up questions — there are no scripts.</li>
+              <li>The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</li>
+              <li>Your mic will be active throughout. You can end anytime.</li>
+            </ul>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-              <CheckCircle className="h-4 w-4 shrink-0" />
+            <div className="flex items-center gap-2 rounded-lg border border-ok/30 bg-ok/10 px-4 py-2.5 text-sm text-ok">
+              <CheckCircle className="h-4 w-4 shrink-0" aria-hidden />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
             <Button className="w-full" size="lg" onClick={startInterview}>
@@ -230,12 +346,31 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <div className="flex justify-center">
+          {endFailed ? (
+            <AlertTriangle className="h-10 w-10 text-secondary" />
+          ) : (
+            <CheckCircle className="h-10 w-10 text-primary" />
+          )}
+        </div>
+        <h2 className="text-xl font-semibold">
+          {endFailed ? "Interview Finished" : "Interview Complete"}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
+          {endFailed ? (
+            <>
+              Your interview has ended and your answers were recorded.
+              <br />
+              We could not close the session automatically, so the hiring team will
+              finalise it on their side. Nothing is lost — you can close this page.
+            </>
+          ) : (
+            <>
+              Thank you. The interview has been recorded.
+              <br />
+              The hiring team will review your results and follow up with you.
+            </>
+          )}
         </p>
       </div>
     );
@@ -248,7 +383,7 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="sticky top-12 z-10 flex items-center justify-between border-b bg-background py-3">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -261,14 +396,23 @@ export default function InterviewPage() {
 
       {/* Reconnecting banner */}
       {interviewState === "reconnecting" && (
+        /* The network failing is a system fault, not the candidate's — so red is
+           allowed here, where it points at the connection, and nowhere that
+           describes their performance. */
         connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
+          <div
+            role="status"
+            className="mt-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive"
+          >
+            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-destructive" aria-hidden />
             <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
+          <div
+            role="status"
+            className="mt-2 flex items-center gap-2 rounded-lg border border-secondary/40 bg-secondary/10 px-4 py-2.5 text-sm text-attention"
+          >
+            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-secondary" aria-hidden />
             <span>Briefly reconnecting — please wait a moment.</span>
           </div>
         )
@@ -276,9 +420,18 @@ export default function InterviewPage() {
 
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+        <div
+          role="status"
+          className="mt-2 flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground"
+        >
+          <span>Reconnected — please say <strong>&ldquo;check&rdquo;</strong> or continue your answer to resume.</span>
+          <button
+            className="ml-3 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => setReconnectedPrompt(false)}
+          >
+            <span className="sr-only">Dismiss</span>
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
         </div>
       )}
 
@@ -320,7 +473,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
@@ -356,7 +509,7 @@ export default function InterviewPage() {
         {import.meta.env.DEV && (
           <Button variant="outline" size="sm" className="text-xs opacity-50"
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
+            <Zap className="h-3 w-3" /> Force reconnect
           </Button>
         )}
         </div>

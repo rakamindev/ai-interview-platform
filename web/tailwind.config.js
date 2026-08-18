@@ -38,6 +38,26 @@ export default {
                     DEFAULT: "hsl(var(--popover))",
                     foreground: "hsl(var(--popover-foreground))",
                 },
+                // Assessment results. Defined once here so no screen invents its
+                // own colour for a level comparison.
+                // Caution copy: readable in both themes, unlike the brand yellow.
+                attention: "hsl(var(--attention))",
+                ok: "hsl(var(--ok))",
+                result: {
+                    exceed: "hsl(var(--result-exceed))",
+                    match: "hsl(var(--result-match))",
+                    gap: "hsl(var(--result-gap))",
+                    none: "hsl(var(--result-none))",
+                },
+            },
+            fontFamily: {
+                // Sans carries the interface and anything the machine wrote.
+                sans: ["IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+                // Mono carries every measurement: levels, deltas, timers, counts.
+                mono: ["IBM Plex Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+                // Serif is reserved for verbatim candidate speech, so a reader can
+                // tell testimony from inference without reading a label.
+                serif: ["Source Serif 4", "Georgia", "serif"],
             },
             borderRadius: {
                 lg: "var(--radius)",

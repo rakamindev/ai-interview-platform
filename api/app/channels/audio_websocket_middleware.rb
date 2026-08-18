@@ -50,7 +50,12 @@ class AudioWebSocketMiddleware
     session, error = authenticate_and_load(env, session_id)
 
     if error
-      browser_ws.send({ type: 'error', code: 'auth_failed', message: error, recoverable: false }.to_json)
+      if error == :consent_required
+        browser_ws.send({ type: 'error', code: 'consent_required', recoverable: false,
+                          message: 'Consent has not been given to process your data.' }.to_json)
+      else
+        browser_ws.send({ type: 'error', code: 'auth_failed', message: error, recoverable: false }.to_json)
+      end
       browser_ws.close
       return
     end
@@ -756,6 +761,12 @@ class AudioWebSocketMiddleware
     return [nil, 'Session not found'] unless session
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+
+    # UU PDP gate: the interview must not begin before the candidate has given
+    # explicit consent. Defense in depth — the web UI blocks the start button,
+    # and the server refuses to open the Gemini session without an accepted
+    # consent record.
+    return [nil, :consent_required] unless session.consent_given?
 
     [session, nil]
   end

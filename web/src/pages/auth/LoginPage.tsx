@@ -25,9 +25,21 @@ export default function LoginPage() {
       const token = res.data.token;
       saveToken(token);
       setAuth({ token });
-      navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
+      // Candidates, not Assessments: people sign in to find out who is waiting
+      // on them, not to look at how the interviews were configured.
+      navigate("/candidates");
+    } catch (e) {
+      // A 403 means the credentials were right and the account is simply not
+      // allowed in. Showing the credential error there sends people to reset a
+      // password that already works, so the server's own message is used.
+      const res = (e as { response?: { status?: number; data?: { errors?: { message?: string }[] } } })
+        .response;
+      setError(
+        res?.status === 403
+          ? res.data?.errors?.[0]?.message ??
+              "This account does not have access to the assessor workspace."
+          : "Invalid email or password.",
+      );
     } finally {
       setLoading(false);
     }

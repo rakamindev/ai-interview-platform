@@ -5,6 +5,8 @@ class User < ApplicationRecord
 
   ROLES = %w[admin user].freeze
 
+  belongs_to :organization, foreign_key: :tenant_id, optional: true
+
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
