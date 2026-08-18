@@ -21,11 +21,11 @@ describe("ComparisonTable", () => {
     expect(screen.getByText("L4")).toBeInTheDocument();
   });
 
-  it("renders '—' when expected_level is undefined/invalid", () => {
+  it("renders '—' and not_assessed count when expected_level or candidate_level is missing", () => {
     const comparisons: SkillComparison[] = [
       {
         skill_label: "GraphQL",
-        expected_level: undefined as unknown as number,
+        expected_level: 3,
         candidate_level: undefined,
         result: "not_assessed",
       },
@@ -33,6 +33,6 @@ describe("ComparisonTable", () => {
 
     render(<ComparisonTable comparisons={comparisons} />);
     expect(screen.getByText("GraphQL")).toBeInTheDocument();
-    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    expect(screen.getByText("— Not assessed: 1 skill")).toBeInTheDocument();
   });
 });

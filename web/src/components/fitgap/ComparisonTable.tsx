@@ -29,6 +29,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+  const notAssessedCount = comparisons.filter((c) => c.result === "not_assessed").length;
 
   return (
     <div className="space-y-3">
@@ -73,6 +74,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
+        {notAssessedCount > 0 && <span>— Not assessed: {notAssessedCount} skill{notAssessedCount !== 1 ? "s" : ""}</span>}
         <span className="ml-auto">✏ = human override applied</span>
       </div>
     </div>
