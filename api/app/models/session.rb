@@ -25,8 +25,11 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # /interview/:token is a web app page, not a route this API serves. On
+  # APP_BASE_URL every candidate landed on a Rails routing error — full route
+  # table included — on their first click.
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('WEB_APP_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
 

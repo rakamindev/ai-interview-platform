@@ -1,8 +1,11 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
 /** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
+// Null because an unassessed skill has no level. To tell "no rating" from "L1",
+// check `assessed` first — this only guarantees a number to render with.
+export function parseLevel(level: string | number | null | undefined): number {
   if (typeof level === "number") return level;
+  if (!level) return 1;
   const n = parseInt(level.replace(/\D/g, ""), 10);
   return isNaN(n) ? 1 : n;
 }

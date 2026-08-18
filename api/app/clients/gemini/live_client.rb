@@ -267,6 +267,18 @@ module Gemini
       end
     end
 
+    # Job history, employers and projects are personal data (UU PDP), and this was
+    # logging them at :info — the level production runs at. A whole interview was
+    # reconstructable from stdout.
+    #
+    # Length plus a stable digest still debugs turn boundaries and duplicates.
+    # LOG_TRANSCRIPT_TEXT=true brings the words back, where that is lawful.
+    def redact_transcript(text)
+      return text.truncate(50) if ENV['LOG_TRANSCRIPT_TEXT'] == 'true'
+
+      "[#{text.length}ch ##{Digest::MD5.hexdigest(text)[0, 6]}]"
+    end
+
     def log_gemini_event(data)
       sc = data['serverContent']
       if sc
@@ -285,11 +297,11 @@ module Gemini
         parts << 'audio' if has_audio
         if has_input_tx
           input_tx_text = sc.dig('inputTranscription', 'parts', 0, 'text') || sc.dig('inputTranscription', 'text')
-          parts << "inputTx=#{input_tx_text.truncate(50)}" if input_tx_text.present?
+          parts << "inputTx=#{redact_transcript(input_tx_text)}" if input_tx_text.present?
         end
         if has_output_tx
           output_tx_text = sc.dig('outputTranscription', 'parts', 0, 'text') || sc.dig('outputTranscription', 'text')
-          parts << "outputTx=#{output_tx_text.truncate(50)}" if output_tx_text.present?
+          parts << "outputTx=#{redact_transcript(output_tx_text)}" if output_tx_text.present?
         end
         parts << 'turnComplete' if turn_complete
         parts << 'generationComplete' if gen_complete

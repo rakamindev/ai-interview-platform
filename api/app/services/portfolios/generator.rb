@@ -20,6 +20,14 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      # A duplicate job hit a 503 and stamped 'failed' over a finished portfolio,
+      # hiding seven usable skills. Regeneration is unaffected — that endpoint
+      # resets the status before enqueueing.
+      if portfolio.complete?
+        Rails.logger.info("[N10] Portfolio for session #{@session.id} already complete — skipping duplicate run")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
@@ -148,34 +156,77 @@ module Portfolios
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      data     = response.is_a?(Hash) ? response : JSON.parse(response)
+      coverage = @session.coverage_maps.index_by(&:skill_label)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Delete and inserts are one unit; a failure between them would wipe the
+      # assessor's results with nothing to restore from.
+      #
+      # requires_new: without it this joins an outer transaction and never rolls
+      # back on its own. And PortfolioSkill.where rather than
+      # portfolio.portfolio_skills — loading the association means the update!
+      # that records the failure autosaves the rolled-back children back in.
+      portfolio.transaction(requires_new: true) do
+        PortfolioSkill.where(portfolio_id: portfolio.id).destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        (data['configured_skills'] || []).each do |skill_data|
+          PortfolioSkill.create!(
+            skill_attributes(skill_data, coverage[skill_data['skill_label']], discovered: false)
+              .merge(portfolio_id: portfolio.id)
+          )
+        end
+
+        (data['discovered_skills'] || []).each do |skill_data|
+          PortfolioSkill.create!(
+            skill_attributes(skill_data, coverage[skill_data['skill_label']], discovered: true)
+              .merge(portfolio_id: portfolio.id)
+          )
+        end
+      end
+    end
+
+    # Asked to rate every configured skill, the model also rates the ones the
+    # interview never reached, borrowing quotes from unrelated answers. Coverage
+    # decides whether a rating is stored, not the model.
+    def skill_attributes(skill_data, coverage_map, discovered:)
+      base = {
+        skill_id:      discovered ? nil : skill_data['skill_id'],
+        skill_label:   skill_data['skill_label'],
+        is_discovered: discovered
+      }
+
+      unless probed?(coverage_map)
+        return base.merge(assessed: false, ai_level: nil, ai_confidence: nil,
+                          evidence: [], competency_summary: nil)
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      base.merge(
+        assessed:           true,
+        ai_level:           skill_data['level'].to_i.clamp(1, 5),
+        ai_confidence:      confidence_for(coverage_map),
+        evidence:           Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary']
+      )
+    end
+
+    # Matched on skill_label — the two tables don't reliably share a skill_id.
+    # No coverage row means it was never tracked.
+    def probed?(coverage_map)
+      return false if coverage_map.nil?
+
+      coverage_map.probe_count.to_i.positive? || coverage_map.state != 'not_yet'
+    end
+
+    # PRD-01 §5 defines this as arithmetic over probe_count and state. Asking the
+    # model for it produced wrong grades; computing it can't.
+    def confidence_for(coverage_map)
+      return 'low' if coverage_map.nil?
+
+      probes = coverage_map.probe_count.to_i
+      return 'high'   if probes >= 3 && coverage_map.state == 'covered'
+      return 'medium' if probes == 2 || coverage_map.state == 'partial'
+
+      'low'
     end
   end
 end

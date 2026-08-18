@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: API (RSpec)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          # trust rather than a literal password: the container is reachable only
+          # from this job, and a hardcoded one is a secret-scanner finding for no
+          # security gained.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      REDIS_URL: redis://localhost:6379/1
+      # Rack::Cors reads this with ENV.fetch and no default — the app will not
+      # boot without it, in CI or anywhere else.
+      ALLOWED_ORIGINS: http://localhost:5173
+      SECRET_KEY_BASE: ${{ github.sha }}
+      APP_BASE_URL: http://localhost:3001
+      WEB_APP_URL: http://localhost:5173
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: api
+          bundler-cache: true
+
+      - name: Prepare database
+        run: |
+          bundle exec rails db:create
+          bundle exec rails db:schema:load
+
+      - name: Verify migrations are reversible
+        run: |
+          bundle exec rails db:migrate
+          bundle exec rails db:rollback STEP=1
+          bundle exec rails db:migrate
+
+      # Development never eager loads, so a Zeitwerk naming mismatch stays
+      # invisible until production boots. Checking it here names the constant
+      # instead of burying it under cascading load errors in the RSpec output.
+      - name: Verify the app eager loads
+        run: bundle exec rails zeitwerk:check
+
+      - name: RSpec
+        run: bundle exec rspec
+
+  web:
+    name: Web (tsgo + Vitest)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      # tsgo (the native TypeScript compiler) rather than tsc: same diagnostics
+      # on this project, roughly an order of magnitude faster.
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Vitest
+        run: npm test

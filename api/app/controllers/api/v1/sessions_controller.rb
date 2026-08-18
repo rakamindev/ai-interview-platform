@@ -121,10 +121,10 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
-        Sessions::EndHandler.new(session).call(reason: 'all_covered')
+        # Used to stamp 'all_covered' unconditionally. One session ended that way
+        # with three of five skills untouched, and the portfolio was generated as
+        # if the agenda had been finished. Derive it instead.
+        Sessions::EndHandler.new(session).call(reason: derived_end_reason(session))
         json_response(ended: true, message: "Session ended")
       end
 
@@ -177,6 +177,28 @@ module Api
           duration_seconds: session.duration_seconds,
           created_at:       session.created_at
         }
+      end
+
+      # Not MapInjector#all_covered?, which also waits on discovered skills. That
+      # is right for deciding when to wrap up, wrong here: N7 can add a discovered
+      # skill mid-closing-turn and mislabel a session that did finish its agenda.
+      def derived_end_reason(session)
+        return 'all_covered' if configured_agenda_covered?(session)
+        return 'time_ceiling' if time_limit_reached?(session)
+
+        'manual_candidate'
+      end
+
+      def configured_agenda_covered?(session)
+        configured = session.coverage_maps.configured
+        configured.any? && configured.all? { |map| map.state == 'covered' }
+      end
+
+      def time_limit_reached?(session)
+        limit = session.assessment&.time_limit_min
+        return false unless session.started_at && limit
+
+        Time.current >= session.started_at + limit.minutes
       end
 
       def coverage_map_json(map)

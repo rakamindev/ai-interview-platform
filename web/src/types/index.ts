@@ -90,10 +90,12 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /** False when the interview never probed this skill. The rating fields are then null. */
+  assessed: boolean;
+  ai_level: string | null;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_confidence: string | null;  // "high" | "medium" | "low"
   evidence: string[];
-  competency_summary: string;
+  competency_summary: string | null;
 }
 
 export interface AssessorOverride {
@@ -127,13 +129,18 @@ export interface VacancySkill {
 
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+// These names must match what the API serialises. They did not: the table read
+// `required_level` and `is_override`, the API sends `expected_level` and
+// `overridden`. Required rendered blank; the override marker never appeared.
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id: string | null;
+  expected_level: number;
+  candidate_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  confidence: string | null;
+  overridden: boolean;
 }
 
 export interface FitGapReport {

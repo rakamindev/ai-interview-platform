@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from "@/utils/internetSpeedTest";
+import {
+    testInternetSpeed,
+    DEFAULT_THRESHOLDS,
+    metOrUnknown,
+    shortfalls,
+    type InternetSpeedResult,
+} from "@/utils/internetSpeedTest";
 import {
     ProctoringState,
     type HardwareCheckingProgress,
@@ -9,7 +15,33 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
 import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+
+function Metric({
+    prefix,
+    value,
+    unit,
+    ok,
+}: {
+    prefix?: string;
+    value: number | null;
+    unit: string;
+    ok: boolean;
+}) {
+    if (value === null) {
+        return (
+            <span className="text-muted-foreground">
+                {prefix} not measured
+            </span>
+        );
+    }
+    return (
+        <span className={ok ? "text-green-600" : "text-destructive"}>
+            {prefix} {value} {unit}
+        </span>
+    );
+}
 
 interface HardwareCheckProps {
     onStart?: () => void;
@@ -241,16 +273,55 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
+                            <div className="mt-2 space-y-2">
+                                <div className="flex flex-wrap gap-3 text-xs">
+                                    <Metric
+                                        prefix="↓"
+                                        value={internetResult.download}
+                                        unit="Mbps"
+                                        ok={metOrUnknown(internetResult.download, thresholds.minDownloadMbps)}
+                                    />
+                                    <Metric
+                                        prefix="↑"
+                                        value={internetResult.upload}
+                                        unit="Mbps"
+                                        ok={metOrUnknown(internetResult.upload, thresholds.minUploadMbps)}
+                                    />
+                                    <Metric
+                                        value={internetResult.ping}
+                                        unit="ms"
+                                        ok={internetResult.ping === null || internetResult.ping <= thresholds.maxPingMs}
+                                    />
+                                </div>
+
+                                {/* "Could not measure" is a different verdict from "too slow", and
+                                    the candidate can act on neither unless we say which. */}
+                                {internetResult.incomplete && (
+                                    <Callout variant="muted">
+                                        <p>
+                                            Some of the connection checks could not complete, so there is
+                                            no reading to judge. This is usually a temporary block on the
+                                            network you are using.
+                                        </p>
+                                        <p className="mt-1">Try measuring again before anything else.</p>
+                                    </Callout>
+                                )}
+
+                                {!internetResult.incomplete && !internetResult.passed && (
+                                    <Callout variant="warning" title="Your connection is below what a live interview needs">
+                                        <ul className="space-y-0.5">
+                                            {shortfalls(internetResult, thresholds).map((line) => (
+                                                <li key={line}>{line}</li>
+                                            ))}
+                                        </ul>
+                                        <p className="mt-1.5">
+                                            Move closer to the router or switch to a wired connection, stop
+                                            other downloads and video calls, then measure again. The
+                                            interview is audio only, but a connection that drops midway
+                                            produces a broken recording of your answers.
+                                        </p>
+                                    </Callout>
+                                )}
                             </div>
                         )}
 

@@ -47,9 +47,15 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         {hasOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
-              <span className="text-muted-foreground text-xs">AI</span>
-              <span className="text-muted-foreground">→</span>
+              {/* An unassessed skill has no AI level to compare against — showing
+                  one would invent the very rating we stopped fabricating. */}
+              {skill.assessed && (
+                <>
+                  <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
+                  <span className="text-muted-foreground text-xs">AI</span>
+                  <span className="text-muted-foreground">→</span>
+                </>
+              )}
               <LevelBadge level={existingOverride!.override_level} size="sm" />
               <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
             </div>

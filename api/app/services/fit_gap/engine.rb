@@ -43,7 +43,9 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
+        # nil effective_level means unprobed and never rated by hand. Not a zero —
+        # nothing to compare, so not_assessed rather than a gap.
+        if portfolio_skill && portfolio_skill[:effective_level]
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
@@ -62,7 +64,9 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          # The UI prints a legend for this marker; without the field it never renders.
+          overridden:      portfolio_skill&.dig(:overridden) || false
         }
       end
 
