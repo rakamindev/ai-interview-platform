@@ -18,7 +18,7 @@ describe("Frontend Component Rendering", () => {
 
   it("renders TranscriptBubble correctly", () => {
     render(<TranscriptBubble speaker="candidate" text="Hello world" />);
-    expect(screen.getByText("You")).toBeInTheDocument();
+    expect(screen.getByText("Candidate")).toBeInTheDocument();
     expect(screen.getByText("Hello world")).toBeInTheDocument();
   });
 });
