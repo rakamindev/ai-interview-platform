@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.6-flash'),
         timeout: 30
       )
     end
@@ -27,7 +27,8 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        generated_at:      Time.current,
+        generation_status: 'complete'
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -48,25 +49,41 @@ module FitGap
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
           result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          confidence       = portfolio_skill[:confidence]
         else
           candidate_level = nil
           expected_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
+          confidence      = nil
         end
 
         {
-          skill_label:     label,
-          skill_id:        vacancy_skill.skill_id,
-          candidate_level: candidate_level,
-          expected_level:  expected_level,
-          result:          result,
-          delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          skill_label:        label,
+          skill_id:           vacancy_skill.skill_id,
+          candidate_level:    candidate_level,
+          expected_level:     expected_level,
+          result:             result,
+          delta:              delta,
+          confidence:         confidence,
+          is_override:        portfolio_skill&.dig(:overridden) || false,
+          # Honesty flag: a verdict must never look factual when the evidence behind
+          # it is thin (low/absent confidence) or completely missing (not_assessed).
+          low_confidence_flag: low_confidence?(result: result, confidence: confidence)
         }
       end
 
       comparisons
+    end
+
+    # A verdict is flagged when it rests on a low-confidence rating, or on no
+    # rating at all. Matches are deliberately not flagged — a match on weak
+    # evidence is still reported, but the flag lives on gap/exceed calls.
+    def low_confidence?(result:, confidence:)
+      return true if result == 'not_assessed'
+      return false unless %w[gap exceed].include?(result)
+
+      confidence.nil? || confidence == 'low'
     end
 
     # Returns portfolio skills with overrides applied.

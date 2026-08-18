@@ -13,7 +13,7 @@ class Rack::Attack
 
   # Throttle candidate-facing endpoints: 30 per minute per IP.
   throttle('candidate/session', limit: 30, period: 1.minute) do |req|
-    req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})
+    req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete|consent)\z})
   end
 
   # Return 429 JSON instead of the default plain-text response.

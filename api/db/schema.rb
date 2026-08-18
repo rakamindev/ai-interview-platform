@@ -10,7 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_032956) do
+  # Migrations create the ai_interview schema and search_path explicitly.
+  # Mirror that here so db:schema:load produces the same layout as db:migrate.
+  # NOTE: do not regenerate this file with db:schema:dump or these lines are lost.
+  execute "CREATE SCHEMA IF NOT EXISTS ai_interview"
+  execute "SET search_path TO ai_interview, public"
+
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -39,6 +45,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "l5_anchor", null: false
     t.integer "expected_level"
     t.integer "display_order", default: 0, null: false
+    t.index ["assessment_id", "skill_label"], name: "idx_assessment_skills_unique_label", unique: true
     t.index ["assessment_id"], name: "index_assessment_skills_on_assessment_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_assessment_skills_expected_level"
   end
@@ -89,6 +96,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "generation_status", default: "pending", null: false
+    t.text "generation_error"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -143,6 +152,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "consent_recorded_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
@@ -201,6 +211,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.integer "expected_level", null: false
+    t.index ["vacancy_id", "skill_label"], name: "idx_vacancy_skills_unique_label", unique: true
     t.index ["vacancy_id"], name: "index_vacancy_skills_on_vacancy_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end

@@ -3,6 +3,7 @@
 module Gemini
   class HttpClient
     BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BETA_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -17,10 +18,11 @@ module Gemini
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
 
-    def initialize(model: nil, api_key: nil, timeout: 60)
+    def initialize(model: nil, api_key: nil, timeout: 60, api_version: 'v1')
       @model = model
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
       @timeout = timeout
+      @base_url = api_version == 'v1beta' ? BETA_BASE_URL : BASE_URL
       @connection = build_connection
     end
 
@@ -30,15 +32,15 @@ module Gemini
       response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
       parse_response(response)
     rescue Faraday::TimeoutError => e
-      raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
+      raise TimeoutError.new("The AI service took too long to respond. Please try again.")
     rescue Faraday::Error => e
-      raise ApiError.new("Gemini API error: #{e.message}")
+      raise ApiError.new("The AI service could not be reached. Please try again.")
     end
 
     private
 
     def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+      "#{@base_url}/models/#{@model}:generateContent"
     end
 
     def request_headers
@@ -74,15 +76,22 @@ module Gemini
 
     def parse_response(response)
       unless response.success?
-        raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
+        if response.status == 429
+          raise RateLimitError.new("The AI service is busy right now. Please wait a minute and try again.", status: response.status, body: response.body)
+        end
         Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
-        raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
+        message = if response.status == 404
+                    "The AI service is unavailable at the moment. Please try again in a few minutes."
+                  else
+                    "The AI service hit a problem. Please try again."
+                  end
+        raise ApiError.new(message, status: response.status, body: response.body)
       end
 
       data = JSON.parse(response.body)
       text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
 
-      raise ApiError.new("No content in Gemini response") unless text
+      raise ApiError.new("The AI did not return a result. Please try again.") unless text
 
       # Strip markdown code fences if present (e.g. ```json ... ```)
       cleaned = text.strip.sub(/\A```(?:json)?\s*/, '').sub(/\s*```\z/, '')

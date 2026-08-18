@@ -8,8 +8,9 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        model:       ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.1-pro-preview'),
+        api_version: 'v1beta',  # pro-preview models only exist on v1beta
+        timeout:     180  # up to 3 minutes for large transcripts
       )
     end
 
@@ -31,12 +32,20 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      portfolio&.update!(generation_status: 'failed', generation_error: user_facing_error(e))
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
 
     private
+
+    # Gemini client errors already carry user-facing messages; use a generic
+    # message for anything else (e.g. DB errors).
+    def user_facing_error(e)
+      return e.message if e.is_a?(Gemini::HttpClient::ApiError)
+
+      'Something went wrong while generating the portfolio. Please try again.'
+    end
 
     def build_prompt
       assessment       = @session.assessment

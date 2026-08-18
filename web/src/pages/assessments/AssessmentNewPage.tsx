@@ -23,10 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import VacancyPicker from "@/components/assessment/VacancyPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
-import type { AssessmentSkill } from "@/types";
+import type { AssessmentSkill, VacancySkill } from "@/types";
 
 export interface AssessmentFormValues {
   name: string;
@@ -39,6 +40,8 @@ export default function AssessmentNewPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [vacancyPickerOpen, setVacancyPickerOpen] = useState(false);
+  const [vacancySkillsById, setVacancySkillsById] = useState<Record<number, VacancySkill[]>>({});
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
@@ -78,6 +81,26 @@ export default function AssessmentNewPage() {
 
   const addB7Skill = (skill: Partial<AssessmentSkill>) => {
     append({ ...skill, display_order: fields.length });
+  };
+
+  const addFromVacancy = (vacancyId: number, skills: VacancySkill[]) => {
+    setVacancySkillsById((prev) => ({ ...prev, [vacancyId]: skills }));
+    const existing = new Set(fields.map((f) => f.skill_label).filter(Boolean));
+    skills.forEach((s, i) => {
+      if (existing.has(s.skill_label)) return;
+      append({
+        skill_id: s.skill_id,
+        skill_label: s.skill_label,
+        is_custom: false,
+        expected_level: s.expected_level,
+        display_order: fields.length + i,
+        l1_anchor: s.l1_anchor,
+        l2_anchor: s.l2_anchor,
+        l3_anchor: s.l3_anchor,
+        l4_anchor: s.l4_anchor,
+        l5_anchor: s.l5_anchor,
+      });
+    });
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
@@ -223,6 +246,15 @@ export default function AssessmentNewPage() {
               type="button"
               variant="outline"
               size="sm"
+              onClick={() => setVacancyPickerOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add from Vacancy
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={addCustomSkill}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
@@ -257,6 +289,15 @@ export default function AssessmentNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
+        excludedLabels={fields.map((f) => f.skill_label).filter(Boolean)}
+      />
+
+      <VacancyPicker
+        open={vacancyPickerOpen}
+        onOpenChange={setVacancyPickerOpen}
+        onSelect={addFromVacancy}
+        fetchedSkills={vacancySkillsById}
+        currentLabels={fields.map((f) => f.skill_label).filter(Boolean)}
       />
     </div>
   );

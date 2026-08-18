@@ -29,13 +29,22 @@ export default function FitGapReportPage() {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
+      const data = res.data as any;
+      if (data.report) {
+        setReport(data.report);
+        setGenerating(false);
+      } else if (data.status === "generating") {
+        // 202 — generation in flight; keep polling without re-triggering.
+        setGenerating(true);
+      }
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
+          const res = await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+          const data = res.data as any;
+          // 202 queued / cached — either way we keep polling.
+          setGenerating(data.status !== "generating" ? false : true);
+          if (data.report) setReport(data.report);
         } catch {
           setGenerating(false);
         }
@@ -148,8 +157,24 @@ export default function FitGapReportPage() {
         </div>
       )}
 
+      {/* Failed */}
+      {!generating && report?.generation_status === "failed" && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">
+            Fit/gap generation failed.
+            {report.generation_error && (
+              <span className="block text-xs text-muted-foreground mt-1">{report.generation_error}</span>
+            )}
+          </p>
+          <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+            {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Report ready */}
-      {report && (
+      {report && report.generation_status !== "failed" && (
         <>
           {/* Skill comparison */}
           <Card>

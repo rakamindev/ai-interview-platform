@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -121,11 +121,28 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
+        # A session that never started has no transcript — ending it here would
+        # fabricate an empty portfolio from nothing.
+        unless session.active?
+          return json_error("Session is not active and cannot be ended", :unprocessable_entity)
+        end
+
         # No coverage re-check here. The backend WS already verified all_covered
         # before sending preparing_to_end. Re-checking here caused false negatives
         # (timing gap between WS detection and HTTP call) that stalled auto-end.
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
+      end
+
+      # POST /sessions/:token/consent  — no JWT, invite token in URL.
+      # UU PDP: the candidate explicitly opts in to recording before the interview
+      # can start. Timestamp is recorded once; repeats are idempotent.
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        session.update_column(:consent_recorded_at, session.consent_recorded_at || Time.current)
+        json_response(consented: true, consent_recorded_at: session.reload.consent_recorded_at)
       end
 
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
@@ -146,10 +163,13 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:       session.id,
+          role_title:       assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          session_status:   session.status,
+          end_reason:       session.end_reason,
+          consent_recorded: session.consent_recorded?,
+          requires_consent: true
         )
       end
 

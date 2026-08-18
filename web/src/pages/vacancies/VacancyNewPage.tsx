@@ -140,6 +140,7 @@ export default function VacancyNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        excludedLabels={fields.map((f) => f.skill_label).filter(Boolean)}
       />
     </div>
   );

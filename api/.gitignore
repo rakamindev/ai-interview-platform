@@ -27,3 +27,5 @@ vertex_ai_credentials.json
 
 # Ignore Public Docs
 /tech-docs
+# RSpec status persistence (regenerated on every run)
+spec/examples.txt

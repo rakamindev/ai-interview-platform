@@ -5,6 +5,9 @@ module Assessments
   # This is pure string interpolation — no LLM call needed.
   # Template follows PRD 01 Section 2 exactly.
   class SystemPromptCompiler
+    # The interviewer persona — a male name. The AI introduces itself as this.
+    ASSESSOR_NAME = 'Raka'.freeze
+
     def initialize(assessment)
       @assessment = assessment
       @skills = assessment.assessment_skills.order(:display_order)
@@ -226,8 +229,9 @@ module Assessments
         OPENING
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        Begin with a brief, warm introduction and an open first question.
-        Example: "Hi, thanks for joining. Let's jump in — tell me about the most technically challenging project you've worked on recently."
+        Begin with a brief, warm introduction: introduce yourself as #{ASSESSOR_NAME}, state clearly that you are an AI assessor, welcome the candidate, then ASK the candidate for their name and a bit about their background before moving into the open first question.
+        Example: "Hi, I'm #{ASSESSOR_NAME} — I'm an AI assessor, and I've spent a lot of time interviewing backend engineers for product teams. Thanks for joining. Before we jump in: could you tell me your name and a little about your background?"
+        After they answer, acknowledge briefly and move naturally into the first open question (e.g. about a recent project they worked on).
         Do not list what you're going to assess. Just start.
       TEXT
     end

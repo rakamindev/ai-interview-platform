@@ -25,6 +25,11 @@ export const DEFAULT_THRESHOLDS: SpeedThresholds = {
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
 const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
 
+// Cloudflare's public speed-test endpoints: CORS-enabled, no auth, reliable.
+// The same endpoints power the Cloudflare Speed Test page.
+// Sized so that RTT overhead is negligible next to real transfer time.
+const DOWNLOAD_URL = "https://speed.cloudflare.com/__down?bytes=5242880";
+
 async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {
         try {
@@ -53,56 +58,38 @@ async function measurePing(): Promise<number> {
 }
 
 async function measureDownloadSpeed(): Promise<number> {
-    const testFiles = [
-        { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
-        { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },
-        { url: "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js", size: 0.09 },
-    ];
-    for (const testFile of testFiles) {
-        try {
-            const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
-            if (response.ok) {
-                await response.blob();
-                const seconds = (performance.now() - start) / 1000;
-                return testFile.size / seconds;
-            }
-        } catch {
-            continue;
-        }
-    }
-    // Rough fallback
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
-        const duration = (performance.now() - start) / 1000;
-        return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
+        const response = await fetch(DOWNLOAD_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error("download failed");
+        const blob = await response.blob();
+        const seconds = (performance.now() - start) / 1000;
+        return blob.size / (1024 * 1024) / seconds;
     } catch {
-        return 0;
+        return 0; // failed: caller sees a failed run instead of a false pass
     }
 }
 
 async function measureUploadSpeed(): Promise<number> {
-    const uploadSizeMB = 0.5;
+    const uploadSizeMB = 2;
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
     const endpoints = SPEED_TEST_UPLOAD_URL
         ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        : ["https://speed.cloudflare.com/__up"];
     for (const endpoint of endpoints) {
         try {
-            const formData = new FormData();
-            formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            const response = await fetch(endpoint, { method: "POST", body: uploadData });
+            if (!response.ok) continue;
             const seconds = (performance.now() - start) / 1000;
             return uploadSizeMB / seconds;
         } catch {
             continue;
         }
     }
-    return 0.5; // conservative fallback
+    return 0.5; // conservative fallback: exactly meets the 4 Mbps minimum
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {

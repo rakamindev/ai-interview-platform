@@ -57,11 +57,20 @@ export default {
                     "0%, 100%": { height: "4px" },
                     "50%": { height: "32px" },
                 },
+                "toast-enter": {
+                    from: { opacity: "0", transform: "translateY(8px)" },
+                    to: { opacity: "1", transform: "translateY(0)" },
+                },
+                "toast-leave": {
+                    from: { opacity: "1" },
+                    to: { opacity: "0" },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
                 "voice-bar": "voice-bar 0.8s ease-in-out infinite",
+                "toast": "toast-enter 0.2s ease-out, toast-leave 0.3s ease-in 3.7s forwards",
             },
         },
     },

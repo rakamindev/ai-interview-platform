@@ -25,8 +25,12 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  def consent_recorded? = consent_recorded_at.present?
+
+  # The interview experience lives in the web app, not the API server.
+  # WEB_APP_BASE_URL is the frontend origin; APP_BASE_URL stays the API origin.
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('WEB_APP_BASE_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
 

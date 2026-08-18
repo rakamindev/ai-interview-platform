@@ -31,7 +31,9 @@ module Api
 
         if assessment.save
           SystemPromptGeneratorWorker.perform_async(assessment.id)
-          json_response({ assessment:, system_prompt_generated: true }, :created)
+          # Serialize with skills — matches the update action and the contract the
+          # frontend types assume (Assessment.skills).
+          json_response({ assessment: assessment_with_skills_json(assessment), system_prompt_generated: true }, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
         end
@@ -49,8 +51,12 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          # dependent: :restrict_with_error — an assessment with sessions cannot go.
+          json_error(@assessment.errors.full_messages.first || "Assessment cannot be deleted", :unprocessable_entity)
+        end
       end
 
       private

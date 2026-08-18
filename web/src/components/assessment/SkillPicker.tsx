@@ -15,9 +15,11 @@ interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (skill: Partial<AssessmentSkill>) => void;
+  /** Skill labels already added — excluded from the picker so duplicates are impossible. */
+  excludedLabels?: (string | undefined)[];
 }
 
-export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
+export default function SkillPicker({ open, onOpenChange, onSelect, excludedLabels = [] }: SkillPickerProps) {
   const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -33,8 +35,11 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
   }, [open]);
 
   const filtered = skills.filter((s) =>
-    s.skill_label.toLowerCase().includes(query.toLowerCase())
+    s.skill_label.toLowerCase().includes(query.toLowerCase()) &&
+    !excludedLabels.includes(s.skill_label)
   );
+
+  const allAdded = filtered.length === 0 && excludedLabels.length > 0 && skills.length > 0;
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({
@@ -77,7 +82,13 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
+            allAdded ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                All taxonomy skills have been added — nothing left to pick.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
+            )
           ) : (
             filtered.map((s) => (
               <button

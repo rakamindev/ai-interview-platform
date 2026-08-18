@@ -23,10 +23,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import VacancyPicker from "@/components/assessment/VacancyPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
-import type { AssessmentSkill } from "@/types";
+import type { AssessmentSkill, VacancySkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
 
 export default function AssessmentEditPage() {
@@ -35,6 +36,8 @@ export default function AssessmentEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [vacancyPickerOpen, setVacancyPickerOpen] = useState(false);
+  const [vacancySkillsById, setVacancySkillsById] = useState<Record<number, VacancySkill[]>>({});
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
@@ -54,6 +57,26 @@ export default function AssessmentEditPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id, reset]);
+
+  const addFromVacancy = (vacancyId: number, skills: VacancySkill[]) => {
+    setVacancySkillsById((prev) => ({ ...prev, [vacancyId]: skills }));
+    const existing = new Set(fields.map((f) => f.skill_label).filter(Boolean));
+    skills.forEach((s, i) => {
+      if (existing.has(s.skill_label)) return;
+      append({
+        skill_id: s.skill_id,
+        skill_label: s.skill_label,
+        is_custom: false,
+        expected_level: s.expected_level,
+        display_order: fields.length + i,
+        l1_anchor: s.l1_anchor,
+        l2_anchor: s.l2_anchor,
+        l3_anchor: s.l3_anchor,
+        l4_anchor: s.l4_anchor,
+        l5_anchor: s.l5_anchor,
+      });
+    });
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -153,6 +176,9 @@ export default function AssessmentEditPage() {
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
             </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setVacancyPickerOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add from Vacancy
+            </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill
             </Button>
@@ -171,7 +197,9 @@ export default function AssessmentEditPage() {
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} excludedLabels={fields.map((f) => f.skill_label).filter(Boolean)} />
+
+      <VacancyPicker open={vacancyPickerOpen} onOpenChange={setVacancyPickerOpen} onSelect={addFromVacancy} fetchedSkills={vacancySkillsById} currentLabels={fields.map((f) => f.skill_label).filter(Boolean)} />
     </div>
   );
 }

@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: API (RSpec)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: rakamin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: rakamin_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: ''
+      REDIS_URL: redis://localhost:6379/1
+      SECRET_KEY_BASE: ci-secret-key-base
+      GEMINI_API_KEY: dummy-key-not-used-in-specs
+      GEMINI_LIVE_MODEL: gemini-3.1-flash-live-preview
+      GEMINI_FLASH_MODEL: gemini-3.6-flash
+      GEMINI_PRO_MODEL: gemini-3.1-pro-preview
+      ALLOWED_ORIGINS: '*'
+      APP_BASE_URL: http://localhost:3001
+      TOKEN_EXPIRATION_TIME: '259200'
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3.2
+          bundler-cache: true
+      - name: Configure Figaro env
+        run: cp config/application.yml.sample config/application.yml
+      - name: Load schema and seed
+        run: |
+          bin/rails db:create db:schema:load db:seed
+      - name: Run RSpec
+        run: bundle exec rspec
+
+  web:
+    name: Web (type-check, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Run Vitest
+        run: npm test
+      - name: Production build
+        run: npm run build

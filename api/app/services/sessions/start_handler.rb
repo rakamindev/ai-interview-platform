@@ -4,11 +4,15 @@ module Sessions
   # Activates a pending session and initializes coverage map rows from assessment skills.
   # Called when a candidate connects to the audio WebSocket and begins the interview.
   class StartHandler
+    class ConsentRequiredError < StandardError; end
+
     def initialize(session)
       @session = session
     end
 
     def call
+      raise ConsentRequiredError, 'Candidate consent is required before the interview starts' unless @session.consent_recorded?
+
       ActiveRecord::Base.transaction do
         @session.update!(status: 'active', started_at: Time.current)
         initialize_coverage_maps

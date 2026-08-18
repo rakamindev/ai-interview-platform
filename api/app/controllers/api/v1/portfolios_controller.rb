@@ -91,7 +91,13 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
+        report = FitGapReport.find_or_initialize_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+        if report.persisted? && report.generating?
+          render json: { status: "generating", message: "Fit/gap report is already being regenerated" }, status: :accepted
+          return
+        end
+
+        report.update!(generation_status: 'pending', generation_error: nil)
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
@@ -113,12 +119,19 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
-        existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
-          return json_response(report: fit_gap_json(existing))
+        report = FitGapReport.find_or_initialize_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+
+        # Cached report — return it (idempotent GET semantics).
+        return json_response(report: fit_gap_json(report)) if report.persisted? && report.complete?
+
+        # Already queued/in flight — never stack duplicate workers (duplicate Gemini calls/cost).
+        if report.persisted? && report.generating?
+          render json: { status: "generating", message: "Fit/gap report generation in progress" }, status: :accepted
+          return
         end
 
+        # New or failed — reset and re-queue exactly once.
+        report.update!(generation_status: 'pending', generation_error: nil, skill_comparisons: report.skill_comparisons || [])
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
@@ -130,7 +143,9 @@ module Api
         portfolio = Portfolio.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
-        if report.nil?
+        if report.nil? || report.generating?
+          return render json: { status: "generating" }, status: :accepted if report&.generating?
+
           return json_error("Fit/gap report not found", :not_found)
         end
 
@@ -205,7 +220,9 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          generated_at:      report.generated_at,
+          generation_status: report.generation_status,
+          generation_error:  report.generation_error
         }
       end
 

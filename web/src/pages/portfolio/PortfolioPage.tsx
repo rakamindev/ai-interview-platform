@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import axios from "axios";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +10,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
+import { toast } from "@/components/ui/toast";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
@@ -89,6 +91,21 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch (err) {
+      // Blob responseType means the 422 JSON arrives as a Blob — read it for the message.
+      const data = axios.isAxiosError(err) ? err.response?.data : undefined;
+      let message = "Export failed";
+      if (data instanceof Blob) {
+        try {
+          const parsed = JSON.parse(await data.text());
+          message = parsed.errors?.[0]?.message ?? message;
+        } catch {
+          /* non-JSON blob */
+        }
+      } else {
+        message = (err as any)?.response?.data?.errors?.[0]?.message ?? message;
+      }
+      toast(message);
     } finally {
       setExporting(null);
     }
@@ -169,7 +186,9 @@ export default function PortfolioPage() {
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          <p className="text-sm text-destructive">
+            {portfolio.generation_error || "Portfolio generation failed."}
+          </p>
           <Button
             variant="outline"
             size="sm"
