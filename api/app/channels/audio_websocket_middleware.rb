@@ -229,6 +229,12 @@ class AudioWebSocketMiddleware
       text = sanitize_output_transcription(text)
       next unless text.present?
 
+      if discard_as_failed_opening_attempt?(state)
+        Rails.logger.warn("[AudioWS] Discarding text-only opening attempt (no audio) — " \
+                           "will retry (session=#{session.id})")
+        next
+      end
+
       turn_number = state.increment_turn!
 
       Thread.new do
@@ -282,10 +288,35 @@ class AudioWebSocketMiddleware
     text.gsub(/\[SISTEM\][^\n]*/m, '').strip
   end
 
+  MAX_OPENING_RETRIES = 2
+
+  # Gemini occasionally answers the synthetic opening trigger with text only (no speech
+  # synthesized) — true while that attempt's (text-only) transcription should be discarded
+  # and the opening re-triggered, rather than shown to the candidate as a silent bubble.
+  def discard_as_failed_opening_attempt?(state)
+    state.awaiting_opening_audio &&
+      (state.ai_audio_chunks || 0).zero? &&
+      state.opening_retry_count < MAX_OPENING_RETRIES
+  end
+
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.
   def build_on_model_turn_complete(browser_ws, state, session)
     lambda {
-      Rails.logger.info("[AudioWS] Model turn complete — ai_audio_chunks=#{state.ai_audio_chunks || 0} sending speaker_changed:candidate")
+      audio_chunks = state.ai_audio_chunks || 0
+
+      if discard_as_failed_opening_attempt?(state)
+        state.opening_retry_count += 1
+        Rails.logger.warn("[AudioWS] Opening turn produced no audio — retrying " \
+                           "(attempt #{state.opening_retry_count}/#{MAX_OPENING_RETRIES}, session=#{session.id})")
+        state.model_speaking = true
+        state.gemini_client.trigger_opening
+        return
+      end
+
+      state.awaiting_opening_audio = false
+
+      Rails.logger.info("[AudioWS] Model turn complete — ai_audio_chunks=#{audio_chunks} " \
+                         'sending speaker_changed:candidate')
       state.model_speaking = false
       state.ai_audio_chunks = 0
 
@@ -335,6 +366,8 @@ class AudioWebSocketMiddleware
         unless session.gemini_resumption_token.present?
           state.model_speaking = true
           send_json(browser_ws, type: 'speaker_changed', speaker: 'ai')
+          state.awaiting_opening_audio = true
+          state.opening_retry_count = 0
           state.gemini_client.trigger_opening
         end
         send_json(browser_ws, type: 'session_started', session_id: session.id)
@@ -435,9 +468,34 @@ class AudioWebSocketMiddleware
       send_json(browser_ws, type: 'session_ended', reason: 'manual_candidate')
       state.gemini_client&.close
       browser_ws.close
+    when 'text_input'
+      handle_text_input(message['text'], browser_ws, state)
     end
   rescue JSON::ParserError
     # ignore malformed control messages
+  end
+
+  # Typed-answer fallback (F19 slice) — candidate answers by typing instead of speaking.
+  # Sent as a genuine clientContent turn (Gemini::LiveClient#send_text_turn), the same
+  # mechanism that elicits the opening greeting — NOT #inject_context (realtimeInput.text),
+  # which is silent context only, never a request for a reply on its own. Gated on
+  # model_speaking to avoid a dual response if a typed answer arrives while the AI is
+  # still talking, and on ending_scheduled so a message arriving as the session wraps up
+  # doesn't orphan a turn.
+  def handle_text_input(text, browser_ws, state)
+    return if text.blank?
+    return if state.model_speaking
+    return if state.ending_scheduled
+
+    unless state.gemini_client&.send_text_turn(text)
+      send_json(browser_ws, type: 'error', message: 'Unable to send message — session is not connected.',
+                             recoverable: true)
+      return
+    end
+
+    turn_number = state.increment_turn!
+    save_transcript_turn(state.session, turn_number, 'candidate', text)
+    send_json(browser_ws, type: 'transcription', speaker: 'candidate', text: text, turn_number: turn_number)
   end
 
   # Schedules a proactive Gemini reconnect ~8.5min in, before Gemini's 10min hard limit triggers a 1011 close.
@@ -783,7 +841,8 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response,
+                  :awaiting_opening_audio, :opening_retry_count
 
     def initialize
       @turn_counter = 0
@@ -794,6 +853,8 @@ class AudioWebSocketMiddleware
       @last_ai_turn_ends_with_question = false
       @waiting_for_candidate_response = false
       @sent_time_warnings = Set.new
+      @awaiting_opening_audio = false
+      @opening_retry_count = 0
     end
 
     def increment_turn!

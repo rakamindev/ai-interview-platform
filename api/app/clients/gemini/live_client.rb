@@ -96,11 +96,33 @@ module Gemini
       true
     end
 
-    # Prompts Gemini to speak first via realtimeInput.text.
+    # Sends a typed candidate answer as a genuine conversational turn, so Gemini actually
+    # responds to it — unlike #inject_context (realtimeInput.text), which is silent context
+    # only folded into whatever turn audio/VAD triggers next. Same clientContent+turnComplete
+    # mechanism as #trigger_opening, the only path proven to elicit a response without audio.
+    def send_text_turn(text)
+      return false unless @connected && @ws
+
+      @ws.send({
+        clientContent: {
+          turns: [{ role: 'user', parts: [{ text: text }] }],
+          turnComplete: true
+        }
+      }.to_json)
+      true
+    end
+
+    # Prompts Gemini to speak first via clientContent — realtimeInput has no explicit turn-completion signal
+    # (it's derived from VAD), so with no audio yet streamed it never triggers a response.
     def trigger_opening
       return unless @connected && @ws
 
-      @ws.send({ realtimeInput: { text: '[Start the interview. Greet the candidate and ask your first question.]' } }.to_json)
+      @ws.send({
+        clientContent: {
+          turns: [{ role: 'user', parts: [{ text: '[Start the interview. Greet the candidate and ask your first question.]' }] }],
+          turnComplete: true
+        }
+      }.to_json)
       Rails.logger.info('[Gemini::LiveClient] trigger_opening sent')
     end
 
@@ -285,11 +307,11 @@ module Gemini
         parts << 'audio' if has_audio
         if has_input_tx
           input_tx_text = sc.dig('inputTranscription', 'parts', 0, 'text') || sc.dig('inputTranscription', 'text')
-          parts << "inputTx=#{input_tx_text.truncate(50)}" if input_tx_text.present?
+          parts << "inputTx=#{input_tx_text.length}chars" if input_tx_text.present?
         end
         if has_output_tx
           output_tx_text = sc.dig('outputTranscription', 'parts', 0, 'text') || sc.dig('outputTranscription', 'text')
-          parts << "outputTx=#{output_tx_text.truncate(50)}" if output_tx_text.present?
+          parts << "outputTx=#{output_tx_text.length}chars" if output_tx_text.present?
         end
         parts << 'turnComplete' if turn_complete
         parts << 'generationComplete' if gen_complete

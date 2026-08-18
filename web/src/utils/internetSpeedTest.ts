@@ -16,14 +16,26 @@ export interface SpeedThresholds {
     maxPingMs: number;
 }
 
+function envNumber(key: string, fallback: number): number {
+    const raw = import.meta.env[key] as string | undefined;
+    const parsed = raw ? Number(raw) : Number.NaN;
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+    minDownloadMbps: envNumber("VITE_MIN_DOWNLOAD_MBPS", 8),
+    minUploadMbps: envNumber("VITE_MIN_UPLOAD_MBPS", 4),
+    maxPingMs: envNumber("VITE_MAX_PING_MS", 300),
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+// Default to our own backend's speed_test endpoint rather than third-party echo services
+// (httpbin.org/postman-echo.com): those add DNS+TLS+external-hop overhead that dominates the
+// timing for a small payload and produces artificially low/false-negative upload readings.
+const SPEED_TEST_UPLOAD_URL =
+    (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) ||
+    (API_BASE_URL ? `${API_BASE_URL.replace(/\/$/, "")}/speed_test` : undefined);
 
 async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {

@@ -129,7 +129,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -175,14 +175,17 @@ export interface PaginationMeta {
 
 // WebSocket message types
 export type InterviewState =
+  | "checking"
   | "idle"
   | "hardware_check"
   | "connecting"
   | "active"
   | "reconnecting"
+  | "connection_lost"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

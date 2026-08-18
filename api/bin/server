@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Starts the Rails server via Puma.
+#
+# macOS only: forked Puma workers can crash on boot when the Objective-C
+# runtime's +[NSCharacterSet initialize] is mid-flight in the parent at
+# fork() time, producing an empty HTTP response with no Rails-side error.
+# The runtime reads OBJC_DISABLE_INITIALIZE_FORK_SAFETY at process launch,
+# before any Ruby code runs, so it must be exported here rather than set
+# from within config/puma.rb.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [[ "$(uname)" == "Darwin" ]]; then
+  export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+fi
+
+exec bundle exec rails server "$@"

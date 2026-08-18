@@ -47,6 +47,23 @@ export function getOSInfo() {
     return os;
 }
 
+/**
+ * Once a user blocks a getUserMedia prompt, browsers remember that choice
+ * per-origin and silently reject future calls without showing the dialog
+ * again — retrying getUserMedia() alone can never recover from "denied".
+ * The Permissions API lets us detect that state so the UI can tell the
+ * candidate to re-enable it manually instead of looking broken.
+ */
+export async function getMicPermissionState(): Promise<PermissionState | "unsupported"> {
+    try {
+        if (!navigator.permissions?.query) return "unsupported";
+        const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        return status.state;
+    } catch {
+        return "unsupported";
+    }
+}
+
 export async function checkCamera(): Promise<MediaStream | null> {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({

@@ -13,6 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import VoiceBars from "@/components/interview/VoiceBars";
+import TextAnswerInput from "@/components/interview/TextAnswerInput";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
@@ -28,7 +29,8 @@ export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
-  const [interviewState, setInterviewState] = useState<InterviewState>("idle");
+  const [interviewState, setInterviewState] = useState<InterviewState>("checking");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
@@ -36,6 +38,7 @@ export default function InterviewPage() {
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endInterviewSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
@@ -46,9 +49,16 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        setInterviewState(res.data.session_status === "ended" ? "complete" : "idle");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        if (err?.response?.status === 404) {
+          setErrorMessage(err.response?.data?.error ?? "This interview link is invalid or has expired.");
+        } else {
+          setErrorMessage("Something went wrong loading this interview. Please try again or contact the interviewer.");
+        }
+        setInterviewState("error");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -56,6 +66,11 @@ export default function InterviewPage() {
 
   const handleStateChange = useCallback((state: InterviewState) => {
     setInterviewState(state);
+
+    if (state === "complete" && endInterviewSafetyTimerRef.current) {
+      clearTimeout(endInterviewSafetyTimerRef.current);
+      endInterviewSafetyTimerRef.current = null;
+    }
 
     if (state === "draining_audio") {
       // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
@@ -74,6 +89,8 @@ export default function InterviewPage() {
       connectionLostTimerRef.current = setTimeout(() => {
         setConnectionLostLong(true);
       }, 60_000);
+    } else if (state === "connection_lost") {
+      muteRef.current?.();
     } else {
       if (connectionLostTimerRef.current) {
         clearTimeout(connectionLostTimerRef.current);
@@ -92,6 +109,15 @@ export default function InterviewPage() {
 
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
+  }, []);
+
+  const [sendError, setSendError] = useState<string | null>(null);
+  const sendErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSendError = useCallback((message: string) => {
+    if (sendErrorTimerRef.current) clearTimeout(sendErrorTimerRef.current);
+    setSendError(message);
+    sendErrorTimerRef.current = setTimeout(() => setSendError(null), 6_000);
   }, []);
 
   const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
@@ -138,6 +164,7 @@ export default function InterviewPage() {
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onError: handleSendError,
   });
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
@@ -170,14 +197,24 @@ export default function InterviewPage() {
     muteRef.current?.();
   }, [sessionId, connect, startCapture]);
 
+  const retryConnection = useCallback(() => {
+    setInterviewState("reconnecting");
+    connect();
+  }, [connect]);
+
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
     stopCapture();
     stopPlayback();
     sendJson({ type: "end_session" });
-    disconnect();
-    setInterviewState("complete");
+    // Wait for the backend's `session_ended` ack (-> onStateChange("complete")) instead of
+    // disconnecting locally: closing the socket here raced the ack and the resulting `onclose`
+    // was misread as connection_lost. Fall back to a local disconnect only if the ack never arrives.
+    endInterviewSafetyTimerRef.current = setTimeout(() => {
+      disconnect();
+      setInterviewState("complete");
+    }, 5_000);
   }, [stopCapture, stopPlayback, sendJson, disconnect]);
 
   const wsConnectionStatus =
@@ -186,6 +223,45 @@ export default function InterviewPage() {
       : connectionState === "connected"
       ? "connected"
       : "reconnecting";
+
+  // ── State: Checking session status ──────────────────────────────────────
+  if (interviewState === "checking") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <div className="text-sm text-muted-foreground animate-pulse">Loading interview...</div>
+      </div>
+    );
+  }
+
+  // ── State: Invalid/expired token or other load error ──────────────────
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Unable to load interview</h2>
+        <p className="text-sm text-muted-foreground">
+          {errorMessage ?? "This interview link is invalid or has expired."}
+        </p>
+      </div>
+    );
+  }
+
+  // ── State: Connection lost — reconnect attempts exhausted (F19) ─────────
+  // The session is NOT ended on the backend here — only the audio WebSocket
+  // gave up reconnecting. Showing "Interview Complete" would be a lie.
+  if (interviewState === "connection_lost") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">📡</div>
+        <h2 className="text-xl font-semibold">Connection lost</h2>
+        <p className="text-sm text-muted-foreground">
+          We couldn't restore your connection automatically. Your interview
+          hasn't ended — check your internet connection and try reconnecting.
+        </p>
+        <Button onClick={retryConnection}>Reconnect</Button>
+      </div>
+    );
+  }
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
@@ -248,14 +324,18 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
-        <span className="text-sm font-medium">AI Interview</span>
+      <div className="flex items-center justify-between gap-2 py-3 border-b sticky top-12 bg-white z-10">
+        <span className="text-sm font-medium truncate">
+          {candidateInfo?.role_title ?? "Interview in progress"}
+        </span>
         {candidateInfo && (
-          <InterviewTimer
-            totalSeconds={candidateInfo.time_limit_min * 60}
-            running={interviewState === "active"}
-            onExpired={endInterview}
-          />
+          <div className="shrink-0">
+            <InterviewTimer
+              totalSeconds={candidateInfo.time_limit_min * 60}
+              running={interviewState === "active"}
+              onExpired={endInterview}
+            />
+          </div>
         )}
       </div>
 
@@ -315,15 +395,24 @@ export default function InterviewPage() {
                 ))}
               </div>
             )}
+
+            {/* Typed-answer fallback (F19) — prefer speaking, but not everyone can/wants to */}
+            <TextAnswerInput
+              disabled={aiSpeaking || interviewState !== "active"}
+              onSend={(text) => sendJson({ type: "text_input", text })}
+            />
+            {sendError && (
+              <p className="text-xs text-destructive w-full text-center">{sendError}</p>
+            )}
           </>
         )}
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-white">
         <ConnectionStatus state={wsConnectionStatus} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
           <Button
             variant={micMuted ? "destructive" : "outline"}
             size="sm"

@@ -7,6 +7,7 @@ import {
     getOSInfo,
     checkCamera,
     getCurrentTime,
+    getMicPermissionState,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
@@ -46,6 +47,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
+    const [micDenied, setMicDenied] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
@@ -102,10 +104,15 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         } catch { /* silent */ }
     };
 
-    // Step 1: OS & browser
+    // Kick off step 1 on mount (and again on every retryAll()).
     useEffect(() => {
         setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+    }, []);
+
+    // Step 1: OS & browser
+    useEffect(() => {
+        if (progress.osAndBrowser !== ProctoringState.LOADING) return;
+        const timer = setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -115,7 +122,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
-    }, []);
+        return () => clearTimeout(timer);
+    }, [progress.osAndBrowser]);
 
     // Step 2: Internet
     useEffect(() => {
@@ -144,8 +152,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             ? checkCamera()
             : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
 
-        getStream.then((stream) => {
+        getStream.then(async (stream) => {
             if (stream) {
+                setMicDenied(false);
                 if (REQUIRE_CAMERA) setVideoStream(stream);
                 startAudioLevelMonitoring(stream);
                 setProgress((p) => ({
@@ -155,6 +164,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     audio: ProctoringState.LOADING,
                 }));
             } else {
+                // Once blocked, Chrome/Firefox won't show the permission
+                // prompt again on retry — getUserMedia() just silently
+                // rejects. Surface that explicitly so "Retry" doesn't look
+                // like it's doing nothing.
+                const permissionState = await getMicPermissionState();
+                setMicDenied(permissionState === "denied");
                 setProgress((p) => ({
                     ...p,
                     ...(REQUIRE_CAMERA ? { camera: ProctoringState.ERROR } : {}),
@@ -179,6 +194,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         videoStream?.getTracks().forEach((t) => t.stop());
         setVideoStream(null);
         setInternetResult(null);
+        setMicDenied(false);
         setProgress({
             osAndBrowser: ProctoringState.LOADING,
             internet: ProctoringState.WAITING,
@@ -265,6 +281,14 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                                 </div>
                                 <span className="text-xs text-muted-foreground w-8 text-right">{audioLevel}</span>
                             </div>
+                        )}
+
+                        {/* Mic blocked instructions — browsers won't re-show the permission prompt once denied */}
+                        {key === "microphone" && progress.microphone === ProctoringState.ERROR && micDenied && (
+                            <p className="mt-2 text-xs text-destructive">
+                                Microphone access is blocked for this site. Click the lock/info icon next to the
+                                address bar → allow Microphone → then click Retry below.
+                            </p>
                         )}
                     </div>
                 ))}

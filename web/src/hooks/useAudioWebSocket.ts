@@ -10,6 +10,7 @@ interface UseAudioWebSocketOptions {
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  onError?: (message: string) => void;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -22,6 +23,7 @@ export function useAudioWebSocket({
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onError,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -103,6 +105,7 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
+              if (msg.recoverable && msg.message) onError?.(msg.message);
               if (!msg.recoverable) onStateChange("complete");
               break;
           }
@@ -127,7 +130,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("connection_lost");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);

@@ -38,82 +38,82 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-          {index}
-        </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
+    <div className="flex items-start gap-3 py-3 px-4">
+      <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground shrink-0 mt-0.5">
+        {index}
+      </div>
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate">{displayName}</span>
           {session.started_at && (
-            <div className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground shrink-0">
               {new Date(session.started_at).toLocaleDateString()}
-            </div>
+            </span>
           )}
         </div>
-      </div>
 
-      <div className="flex items-center gap-3">
-        {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Awaiting candidate
-          </span>
-        )}
-        {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Live
-          </span>
-        )}
-        {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
-        )}
-        {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
-        )}
-
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between gap-3">
           {isPending && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(session.id)}
-            >
-              {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
-              ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
-              )}
-            </Button>
+            <span className="flex items-center gap-1 text-xs text-amber-600 whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              Awaiting candidate
+            </span>
           )}
           {isLive && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
-            >
-              <Eye className="h-3 w-3 mr-1" /> Monitor
-            </Button>
+            <span className="flex items-center gap-1 text-xs text-primary whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+              Live
+            </span>
+          )}
+          {isEnded && session.end_reason === "error" && (
+            <span className="flex items-center gap-1 text-xs text-destructive whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+              Failed
+            </span>
           )}
           {isEnded && session.end_reason !== "error" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
-            >
-              Results
-            </Button>
+            <span className="flex items-center gap-1 text-xs text-green-600 whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+              Completed
+            </span>
           )}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isPending && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => onCopy(session.id)}
+              >
+                {copiedId === session.id ? (
+                  <><Check className="h-3 w-3 mr-1" /> Copied</>
+                ) : (
+                  <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                )}
+              </Button>
+            )}
+            {isLive && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
+              >
+                <Eye className="h-3 w-3 mr-1" /> Monitor
+              </Button>
+            )}
+            {isEnded && session.end_reason !== "error" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              >
+                Results
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -190,7 +190,7 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -199,23 +199,23 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-2 min-w-0">
+          <Link to="/assessments" className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold break-words">{assessment?.name ?? "—"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
+              <Clock className="h-3 w-3 shrink-0" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>

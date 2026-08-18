@@ -15,6 +15,7 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 export default function App() {
   return (
@@ -56,6 +57,9 @@ export default function App() {
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
       </Route>
+
+      {/* Fallback — unmatched routes (e.g. /signup, which doesn't exist) */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

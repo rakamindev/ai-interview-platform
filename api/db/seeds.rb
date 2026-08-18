@@ -369,6 +369,31 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Test admin user (real password login, for local dev + e2e tests) ──────────
+#
+# JWTs minted via the console (see below) bypass the User table entirely, so
+# they don't exercise POST /api/v1/auth/login. This user does, and is what
+# Playwright's login e2e spec authenticates as.
+
+TEST_USER = {
+  email:    "e2e.admin@test-corp.dev",
+  password: "e2e-test-password-1",
+  role:     "admin"
+}.freeze
+
+puts "== Seeding test admin user =="
+
+test_user = User.find_or_initialize_by(email: TEST_USER[:email])
+test_user.password = TEST_USER[:password]
+test_user.role = TEST_USER[:role]
+
+if test_user.save
+  puts "  User ready: id=#{test_user.id} email=#{test_user.email}"
+else
+  puts "  ERROR seeding test user: #{test_user.errors.full_messages.join(', ')}"
+end
+puts ""
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

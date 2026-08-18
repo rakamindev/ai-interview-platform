@@ -67,14 +67,14 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   }
 
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+    <div className="w-full border rounded-lg p-4 space-y-3 bg-muted/30">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Override
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-sm">Your rating:</Label>
-        <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
+        <LevelRadio value={overrideLevel} onChange={setOverrideLevel} className="flex-wrap gap-y-2" />
       </div>
 
       <div className="space-y-1.5">

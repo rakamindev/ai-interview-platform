@@ -89,7 +89,7 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
@@ -99,7 +99,7 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div>
       <div className="flex items-center gap-2 mb-6">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />

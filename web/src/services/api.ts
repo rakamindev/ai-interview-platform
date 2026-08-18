@@ -18,7 +18,10 @@ api.interceptors.request.use((config) => {
 });
 
 // Unwrap backend envelope: { data: { ... } } → { ... }
-// On 401/403, clear stored credentials and redirect to login.
+// On 401/403, clear stored credentials and redirect to login — except for the
+// login request itself, where a 401 means "wrong credentials", not "session
+// expired", and the caller needs to handle it inline rather than being
+// redirected before it can show the error.
 api.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === "object" && "data" in response.data) {
@@ -27,7 +30,8 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const isLoginRequest = error.config?.url === "/auth/login";
+    if (!isLoginRequest && (error.response?.status === 401 || error.response?.status === 403)) {
       clearToken();
       window.location.href = "/login";
     }

@@ -26,8 +26,9 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
+  const { register, handleSubmit, control, setValue, watch, reset, formState: { errors } } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
@@ -40,6 +41,7 @@ export default function VacancyEditPage() {
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
+    setError(null);
     setSubmitting(true);
     try {
       await vacanciesApi.update(Number(id), {
@@ -49,15 +51,17 @@ export default function VacancyEditPage() {
         vacancy_skills_attributes: data.skills,
       });
       navigate("/vacancies");
+    } catch (e: any) {
+      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+  if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div>
       <div className="flex items-center gap-2 mb-6">
         <Link to="/vacancies" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
         <span className="text-sm font-medium">Edit Vacancy</span>
@@ -66,7 +70,8 @@ export default function VacancyEditPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label>Role title <span className="text-destructive">*</span></Label>
-          <Input {...register("role_title", { required: true })} />
+          <Input {...register("role_title", { required: "Role title is required" })} />
+          {errors.role_title && <p className="text-sm text-destructive">{errors.role_title.message}</p>}
         </div>
         <Separator />
         <div className="space-y-3">
@@ -93,6 +98,8 @@ export default function VacancyEditPage() {
           <Label>Competency expectations</Label>
           <Textarea rows={3} {...register("competency_expectations")} />
         </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
           <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>

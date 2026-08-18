@@ -95,7 +95,7 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -103,7 +103,7 @@ export default function FitGapReportPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
