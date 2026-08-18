@@ -48,9 +48,25 @@ export const portfoliosApi = {
       vacancy_id: vacancyId,
     }),
 
-  exportPortfolio: (portfolioId: number, format: "pdf" | "json", vacancyId?: number) =>
-    api.get(`/portfolios/${portfolioId}/export`, {
+  exportPortfolio: async (portfolioId: number, format: "pdf" | "json", vacancyId?: number) => {
+    const res = await api.get(`/portfolios/${portfolioId}/export`, {
       params: { format, ...(vacancyId ? { vacancy_id: vacancyId } : {}) },
       responseType: format === "pdf" ? "blob" : "json",
-    }),
+    });
+
+    if (format === "pdf" && res.data instanceof Blob && !res.data.type.includes("application/pdf")) {
+      const text = await res.data.text();
+      try {
+        const err = JSON.parse(text);
+        throw new Error(err.message || "Export failed");
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          throw new Error("Export failed with an unexpected response");
+        }
+        throw e;
+      }
+    }
+
+    return res;
+  },
 };
