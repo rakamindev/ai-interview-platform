@@ -65,9 +65,12 @@ export const cvScreeningsApi = {
     );
   },
 
-  reviewEntry: (entryId: number, action: "invite" | "reject") =>
+  // email is only required when the entry has no detected_email yet — the API
+  // ignores it otherwise. Omitted, it's dropped from the JSON body entirely.
+  reviewEntry: (entryId: number, action: "invite" | "reject", email?: string) =>
     api.post<{ entry: CvScreeningEntry }>(`/cv_screening_entries/${entryId}/review`, {
       action,
+      email,
     }),
 
   // Only valid for an entry that failed because the pipeline itself broke

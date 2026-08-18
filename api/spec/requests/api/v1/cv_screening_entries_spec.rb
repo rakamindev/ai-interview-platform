@@ -33,7 +33,8 @@ RSpec.describe 'CV Screening Entries API', type: :request do
 
   describe 'POST /api/v1/cv_screening_entries/:id/review' do
     it 'invites the candidate' do
-      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review')
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review',
+                                           detected_email: 'jordan.example@test.invalid')
 
       post "/api/v1/cv_screening_entries/#{entry.id}/review", params: { action: 'invite' }, headers: headers
 
@@ -43,7 +44,8 @@ RSpec.describe 'CV Screening Entries API', type: :request do
     end
 
     it 'rejects the candidate' do
-      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review')
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review',
+                                           detected_email: 'jordan.example@test.invalid')
       # The controller constructs its own Gemini::HttpClient (no request-level DI
       # seam) to generate CvScreenings::FeedbackGenerator's rejection copy —
       # allow_any_instance_of is the pragmatic stub here, unlike unit specs on the
@@ -64,6 +66,39 @@ RSpec.describe 'CV Screening Entries API', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(entry.reload.decision).to eq('pending')
+    end
+
+    it 'refuses to review a no-email entry with no email param' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review', detected_email: nil)
+
+      post "/api/v1/cv_screening_entries/#{entry.id}/review", params: { action: 'invite' }, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(entry.reload.decision).to eq('needs_review')
+      expect(entry.detected_email).to be_nil
+    end
+
+    it 'refuses to review a no-email entry with an invalid-format email' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review', detected_email: nil)
+
+      post "/api/v1/cv_screening_entries/#{entry.id}/review",
+           params: { action: 'invite', email: 'not-an-email' }, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(entry.reload.detected_email).to be_nil
+    end
+
+    it 'accepts a submitted email for a no-email entry, persists it, and invites with it' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review', detected_email: nil)
+
+      post "/api/v1/cv_screening_entries/#{entry.id}/review",
+           params: { action: 'invite', email: 'jordan.example@test.invalid' }, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      entry.reload
+      expect(entry.decision).to eq('invited')
+      expect(entry.detected_email).to eq('jordan.example@test.invalid')
+      expect(entry.session.candidate_name).to eq('jordan.example@test.invalid')
     end
   end
 

@@ -1,13 +1,25 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { cvScreeningsApi } from "@/services/cvScreenings";
 import { Check, X, Download, Loader2, RefreshCw, Ban } from "lucide-react";
 import type { CvScreeningEntry } from "@/types";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 interface EntryRowProps {
   entry: CvScreeningEntry;
   index: number;
-  onReview: (entryId: number, action: "invite" | "reject") => void;
+  onReview: (entryId: number, action: "invite" | "reject", email?: string) => void;
   reviewing: boolean;
   onReanalyze: (entryId: number) => void;
   reanalyzing: boolean;
@@ -32,6 +44,30 @@ export default function EntryRow({
   const failedToAnalyze =
     entry.decision_reason === "model_failed" || entry.decision_reason === "cancelled";
   const displayFilename = entry.filename ?? "—";
+
+  const [pendingAction, setPendingAction] = useState<"invite" | "reject" | null>(null);
+  const [emailInput, setEmailInput] = useState("");
+  const emailValid = EMAIL_PATTERN.test(emailInput.trim());
+  // Which of Invite/Reject was actually clicked — `reviewing` alone can't tell,
+  // since both buttons share one in-flight flag from the parent.
+  const [inFlightAction, setInFlightAction] = useState<"invite" | "reject" | null>(null);
+
+  const requestReview = (action: "invite" | "reject") => {
+    if (!entry.detected_email) {
+      setEmailInput("");
+      setPendingAction(action);
+      return;
+    }
+    setInFlightAction(action);
+    onReview(entry.id, action);
+  };
+
+  const confirmReviewWithEmail = () => {
+    if (!pendingAction || !emailValid) return;
+    setInFlightAction(pendingAction);
+    onReview(entry.id, pendingAction, emailInput.trim());
+    setPendingAction(null);
+  };
 
   return (
     <div className="flex items-center justify-between py-3 px-4 gap-3 flex-wrap sm:flex-nowrap">
@@ -125,23 +161,60 @@ export default function EntryRow({
                 size="sm"
                 className="h-7 px-2 text-xs"
                 disabled={reviewing}
-                onClick={() => onReview(entry.id, "invite")}
+                onClick={() => requestReview("invite")}
               >
-                <Check className="h-3 w-3 mr-1" /> Invite
+                {reviewing && inFlightAction === "invite" ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Check className="h-3 w-3 mr-1" />
+                )}
+                Invite
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-7 px-2 text-xs text-destructive hover:text-destructive"
                 disabled={reviewing}
-                onClick={() => onReview(entry.id, "reject")}
+                onClick={() => requestReview("reject")}
               >
-                <X className="h-3 w-3 mr-1" /> Reject
+                {reviewing && inFlightAction === "reject" ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <X className="h-3 w-3 mr-1" />
+                )}
+                Reject
               </Button>
             </>
           )}
         </div>
       </div>
+
+      <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Email required</DialogTitle>
+            <DialogDescription>
+              No email was detected on this CV. Enter one to {pendingAction} this candidate — it'll
+              be used to send the {pendingAction === "invite" ? "invite" : "rejection"} notification.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            type="email"
+            placeholder="candidate@example.com"
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setPendingAction(null)}>
+              Cancel
+            </Button>
+            <Button size="sm" disabled={!emailValid || reviewing} onClick={confirmReviewWithEmail}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -24,13 +24,31 @@ module Api
         )
       end
 
-      # POST /api/v1/cv_screening_entries/:id/review  {action: 'invite'|'reject'}
+      # POST /api/v1/cv_screening_entries/:id/review  {action: 'invite'|'reject', email?: string}
       def review
-        case request_body[:action]
+        action = request_body[:action]
+        return json_error("action must be 'invite' or 'reject'", :unprocessable_entity) unless %w[invite reject].include?(action)
+
+        # An entry with no detected email has no address for Inviter/CvScreeningMailer
+        # to send to — Inviter sets candidate_name: @entry.detected_email, and
+        # CvScreeningMailer mails to: entry.detected_email, so a nil here means the
+        # notification silently fails (BatchNotifier.send_now! only logs the error).
+        # Require and persist one before proceeding, but only when the entry doesn't
+        # already have one — an entry with a detected email keeps working exactly as
+        # before, and this param is ignored for it.
+        if @entry.detected_email.blank?
+          email = request_body[:email].presence
+          return json_error(
+            'An email address is required to invite or reject a candidate with no detected email.',
+            :unprocessable_entity
+          ) if email.nil?
+          return json_error('Enter a valid email address.', :unprocessable_entity) unless email.match?(URI::MailTo::EMAIL_REGEXP)
+
+          @entry.update!(detected_email: email)
+        end
+
+        case action
         when 'invite'
-          # No detected_email is fine — Session#candidate_name / SessionRow already
-          # render a nameless auto-invited session safely (see Phase 8 in the plan
-          # doc), so a recruiter can still manually invite without one.
           CvScreenings::Inviter.new(entry: @entry).call
           @entry.update!(decision: 'invited', decision_reason: 'recruiter_invited')
           # A single recruiter action bypasses FR5's batch confirm gate — they just
@@ -43,8 +61,6 @@ module Api
           ).call
           @entry.update!(decision: 'not_advanced', decision_reason: 'recruiter_rejected', feedback_text: feedback)
           CvScreenings::BatchNotifier.send_now!(@entry)
-        else
-          return json_error("action must be 'invite' or 'reject'", :unprocessable_entity)
         end
 
         json_response(entry: entry_json(@entry))

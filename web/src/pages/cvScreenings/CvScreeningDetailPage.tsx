@@ -75,10 +75,10 @@ export default function CvScreeningDetailPage() {
     await Promise.all([loadEntries(), loadScreening(), loadBatches()]);
   };
 
-  const handleReview = async (entryId: number, action: "invite" | "reject") => {
+  const handleReview = async (entryId: number, action: "invite" | "reject", email?: string) => {
     setReviewingEntryId(entryId);
     try {
-      await cvScreeningsApi.reviewEntry(entryId, action);
+      await cvScreeningsApi.reviewEntry(entryId, action, email);
       await Promise.all([loadEntries(), loadScreening()]);
       setReviewingEntryId(null);
     } catch {
