@@ -31,12 +31,12 @@ AI INTERVIEW        🟢 PASS — selesai natural, diakhiri oleh AI-nya sendiri,
 EVIDENCE              🟢 PASS — transcript tersimpan & terbaca lengkap (verified,
    │                          "Interview Transcript" page). Independen dari Portfolio.
    ▼
-COVERAGE               🟡 PARTIAL — `[N7]` gagal SAAT interview session 2 berlangsung
-   │                          (key lama). B-02 di-fix sesudahnya; belum ada interview BARU
-   │                          untuk buktikan Coverage real-time jalan dengan key baru.
+COVERAGE               🟢 PASS — interview session BARU dijalankan manual oleh user
+   │                          (key baru), coverage map ter-update real-time terkonfirmasi.
+   │                          Lihat STEP 07.
    ▼
-LIVE MONITOR             ⚪ NOT TESTED langsung (UI belum dibuka) — sama alasannya,
-   │                          perlu interview baru untuk ngetes real-time.
+LIVE MONITOR             🟢 PASS — dibuka assessor selagi interview berlangsung, transcript
+   │                          + coverage bar ter-update tanpa refresh manual. Lihat STEP 07.
    ▼
 PORTFOLIO                  🟢 PASS (setelah fix B-02) — di-retry dari UI assessor,
    │                          `[N10] Portfolio generated for session 2`, isi lengkap & masuk akal.
@@ -75,10 +75,13 @@ sebelum scope final dipilih.
 | B-05 — Export filename fallback ke label generik ("Assessment") | Exploration (sudah difix) | 🟡 Correctness bug kecil | P3 (kosmetik) | Sudah difix, satu cluster dengan B-04 — bukan scope §4.1 |
 | B-01 — Speed test false negative | Exploration (sudah difix) | 🔴 Exploration blocker | Tinggi untuk testing, tidak relevan untuk end-user asli | Bukan scope — minimal fix supaya testing bisa lanjut |
 | B-02 — Gemini API key salah tipe | Exploration (sudah difix) | ⚙️ Infra/config, bukan product bug | N/A | Bukan scope |
+| D — Session lifecycle visibility: sinyal "candidate mulai" pasif (harus buka halaman list, tidak ada push/notifikasi) + `ended_at`/`duration_seconds` ada di DB & API tapi tidak pernah disurface di UI mana pun | Exploration (baru, STEP 07) | 🟡 UX / data-surfacing gap | Belum di-P-rate formal — kecil & sempit tapi evidence tajam (bukan hipotesis) | Menarik: backend sudah 100% benar (data lengkap, tinggal render), gap murni frontend, scope kecil & bisa dites tuntas dalam sisa waktu — lihat STEP 07 untuk rincian & premis awal yang perlu dikoreksi |
 
-**Yang masih perlu ditelusuri sebelum problem map bisa disebut lengkap** (per journey map di
-atas): Coverage/Live Monitor real-time dengan key baru (⚪, butuh interview baru + audio —
-di luar kemampuan saya, mic browser otomatis diblokir sistem, lihat STEP 01).
+**Status per journey map di atas:** semua baris sekarang tertelusuri — Coverage/Live Monitor
+real-time (dulu ⚪, blocker-nya mic browser saya sendiri per STEP 01) sudah dites manual oleh
+user dengan key baru dan PASS (STEP 07). Problem map dari sisi "belum ditelusuri sama sekali"
+sudah tuntas; STEP 07 di bawah menambahkan satu temuan baru (D) yang muncul justru dari
+langkah verifikasi ini, bukan dari daftar F-01..F-05 audit awal.
 
 ### ✅ RESOLVED — dua pertanyaan lama di journey map, bukan gap, ternyata batas produk yang disengaja
 - **Confidence sebagai halaman berdiri sendiri**: dicek langsung ke `web/src/App.tsx` (semua
@@ -718,3 +721,343 @@ dikoreksi" yang diminta checklist submission (`ROADMAP.md` §Langkah 6) — sesi
 menduga race condition (masuk akal secara teori, tapi salah), sesi ini baca ulang kode
 tanpa asumsi itu dan ketemu akar masalah sebenarnya yang jauh lebih sederhana & 100%
 reproducible. Screenshot/log di atas bisa langsung dipakai sebagai bukti momen ini.
+
+---
+
+# STEP 07 — Coverage/Live Monitor real-time (RESOLVED) + temuan baru: session lifecycle visibility
+
+**ROLE:** Candidate (interview baru, dijalankan manual oleh user di browser asli) + Assessor
+(buka Live Monitor selagi interview berlangsung).
+
+**PAGE:** Interview baru end-to-end (hardware check → interview → complete) + assessor
+`monitor/LiveMonitorPage.tsx` dibuka paralel.
+
+**USER ACTION:** Menjalankan interview baru dari nol dengan `GEMINI_API_KEY` yang sudah benar
+(pengganti key lama yang gagal di B-02) — ini interview yang sejak STEP 01 tidak bisa saya
+verifikasi sendiri karena mic browser saya diblokir sistem.
+
+**EXPECTED:** Candidate bisa mulai interview sendiri; assessor bisa membuka Live Monitor;
+transcript masuk real-time; coverage berubah real-time; setelah selesai, assessor bisa lihat
+hasil/portfolio.
+
+**ACTUAL:** Dikonfirmasi user — **semua lima poin di atas PASS**, tidak ada masalah baru.
+Ini menutup item terakhir yang sejak awal sesi ditandai ⚪ NOT TESTED di journey map.
+
+**STATUS:** 🟢 PASS (Coverage), 🟢 PASS (Live Monitor)
+
+---
+
+## Temuan baru — bukan bug di jalur yang baru saja PASS, tapi gap satu langkah sebelumnya
+
+Pertanyaan yang muncul setelah PASS di atas: kalau assessor *tidak* sedang membuka Live
+Monitor pada saat candidate mulai — bagaimana dia tahu kapan harus membukanya? Sebelum
+menjawab dengan asumsi/mockup, saya cek langsung ke kode yang sudah ada.
+
+**Premis awal (dari diskusi sebelum STEP ini) perlu dikoreksi sebagian — sudah ada partial
+solution yang terlewat:**
+
+[`AssessmentInvitePage.tsx`](../web/src/pages/assessments/AssessmentInvitePage.tsx) — halaman
+"Assessment → Candidates" yang assessor lihat tanpa perlu membuka Live Monitor — **sudah**
+menampilkan status per-kandidat yang berubah otomatis:
+- `isPending` → badge kuning "Awaiting candidate"
+- `isLive` (`status === "active"`) → badge "Live" (dot pulsing) + tombol **Monitor**
+- `isEnded` → badge hijau "Completed" (atau merah "Failed" kalau `end_reason === "error"`) +
+  tombol **Results**
+
+Ini di-refresh via polling `setInterval(loadSessions, 5000)` selama ada sesi yang belum
+`ended` ([AssessmentInvitePage.tsx:152-157](../web/src/pages/assessments/AssessmentInvitePage.tsx#L152)).
+Jadi klaim "assessor cuma lihat 'Awaiting candidate' selamanya sampai dia buka Live Monitor
+sendiri" **tidak akurat** — kalau assessor ada di halaman ini, dia akan lihat transisi
+Awaiting → Live → Completed dalam ≤5 detik tanpa aksi apa pun. Ini fungsional setara dengan
+"Option 2" (status jelas di list) yang sempat didiskusikan sebagai proposal — **ternyata
+sudah ada**, bukan gap.
+
+**Yang setelah dicek TERBUKTI masih gap, dengan bukti konkret (bukan hipotesis):**
+
+1. **Tidak ada mekanisme push/notifikasi sama sekali** — `grep -rni "notif|bell|toast"` di
+   seluruh `web/src` nihil (dikonfirmasi ulang dari catatan `ROADMAP.md` Langkah 3 soal
+   `@radix-ui/react-toast` yang memang tidak terpasang). Assessor **harus sedang berada** di
+   halaman Candidates list itu untuk lihat transisinya — kalau di halaman lain/tab lain, tidak
+   ada sinyal apa pun sampai dia kembali & poll berikutnya jalan.
+2. **Mekanisme list ini polling, bukan push** — beda arsitektur dari Coverage/Transcript yang
+   memang WebSocket push sesuai PRD U5 (`codebase-audit.md` §2 item 7). Assessor list page
+   pakai `setInterval` 5 detik biasa, bukan Redis pub/sub seperti Coverage. Bukan bug (masih
+   dalam SLA "real-time" yang wajar), tapi arsitektur tidak konsisten satu sama lain — worth
+   noting, bukan worth fixing sendirian.
+3. **`ended_at` dan `duration_seconds` ada penuh di backend, TIDAK PERNAH disurface di
+   frontend mana pun** — ini yang paling konkret. Dikonfirmasi 3 lapis:
+   - DB: `schema.rb` — kolom `started_at`, `ended_at`, `duration_seconds` semua ada di tabel
+     `sessions` ([schema.rb:140-142](../api/db/schema.rb#L140)).
+   - API: `sessions_controller.rb` **mengembalikan** ketiganya di response JSON
+     ([sessions_controller.rb:175-177](../api/app/controllers/api/v1/sessions_controller.rb#L175)).
+   - Frontend: `grep -rn "duration_seconds|ended_at|started_at" web/src` — `duration_seconds`
+     dan `ended_at` **nol pemakaian** di seluruh frontend. `started_at` dipakai di 2 tempat
+     saja: (a) [AssessmentInvitePage.tsx:50](../web/src/pages/assessments/AssessmentInvitePage.tsx#L50)
+     cuma jadi tanggal polos (`toLocaleDateString()`, tanpa jam), dan (b)
+     [LiveMonitorPage.tsx](../web/src/pages/monitor/LiveMonitorPage.tsx) dipakai
+     `ElapsedTimer` — tapi itu **cuma jalan selama sesi masih live** (timer klien-side
+     `Date.now() - start`), hilang begitu sesi berakhir, bukan durasi tersimpan.
+
+   **Artinya**: badge "Completed" di list, dan Portfolio Results setelahnya, **tidak pernah
+   menunjukkan kapan interview selesai atau berapa lama berlangsung** — meskipun datanya
+   100% sudah ada dan sudah dikirim API-nya. Ini persis pertanyaan yang diajukan sebelum STEP
+   ini ("apakah ada info Started at/Completed at/Duration setelah selesai?") — jawabannya
+   **tidak**, dan sekarang dibuktikan dari kode+schema, bukan perlu re-cek manual di browser.
+
+**KONSEKUENSI:** gap sebenarnya bukan "assessor tidak tahu kapan candidate mulai" (itu sudah
+tertangani oleh list page yang ada) — gap yang presisi dan didukung bukti adalah **(a)** sinyal
+itu pasif/polling, tidak proaktif ke assessor yang sedang tidak melihat halaman itu, dan
+**(b)** data lifecycle yang paling berharga buat assessor (durasi & waktu selesai) sudah
+dihitung backend tapi dibuang begitu saja di frontend. (a) butuh keputusan produk (worth
+notification infra atau tidak — di luar scope kecil); (b) adalah win kecil, murni frontend,
+tidak butuh perubahan backend/DB sama sekali (field-nya sudah dikirim API).
+
+---
+
+## Menjawab pertanyaan strategis: apakah Live Monitor dimaksudkan untuk diawasi live, atau opsional?
+
+Dicek ke satu-satunya sumber spek yang ada (`codebase-audit.md`'s catatan: wiki cuma berisi
+`PRD-01` dan `PRD-02`, tidak ada halaman lain) — **item PRD yang menyebut Live Monitor cuma
+satu: U5**, "Push realtime ke assessor live monitor saat state berubah"
+(`codebase-audit.md:153`). Itu spek tentang **mekanisme** (push, bukan polling) untuk data
+di dalam halaman Live Monitor — PRD **tidak menyatakan** apakah assessor diharapkan hadir
+live saat interview berlangsung atau memantau belakangan. Ini genuinely tidak
+dispesifikasikan, bukan sesuatu yang saya simpulkan sepihak.
+
+Tapi temuan STEP ini memberi sinyal produk yang cukup kuat ke satu arah: **list page
+Candidates sudah cukup untuk tahu "sudah mulai?" dan "sudah selesai?" tanpa perlu membuka
+Live Monitor sama sekali** — assessor tinggal balik ke halaman itu kapan saja, tombol
+**Monitor** muncul otomatis kalau masih live, tombol **Results** muncul otomatis kalau sudah
+selesai. Live Monitor sendiri (transcript+coverage bar live) baru relevan kalau assessor
+**memang ingin** menonton prosesnya — bukan satu-satunya cara tahu statusnya. Bacaan paling
+konsisten dengan bukti kode: **Live Monitor difungsikan sebagai fasilitas opsional untuk
+observasi mendalam, bukan gerbang wajib untuk tahu progres** — yang berarti alasan bisnis
+untuk scheduling (Level 3 di diskusi sebelumnya) lemah, sementara win kecil di (b) di atas
+punya alasan bisnis jauh lebih langsung dan murah untuk dieksekusi.
+
+**Tidak diputuskan di sini** (bukan wewenang saya, §4.1 masih terbuka) — ini murni evidence
+baru untuk problem map, ditambahkan sebagai Finding D di tabel atas. Keputusan scope final
+tetap milik Fadhil.
+
+---
+
+## ✅ §4.1 DIPUTUSKAN (2026-08-18) — lihat ROADMAP.md §4.1 untuk detail lengkap
+
+Ringkasan: **A (F-01, mandatory security fix) + D & slice-F-04/F-05 (primary product scope:
+session lifecycle visibility + AI pipeline failure transparency)**. F-02, F-03, dan
+full-backend F-04/F-05 eksplisit di luar scope (alasan tercatat di ROADMAP.md §4.1). Exploration
+journey di atas ini yang jadi dasar bukti keputusan — tidak ada temuan baru yang mengubahnya,
+cuma dipilih di antara opsi yang sudah tertelusuri.
+
+---
+
+## F-01 FIX — VERIFIED (2026-08-18)
+
+**Fix:** `tenant_scoped_portfolios` helper di
+[portfolios_controller.rb](../api/app/controllers/api/v1/portfolios_controller.rb) — semua
+`Portfolio.find(params[:id])` polos (4 titik: `export`/`set_portfolio`, `regenerate_fitgap`,
+`fitgap`, `show_fitgap`) diganti `Portfolio.joins(:session).where(sessions: { tenant_id:
+Current.tenant_id }).find(...)`. Pola sama di
+[portfolio_skills_controller.rb](../api/app/controllers/api/v1/portfolio_skills_controller.rb)
+(`override` action) lewat `joins(portfolio: :session)`. `FitGapReport`/`AssessorOverride` tidak
+punya route langsung sendiri (dikonfirmasi `routes.rb`) — selalu diakses lewat `portfolio`/
+`portfolio_skill` yang sekarang sudah tenant-scoped di titik masuknya, jadi aman tanpa
+perubahan tambahan. Opsi A dari §4.2 ROADMAP (join/relasi, TANPA migration/kolom `tenant_id`
+baru) — bukan Opsi A audit asli yang minta migration.
+
+**Verifikasi nyata** (bukan cuma baca kode) — 2 organisasi asli di DB (`Test Corp` id=1
+existing, `Other Corp` id=999-role dibuat untuk test), JWT asli di-mint per masing-masing
+`scheme` (`JsonWebToken.encode`, sama persis mekanisme auth produksi — tenant resolusi dari
+klaim `scheme` di JWT, `tenant_resolver_middleware.rb`), lalu HTTP request sungguhan ke server
+yang jalan (`localhost:3001`, restart dulu supaya kode baru pasti termuat — `preload_app!` di
+`puma.rb` bikin restart perlu, bukan opsional):
+
+| Endpoint | Token tenant lain (org2 → data org1) | Token tenant sama (org1 → data sendiri) |
+|---|---|---|
+| `GET /portfolios/1/export` | **404** ✅ (sebelumnya: 200, bocor) | 200 ✅ (no regresi) |
+| `GET /portfolios/1/fitgap/1` | **404** ✅ | — |
+| `POST /portfolios/1/fitgap` | **404** ✅ | — |
+| `POST /portfolios/1/regenerate_fitgap` | **404** ✅ | — |
+| `POST /portfolio_skills/1/override` | **404** ✅ (sebelumnya bisa **menulis** rating milik tenant lain) | — |
+
+Kelima titik yang disebut eksplisit di audit (`codebase-audit.md:363`,
+`portfolios_controller.rb:82,104,130,156` + `portfolio_skills_controller.rb:50-55`) sekarang
+menolak akses lintas tenant, akses tenant sendiri tidak berubah.
+
+---
+
+# STEP 08 — Scope 2 (D + slice-C) diimplementasikan & diverifikasi (2026-08-18)
+
+**Perubahan** (semua frontend, nol migration — sesuai temuan pra-implementasi di ROADMAP §4.1):
+- [formatDuration.ts](../web/src/utils/formatDuration.ts) — helper baru, `formatDuration()`
+  ("4m 47s") + `formatTime()`.
+- [AssessmentInvitePage.tsx](../web/src/pages/assessments/AssessmentInvitePage.tsx) — baris
+  candidate yang `isEnded` sekarang tampilkan `Completed HH:mm · durasi` (Finding D).
+- [PortfolioPage.tsx](../web/src/pages/portfolio/PortfolioPage.tsx) — header tampilkan waktu
+  selesai+durasi yang sama; blok "Portfolio generation failed" sekarang render
+  `portfolio.generation_error` (field yang sudah ada di API, sebelumnya dibuang).
+- [TranscriptPage.tsx](../web/src/pages/transcript/TranscriptPage.tsx) — empty state dipecah 3
+  jadi by `session.status`: pending → "Candidate hasn't started..."; active → "still in
+  progress..."; ended+kosong → pesan dead-end eksplisit, styled merah (beda dari 2 kondisi
+  lain yang netral) supaya assessor langsung sadar ini bukan kondisi normal.
+
+**Verifikasi nyata di browser** (login `assessor@test-corp.local`, bukan cuma baca kode):
+- List "Flutter Engineer" → Budi: **"Completed 03:54 AM · 5m 47s"** tampil di baris candidate.
+- Portfolio Results (Budi) header: **"Completed 03:54 AM · 5m 47s"** tampil di bawah nama.
+- Dibuat 1 sesi test sementara ("QA Empty State Test") untuk memaksa & screenshot ketiga
+  state Transcript (pending/ended-kosong) dan state Portfolio failed dengan `generation_error`
+  asli — ketiganya render persis sesuai desain (screenshot dilihat langsung dalam sesi ini).
+  **Sesi test + org test (`other-corp`, dari verifikasi F-01) sudah dihapus** setelah
+  verifikasi selesai — tidak ada data sintetis tersisa di DB, hanya 2 sesi Budi asli.
+- `npx tsc --noEmit` — bersih, tidak ada type error baru.
+
+**Catatan untuk laporan:** screenshot resmi untuk PDF/submission sebaiknya diambil ulang
+mendekati waktu submit (per `ROADMAP.md` Langkah 5, blok T+14:00) dengan data yang masih hidup
+saat itu — screenshot yang diambil di STEP ini murni untuk verifikasi teknis, sesi test-nya
+sudah dihapus.
+
+---
+
+# STEP 09 — Vacancy-context persistence (Fit/Gap navigation) — hard-stop scope item terakhir
+
+**Ditemukan oleh Fadhil** (bukan dari audit): setelah Run Fit/Gap Analysis dari Portfolio,
+klik Back di Fit/Gap Report memaksa assessor pilih ulang vacancy — dropdown reset ke kosong.
+
+**Root cause** (trace lengkap, "jangan coding dulu" dilakukan sebelum implementasi):
+`selectedVacancy` hidup di `useState` lokal `PortfolioPage.tsx`, tidak pernah ditulis ke URL.
+Navigasi ke `/fitgap/:vacancyId` adalah route match baru → `PortfolioPage` unmount total →
+state lenyap. Tombol Back di `FitGapReportPage.tsx` cuma `<Link>` polos ke `/portfolio` tanpa
+membawa apa pun. Klasifikasi: **state management**, bukan desain route yang disengaja.
+
+**Opsi dipertimbangkan**: URL query param (dipilih), `location.state` (precedent `returnTo`
+sudah ada di codebase tapi rapuh untuk direct-URL/refresh), route nesting (arsitektural paling
+benar tapi disproportionate untuk 1 bug ini). Detail lengkap trade-off ada di riwayat chat sesi
+ini — dirangkum di sini demi keringkasan log.
+
+**Desain final** (2 koreksi penting dari Fadhil terhadap draft awal):
+1. `setSearchParams` harus **merge** dengan search params lain yang mungkin ada (spread
+   `URLSearchParams` yang sekarang, timpa key `vacancy` saja) — bukan bikin objek baru dari nol.
+2. URL cuma **intent**, bukan **fact** — validasi tetap terhadap `vacancies` list hasil fetch
+   API, bukan sekadar "param ada berarti valid".
+3. Milik desain sendiri (bukan koreksi Fadhil, tapi baru muncul saat merevisi): pilih vacancy
+   di dropdown pakai `setSearchParams(..., { replace: true })`, BUKAN push — supaya ganti-ganti
+   pilihan tidak menumpuk history entry. Navigasi ke Fit/Gap tetap `push` (default `navigate()`).
+   Kombinasi replace+push inilah yang membuat browser Back native dan tombol Back aplikasi
+   konvergen ke URL yang sama persis — tanpa ini, browser Back native tetap akan gagal walau
+   tombol Back aplikasi sudah "diperbaiki" sepihak.
+
+**File yang diubah:**
+- [PortfolioPage.tsx](../web/src/pages/portfolio/PortfolioPage.tsx) — `selectedVacancy`
+  sekarang derived dari `useSearchParams()` (bukan `useState`), plus efek validasi pasca-fetch
+  yang membersihkan `?vacancy=` kalau ID tidak match vacancy manapun di list yang di-fetch.
+- [FitGapReportPage.tsx](../web/src/pages/fitgap/FitGapReportPage.tsx) — Back link sekarang
+  `.../portfolio?vacancy=${vacancyId}` (vacancyId sudah ada di scope, dari route param sendiri).
+
+**Verifikasi nyata di browser** (bukan cuma baca kode) — login assessor, Budi/Flutter Engineer:
+- Pilih vacancy → URL langsung `?vacancy=3` tanpa klik apa pun lagi, `history.length` **tidak
+  bertambah** (dicek via `history.length` sebelum/sesudah 2x ganti pilihan — tetap 11).
+- Klik "Run Fit/Gap Analysis" → `history.length` bertambah tepat +1 (push asli).
+- Browser Back **native** (`navigate("back")` di tooling) → mendarat di `/portfolio?vacancy=4`,
+  dropdown menunjukkan "QA ENgineer" — benar.
+- Ulang alur, kali ini pakai tombol Back **aplikasi** → hasil identik (`?vacancy=4`).
+- Refresh penuh (`location.reload()`) di `/portfolio?vacancy=4` → dropdown tetap "QA ENgineer".
+- Direct URL `?vacancy=999999` (tidak ada) → dropdown fallback ke placeholder "Choose
+  vacancy...", DAN URL otomatis dibersihkan jadi `/portfolio` polos (dicek via `location.href`
+  sesudah 1.5 detik, setelah fetch vacancies selesai) — tidak ada extra API call untuk ID yang
+  tidak valid (dicek network log, cuma request `vacancies?page=1` normal, tidak ada
+  `vacancies/999999`).
+- Direct URL `?vacancy=3` (valid) → dropdown ter-hydrate "Flutter Engineer" (dicek langsung
+  `textContent` elemen combobox, bukan cuma screenshot).
+- Console errors dicek — cuma 404 `GET /portfolios/1/fitgap/4` yang genuinely expected (alur
+  "generate on first visit" yang sudah ada sejak awal, dikonfirmasi lewat network log lengkap,
+  bukan regresi baru).
+- `npx tsc --noEmit` — bersih.
+
+**Ini hard-stop scope terakhir** (keputusan eksplisit Fadhil) — setelah ini, temuan baru apa
+pun yang muncul dicatat sebagai finding untuk laporan, TIDAK otomatis masuk implementasi.
+Fokus berikutnya: test coverage (RSpec seeded fault test + Vitest), yang masih 0%.
+
+---
+
+# STEP 10 — Test Coverage: RSpec seeded-fault regression untuk F-01
+
+**Bootstrap dari nol** — belum ada `spec/` sama sekali sebelum step ini (dikonfirmasi
+`ROADMAP.md §4.2`'s catatan sendiri: "bootstrap RSpec dari nol... menambah waktu signifikan").
+`rspec-rails`/`factory_bot_rails`/`database_cleaner` sudah ada di `Gemfile` tapi belum pernah
+di-generate. Dijalankan `rails generate rspec:install`, test DB (`rakamin_test`, sudah dibuat
+sejak Langkah 1) di-`db:schema:load` (kosong sebelumnya — nol tabel). `spec/rails_helper.rb`
+ditambah `Sidekiq::Testing.fake!` (job masuk array in-memory, tidak pernah eksekusi nyata —
+tidak ada panggilan Gemini asli dari test) + `FactoryBot::Syntax::Methods` + helper JWT
+(`spec/support/request_spec_helpers.rb`, `JsonWebToken.encode` persis mekanisme produksi).
+7 factory baru (`organization`, `assessment`, `session`, `portfolio`, `portfolio_skill`,
+`assessor_override`, `vacancy`, `fit_gap_report`) — tidak ada factory `user` karena
+`AuthorizeApiRequest` percaya klaim JWT langsung, tidak pernah query tabel `users`.
+
+**Test:** `spec/requests/api/v1/portfolios_tenant_isolation_spec.rb` +
+`spec/requests/api/v1/portfolio_skills_tenant_isolation_spec.rb` — 12 example, masing-masing
+titik F-01 (export, show via session, fitgap generation, fitgap retrieval, regenerate_fitgap,
+portfolio_skill override) punya sepasang "allows own tenant" + "denies other tenant" via JWT
+asli 2 organisasi berbeda.
+
+**Seeded-fault run (WAJIB per checklist, dijalankan sungguhan bukan didokumentasikan saja):**
+`git stash push -- portfolios_controller.rb portfolio_skills_controller.rb` (revert 2 file itu
+ke HEAD pre-fix, file spec/factory tidak tersentuh) → jalankan suite → **5 dari 6 example
+"denies" merah**, restore (`git stash pop`, diff dikonfirmasi identik byte-per-byte via
+`git diff --stat`) → suite hijau lagi (12/12).
+
+**Temuan saat seeded-fault run — koreksi terhadap catatan verifikasi manual STEP F-01 di atas:**
+1. Draft awal test untuk `fitgap`/`regenerate_fitgap` memakai `vacancy_id` milik korban
+   (tenant sendiri) di request lintas-tenant — ternyata **tidak pernah merah** meski
+   controller di-revert ke pre-fix, karena `Vacancy` punya `TenantScoped`-nya sendiri: lookup
+   vacancy gagal duluan (404 "Vacancy not found") sebelum sempat menyentuh kode portfolio yang
+   sebenarnya rentan — proteksi kebetulan yang menutupi lubang asli, false negative. Diperbaiki
+   dengan `attacker_vacancy` (vacancy milik tenant PENYERANG sendiri, target portfolio_id tetap
+   milik korban) — bentuk serangan yang realistis, dan ini yang betul-betul menembus ke kode
+   rentan. Setelah fix: kedua endpoint ini merah dengan bukti konkret job `FitGapGeneratorWorker`
+   benar-benar ter-enqueue untuk portfolio korban (`jobs.size` 0→1) sebelum fix, nol enqueue
+   sesudah fix.
+2. Endpoint `export` pre-fix **tidak** menghasilkan "200, bocor" seperti tercatat di catatan
+   verifikasi manual F-01 di atas — hasil aktual dari seeded-fault run adalah **500** ("undefined
+   method `candidate_name` for nil"). Sebab: `portfolio.session` adalah association
+   `belongs_to`, dan `Session` sendiri sudah punya `TenantScoped` (default_scope) —jadi
+   meski `Portfolio.find(params[:id])` polos berhasil menemukan portfolio korban, association
+   `.session`-nya tetap gagal (ke-filter default_scope Session, balik nil) → crash di
+   `export_filename`. Klaim "200, bocor" di catatan manual sebelumnya kemungkinan berasal dari
+   penalaran dari kode (bukan hasil hit HTTP nyata ke server pre-fix) — jadi kesalahan diagnosis
+   yang baru ketahuan sekarang lewat seeded-fault run yang sungguhan dijalankan. Konsekuensi
+   praktis sama (akses lintas tenant tidak seharusnya berhasil dalam bentuk apa pun), tapi
+   mekanismenya beda dan penting dicatat sebagai momen koreksi AI (persis yang diminta checklist
+   submission).
+3. Endpoint `fitgap/:vacancy_id` (retrieval) dan `portfolio_skills#override` **memang** merah
+   dengan pola bersih sesuai dugaan awal: 200 dengan body laporan korban ter-return penuh
+   (retrieval), dan 201 dengan override benar-benar tertulis ke data korban (`assessor_override`
+   korban terisi) — dua-duanya dikonfirmasi lewat assertion langsung ke response body/DB state,
+   bukan cuma status code.
+
+**Command:** `bundle exec rspec spec/requests/api/v1/portfolios_tenant_isolation_spec.rb
+spec/requests/api/v1/portfolio_skills_tenant_isolation_spec.rb` → **12 examples, 0 failures**
+(state akhir, setelah restore).
+
+---
+
+# Temuan pasca hard-stop — tombol Share di card invite link (tidak diimplementasi)
+
+**Sumber:** screenshot dari Fadhil, halaman invite kandidat
+([AssessmentInvitePage.tsx:264-287](../web/src/pages/assessments/AssessmentInvitePage.tsx)) —
+card "Link for [Nama] ready — share with your candidate:" saat ini cuma render satu tombol
+**Copy link** (baris 278-284). Ide yang muncul: tambah tombol **Share** di sebelahnya (mis.
+Web Share API kalau tersedia, atau shortcut ke WhatsApp/email).
+
+**Keputusan: TIDAK diimplementasi**, sesuai aturan hard-stop yang sudah dinyatakan eksplisit di
+STEP 09 di atas — "setelah ini, temuan baru apa pun yang muncul dicatat sebagai finding untuk
+laporan, TIDAK otomatis masuk implementasi". Item ini muncul dari observasi UI, bukan dari
+scope 2 (D+slice-C) yang sudah dikunci di `ROADMAP.md §4.1`, dan bukan polish yang termasuk
+Arah 1 (§4.5) karena itu murni menerapkan pola *existing* (Skeleton/error-banner/empty-CTA) ke
+2 komponen scope 2 — tombol Share adalah permukaan UI baru (state Web Share API
+tersedia/tidak-tersedia, fallback platform, kebutuhan test tambahan) yang tidak sepadan untuk
+sisa waktu dan tidak menambah nilai ke narasi laporan (AI-trust/observability).
+
+**Dicatat untuk laporan sebagai:** *Potential UX enhancement — invitation link sharing* — masuk
+ke bagian "Problem & gap analysis" / catatan future-work di laporan PDF (Langkah 6 di
+`ROADMAP.md`), BUKAN sebagai implemented finding dengan bukti screenshot/state seperti temuan
+STEP 01-10 di atas.

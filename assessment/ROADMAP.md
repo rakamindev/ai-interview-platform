@@ -179,33 +179,77 @@ Nilai plus: lebih menonjol untuk kriteria "exceptional UI/UX design taste" di ru
 **Format: JANGAN aku isi. Pilih, lalu tulis alasan singkat di ruang kosong kalau perlu buat laporan PDF nanti.**
 
 ### 4.1 — Scope revamp final
-⏳ **DIBUKA LAGI (2026-08-18, ~11:00 WIB)** — sempat ditulis "DIPUTUSKAN" (C→A→B) sebelumnya di
-sesi ini, itu **prematur** dan sudah dikoreksi Fadhil. Brief membolehkan revamp/enhancement apa
-pun (bug dari audit, UX gap yang ditemukan sendiri saat testing, atau ide baru) selama reasoning
-& impact-nya kuat — bukan wajib pilih dari `codebase-audit.md` §6 saja, dan severity (P0-P3)
-bukan otomatis = scope terbaik untuk case study (P0 security bug bisa jadi punya product story
-yang tipis; P1 product-trust gap bisa punya surface area & ruang demonstrasi lebih luas).
-A/B/C dari audit sekarang berstatus **known findings**, bukan 3 opsi tinggal pilih satu — lihat
-tabel lengkap + klasifikasi (jenis vs severity vs kandidat-scope, tiga sumbu terpisah) di
-[EXPLORATION_LOG.md § Problem Map](EXPLORATION_LOG.md#problem-map--known-findings--exploration-belum-final).
-- [ ] F-01 — celah tenant isolation (P0)
-- [ ] F-02 — retensi/penghapusan data kandidat (P0)
-- [ ] F-03 — kebocoran channel B6 (P1, ada bukti konkret di kode)
-- [ ] F-04 — confidence portfolio tidak diverifikasi (P1)
-- [ ] F-05 — narasi fit/gap kurang lengkap (P1)
-- [ ] Sesuatu di luar audit (UX gap/enhancement baru dari exploration) — lihat tema "dead-end
-      state guidance" yang dihipotesiskan dari B-03 di Problem Map, belum ditelusuri tuntas
-- **Proses:** lanjutkan exploration journey dulu (Coverage/Live Monitor real-time, Confidence
-  standalone page, Hiring Decision, sapuan dead-end-state) sampai problem map terasa cukup
-  lengkap, baru pilih scope final — bukan dikunci lebih awal.
+✅ **DIPUTUSKAN (2026-08-18)** oleh Fadhil — dua bagian terpisah, bukan satu pilihan tunggal:
+
+1. **A (F-01, P0) — mandatory security remediation.** Tenant isolation leak (`Portfolio`,
+   `PortfolioSkill`, `FitGapReport`, `AssessorOverride` bisa diakses lintas tenant) **wajib
+   ditutup sebelum submit**, terlepas dari narasi laporan — P0 nyata yang sudah dikonfirmasi
+   di kode (`codebase-audit.md:363`) tidak etis dibiarkan cuma karena bukan fokus demo.
+   Bukan bagian dari cerita produk utama; ini due-diligence.
+2. **D + slice-C — primary product scope**, yang jadi fokus narasi laporan & demo:
+   - **Finding D** (STEP 07): session lifecycle visibility — `started_at`/`ended_at`/
+     `duration_seconds` sudah dihitung backend & dikirim API, tidak pernah dirender di
+     frontend mana pun.
+   - **Slice dari F-04/F-05** (bukan full Opsi C audit): AI-pipeline failure transparency —
+     `portfolios.generation_error` sudah tersimpan & **sudah dikirim di response API**
+     (`portfolios_controller.rb:20,169`, dikonfirmasi langsung ke kode) tapi
+     `PortfolioPage.tsx:196` cuma render teks generik "Portfolio generation failed." tanpa
+     pernah baca field itu. `TranscriptPage.tsx:82-86` sama — "No transcript available"
+     generik, padahal `session.status` (pending/active/ended) sudah ada di response yang
+     SAMA yang sudah di-fetch di komponen itu (`sessionsApi.get`, dipakai baris 23) — cukup
+     untuk bedakan "belum mulai" vs "berakhir tapi transcript hilang" tanpa field baru.
+   - **Temuan kunci saat verifikasi pra-implementasi**: kedua data ini **sudah 100% tersedia
+     di response API yang sudah di-fetch** — scope 2 ini genuinely pure-frontend, nol
+     perubahan backend/migration. Ini alasan kuat kenapa aman dikerjakan berdampingan dengan
+     security fix (scope 1) tanpa context-switch backend↔frontend yang mahal.
+
+**Eksplisit DI LUAR scope** (dicatat sadar, bukan lubang yang tidak disebut — untuk
+"Problem & gap analysis" di laporan §Langkah 6):
+- F-02 — retensi/penghapusan data kandidat (P0) — **tidak dikerjakan**. Alasan: waktu: fix
+  yang genuinely aman (Sidekiq scheduled job + tombol delete) effort-nya **L** per audit
+  Opsi E, tidak muat berdampingan dengan scope 1+2 dalam sisa waktu.
+- F-03 — kebocoran channel B6 (P1) — **tidak dikerjakan**. Alasan: verifikasi butuh audio
+  live real (schedule risk, `codebase-audit.md:412` sendiri menyebut ini risiko sedang-tinggi).
+- F-04/F-05 sebagai **backend rework penuh** (verifikasi confidence scoring dari `probe_count`,
+  prompt Gemini untuk narasi fit/gap) — **tidak dikerjakan**; hanya versi frontend-nya
+  (transparency saat gagal) yang masuk lewat slice-C di atas.
+
+- [x] F-01 — celah tenant isolation (P0) — mandatory fix, lihat poin 1
+- [ ] F-02 — retensi/penghapusan data kandidat (P0) — out of scope, lihat catatan di atas
+- [ ] F-03 — kebocoran channel B6 (P1) — out of scope, lihat catatan di atas
+- [x] F-04/F-05 (slice, bukan penuh) — AI pipeline failure transparency — masuk lewat scope 2
+- [x] Finding D (di luar audit) — session lifecycle visibility — masuk lewat scope 2
 
 ### 4.2 — Pendekatan teknis (Option A vs Option B)
-⏳ **MENUNGGU §4.1** — trade-off matrix (Product Impact vs Cost, Maintainability, Failure Modes,
-Contextual Fit) baru bisa dirumuskan setelah scope final jelas, supaya isinya asli bukan
-buru-buru cuma buat centang kotak.
-- Option A: ______________________
-- Option B: ______________________
-- Dipilih: ______________________ karena: ______________________
+🟡 **DIREKOMENDASIKAN AI (2026-08-18)** — hanya untuk sisi security fix (scope 1); sisi
+scope 2 (D+slice-C) tidak butuh trade-off berarti karena murni rendering data yang sudah ada
+(dikonfirmasi di §4.1 di atas). Fadhil bisa veto/ganti — ini bukan dikunci final, cuma supaya
+implementasi bisa mulai tanpa nunggu ronde konfirmasi lagi mengingat sisa waktu.
+
+**Konteks:** `Portfolio`/`PortfolioSkill`/`FitGapReport`/`AssessorOverride` tidak punya kolom
+`tenant_id` sendiri (`schema.rb:59-131`) — beda dari `Assessment`/`Session`/`Vacancy` yang
+sudah pakai `include TenantScoped` (concern yang butuh kolom `tenant_id` + default_scope,
+lihat `api/app/models/concerns/tenant_scoped.rb`). Tenant sebenarnya bisa ditelusuri lewat
+relasi: `Portfolio → session → tenant_id`, dst.
+
+- **Option A — Scoping lewat join/relasi, TANPA migration.** Ganti lookup di
+  `portfolios_controller.rb` (baris 82,104,130,156 per audit) dan `portfolio_skills_controller.rb`
+  dari `Model.find(params[:id])` polos jadi query yang selalu lewat relasi tenant, mis.
+  `Portfolio.joins(:session).merge(Session.where(tenant_id: Current.tenant_id)).find(...)`.
+  **Effort: S. Risiko: Rendah** (tidak menyentuh schema/data existing, tidak ada backfill,
+  tidak bisa merusak data). **Trade-off jujur**: tidak konsisten dengan pola `TenantScoped`
+  yang sudah dipakai di 3 model lain — didokumentasikan sebagai known deviation, bukan
+  disembunyikan, dengan alasan eksplisit: migration+backfill di <24 jam sisa waktu menaikkan
+  risiko lebih dari nilai konsistensinya.
+- **Option B — Kolom `tenant_id` + `TenantScoped` penuh (persis audit Opsi A asli).**
+  Migration 4 tabel + backfill dari relasi + `include TenantScoped`. **Effort: M** (audit
+  sendiri catat: "bootstrap RSpec dari nol... menambah waktu signifikan", `codebase-audit.md:396`).
+  **Risiko: Sedang** — migration di tabel yang datanya sudah ada butuh backfill benar,
+  bukan `null: false` langsung. Lebih konsisten & "proper" jangka panjang, tapi biaya waktu
+  tidak sepadan untuk item yang bukan fokus narasi laporan (scope 1, bukan scope 2).
+- **Dipilih: Option A** karena Contextual Fit menang jelas untuk sisa waktu <24 jam dan scope 1
+  bukan bagian yang dinilai paling dalam di laporan (itu perannya scope 2) — spending effort M
+  di sini mengambil jatah waktu dari scope 2 yang justru jadi fokus demo/rubrik utama.
 
 ### 4.3 — Struktur PR
 ✅ **DIPUTUSKAN** (sebelum handoff, di chat sebelumnya):
@@ -215,20 +259,27 @@ buru-buru cuma buat centang kotak.
   exploration (B-01..B-05) — harus mengikuti scope final §4.1 (C/A/B), yang baru jelas sekarang.
 
 ### 4.4 — Klaim kedalaman (backend-heavy vs frontend-heavy)
-⏳ **MENUNGGU §4.1 lagi** — sebelumnya ditulis "terjawab otomatis" dengan asumsi scope pasti
-F-01/F-03/F-04/F-05 (semua backend-dominant); asumsi itu sudah tidak valid sejak §4.1 dibuka
-lagi. Kalau problem map akhirnya mengarah ke tema UX/frontend (mis. dead-end-state guidance),
-jawabannya bisa Frontend-heavy — genuinely tergantung hasil exploration lanjutan.
+✅ **TERJAWAB dari §4.1** — hasilnya hybrid tapi condong jelas ke satu sisi:
 - [ ] Backend-heavy
-- [ ] Frontend-heavy
-- Catatan: ______________________
+- [x] Frontend-heavy
+- **Catatan:** scope 1 (security fix, Option A di §4.2) backend-only tapi kecil (Effort S,
+  query-level fix di 2 controller). Scope 2 (D+slice-C, fokus laporan) **nol perubahan
+  backend** — dikonfirmasi langsung ke kode: `started_at`/`ended_at`/`duration_seconds`
+  (`sessions_controller.rb:152-177`) dan `generation_error` (`portfolios_controller.rb:20,169`)
+  sudah dikirim di response API yang sudah di-fetch frontend, tinggal dirender. Klaim jujur:
+  **frontend-heavy secara keseluruhan**, dengan satu sentuhan backend kecil & terpisah untuk
+  security (bukan yang dinilai kedalamannya di laporan).
 
 ### 4.5 — Arah visual dari Langkah 3
-⏳ **MASIH TERBUKA** — belum diputuskan, dan sekarang malah lebih terbuka lagi (bisa jadi arah
-visual ini melebur dengan §4.1 kalau scope akhirnya UX/frontend-heavy, bukan sekadar polish
-terpisah dari perbaikan backend):
-- [ ] Arah 1 — Polish minimal
+🟡 **DIREKOMENDASIKAN AI (2026-08-18)** — Fadhil bisa veto, sama seperti §4.2:
+- [x] Arah 1 — Polish minimal
 - [ ] Arah 2 — Ekspresif dengan micro-interaction
+- **Catatan:** scope 2 (§4.1) sudah menambah permukaan UI baru sendiri (timing display,
+  error banner) — menumpuk Arah 2 (dependency `@radix-ui/react-toast` baru + animasi
+  tambahan) di atasnya menaikkan risiko state-yang-perlu-ditest tanpa menambah nilai ke
+  narasi laporan (yang soal AI-trust/observability, bukan micro-interaction). Arah 1 pakai
+  pola Skeleton/error-banner/empty-CTA yang SUDAH ada persis untuk 2 komponen baru scope 2 —
+  konsisten dengan codebase, effort rendah, risiko rendah.
 
 ---
 
