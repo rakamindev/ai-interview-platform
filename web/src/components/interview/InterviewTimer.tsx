@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { cn } from "@/lib/utils";
 
 interface InterviewTimerProps {
@@ -13,7 +13,7 @@ function formatTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
+const InterviewTimer = memo(function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
   const [remaining, setRemaining] = useState(totalSeconds);
 
   useEffect(() => {
@@ -40,4 +40,6 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
       {formatTime(remaining)}
     </span>
   );
-}
+});
+
+export default InterviewTimer;
