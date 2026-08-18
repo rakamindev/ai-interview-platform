@@ -63,8 +63,8 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-verdict-match bg-verdict-match/10",
+  gap: "text-verdict-gap bg-verdict-gap/10",
+  exceed: "text-verdict-exceed bg-verdict-exceed/10",
+  not_assessed: "text-verdict-unknown bg-verdict-unknown/10",
 };

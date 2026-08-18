@@ -4,6 +4,10 @@ export default {
     content: ["./index.html", "./src/**/*.{ts,tsx}"],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ['"Inter"', "ui-sans-serif", "system-ui", "sans-serif"],
+                serif: ['"Fraunces"', "Georgia", "serif"],
+            },
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
@@ -38,6 +42,13 @@ export default {
                     DEFAULT: "hsl(var(--popover))",
                     foreground: "hsl(var(--popover-foreground))",
                 },
+                "verdict-exceed": "hsl(var(--verdict-exceed))",
+                "verdict-match": "hsl(var(--verdict-match))",
+                "verdict-gap": "hsl(var(--verdict-gap))",
+                "verdict-unknown": "hsl(var(--verdict-unknown))",
+                "verdict-absent": "hsl(var(--verdict-absent))",
+                "rail-track": "hsl(var(--rail-track))",
+                "mark-requirement": "hsl(var(--mark-requirement))",
             },
             borderRadius: {
                 lg: "var(--radius)",

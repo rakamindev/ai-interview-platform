@@ -30,7 +30,7 @@ export default function SkillPortfolioCard({
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>
                 {skill.is_discovered && (
-                  <span className="flex items-center gap-0.5 text-xs text-amber-600">
+                  <span className="flex items-center gap-0.5 text-xs text-verdict-gap">
                     <Zap className="h-3 w-3" /> Discovered
                   </span>
                 )}
@@ -43,7 +43,7 @@ export default function SkillPortfolioCard({
 
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
-          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          <div className="text-xs text-muted-foreground bg-verdict-gap/10 border border-verdict-gap/20 rounded px-3 py-2">
             Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
           </div>
         )}
