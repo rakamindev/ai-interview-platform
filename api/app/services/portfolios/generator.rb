@@ -150,35 +150,30 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      validator = ResponseValidator.new
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      configured = validator.call(data['configured_skills'], is_discovered: false)
+      discovered = validator.call(data['discovered_skills'], is_discovered: true)
+      all_skills = configured + discovered
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary'],
-          tenant_id:          portfolio.tenant_id
-        )
+      ActiveRecord::Base.transaction do
+        all_skills.each { |skill| upsert_skill(portfolio, skill) }
       end
+    end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary'],
-          tenant_id:          portfolio.tenant_id
-        )
-      end
+    def upsert_skill(portfolio, skill)
+      row = portfolio.portfolio_skills.find_or_initialize_by(skill_label: skill.skill_label)
+      row.assign_attributes(
+        skill_id:           skill.skill_id,
+        is_discovered:      skill.is_discovered,
+        ai_level:           skill.ai_level,
+        rating_state:       skill.rating_state,
+        ai_confidence:      skill.ai_confidence,
+        evidence:           skill.evidence,
+        competency_summary: skill.competency_summary,
+        tenant_id:          portfolio.tenant_id
+      )
+      row.save!
     end
   end
 end
