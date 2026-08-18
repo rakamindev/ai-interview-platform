@@ -9,12 +9,17 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        assessments = paginate(Assessment.order(created_at: :desc))
+
+        # Single windowed query: DISTINCT ON picks the most recent session per assessment.
+        assessment_ids = assessments.map(&:id)
+        latest_sessions = Session.where(assessment_id: assessment_ids)
+                                 .select('DISTINCT ON (assessment_id) sessions.*')
+                                 .order(assessment_id: :asc, created_at: :desc)
+                                 .index_by(&:assessment_id)
 
         json_response(
-          assessments: assessments.map(&method(:assessment_json)),
+          assessments: assessments.map { |a| assessment_json(a, latest_sessions[a.id]) },
           meta: pagination_meta(assessments)
         )
       end
@@ -75,8 +80,8 @@ module Api
         )
       end
 
-      def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+      def assessment_json(assessment, latest = nil)
+        latest ||= assessment.sessions.order(created_at: :desc).first
 
         {
           id:             assessment.id,
