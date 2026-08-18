@@ -6,7 +6,6 @@ import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, Pencil } from "lucide-react";
-import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface OverridePanelProps {
@@ -17,7 +16,8 @@ interface OverridePanelProps {
 
 export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
-  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+  const initialLevel = existingOverride?.override_level ?? skill.ai_level;
+  const [overrideLevel, setOverrideLevel] = useState(initialLevel);
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -47,11 +47,11 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         {hasOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
+              <LevelBadge level={skill.ai_level} size="sm" />
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
+              <span className="text-xs text-green-600 font-medium">Overridden by you</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <Pencil className="h-3 w-3 mr-1" /> Edit override
@@ -66,6 +66,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
     );
   }
 
+  const ratingLabelId = `override-rating-${skill.id}`;
+
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -73,8 +75,13 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-sm">Your rating:</Label>
-        <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
+        <Label id={ratingLabelId} className="text-sm">Your rating:</Label>
+        <LevelRadio
+          value={overrideLevel}
+          onChange={setOverrideLevel}
+          ariaLabelledby={ratingLabelId}
+          namePrefix={`skill-${skill.id}`}
+        />
       </div>
 
       <div className="space-y-1.5">
