@@ -9,4 +9,9 @@ class FitGapReport < ApplicationRecord
   belongs_to :vacancy
 
   validates :skill_comparisons, presence: true
+
+  def pending?    = status == "pending"
+  def generating? = status == "generating"
+  def complete?   = status == "complete"
+  def failed?     = status == "failed"
 end
