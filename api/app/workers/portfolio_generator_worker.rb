@@ -3,9 +3,9 @@
 class PortfolioGeneratorWorker
   include Sidekiq::Worker
 
-  # Retry dengan backoff lebih panjang untuk handle rate limit (429) dari free tier.
+  # Retry with longer backoff to handle rate limits (429) from the free tier.
   # Sidekiq default backoff: (retry^4 + 15 + rand(30)) seconds
-  # retry: 6 → last attempt ~25 menit setelah failure pertama.
+  # retry: 6 → last attempt ~25 minutes after the first failure.
   sidekiq_options queue: :portfolio, retry: 6
 
   sidekiq_retries_exhausted do |msg, _ex|
@@ -22,7 +22,7 @@ class PortfolioGeneratorWorker
     session = Session.find(session_id)
     Portfolios::Generator.new(session: session).call
   rescue Gemini::HttpClient::RateLimitError => e
-    # Re-raise agar Sidekiq retry dengan backoff — jangan mark failed dulu
+    # Re-raise so Sidekiq retries with backoff — do not mark as failed yet
     Rails.logger.warn("[N10] Rate limited for session #{session_id} — will retry: #{e.message}")
     raise
   rescue ActiveRecord::RecordNotFound

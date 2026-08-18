@@ -27,7 +27,8 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const isAuthEndpoint = error.config?.url?.includes("/auth/");
+    if (!isAuthEndpoint && (error.response?.status === 401 || error.response?.status === 403)) {
       clearToken();
       window.location.href = "/login";
     }

@@ -65,7 +65,6 @@ export default function InterviewPage() {
     setInterviewState(state);
 
     if (state === "draining_audio") {
-      // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
       muteRef.current?.();
       audioCompleteCalledRef.current = false;
       // Safety timeout: call audio_complete after 10s even if drain never fires
@@ -220,7 +219,7 @@ export default function InterviewPage() {
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           <p className="text-sm text-muted-foreground">
-            Pengecekan perangkat — {candidateInfo?.time_limit_min} menit
+            Device check — {candidateInfo?.time_limit_min} minutes
           </p>
         </div>
         <HardwareCheck

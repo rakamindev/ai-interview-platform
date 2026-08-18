@@ -55,7 +55,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg">
         <DialogHeader>
           <DialogTitle>Add from B7 taxonomy</DialogTitle>
         </DialogHeader>

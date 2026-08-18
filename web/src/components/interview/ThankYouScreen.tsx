@@ -8,8 +8,8 @@ interface ThankYouScreenProps {
   initialInfo: CandidateInfo | null;
 }
 
-const POLL_INTERVAL = 5000;   // 5s
-const POLL_TIMEOUT = 180000; // stop after 3 menit
+const POLL_INTERVAL = 5000;
+const POLL_TIMEOUT = 180000;
 
 export default function ThankYouScreen({ token, initialInfo }: ThankYouScreenProps) {
   const [summary, setSummary] = useState(initialInfo?.portfolio_summary ?? null);
@@ -18,13 +18,13 @@ export default function ThankYouScreen({ token, initialInfo }: ThankYouScreenPro
   const elapsedRef = useRef(0);
 
   useEffect(() => {
-    // Jika summary sudah complete dari data awal, tidak perlu polling
+    // If summary is already complete from initial data, no polling needed
     if (summary?.status === "complete") {
       setPollingDone(true);
       return;
     }
 
-    // Portfolio belum ready — poll candidate_info sampai complete atau timeout
+    // Portfolio not ready yet — poll candidate_info until complete or timeout
     timerRef.current = setInterval(async () => {
       elapsedRef.current += POLL_INTERVAL;
 
@@ -65,32 +65,34 @@ export default function ThankYouScreen({ token, initialInfo }: ThankYouScreenPro
         <div className="flex justify-center">
           <CheckCircle className="h-12 w-12 text-green-500" />
         </div>
-        <h2 className="text-2xl font-semibold">Interview Selesai</h2>
+        <h2 className="text-2xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          Terima kasih. Rekaman interview kamu telah disimpan dan akan
-          ditinjau oleh tim perekrut.
+          Thank you. Your interview has been recorded and will be reviewed
+          by the hiring team.
         </p>
       </div>
 
-      {/* Portfolio summary */}
+      {/* Portfolio summary — loading state */}
       {isPending && (
         <div className="rounded-xl border bg-muted/30 px-5 py-6 flex items-center gap-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-          <span>Hasil sedang diproses, Anda bisa kembali ke halaman ini beberapa menit lagi…</span>
+          <span>Your results are being processed. You can come back to this page in a few minutes.</span>
         </div>
       )}
 
+      {/* Portfolio summary — failed state */}
       {isFailed && pollingDone && (
         <div className="rounded-xl border bg-muted/30 px-5 py-6 text-center text-sm text-muted-foreground">
-          Analisis hasil tidak tersedia saat ini. Tim kami akan meninjau
-          interview kamu secara manual.
+          Analysis results are not available at this time. Our team will
+          review your interview manually.
         </div>
       )}
 
+      {/* Portfolio summary — complete state */}
       {isReady && summary && (
         <div className="space-y-4">
           <p className="text-sm font-medium text-center text-muted-foreground">
-            Ringkasan hasil interview kamu
+            Your interview result summary
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -99,12 +101,12 @@ export default function ThankYouScreen({ token, initialInfo }: ThankYouScreenPro
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-green-600 shrink-0" />
                 <span className="text-sm font-semibold text-green-700">
-                  Kelebihan
+                  Strengths
                 </span>
               </div>
               {summary.strengths.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Tidak ada kelebihan yang teridentifikasi.
+                  No strengths identified.
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -123,12 +125,12 @@ export default function ThankYouScreen({ token, initialInfo }: ThankYouScreenPro
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-orange-500 shrink-0" />
                 <span className="text-sm font-semibold text-orange-600">
-                  Area Pengembangan
+                  Areas for Development
                 </span>
               </div>
               {summary.gaps.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Tidak ada area yang perlu dikembangkan.
+                  No development areas identified.
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -144,17 +146,16 @@ export default function ThankYouScreen({ token, initialInfo }: ThankYouScreenPro
           </div>
 
           <p className="text-xs text-center text-muted-foreground pt-1">
-            Penilaian ini bersifat indikatif dan dapat disesuaikan oleh tim
-            perekrut.
+            This assessment is indicative and may be adjusted by the hiring team.
           </p>
         </div>
       )}
 
-      {/* Timeout — portfolio tidak kunjung ready */}
+      {/* Timeout — portfolio still not ready after polling window */}
       {pollingDone && !isReady && !isFailed && (
         <div className="rounded-xl border bg-muted/30 px-5 py-6 text-center text-sm text-muted-foreground">
-          Analisis masih berjalan. Kamu akan dihubungi tim perekrut untuk
-          hasilnya.
+          Analysis is still running. The hiring team will follow up with
+          your results.
         </div>
       )}
     </div>
