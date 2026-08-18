@@ -9,6 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
+import { exportFilename } from "@/utils/exportFilename";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Briefcase, Plus } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
@@ -37,6 +38,7 @@ export default function PortfolioPage() {
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [roleTitle, setRoleTitle] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -59,7 +61,8 @@ export default function PortfolioPage() {
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
+        setCandidateName(sRes.data?.session?.candidate_name ?? null);
+        setRoleTitle(sRes.data?.assessment?.name ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -78,6 +81,7 @@ export default function PortfolioPage() {
   };
 
   const handleExport = async (format: "pdf" | "json") => {
+    console.log("DEBUG handleExport roleTitle=", JSON.stringify(roleTitle), "candidateName=", JSON.stringify(candidateName));
     if (!portfolio) return;
     setExporting(format);
     setExportError(null);
@@ -92,7 +96,7 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
+        a.download = exportFilename(candidateName, roleTitle, "Portfolio", "json");
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -100,7 +104,7 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
+        a.download = exportFilename(candidateName, roleTitle, "Portfolio", "pdf");
         a.click();
         URL.revokeObjectURL(url);
       }

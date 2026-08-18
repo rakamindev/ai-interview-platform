@@ -575,3 +575,44 @@ Bug yang saya perbaiki di sini (encoding crash + silent failure) **independen** 
 dan tidak memperbaikinya maupun memperparahnya — tapi karena saya baru saja "menghidupkan"
 fitur export ini, F-01 di endpoint yang sama ini jadi lebih relevan untuk diprioritaskan,
 bukan kurang.
+
+---
+
+# STEP 06 — ⚠️ BELUM SELESAI, di-handoff ke sesi baru
+
+**Task:** ganti nama file export dari `portfolio-1.pdf` (tidak informatif) jadi
+`{Candidate}-{Role}-Portfolio-{Date}.pdf`.
+
+**Backend** ([portfolios_controller.rb](../api/app/controllers/api/v1/portfolios_controller.rb),
+method `export_filename`) — **selesai & aman**, langsung baca dari
+`portfolio.session.candidate_name` / `portfolio.session.assessment.name`, tidak ada async race,
+tidak perlu disentuh lagi.
+
+**Frontend** — mencoba pola yang sama (fetch `session.candidate_name` +
+`assessment.name` lewat `sessionsApi.get()`, sudah ada di response, tidak perlu request
+tambahan) di `PortfolioPage.tsx` dan `FitGapReportPage.tsx`. **Ditemukan bug aneh saat
+verifikasi**: `candidateName` ("Budi") selalu berhasil ke-set, tapi `roleTitle` seringkali
+tetap `null` walau `JSON.stringify(sRes.data)` di baris SEBELUMNYA, dalam callback yang
+SAMA, terbukti sudah berisi `assessment: {name: "Flutter Engineer"}` lengkap. Ditelusuri
+sampai ke: `sRes.data.assessment.name` kadang lempar `TypeError: Cannot read properties of
+undefined (reading 'name')` — seolah `sRes.data` berubah bentuk DI ANTARA dua baris kode
+yang sama-sama membaca objek yang sama.
+
+**Sudah dicoba & TIDAK menyelesaikan akar masalah** (tapi berguna buat eliminasi):
+tab browser baru, restart Vite dev server + hapus cache `node_modules/.vite` — bug tetap
+sama persis. Jadi ini BUKAN masalah cache/HMR.
+
+**Dugaan terkuat yang BELUM diverifikasi**: `web/src/services/api.ts` punya response
+interceptor yang "membuka bungkus" amplop backend (`if ('data' in response.data)
+response.data = response.data.data`). Curiga ini yang berperilaku tidak konsisten —
+mungkin terkait race antara React 18 Strict Mode yang me-invoke effect 2x di development
+(sempat kelihatan `Promise.all` jalan 1x vs 2x di run yang berbeda-beda), dikombinasi
+dengan interceptor yang me-mutasi `response.data` in-place. Belum sempat dikonfirmasi —
+**ini titik lanjut yang paling masuk akal buat sesi berikutnya.**
+
+**Mitigasi sementara yang SUDAH diterapkan** (defensif, bukan fix akar masalah): ganti ke
+optional chaining (`sRes.data?.assessment?.name`) di kedua file supaya minimal TIDAK CRASH
+kalau race ini kejadian — fallback ke label generik "Assessment" di nama file kalau
+`roleTitle` gagal ke-populate, tapi `candidateName` ("Budi") tetap selalu benar. **Belum
+diverifikasi ulang di browser setelah perubahan defensif ini** — itu langkah pertama yang
+perlu dilakukan sesi baru.

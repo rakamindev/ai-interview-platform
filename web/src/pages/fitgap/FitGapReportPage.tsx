@@ -7,9 +7,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
+import { vacanciesApi } from "@/services/vacancies";
 import { usePolling } from "@/hooks/usePolling";
+import { exportFilename } from "@/utils/exportFilename";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+
+// PDF requests use responseType "blob", so an error body also arrives as a Blob
+// instead of parsed JSON — read it back out to surface the real backend message.
+async function extractErrorMessage(e: any, format: "pdf" | "json"): Promise<string> {
+  const fallback = `Failed to export ${format.toUpperCase()}. Please try again.`;
+  const data = e?.response?.data;
+  try {
+    const parsed = data instanceof Blob ? JSON.parse(await data.text()) : data;
+    return parsed?.errors?.[0]?.message ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -23,7 +38,10 @@ export default function FitGapReportPage() {
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [roleTitle, setRoleTitle] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -44,16 +62,21 @@ export default function FitGapReportPage() {
   }, [portfolio, vacancyId]);
 
   useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
+    Promise.all([
+      sessionsApi.getPortfolio(Number(sessionId)),
+      sessionsApi.get(Number(sessionId)),
+      vacanciesApi.get(Number(vacancyId)),
+    ])
+      .then(([pRes, sRes, vRes]) => {
+        const data = pRes.data as any;
         if (data.portfolio) {
           setPortfolio(data.portfolio);
         }
+        setCandidateName(sRes.data.session.candidate_name ?? null);
+        setRoleTitle(vRes.data.vacancy.role_title ?? null);
       })
       .finally(() => setLoading(false));
-  }, [sessionId]);
+  }, [sessionId, vacancyId]);
 
   useEffect(() => {
     if (portfolio) fetchReport();
@@ -76,18 +99,20 @@ export default function FitGapReportPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
-      const ext = format;
       const blob = format === "pdf"
         ? new Blob([res.data as BlobPart], { type: "application/pdf" })
         : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
+      a.download = exportFilename(candidateName, roleTitle, "FitGap", format);
       a.click();
       URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setExportError(await extractErrorMessage(e, format));
     } finally {
       setExporting(null);
     }
@@ -139,6 +164,10 @@ export default function FitGapReportPage() {
           </div>
         )}
       </div>
+
+      {exportError && (
+        <p className="text-sm text-destructive -mt-2">{exportError}</p>
+      )}
 
       {/* Generating */}
       {generating && (

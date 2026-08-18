@@ -62,7 +62,7 @@ module Api
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
-                           filename:    "portfolio-#{@portfolio.id}.pdf",
+                           filename:    export_filename(@portfolio, "pdf"),
                            type:        "application/pdf",
                            disposition: "attachment"
         end
@@ -72,7 +72,7 @@ module Api
         export_data = build_export_json(@portfolio, vacancy_id)
 
         send_data export_data.to_json,
-                  filename:    "portfolio-#{@portfolio.id}.json",
+                  filename:    export_filename(@portfolio, "json"),
                   type:        "application/json",
                   disposition: "attachment"
       end
@@ -207,6 +207,21 @@ module Api
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at
         }
+      end
+
+      # e.g. "Budi-Flutter-Engineer-Portfolio-2026-08-18.pdf" — who was interviewed and
+      # for what role, instead of the meaningless "portfolio-1.pdf".
+      def export_filename(portfolio, ext)
+        session = portfolio.session
+        candidate = filename_slug(session.candidate_name.presence || "Candidate")
+        role      = filename_slug(session.assessment.name.presence || "Assessment")
+        date      = Time.current.strftime("%Y-%m-%d")
+
+        "#{candidate}-#{role}-Portfolio-#{date}.#{ext}"
+      end
+
+      def filename_slug(text)
+        text.to_s.strip.gsub(/[^\w\s-]/, "").gsub(/\s+/, "-").gsub(/-+/, "-")
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
