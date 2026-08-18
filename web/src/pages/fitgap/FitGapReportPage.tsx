@@ -114,7 +114,14 @@ export default function FitGapReportPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+            <h1 className="text-lg font-semibold">
+              Fit/Gap Report
+              {report?.vacancy_role_title && (
+                <span className="text-muted-foreground font-normal ml-2">
+                  — {report.vacancy_role_title}
+                </span>
+              )}
+            </h1>
           </div>
         </div>
 
@@ -163,17 +170,34 @@ export default function FitGapReportPage() {
 
           <Separator />
 
-          {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
+          {/* Narratives */}
+          <div className="space-y-6">
+            {report.culture_narrative && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                    {report.culture_narrative}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {report.overall_narrative && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Overall Recommendation</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                    {report.overall_narrative}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
