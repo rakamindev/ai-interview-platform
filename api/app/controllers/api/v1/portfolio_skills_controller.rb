@@ -9,6 +9,11 @@ module Api
 
       # POST /api/v1/portfolio-skills/:id/override
       def override
+        portfolio = @portfolio_skill.portfolio
+        unless portfolio.complete? && portfolio.published_result?
+          return json_error("Portfolio is not ready for override", :unprocessable_entity)
+        end
+
         existing = @portfolio_skill.assessor_override
 
         if existing
@@ -48,7 +53,8 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        @portfolio_skill = PortfolioSkill.joins(portfolio: :session)
+                                         .merge(Session.where(tenant_id: Current.tenant_id))
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
