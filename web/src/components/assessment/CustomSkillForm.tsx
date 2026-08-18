@@ -19,7 +19,11 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
 };
 
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
-  const { register, setValue, formState: { errors } } = form;
+  const {
+    register,
+    setValue,
+    formState: { errors },
+  } = form;
   const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
 
   return (
@@ -48,19 +52,21 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
       </div>
 
       <div className="space-y-2">
-        {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map((key, i) => (
-          <div key={key} className="space-y-1">
-            <Label htmlFor={`skills.${index}.${key}`}>
-              L{i + 1} anchor <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id={`skills.${index}.${key}`}
-              placeholder={LEVEL_PLACEHOLDERS[i + 1]}
-              rows={2}
-              {...register(`skills.${index}.${key}`, { required: true })}
-            />
-          </div>
-        ))}
+        {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map(
+          (key, i) => (
+            <div key={key} className="space-y-1">
+              <Label htmlFor={`skills.${index}.${key}`}>
+                L{i + 1} anchor <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id={`skills.${index}.${key}`}
+                placeholder={LEVEL_PLACEHOLDERS[i + 1]}
+                rows={2}
+                {...register(`skills.${index}.${key}`, { required: true })}
+              />
+            </div>
+          ),
+        )}
       </div>
 
       <div className="space-y-1.5">

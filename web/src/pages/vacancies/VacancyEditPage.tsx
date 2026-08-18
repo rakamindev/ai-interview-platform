@@ -28,15 +28,29 @@ export default function VacancyEditPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+    defaultValues: {
+      role_title: "",
+      culture_dimensions: "",
+      competency_expectations: "",
+      skills: [],
+    },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
-    vacanciesApi.get(Number(id)).then((res) => {
-      const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
+    vacanciesApi
+      .get(Number(id))
+      .then((res) => {
+        const v = res.data.vacancy;
+        reset({
+          role_title: v.role_title,
+          culture_dimensions: v.culture_dimensions,
+          competency_expectations: v.competency_expectations,
+          skills: v.skills,
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
@@ -54,18 +68,28 @@ export default function VacancyEditPage() {
     }
   };
 
-  if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+  if (loading)
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
 
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
         <span className="text-sm font-medium">Edit Vacancy</span>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
-          <Label>Role title <span className="text-destructive">*</span></Label>
+          <Label>
+            Role title <span className="text-destructive">*</span>
+          </Label>
           <Input {...register("role_title", { required: true })} />
         </div>
         <Separator />
@@ -75,9 +99,18 @@ export default function VacancyEditPage() {
             <div key={field.id} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => remove(index)}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
+              <LevelRadio
+                value={watch(`skills.${index}.expected_level`) ?? 3}
+                onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
+              />
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
@@ -94,12 +127,29 @@ export default function VacancyEditPage() {
           <Textarea rows={3} {...register("competency_expectations")} />
         </div>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
+          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes
+          </Button>
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(skills) =>
+          append(
+            skills.map((s) => ({
+              skill_id: s.skill_id,
+              skill_label: s.skill_label ?? "",
+              expected_level: 3,
+            })),
+          )
+        }
+        selectedLabels={fields.map((f) => f.skill_label || "")}
+      />
     </div>
   );
 }

@@ -13,13 +13,23 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   let icon = "";
   let suffix = "";
   if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
-  else icon = "—";
+  else if (comparison.result === "exceed") {
+    icon = "⭐";
+    suffix = comparison.delta ? ` +${comparison.delta}` : "";
+  } else if (comparison.result === "gap") {
+    icon = "⚠";
+    suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : "";
+  } else icon = "—";
 
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
-      {icon} {label}{suffix}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded",
+        classes,
+      )}
+    >
+      {icon} {label}
+      {suffix}
     </span>
   );
 }
@@ -53,7 +63,9 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
                   {c.candidate_level != null ? (
                     <span>
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.is_override && (
+                        <span className="text-xs text-muted-foreground ml-1">✏</span>
+                      )}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -70,9 +82,21 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
 
       {/* Summary */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
+        {matchCount > 0 && (
+          <span>
+            ✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}
+          </span>
+        )}
+        {gapCount > 0 && (
+          <span>
+            ⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}
+          </span>
+        )}
+        {exceedCount > 0 && (
+          <span>
+            ⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}
+          </span>
+        )}
         <span className="ml-auto">✏ = human override applied</span>
       </div>
     </div>

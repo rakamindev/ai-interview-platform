@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'faye/websocket'
+require 'websocket-client-simple'
 require 'json'
 require 'base64'
 
 module Gemini
   # Manages a persistent WebSocket connection to Gemini Live API.
   class LiveClient
-    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
+    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent'
 
     INACTIVITY_TIMEOUT = 30 # reconnect if Gemini produces no meaningful response
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
@@ -37,7 +37,7 @@ module Gemini
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-2.0-flash-exp')
       @voice = voice
       @resumption_token = nil
       @connected = false
@@ -60,11 +60,38 @@ module Gemini
       @on_resumption_token_update = on_resumption_token_update
     end
 
+    def schedule_safe(&block)
+      if defined?(EventMachine) && EventMachine.reactor_running?
+        EventMachine.schedule(&block)
+      else
+        yield
+      end
+    end
+
+    def gemini_ws_url
+      "#{GEMINI_WS_URL}?key=#{@api_key}"
+    end
+
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
       @setup_complete = false
+      
+      if Gem.win_platform?
+        Rails.logger.info("[Gemini::LiveClient] Windows detected — routing through websocket-client-simple fallback.")
+        connect_via_simple(resumption_handle)
+      else
+        Rails.logger.info("[Gemini::LiveClient] Native OS detected — routing through optimized Faye::WebSocket.")
+        connect_via_faye(resumption_handle)
+      end
+
+      @ws
+    end
+
+    private
+
+    def connect_via_faye(resumption_handle)
       @ws = Faye::WebSocket::Client.new(
-        GEMINI_WS_URL,
+        gemini_ws_url,
         nil,
         headers: { 'x-goog-api-key' => @api_key }
       )
@@ -73,9 +100,31 @@ module Gemini
       @ws.on(:message) { |event|  handle_message(event.data) }
       @ws.on(:close)   { |event|  handle_ws_close(event) }
       @ws.on(:error)   { |event|  handle_ws_error(event) }
-
-      @ws
     end
+
+    def connect_via_simple(resumption_handle)
+      @ws = WebSocket::Client::Simple.connect(
+        gemini_ws_url,
+        headers: { 'x-goog-api-key' => @api_key }
+      )
+
+      client = self
+      @ws.on(:open)    { client.send(:schedule_safe) { client.send(:handle_ws_open, resumption_handle) } }
+      @ws.on(:message) { |msg| client.send(:schedule_safe) { client.send(:handle_message, msg.data) } }
+      
+      @ws.on(:close) do |event| 
+        code = event.respond_to?(:code) ? event.code : 1006
+        reason = event.respond_to?(:reason) ? event.reason : (event.respond_to?(:data) ? event.data : '')
+        client.send(:schedule_safe) { client.send(:handle_ws_close_safe, code, reason) } 
+      end
+      
+      @ws.on(:error) do |event| 
+        msg = event.respond_to?(:message) ? event.message : event.to_s
+        client.send(:schedule_safe) { client.send(:handle_ws_error_safe, msg) } 
+      end
+    end
+
+    public
 
     # Sends raw PCM audio bytes to Gemini Live as realtimeInput.
     def send_audio(pcm_bytes)
@@ -138,15 +187,23 @@ module Gemini
     end
 
     def handle_ws_close(event)
-      @connected = false
-      Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{event.code} reason=#{event.reason} superseded=#{@superseded}")
-      # Skip on_close for superseded clients to avoid duplicate reconnect from the replaced instance.
-      @on_close&.call(code: event.code, reason: event.reason) unless @superseded
+      handle_ws_close_safe(event.code, event.reason)
     end
 
     def handle_ws_error(event)
-      Rails.logger.error("[Gemini::LiveClient] WebSocket error: #{event.message}")
-      @on_error&.call(event.message) unless @superseded
+      handle_ws_error_safe(event.message)
+    end
+
+    def handle_ws_close_safe(code, reason)
+      @connected = false
+      Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{code} reason=#{reason} superseded=#{@superseded}")
+      # Skip on_close for superseded clients to avoid duplicate reconnect from the replaced instance.
+      @on_close&.call(code: code, reason: reason) unless @superseded
+    end
+
+    def handle_ws_error_safe(msg)
+      Rails.logger.error("[Gemini::LiveClient] WebSocket error: #{msg}")
+      @on_error&.call(msg) unless @superseded
     end
 
     def activate_connection!
@@ -352,7 +409,7 @@ module Gemini
       handle_setup_complete(data)
       handle_go_away_event(data)
     rescue JSON::ParserError => e
-      Rails.logger.error("[Gemini::LiveClient] Failed to parse message: #{e.message}")
+      Rails.logger.error("[Gemini::LiveClient] Failed to parse message: #{e.message} | Raw Data: #{raw_data.inspect}")
     end
 
     def handle_audio_response(data)

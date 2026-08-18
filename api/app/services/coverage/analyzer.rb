@@ -7,11 +7,13 @@ module Coverage
   class Analyzer
     TURNS_CONTEXT = 6
 
-    def initialize(session:, gemini_client: nil)
-      @session = session
+    def initialize(session:, turn_number:, turns_context: 6, gemini_client: nil)
+      @session       = session
+      @turn_number   = turn_number
+      @turns_context = turns_context
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
-        timeout: 45
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash'),
+        timeout: 10
       )
     end
 

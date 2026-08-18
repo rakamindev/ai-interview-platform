@@ -4,7 +4,7 @@ import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } f
 export const sessionsApi = {
   get: (id: number) =>
     api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
-      `/sessions/${id}`
+      `/sessions/${id}`,
     ),
 
   endSession: (id: number, reason = "manual_assessor") =>
@@ -12,8 +12,7 @@ export const sessionsApi = {
       session: { reason },
     }),
 
-  getCoverage: (id: number) =>
-    api.get<CoverageMap>(`/sessions/${id}/coverage`),
+  getCoverage: (id: number) => api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
   getTranscript: (id: number, fromTurn?: number) =>
     api.get<{ turns: TranscriptTurn[]; total: number }>(`/sessions/${id}/transcript`, {
@@ -26,8 +25,7 @@ export const sessionsApi = {
   regeneratePortfolio: (id: number) =>
     api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),
 
-  getCandidateInfo: (token: string) =>
-    api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+  getCandidateInfo: (token: string) => api.get<CandidateInfo>(`/sessions/${token}/candidate`),
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),

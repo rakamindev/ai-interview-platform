@@ -5,28 +5,43 @@ class CoverageAnalyzerWorker
 
   sidekiq_options queue: :coverage, retry: 0  # non-critical — no retry
 
+  LOCK_TTL_MS = 20_000
+  LOCK_RETRY_DELAY = 0.5
+
   def perform(session_id, turn_number)
     session = Session.find(session_id)
-
     return if session.ended?
 
-    result = Coverage::Analyzer.new(session: session).call
+    lock_key = "coverage_lock:#{session_id}"
+    unless Sidekiq.redis { |c| c.set(lock_key, turn_number, nx: true, px: LOCK_TTL_MS) }
+      self.class.perform_in(LOCK_RETRY_DELAY, session_id, turn_number)
+      return
+    end
 
-    apply_updates(session, result[:skill_updates])
-    create_discovered_skills(session, result[:discovered_skills])
+    begin
+      return if stale_turn?(session_id, turn_number)
 
-    # Pass the IDs of maps just updated this run so we never auto-advance a
-    # skill that was touched in the same job (it isn't stale yet).
-    updated_ids = result[:skill_updates].filter_map { |u| u[:coverage_map_id] }
-    advance_stale_partials(session, exclude_ids: updated_ids)
+      result = Coverage::Analyzer.new(session: session, turn_number: turn_number).call
 
-    publish_coverage_update(session)
-    # Session-end detection removed from worker (H1 fix) — the middleware owns
-    # session lifecycle because it's the only component with access to both the
-    # Gemini client and the browser WebSocket. The worker updating DB state and
-    # the middleware checking it on the next AI turn avoids the duplicate-end race.
+      apply_updates(session, result[:skill_updates])
+      create_discovered_skills(session, result[:discovered_skills])
 
-    Rails.logger.info("[N7] Coverage analyzed for session #{session_id}, turn #{turn_number}")
+      # Pass the IDs of maps just updated this run so we never auto-advance a
+      # skill that was touched in the same job (it isn't stale yet).
+      updated_ids = result[:skill_updates].filter_map { |u| u[:coverage_map_id] }
+      advance_stale_partials(session, exclude_ids: updated_ids)
+
+      mark_turn_processed(session_id, turn_number)
+      publish_coverage_update(session, turn_number)
+      # Session-end detection removed from worker (H1 fix) — the middleware owns
+      # session lifecycle because it's the only component with access to both the
+      # Gemini client and the browser WebSocket. The worker updating DB state and
+      # the middleware checking it on the next AI turn avoids the duplicate-end race.
+
+      Rails.logger.info("[N7] Coverage analyzed for session #{session_id}, turn #{turn_number}")
+    ensure
+      Sidekiq.redis { |c| c.del(lock_key) }
+    end
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N7] Session #{session_id} not found — skipping")
   rescue => e
@@ -35,6 +50,15 @@ class CoverageAnalyzerWorker
   end
 
   private
+
+  def stale_turn?(session_id, turn_number)
+    processed = Sidekiq.redis { |c| c.get("coverage_last_turn:#{session_id}") }
+    processed.present? && turn_number <= processed.to_i
+  end
+
+  def mark_turn_processed(session_id, turn_number)
+    Sidekiq.redis { |c| c.set("coverage_last_turn:#{session_id}", turn_number) }
+  end
 
   def apply_updates(session, skill_updates)
     skill_updates.each do |update|
@@ -64,14 +88,15 @@ class CoverageAnalyzerWorker
     end
   end
 
-  def publish_coverage_update(session)
+  def publish_coverage_update(session, turn_number)
     maps       = session.coverage_maps.configured.order(:id)
     discovered = session.coverage_maps.discovered.order(:id)
 
     payload = {
-      type:      'coverage_update',
-      skills:    maps.map { |m| coverage_json(m) },
-      discovered: discovered.map { |m| coverage_json(m) }
+      type:          'coverage_update',
+      analyzed_turn: turn_number,
+      skills:        maps.map { |m| coverage_json(m) },
+      discovered:    discovered.map { |m| coverage_json(m) }
     }.to_json
 
     # H5 fix: use Sidekiq's pooled Redis connection instead of creating

@@ -44,7 +44,8 @@ export default function SkillPortfolioCard({
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
           <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+            Only briefly explored. Confidence is low — warrants a dedicated session if this skill
+            matters.
           </div>
         )}
 
@@ -55,11 +56,16 @@ export default function SkillPortfolioCard({
               Evidence from interview
             </span>
             <ul className="space-y-1">
-              {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
-                </li>
-              ))}
+              {skill.evidence.map((quoteItem, i) => {
+                const quote = typeof quoteItem === "string"
+                  ? quoteItem
+                  : (quoteItem as unknown as { quote?: string })?.quote ?? JSON.stringify(quoteItem);
+                return (
+                  <li key={i} className="text-sm text-foreground">
+                    • "{quote}"
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

@@ -17,6 +17,7 @@ default: &default
 development:
   <<: *default
   database: rakamin_development
+  prepared_statements: false
 
 test:
   <<: *default

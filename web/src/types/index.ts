@@ -87,11 +87,11 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: number; // 1-5
+  ai_confidence: string; // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
 }
@@ -133,6 +133,7 @@ export interface SkillComparison {
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
+  confidence?: string; // "high" | "medium" | "low"
   is_override?: boolean;
 }
 
@@ -182,7 +183,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -204,4 +206,16 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+}
+
+export interface FitGapSnapshot {
+  id: number;
+  portfolio_id: number;
+  vacancy_id: number;
+  vacancy_title: string; // Snapshotted denormalized title in case vacancy is deleted
+  skill_comparisons: SkillComparison[];
+  culture_narrative: string;
+  overall_narrative: string;
+  generated_at: string;
+  trigger_reason: "initial_generation" | "manual_regeneration" | "assessor_override_update";
 }

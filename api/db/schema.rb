@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_19_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -89,7 +89,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
-    t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
+    t.string "vacancy_title"
+    t.string "trigger_reason"
+    t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id"
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
   end
@@ -143,10 +145,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
-    t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
-    t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
-    t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
-    t.index ["tenant_id", "status"], name: "idx_sessions_tenant_status"
   end
 
   create_table "skill_taxonomies", force: :cascade do |t|

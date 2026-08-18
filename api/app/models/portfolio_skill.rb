@@ -11,8 +11,16 @@ class PortfolioSkill < ApplicationRecord
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }
   validates :competency_summary, presence: true
 
-  # evidence is stored as JSONB array of quote strings
+  # evidence can be stored as JSONB array of quote strings or objects
+  def evidence
+    raw = super
+    return [] if raw.nil?
+    Array(raw).map do |quote|
+      quote.is_a?(Hash) ? (quote["quote"] || quote[:quote] || quote.to_s) : quote.to_s
+    end
+  end
+
   def evidence_quotes
-    Array(evidence)
+    evidence
   end
 end

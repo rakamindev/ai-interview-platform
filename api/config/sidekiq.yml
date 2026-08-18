@@ -1,6 +1,7 @@
 :concurrency: 10
 
 :queues:
+  - [transcripts, 8] # audio WS turn/token writes — must be fast, gates coverage queue
   - [coverage, 6]    # N7 — runs every candidate turn, must be fast (< 3s)
   - [portfolio, 3]   # N10 — runs once per session, can take up to 3 min
   - [default, 1]     # N2, N13 — lower frequency

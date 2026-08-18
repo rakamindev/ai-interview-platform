@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript"],
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-console": "off",
+    "typescript/no-explicit-any": "error",
+    "react/react-in-jsx-scope": "off"
+  },
+  "ignorePatterns": ["node_modules", "dist"]
+}

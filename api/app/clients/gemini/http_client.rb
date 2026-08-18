@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -27,18 +27,47 @@ module Gemini
     # Generates content using Gemini REST API.
     # Returns parsed JSON response body.
     def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
-      parse_response(response)
-    rescue Faraday::TimeoutError => e
-      raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
-    rescue Faraday::Error => e
-      raise ApiError.new("Gemini API error: #{e.message}")
+      retries = 0
+      begin
+        response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
+        parse_response(response)
+      rescue RateLimitError => e
+        retries += 1
+        if retries <= 5
+          Rails.logger.warn("[Gemini::HttpClient] Rate limited (429). Retry ##{retries} for #{@model} after 15s")
+          sleep(15)
+          retry
+        else
+          raise
+        end
+      rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
+        retries += 1
+        raise TimeoutError.new("Gemini API network error: #{e.message}") if retries > 3
+        
+        sleep_time = 2 ** retries
+        Rails.logger.warn("[Gemini::HttpClient] Network error (#{e.class}). Retry ##{retries} for #{@model} after #{sleep_time}s")
+        sleep(sleep_time)
+        retry
+      rescue ApiError => e
+        # Only retry on 5xx server errors
+        raise unless e.status && e.status >= 500
+        
+        retries += 1
+        raise if retries > 3
+        
+        sleep_time = 2 ** retries
+        Rails.logger.warn("[Gemini::HttpClient] Server error (#{e.status}). Retry ##{retries} for #{@model} after #{sleep_time}s")
+        sleep(sleep_time)
+        retry
+      rescue Faraday::Error => e
+        raise ApiError.new("Gemini API error: #{e.message}")
+      end
     end
 
     private
 
     def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+      "#{BASE_URL}/models/#{@model}:generateContent?key=#{@api_key}"
     end
 
     def request_headers
@@ -54,18 +83,6 @@ module Gemini
 
     def build_connection
       Faraday.new do |f|
-        f.request :retry, {
-          max: 3,
-          interval: 1,
-          interval_randomness: 0.5,
-          backoff_factor: 2,
-          retry_statuses: [429, 500, 502, 503],
-          retry_block: ->(env, _opts, retries, exc) {
-            retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
-          }
-        }
         f.options.timeout = @timeout
         f.options.open_timeout = 10
         f.adapter Faraday.default_adapter
@@ -84,8 +101,12 @@ module Gemini
 
       raise ApiError.new("No content in Gemini response") unless text
 
-      # Strip markdown code fences if present (e.g. ```json ... ```)
-      cleaned = text.strip.sub(/\A```(?:json)?\s*/, '').sub(/\s*```\z/, '')
+      # Robustly extract JSON from markdown fences if present
+      cleaned = if text.match?(/```(?:json)?\s*(.*?)\s*```/m)
+                  text[/```(?:json)?\s*(.*?)\s*```/m, 1]
+                else
+                  text.strip
+                end
 
       begin
         JSON.parse(cleaned)

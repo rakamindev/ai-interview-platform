@@ -369,6 +369,16 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# Reset sequences so auto-increment works with explicitly seeded IDs
+ActiveRecord::Base.connection.tables.each do |table|
+  next if table == "schema_migrations" || table == "ar_internal_metadata"
+  begin
+    ActiveRecord::Base.connection.reset_pk_sequence!(table)
+  rescue => e
+    # Skip tables without auto-increment primary keys
+  end
+end
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

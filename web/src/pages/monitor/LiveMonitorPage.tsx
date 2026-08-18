@@ -62,8 +62,9 @@ export default function LiveMonitorPage() {
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
-    useCoverageWebSocket(Number(sessionId));
+  const { coverageMap, sessionEnded, sessionEndReason, isConnected } = useCoverageWebSocket(
+    Number(sessionId),
+  );
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {
@@ -75,12 +76,13 @@ export default function LiveMonitorPage() {
 
   // Initial load
   useEffect(() => {
-    Promise.all([
-      sessionsApi.get(Number(sessionId)),
-      sessionsApi.getTranscript(Number(sessionId)),
-    ])
+    Promise.all([sessionsApi.get(Number(sessionId)), sessionsApi.getTranscript(Number(sessionId))])
       .then(([sRes, tRes]) => {
-        const s = sRes.data.session as any;
+        const s = sRes.data.session as {
+          started_at: string | null;
+          assessment?: { name: string };
+          status: string;
+        };
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
         if (s.status !== "active") setSessionActive(false);
@@ -97,10 +99,7 @@ export default function LiveMonitorPage() {
   // Poll transcript every 3s while session is active
   const fetchNewTurns = useCallback(async () => {
     try {
-      const res = await sessionsApi.getTranscript(
-        Number(sessionId),
-        lastTurnRef.current + 1
-      );
+      const res = await sessionsApi.getTranscript(Number(sessionId), lastTurnRef.current + 1);
       if (res.data.turns.length > 0) {
         setTranscript((prev) => [...prev, ...res.data.turns].slice(-10));
         lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
@@ -113,7 +112,9 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     if (!sessionActive || loading) return;
     pollTimerRef.current = setInterval(fetchNewTurns, 3000);
-    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
   }, [sessionActive, loading, fetchNewTurns]);
 
   const handleEndSession = async () => {
@@ -146,22 +147,25 @@ export default function LiveMonitorPage() {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link
+              to={`/assessments/${id}/invite`}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <h1 className="text-lg font-semibold">Live Monitor</h1>
           </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
+          {assessmentName && <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>}
         </div>
 
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
+          <span
+            className={cn(
+              "flex items-center gap-1 text-xs",
+              isConnected ? "text-green-600" : "text-muted-foreground",
+            )}
+          >
             <Radio className="h-3 w-3" />
             {isConnected ? "Live" : "Reconnecting..."}
           </span>
@@ -206,7 +210,9 @@ export default function LiveMonitorPage() {
                   <span className="font-medium">{skill.skill_label}</span>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {skill.probe_count > 0 && (
-                      <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                      <span>
+                        {skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}
+                      </span>
                     )}
                     <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                   </div>
@@ -217,9 +223,7 @@ export default function LiveMonitorPage() {
                   className="h-2"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    "{skill.last_signal}"
-                  </p>
+                  <p className="text-xs text-muted-foreground truncate">"{skill.last_signal}"</p>
                 )}
               </div>
             ))
@@ -242,7 +246,9 @@ export default function LiveMonitorPage() {
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {skill.probe_count > 0 && (
-                          <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                          <span>
+                            {skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}
+                          </span>
                         )}
                         <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                       </div>
