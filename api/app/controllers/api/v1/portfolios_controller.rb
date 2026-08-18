@@ -58,7 +58,7 @@ module Api
         end
 
         if format == "pdf"
-          vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
+          vacancy = params[:vacancy_id].present? ? find_vacancy(params[:vacancy_id]) : nil
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
@@ -79,12 +79,12 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = find_portfolio(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
 
-        vacancy = Vacancy.find_by(id: vacancy_id)
+        vacancy = find_vacancy(vacancy_id)
         return json_error("Vacancy not found", :not_found) unless vacancy
 
         unless portfolio.complete?
@@ -96,17 +96,17 @@ module Api
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        json_error("Record not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = find_portfolio(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
 
-        vacancy = Vacancy.find_by(id: vacancy_id)
+        vacancy = find_vacancy(vacancy_id)
         return json_error("Vacancy not found", :not_found) unless vacancy
 
         unless portfolio.complete?
@@ -122,13 +122,14 @@ module Api
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        json_error("Record not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        portfolio = find_portfolio(params[:id])
+        vacancy   = find_vacancy(params[:vacancy_id])
+        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
 
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
@@ -136,10 +137,18 @@ module Api
 
         json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        json_error("Record not found", :not_found)
       end
 
       private
+
+      def find_portfolio(id)
+        Portfolio.joins(:session).find(id)
+      end
+
+      def find_vacancy(id)
+        Vacancy.find(id)
+      end
 
       def set_session
         @session = Session.find(params[:id])
@@ -153,7 +162,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = find_portfolio(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
