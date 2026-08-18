@@ -19,3 +19,12 @@ r2:
   bucket: <%= ENV.fetch("R2_BUCKET", "") %>
   endpoint: https://<%= ENV.fetch("R2_ACCOUNT_ID", "") %>.r2.cloudflarestorage.com
   force_path_style: true
+  # aws-sdk-core >= ~3.210 defaults to auto-attaching its own request checksum
+  # (x-amz-checksum-*) on every PutObject, on top of the content_md5 ActiveStorage
+  # already sends itself — two non-default checksums on one request, which the SDK
+  # rejects with "You can only specify one non-default checksum at a time." Not an
+  # R2-specific bug (reproduces against real AWS S3 too on these SDK versions).
+  # Restores the pre-3.210 behavior: only compute/require a checksum when the API
+  # call actually mandates one.
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
