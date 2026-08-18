@@ -16,4 +16,10 @@ class Portfolio < ApplicationRecord
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
+
+  # Strict definition of a published result: must have both a recorded completion
+  # timestamp and at least one persisted skill row.
+  def published_result?
+    generated_at.present? && portfolio_skills.exists?
+  end
 end
