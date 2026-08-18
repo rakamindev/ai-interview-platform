@@ -22,6 +22,8 @@ RSpec.describe 'API Controllers', type: :request do
 
   let!(:assessment) { create(:assessment, tenant_id: 1, created_by: 1) }
 
+  before { Rack::Attack.reset! }
+
   describe 'GET /api/v1/assessments' do
     it 'returns list of assessments' do
       get '/api/v1/assessments', headers: headers
