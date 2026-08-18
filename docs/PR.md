@@ -14,9 +14,9 @@ Every change has RSpec and/or Vitest coverage, a migration where the schema chan
 |---|---|---|
 | P0 | 4 | Breaks a core workflow, a compliance requirement, or shows wrong data to a decision-maker |
 | P1 | 6 | Real workflow/maintainability impact, not yet broken in production |
-| P2 | 4 | Moderate UX or code-health improvement |
+| P2 | 5 | Moderate UX or code-health improvement |
 | P3 | 2 | Cosmetic polish |
-| **Total** | **16** | |
+| **Total** | **17** | |
 
 ## Improvements
 
@@ -36,6 +36,7 @@ Every change has RSpec and/or Vitest coverage, a migration where the schema chan
 | 12 | "Skills assessed" list disconnected at page bottom | Fixed | P3 | [09](assessments/09-skills-assessed-reposition.md) |
 | 13 | Transcript-save failures silently swallowed | Fixed | P0 | [13](assessments/13-silent-transcript-capture-failure.md) |
 | 14 | Interview-complete and "Your data" views had no visual hierarchy | Fixed | P3 | [14](assessments/14-candidate-facing-view-revamp.md) |
+| 15 | Global nav, portfolio toolbar, and candidate table broke on mobile viewports | Fixed | P2 | [15](assessments/15-mobile-responsiveness.md) |
 
 ## Known gap
 
@@ -49,4 +50,5 @@ Every change has RSpec and/or Vitest coverage, a migration where the schema chan
 - **Encryption config gotcha.** Keys set in a normal initializer are silently ignored — Rails reads `active_record.encryption` config earlier in boot. Fix: `config.before_initialize` in `application.rb`. Detailed in [12](assessments/12-encryption-at-rest.md).
 - **That gotcha found a real bug.** A stale Puma process pre-dating the encryption keys raised a config error on every transcript save for 3 live sessions, 24 turns lost, silently logged and ignored. Restarted the server, then hardened the swallow itself (row 13) so the next failure mode won't hide the same way.
 - **Caught an AI test bug.** An early consent test matched a button by empty accessible name — passed by luck, would've broken the moment a second icon-only button existed. Replaced with `aria-label="Copy invite link"` and a named query.
-- **Test harness built from zero.** No RSpec, no web test runner at start. Now: 81 RSpec examples, 117 Vitest examples, `tsc --noEmit` clean.
+- **Test harness built from zero.** No RSpec, no web test runner at start. Now: 81 RSpec examples, 122 Vitest examples, `tsc --noEmit` clean.
+- **A test that can't prove what it claims.** Seed-faulting the mobile nav's `aria-label` removal didn't fail the test — jsdom doesn't apply real CSS, so the `hidden` class never actually hides the label from the accessibility tree in tests. The label is still correct for a real browser; the test just can't be seed-proven the way the rest of the suite is. Documented rather than silently claimed as verified. See [15](assessments/15-mobile-responsiveness.md).
