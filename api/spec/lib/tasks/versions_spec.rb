@@ -23,6 +23,9 @@ RSpec.describe 'versions:backfill rake task' do
 
     expect(fit_gap_report.reload.vacancy_version_id).to eq(VacancyVersion.find_by(vacancy_id: vacancy.id).id)
     expect(session.reload.assessment_version_id).to eq(AssessmentVersion.find_by(assessment_id: assessment.id).id)
+    # Phase 8's "approximate, not historical" UI badge relies on this.
+    expect(VacancyVersion.find_by(vacancy_id: vacancy.id).approximate).to be(true)
+    expect(AssessmentVersion.find_by(assessment_id: assessment.id).approximate).to be(true)
 
     Rake::Task['versions:backfill'].reenable
     expect do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_18_300001) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_19_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -79,6 +79,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_300001) do
     t.string "language", default: "en"
     t.jsonb "skills_snapshot", default: [], null: false
     t.datetime "created_at", null: false
+    t.boolean "approximate", default: false, null: false
     t.index ["assessment_id"], name: "index_assessment_versions_on_assessment_id"
   end
 
@@ -150,6 +151,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_300001) do
     t.text "feedback_text"
     t.bigint "session_id"
     t.datetime "notified_at"
+    t.integer "score"
     t.index ["cv_screening_batch_id"], name: "index_cv_screening_entries_on_cv_screening_batch_id"
     t.index ["detected_email"], name: "index_cv_screening_entries_on_detected_email"
     t.index ["session_id"], name: "index_cv_screening_entries_on_session_id"
@@ -307,6 +309,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_300001) do
     t.text "public_requirement_text"
     t.jsonb "skills_snapshot", default: [], null: false
     t.datetime "created_at", null: false
+    t.boolean "approximate", default: false, null: false
     t.index ["vacancy_id"], name: "index_vacancy_versions_on_vacancy_id"
   end
 

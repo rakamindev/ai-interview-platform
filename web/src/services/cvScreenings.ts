@@ -1,0 +1,90 @@
+import api from "./api";
+import type {
+  CvScreening,
+  CvScreeningBatch,
+  CvScreeningEntry,
+  PaginationMeta,
+} from "@/types";
+
+export interface CvScreeningPayload {
+  name: string;
+  vacancy_id: number;
+  assessment_id: number;
+  threshold?: number | null;
+}
+
+export const cvScreeningsApi = {
+  list: (page = 1) =>
+    api.get<{ cv_screenings: CvScreening[]; meta: PaginationMeta }>("/cv_screenings", {
+      params: { page },
+    }),
+
+  get: (id: number) =>
+    api.get<{ cv_screening: CvScreening }>(`/cv_screenings/${id}`),
+
+  create: (data: CvScreeningPayload) =>
+    api.post<{ cv_screening: CvScreening }>("/cv_screenings", { cv_screening: data }),
+
+  update: (id: number, data: Partial<CvScreeningPayload>) =>
+    api.patch<{ cv_screening: CvScreening }>(`/cv_screenings/${id}`, { cv_screening: data }),
+
+  batches: (id: number) =>
+    api.get<{ batches: CvScreeningBatch[] }>(`/cv_screenings/${id}/batches`),
+
+  confirmBatch: (cvScreeningId: number, batchId: number) =>
+    api.post<{ batch: CvScreeningBatch }>(
+      `/cv_screenings/${cvScreeningId}/batches/${batchId}/confirm`
+    ),
+
+  entries: (id: number, decision?: string) =>
+    api.get<{ entries: CvScreeningEntry[]; meta: PaginationMeta }>(
+      `/cv_screenings/${id}/entries`,
+      { params: decision ? { decision } : undefined }
+    ),
+
+  // FormData upload — src/services/api.ts sets a global Content-Type:
+  // application/json on every request, which a multipart upload must override
+  // (set to undefined here) so the browser can set its own boundary parameter.
+  // A Content-Type explicitly set to "multipart/form-data" without that boundary
+  // would be silently wrong and the server couldn't parse the body.
+  uploadBatch: (id: number, files: File[], onProgress?: (percent: number) => void) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files[]", file));
+
+    return api.post<{ batch: CvScreeningBatch; entries: CvScreeningEntry[] }>(
+      `/cv_screenings/${id}/batches`,
+      formData,
+      {
+        headers: { "Content-Type": undefined },
+        onUploadProgress: (event) => {
+          if (onProgress && event.total) {
+            onProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        },
+      }
+    );
+  },
+
+  reviewEntry: (entryId: number, action: "invite" | "reject") =>
+    api.post<{ entry: CvScreeningEntry }>(`/cv_screening_entries/${entryId}/review`, {
+      action,
+    }),
+
+  // The file endpoint requires the same Bearer auth as everything else, so it
+  // can't be a plain <a href> / window.open — those don't carry the header.
+  // Fetch it through the authenticated axios instance and hand the browser a
+  // local blob URL instead.
+  downloadFile: async (entryId: number, filename?: string) => {
+    const res = await api.get(`/cv_screening_entries/${entryId}/file`, {
+      responseType: "blob",
+    });
+    const url = window.URL.createObjectURL(new Blob([res.data as BlobPart]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename ?? "cv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+};

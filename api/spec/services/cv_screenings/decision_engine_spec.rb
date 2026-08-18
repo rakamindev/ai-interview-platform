@@ -90,6 +90,8 @@ RSpec.describe CvScreenings::DecisionEngine do
 
     expect(entry.reload.decision).to eq('invited')
     expect(entry.decision_reason).to eq('auto_invited')
+    expect(entry.score).to eq(85)
+    expect(entry.session).to be_present
   end
 
   it 'auto-invites when the score is EXACTLY equal to the threshold — the >= boundary, ' \
@@ -113,6 +115,7 @@ RSpec.describe CvScreenings::DecisionEngine do
 
     expect(entry.reload.decision).to eq('needs_review')
     expect(entry.decision_reason).to eq('below_private_threshold')
+    expect(entry.score).to eq(screening.threshold - 1) # recruiter reviewing needs_review can still see it
   end
 
   it 'never auto-decides when the batch has no threshold configured, even with a strong score' do

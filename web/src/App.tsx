@@ -15,6 +15,9 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import CvScreeningListPage from "@/pages/cvScreenings/CvScreeningListPage";
+import CvScreeningNewPage from "@/pages/cvScreenings/CvScreeningNewPage";
+import CvScreeningDetailPage from "@/pages/cvScreenings/CvScreeningDetailPage";
 
 export default function App() {
   return (
@@ -49,6 +52,9 @@ export default function App() {
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        <Route path="/cv-screenings" element={<CvScreeningListPage />} />
+        <Route path="/cv-screenings/new" element={<CvScreeningNewPage />} />
+        <Route path="/cv-screenings/:id" element={<CvScreeningDetailPage />} />
       </Route>
       </Route>
 

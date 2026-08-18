@@ -8,6 +8,16 @@ module Api
       before_action :set_cv_screening
       before_action :set_batch, only: %i[confirm]
 
+      # GET /api/v1/cv_screenings/:cv_screening_id/batches
+      # Not in the original design, but the frontend needs this on every page
+      # load (not just right after an upload) to know whether the latest batch
+      # is held awaiting confirmation, or scored against an approximate snapshot.
+      def index
+        batches = @cv_screening.cv_screening_batches.order(created_at: :desc)
+
+        json_response(batches: batches.map(&method(:batch_json)))
+      end
+
       # POST /api/v1/cv_screenings/:cv_screening_id/batches  (multipart)
       def create
         files = Array(params[:files]).reject(&:blank?)
@@ -77,6 +87,9 @@ module Api
           vacancy_id:          batch.vacancy_id,
           assessment_id:       batch.assessment_id,
           vacancy_version_id:  batch.vacancy_version_id,
+          # Phase 2's backfill task can only reconstruct a version from a record's
+          # CURRENT state, not its actual history — flagged so the UI can show that.
+          vacancy_version_approximate: batch.vacancy_version&.approximate || false,
           threshold:           batch.threshold,
           notification_status: batch.notification_status,
           created_by:          batch.created_by,
@@ -90,6 +103,7 @@ module Api
           cv_screening_batch_id: entry.cv_screening_batch_id,
           decision:         entry.decision,
           decision_reason:  entry.decision_reason,
+          score:            entry.score,
           filename:         entry.cv_file.filename.to_s
         }
       end

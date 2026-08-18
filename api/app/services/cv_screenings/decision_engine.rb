@@ -53,6 +53,11 @@ module CvScreenings
 
       return finish('needs_review', 'model_failed', extraction.char_count) unless match.ok?
 
+      # Recruiter-facing only (Phase 8's score badge on a session that originated
+      # from CV screening) — never sent to the candidate. FeedbackGenerator has no
+      # way to see this column at all, structurally, regardless of decision.
+      @entry.update!(score: match.score)
+
       threshold = @entry.cv_screening_batch.threshold
 
       if threshold.present? && match.score >= threshold

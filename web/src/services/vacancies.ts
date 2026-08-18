@@ -5,6 +5,7 @@ export interface VacancyPayload {
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  public_requirement_text?: string;
   vacancy_skills_attributes: Partial<VacancySkill>[];
 }
 

@@ -8,6 +8,21 @@ RSpec.describe 'CV Screening Batches API', type: :request do
   let(:headers) { auth_headers(user_id: 1, role: 'assessor', scheme: organization.scheme) }
   let(:cv_file) { fixture_file_upload('sample_cv.pdf', 'application/pdf') }
 
+  describe 'GET /api/v1/cv_screenings/:cv_screening_id/batches' do
+    it 'lists batches for the screening, most recent first, including approximate/notification flags' do
+      older = create(:cv_screening_batch, cv_screening: screening, notification_status: 'released')
+      newer = create(:cv_screening_batch, cv_screening: screening, notification_status: 'held')
+
+      get "/api/v1/cv_screenings/#{screening.id}/batches", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      ids = json_body['batches'].map { |b| b['id'] }
+      expect(ids.first(2)).to eq([newer.id, older.id])
+      expect(json_body['batches'].first).to include('notification_status' => 'held',
+                                                      'vacancy_version_approximate' => false)
+    end
+  end
+
   describe 'POST /api/v1/cv_screenings/:cv_screening_id/batches' do
     it 'creates a batch and one entry per uploaded file, attaching the file' do
       post "/api/v1/cv_screenings/#{screening.id}/batches",

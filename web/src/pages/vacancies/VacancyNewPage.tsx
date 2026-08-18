@@ -12,10 +12,13 @@ import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
+const PUBLIC_REQUIREMENT_TEXT_MAX = 5000;
+
 interface VacancyFormValues {
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  public_requirement_text: string;
   skills: Partial<VacancySkill>[];
 }
 
@@ -26,10 +29,11 @@ export default function VacancyNewPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", public_requirement_text: "", skills: [] },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
+  const publicRequirementText = watch("public_requirement_text") ?? "";
 
   const onSubmit = async (data: VacancyFormValues) => {
     setError(null);
@@ -39,6 +43,7 @@ export default function VacancyNewPage() {
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
+        public_requirement_text: data.public_requirement_text,
         vacancy_skills_attributes: data.skills,
       });
       navigate("/vacancies");
@@ -123,6 +128,27 @@ export default function VacancyNewPage() {
             rows={3}
             {...register("competency_expectations")}
           />
+        </div>
+
+        <Separator />
+
+        <div className="space-y-1.5">
+          <Label htmlFor="public_requirement_text">Public requirement text</Label>
+          <p className="text-xs text-muted-foreground">
+            Shown to candidates and used for CV screening's initial pass — never internal
+            scoring criteria, so keep it to what a candidate could read. Required before this
+            vacancy can be used for CV screening.
+          </p>
+          <Textarea
+            id="public_requirement_text"
+            rows={5}
+            maxLength={PUBLIC_REQUIREMENT_TEXT_MAX}
+            placeholder="We're looking for a frontend-leaning fullstack engineer with 3+ years of React experience..."
+            {...register("public_requirement_text", { maxLength: PUBLIC_REQUIREMENT_TEXT_MAX })}
+          />
+          <p className="text-xs text-muted-foreground text-right">
+            {publicRequirementText.length} / {PUBLIC_REQUIREMENT_TEXT_MAX} characters
+          </p>
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}

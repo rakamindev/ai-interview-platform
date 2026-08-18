@@ -14,7 +14,10 @@ namespace :versions do
         public_requirement_text: vacancy.public_requirement_text,
         skills_snapshot: vacancy.vacancy_skills.map do |s|
           { skill_id: s.skill_id, skill_label: s.skill_label, expected_level: s.expected_level }
-        end
+        end,
+        # Built from the vacancy's CURRENT state, not its actual history at any
+        # past point in time — flagged so the UI can show that distinction.
+        approximate: true
       )
 
       FitGapReport.where(vacancy_id: vacancy.id, vacancy_version_id: nil)
@@ -44,7 +47,8 @@ namespace :versions do
             expected_level: s.expected_level,
             display_order: s.display_order
           }
-        end
+        end,
+        approximate: true
       )
 
       Session.where(assessment_id: assessment.id, assessment_version_id: nil)

@@ -14,6 +14,7 @@ RSpec.describe Vacancy, type: :model do
     expect(version.competency_expectations).to eq(vacancy.competency_expectations)
     expect(version.public_requirement_text).to eq('Must know Ruby.')
     expect(version.skills_snapshot).to eq([])
+    expect(version.approximate).to be(false) # only the Phase 2 backfill task sets this true
   end
 
   it 'captures a destroy-and-recreate of vacancy_skills via nested attributes in the next version' do

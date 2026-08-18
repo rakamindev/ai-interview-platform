@@ -62,7 +62,7 @@ Rails.application.routes.draw do
 
       # CV screening
       resources :cv_screenings, only: %i[index create show update] do
-        resources :batches, only: %i[create], controller: 'cv_screening_batches' do
+        resources :batches, only: %i[index create], controller: 'cv_screening_batches' do
           member do
             post :confirm
           end

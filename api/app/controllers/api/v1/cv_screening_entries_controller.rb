@@ -79,6 +79,7 @@ module Api
           detected_email:         entry.detected_email,
           decision:               entry.decision,
           decision_reason:        entry.decision_reason,
+          score:                  entry.score,
           filename:               entry.cv_file.attached? ? entry.cv_file.filename.to_s : nil,
           created_at:             entry.created_at
         }
