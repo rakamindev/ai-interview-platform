@@ -28,7 +28,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
     setSaving(true);
     setSaveError(false);
     try {
-      const res = await portfoliosApi.getOverride(skill.id, {
+      const res = await portfoliosApi.saveOverride(skill.id, {
         override_level: overrideLevel,
         assessor_notes: notes,
       });
