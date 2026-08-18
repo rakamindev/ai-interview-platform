@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -89,9 +89,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "generation_status", default: "pending", null: false
+    t.text "generation_error"
+    t.datetime "generation_started_at", precision: 6
+    t.string "generation_token", limit: 64
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.check_constraint "generation_status IN ('pending', 'generating', 'complete', 'failed')", name: "chk_fit_gap_reports_generation_status"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -116,8 +121,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.string "rating_status", default: "rated", null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "rating_status IN ('rated', 'not_assessed')", name: "chk_portfolio_skills_rating_status"
   end
 
   create_table "portfolios", force: :cascade do |t|

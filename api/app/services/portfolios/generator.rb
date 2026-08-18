@@ -1,57 +1,134 @@
-# frozen_string_literal: true
-
 module Portfolios
-  # N10: Generates a structured skill portfolio from the full transcript
-  # and final coverage map using Gemini Pro.
-  # Runs post-session as a background job.
   class Generator
+    GENERATION_LOCK_TIMEOUT = 10 * 60
+    SAFE_ERROR_MESSAGE = "Portfolio generation is temporarily unavailable. Please try again."
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        model: ENV.fetch("GEMINI_PRO_MODEL", "gemini-2.0-pro-001"),
+        timeout: 180
       )
     end
 
-    # Returns the Portfolio record with skills populated.
     def call
-      portfolio = @session.portfolio || @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
-      )
+      portfolio = find_or_create_portfolio
+      generation_token = claim_portfolio(portfolio)
+      return portfolio if generation_token.nil?
 
-      portfolio.update!(generation_status: 'generating')
+      response = @gemini_client.generate_content(build_prompt, temperature: 0.2)
+      normalized_skills = ResultNormalizer.new(
+        assessment_skills: @session.assessment.assessment_skills.order(:display_order),
+        response:
+      ).call
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      return portfolio unless persist_skills!(portfolio, normalized_skills, generation_token)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      complete_portfolio!(portfolio, generation_token)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
-      portfolio
-    rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      portfolio.reload
+    rescue StandardError => e
+      fail_portfolio!(portfolio, generation_token, e) if portfolio
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
     private
 
+    def find_or_create_portfolio
+      @session.with_lock do
+        @session.portfolio || @session.create_portfolio!(
+          candidate_id: @session.candidate_id,
+          generation_status: "pending"
+        )
+      end
+    rescue ActiveRecord::RecordNotUnique
+      @session.reload.portfolio
+    end
+
+    def claim_portfolio(portfolio)
+      token = nil
+
+      portfolio.with_lock do
+        if portfolio.complete?
+          next
+        end
+
+        if portfolio.generating? && portfolio.generation_started_at &&
+           portfolio.generation_started_at > Time.current - GENERATION_LOCK_TIMEOUT
+          next
+        end
+
+        token = SecureRandom.hex(24)
+        portfolio.update!(
+          generation_status: "generating",
+          generation_error: nil,
+          generation_started_at: Time.current,
+          generation_token: token
+        )
+      end
+
+      token
+    end
+
+    def persist_skills!(portfolio, normalized_skills, generation_token)
+      persisted = false
+
+      portfolio.with_lock do
+        next unless portfolio.generation_token == generation_token && portfolio.generating?
+
+        portfolio.portfolio_skills.destroy_all
+        normalized_skills.each do |skill_attributes|
+          portfolio.portfolio_skills.create!(skill_attributes)
+        end
+        persisted = true
+      end
+
+      persisted
+    end
+
+    def complete_portfolio!(portfolio, generation_token)
+      portfolio.with_lock do
+        return unless portfolio.generation_token == generation_token
+
+        portfolio.update!(
+          generation_status: "complete",
+          generated_at: Time.current,
+          generation_error: nil,
+          generation_started_at: nil,
+          generation_token: nil
+        )
+      end
+    end
+
+    def fail_portfolio!(portfolio, generation_token, _error)
+      portfolio.with_lock do
+        next unless portfolio.generation_token == generation_token
+
+        portfolio.update(
+          generation_status: "failed",
+          generation_error: SAFE_ERROR_MESSAGE,
+          generation_started_at: nil,
+          generation_token: nil
+        )
+      end
+    rescue StandardError
+      nil
+    end
+
     def build_prompt
-      assessment       = @session.assessment
+      assessment = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
-      coverage_maps     = @session.coverage_maps.order(:id)
-      turns             = @session.transcript_turns.ordered
+      coverage_maps = @session.coverage_maps.order(:id)
+      turns = @session.transcript_turns.ordered
 
-      skills_text = configured_skills.map { |s| skill_definition_block(s) }.join("\n\n")
-
+      skills_text = configured_skills.map { |skill| skill_definition_block(skill) }.join("\n\n")
       coverage_json = {
-        skills:     coverage_maps.reject(&:is_discovered).map { |m| coverage_json(m) },
-        discovered: coverage_maps.select(&:is_discovered).map { |m| coverage_json(m) }
+        skills: coverage_maps.reject(&:is_discovered).map { |map| coverage_json(map) },
+        discovered: coverage_maps.select(&:is_discovered).map { |map| coverage_json(map) }
       }.to_json
-
-      transcript_text = turns.map { |t| "[#{t.speaker.upcase}]: #{t.text}" }.join("\n")
+      transcript_text = turns.map { |turn| "[#{turn.speaker.upcase}]: #{turn.text.to_s.slice(0, 4000)}" }.join("\n").slice(0, 120_000)
 
       <<~PROMPT
         You are evaluating a completed skills assessment interview to produce a structured skill portfolio.
@@ -126,56 +203,25 @@ module Portfolios
 
     def skill_definition_block(skill)
       lines = ["━━━━━━━━━━━━━━━"]
-      lines << "SKILL: #{skill.skill_label} (#{skill.skill_id || 'custom'})"
-      lines << "SCOPE: #{skill.scope_include}" if skill.scope_include.present?
+      lines << "SKILL: #{skill.skill_label} (#{skill.skill_id || "custom"})"
+      lines << "SCOPE: #{skill.scope_include.to_s.slice(0, 2000)}" if skill.scope_include.present?
       lines << ""
-      lines << "L1 — #{skill.l1_anchor}"
-      lines << "L2 — #{skill.l2_anchor}"
-      lines << "L3 — #{skill.l3_anchor}"
-      lines << "L4 — #{skill.l4_anchor}"
-      lines << "L5 — #{skill.l5_anchor}"
+      lines << "L1 — #{skill.l1_anchor.to_s.slice(0, 1200)}"
+      lines << "L2 — #{skill.l2_anchor.to_s.slice(0, 1200)}"
+      lines << "L3 — #{skill.l3_anchor.to_s.slice(0, 1200)}"
+      lines << "L4 — #{skill.l4_anchor.to_s.slice(0, 1200)}"
+      lines << "L5 — #{skill.l5_anchor.to_s.slice(0, 1200)}"
       lines.join("\n")
     end
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
+        id: map.skill_id || map.skill_label.downcase.gsub(/\s+/, "-"),
+        label: map.skill_label,
+        state: map.state,
         probe_count: map.probe_count,
         is_discovered: map.is_discovered
       }
-    end
-
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
-
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
     end
   end
 end

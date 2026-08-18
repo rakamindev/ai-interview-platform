@@ -6,11 +6,26 @@ export function usePolling(
   active: boolean
 ) {
   const fnRef = useRef(fn);
+  const runningRef = useRef(false);
   fnRef.current = fn;
 
   useEffect(() => {
     if (!active) return;
-    const id = setInterval(() => fnRef.current(), intervalMs);
+
+    const tick = async () => {
+      if (runningRef.current) return;
+      runningRef.current = true;
+      try {
+        await fnRef.current();
+      } catch {
+        return;
+      } finally {
+        runningRef.current = false;
+      }
+    };
+
+    void tick();
+    const id = setInterval(() => void tick(), intervalMs);
     return () => clearInterval(id);
   }, [intervalMs, active]);
 }

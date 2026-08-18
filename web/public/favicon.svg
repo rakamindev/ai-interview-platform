@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">AI Interview</title>
+  <rect width="64" height="64" rx="16" fill="#312e81"/>
+  <path d="M17 19h30v22H31l-9 8v-8h-5z" fill="#a5b4fc"/>
+  <circle cx="25" cy="30" r="3" fill="#312e81"/>
+  <circle cx="32" cy="30" r="3" fill="#312e81"/>
+  <circle cx="39" cy="30" r="3" fill="#312e81"/>
+</svg>

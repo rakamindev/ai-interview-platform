@@ -14,6 +14,8 @@ api/storage/
 # Build output
 web/dist/
 web/.vite/
+web/.playwright-cli/
+.serena/
 
 # OS
 .DS_Store
