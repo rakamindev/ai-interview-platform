@@ -12,6 +12,7 @@ FactoryBot.define do
     time_limit_min { 30 }
     language { 'en' }
     tenant_id { 1 }
+    created_by { 1 }
   end
 
   factory :assessment_skill do
@@ -62,6 +63,7 @@ FactoryBot.define do
     culture_dimensions { 'High ownership and fast execution.' }
     competency_expectations { 'Deep knowledge of modern web stack.' }
     tenant_id { 1 }
+    created_by { 1 }
   end
 
   factory :vacancy_skill do
