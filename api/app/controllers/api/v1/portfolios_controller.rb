@@ -32,8 +32,8 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        unless portfolio.failed? || portfolio.unverifiable?
+          return json_error("Portfolio can only be regenerated when status is 'failed' or 'unverifiable'", :unprocessable_entity)
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)

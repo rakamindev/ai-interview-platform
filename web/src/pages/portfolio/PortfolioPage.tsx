@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, AlertTriangle } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -180,6 +180,47 @@ export default function PortfolioPage() {
           >
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
           </Button>
+        </div>
+      )}
+
+      {/* Unverifiable state */}
+      {!generating && portfolio?.generation_status === "unverifiable" && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-4">
+          <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
+          <div>
+            <p className="font-medium">Portfolio cannot be generated from this transcript.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {portfolio.generation_error ??
+                "The transcript failed quality checks, so portfolio generation was skipped to avoid presenting unreliable results."}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              No retake is offered — instead, review the transcript and decide whether to override the quality guard
+              manually below.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link
+              to={`/assessments/${id}/sessions/${sessionId}/transcript`}
+              className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Review Transcript
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (!window.confirm("Override the transcript quality guard and generate anyway? The output may be unreliable.")) {
+                  return;
+                }
+                await sessionsApi.regeneratePortfolio(Number(sessionId));
+                setGenerating(true);
+              }}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Regenerate anyway (override)
+            </Button>
+          </div>
         </div>
       )}
 

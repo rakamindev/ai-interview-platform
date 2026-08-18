@@ -78,7 +78,7 @@ export interface Portfolio {
   id: number;
   session_id: number;
   candidate_id?: number;
-  generation_status: "pending" | "generating" | "complete" | "failed";
+  generation_status: "pending" | "generating" | "complete" | "failed" | "unverifiable";
   generated_at?: string;
   generation_error?: string;
   skills: PortfolioSkill[];
