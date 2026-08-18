@@ -27,6 +27,14 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        pdf.font_families.update(
+          'DejaVu' => {
+            normal: Rails.root.join('app/assets/fonts/DejaVuSans.ttf'),
+            bold: Rails.root.join('app/assets/fonts/DejaVuSans-Bold.ttf')
+          }
+        )
+
+        pdf.font 'DejaVu'
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap

@@ -1,21 +1,13 @@
-import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
+import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,88 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
-import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
-import type { AssessmentSkill } from "@/types";
-
-export interface AssessmentFormValues {
-  name: string;
-  time_limit_min: number;
-  language: "en" | "id";
-  skills: Partial<AssessmentSkill>[];
-}
+import { useAssessmentNewPage } from "@/pages/assessments/useAssessmentNewPage";
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const form = useForm<AssessmentFormValues>({
-    defaultValues: {
-      name: "",
-      time_limit_min: 45,
-      language: "en",
-      skills: [],
-    },
-  });
-
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = fields.findIndex((f) => f.id === active.id);
-      const newIndex = fields.findIndex((f) => f.id === over.id);
-      move(oldIndex, newIndex);
-    }
-  };
-
-  const addCustomSkill = () => {
-    append({
-      skill_label: "",
-      is_custom: true,
-      expected_level: 3,
-      display_order: fields.length,
-    });
-  };
-
-  const addB7Skill = (skill: Partial<AssessmentSkill>) => {
-    append({ ...skill, display_order: fields.length });
-  };
-
-  const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-    try {
-      const payload = {
-        name: data.name,
-        time_limit_min: data.time_limit_min,
-        language: data.language,
-        assessment_skills_attributes: data.skills.map((s, i) => ({
-          ...s,
-          display_order: i,
-        })),
-      };
-      const res = await assessmentsApi.create(payload);
-      navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const { form, fields, sensors, pickerOpen, error, submitting, addB7Skill, addCustomSkill, handleSubmit, remove, handleDragEnd, onSubmit, setPickerOpen, setValue } = useAssessmentNewPage();
+  const { errors } = form.formState;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -127,10 +44,12 @@ export default function AssessmentNewPage() {
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
+            maxLength={128}
+            error={!!errors.name}
+            {...form.register("name")}
           />
           {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+            <p className="text-sm font-medium text-destructive">{errors.name.message}</p>
           )}
         </div>
 
@@ -180,9 +99,8 @@ export default function AssessmentNewPage() {
           <Label>Skills to assess</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              <p className="mb-1">No skills added yet.</p>
-              <p>Add at least one skill to continue.</p>
+            <div className={`border rounded-lg p-6 text-center text-sm text-muted-foreground ${errors?.skills ? "border-destructive" : ""}`}>
+              <p className={`${errors?.skills ? "text-destructive" : ""}`}>No skills added yet.</p>
             </div>
           ) : (
             <DndContext
@@ -207,6 +125,12 @@ export default function AssessmentNewPage() {
                 </div>
               </SortableContext>
             </DndContext>
+          )}
+
+          {errors.skills && (
+            <p className="text-sm font-medium text-destructive mt-2">
+              {errors.skills.message}
+            </p>
           )}
 
           <div className="flex gap-2">

@@ -31,8 +31,18 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      puts "========== PORTFOLIO GEMINI ERROR =========="
+      puts "CLASS: #{e.class}"
+      puts "MESSAGE: #{e.message}"
+      puts "STATUS: #{e.respond_to?(:status) ? e.status : nil}"
+      puts "BODY: #{e.respond_to?(:body) ? e.body : nil}"
+      puts "============================================"
+
+      portfolio&.update!(
+        generation_status: 'failed',
+        generation_error: e.message
+      )
+
       raise
     end
 

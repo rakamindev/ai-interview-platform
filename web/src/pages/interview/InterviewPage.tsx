@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,176 +15,29 @@ import VoiceBars from "@/components/interview/VoiceBars";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
-import { useAudioCapture } from "@/hooks/useAudioCapture";
-import { useAudioPlayback } from "@/hooks/useAudioPlayback";
-import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
-import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
-import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { CheckCircle, Mic, MicOff, XCircle } from "lucide-react";
+import { useInterviewPage } from "./useInterviewPage";
 
 export default function InterviewPage() {
-  const { token } = useParams<{ token: string }>();
-  const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
-  const [sessionId, setSessionId] = useState<number | null>(null);
-  const [interviewState, setInterviewState] = useState<InterviewState>("idle");
-  const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
-  const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
-  const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
-  const [connectionLostLong, setConnectionLostLong] = useState(false);
-  const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
-  const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [micMuted, setMicMuted] = useState(false);
-  const micMutedRef = useRef(false);
-
-  // Fetch candidate info
-  useEffect(() => {
-    if (!token) return;
-    sessionsApi.getCandidateInfo(token)
-      .then((res) => {
-        setCandidateInfo(res.data);
-        setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
-      })
-      .catch(() => setInterviewState("complete"));
-  }, [token]);
-
-  const muteRef = useRef<(() => void) | null>(null);
-  const unmuteRef = useRef<(() => void) | null>(null);
-
-  const handleStateChange = useCallback((state: InterviewState) => {
-    setInterviewState(state);
-
-    if (state === "draining_audio") {
-      // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
-      muteRef.current?.();
-      audioCompleteCalledRef.current = false;
-      // Safety timeout: call audio_complete after 10s even if drain never fires
-      audioCompleteSafetyTimerRef.current = setTimeout(() => {
-        callAudioComplete();
-      }, 10_000);
-      waitForDrain(() => callAudioComplete());
-      return;
-    }
-
-    if (state === "reconnecting") {
-      muteRef.current?.();
-      connectionLostTimerRef.current = setTimeout(() => {
-        setConnectionLostLong(true);
-      }, 60_000);
-    } else {
-      if (connectionLostTimerRef.current) {
-        clearTimeout(connectionLostTimerRef.current);
-        connectionLostTimerRef.current = null;
-      }
-      setConnectionLostLong(false);
-      if (state === "active" && !micMutedRef.current) unmuteRef.current?.();
-    }
-  }, []);
-
-  const handleReconnected = useCallback(() => {
-    if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
-    setReconnectedPrompt(true);
-    reconnectedPromptTimerRef.current = setTimeout(() => setReconnectedPrompt(false), 10_000);
-  }, []);
-
-  const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
-    setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
-  }, []);
-
-  const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
-  const audioCompleteCalledRef = useRef(false);
-  const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const callAudioComplete = useCallback(async () => {
-    if (audioCompleteCalledRef.current || !token) return;
-    audioCompleteCalledRef.current = true;
-    cancelDrain();
-    if (audioCompleteSafetyTimerRef.current) {
-      clearTimeout(audioCompleteSafetyTimerRef.current);
-      audioCompleteSafetyTimerRef.current = null;
-    }
-    // Retry until success — endpoint now always returns ended:true or an error.
-    // ended:false is no longer a valid response; any success means the session ended.
-    const attempt = async (delay: number) => {
-      try {
-        await sessionsApi.audioComplete(token);
-      } catch {
-        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
-      }
-    };
-    attempt(2000);
-  }, [token, cancelDrain]);
-
-  const handleSpeakerChange = useCallback((newSpeaker: InterviewSpeaker) => {
-    if (newSpeaker === "ai") {
-      setSpeaker("ai");
-      muteRef.current?.();
-    } else if (newSpeaker === "candidate") {
-      scheduleAfterPlayback(() => {
-        setSpeaker("candidate");
-        if (!micMutedRef.current) unmuteRef.current?.();
-      });
-    }
-  }, [scheduleAfterPlayback]);
-
-  const { connect, send, sendJson, disconnect, connectionState } = useAudioWebSocket({
-    sessionId: sessionId ?? 0,
-    token,
-    onAudioChunk: playChunk,
-    onTranscript: handleTranscript,
-    onStateChange: handleStateChange,
-    onSpeakerChange: handleSpeakerChange,
-    onReconnected: handleReconnected,
-  });
-
-  const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
-    onFrame: send,
-  });
-
-  muteRef.current = mute;
-  unmuteRef.current = unmute;
-
-  const toggleMic = useCallback(() => {
-    if (micMutedRef.current) {
-      micMutedRef.current = false;
-      setMicMuted(false);
-      unmute();
-    } else {
-      micMutedRef.current = true;
-      setMicMuted(true);
-      mute();
-    }
-  }, [mute, unmute]);
-
-  const startInterview = useCallback(async () => {
-    if (!sessionId) return;
-    setInterviewState("connecting");
-    connect();
-    await startCapture();
-    // Start muted — only unmute when backend sends speaker_changed: candidate.
-    // This prevents mic audio from being sent during AI speech, since separate
-    // AudioContexts for capture/playback break the browser's echo cancellation.
-    muteRef.current?.();
-  }, [sessionId, connect, startCapture]);
-
-  const endInterview = useCallback(async () => {
-    setInterviewState("ending");
-    if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
-    stopCapture();
-    stopPlayback();
-    sendJson({ type: "end_session" });
-    disconnect();
-    setInterviewState("complete");
-  }, [stopCapture, stopPlayback, sendJson, disconnect]);
-
-  const wsConnectionStatus =
-    interviewState === "reconnecting"
-      ? connectionLostLong ? "lost" : "reconnecting"
-      : connectionState === "connected"
-      ? "connected"
-      : "reconnecting";
+  const {
+    candidateInfo,
+    interviewState,
+    speaker,
+    transcript,
+    hardwareCheckDone,
+    connectionLostLong,
+    reconnectedPrompt,
+    micMuted,
+    wsConnectionStatus,
+    setHardwareCheckDone,
+    setReconnectedPrompt,
+    toggleMic,
+    startInterview,
+    endInterview,
+    endDetails,
+    sendJson,
+  } = useInterviewPage();
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
@@ -230,12 +82,28 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
+        {!endDetails || endDetails.reason !== "error" ? (
+          <div className="text-4xl">✅</div>
+        ) : (
+          <XCircle className="h-16 w-16 text-destructive mx-auto" />
+        )}
+        <h2 className="text-xl font-semibold">
+          {!endDetails
+            ? "Interview Already Completed"
+            : endDetails.reason === "error"
+              ? "Interview Ended with Problem"
+              : "Interview Complete"}
+        </h2>
+        <p className={`text-sm ${endDetails?.reason === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+          {!endDetails
+            ? "This interview session has already been completed. You can now safely close this window."
+            : endDetails.reason === "error" && endDetails.message
+              ? endDetails.message
+              : <>
+                Thank you. The interview has been recorded.
+                <br />
+                The hiring team will review your results and follow up with you.
+              </>}
         </p>
       </div>
     );
@@ -293,17 +161,18 @@ export default function InterviewPage() {
           </div>
         ) : (
           <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
 
-            {candidateSpeaking && (
+            {candidateSpeaking ? (
               <VoiceBars
                 active={true}
                 label="You're speaking"
                 variant="candidate"
+              />
+            ) : (
+              <VoiceBars
+                active={aiSpeaking}
+                label={aiSpeaking ? "AI speaking" : "Listening..."}
+                variant="ai"
               />
             )}
 
@@ -336,29 +205,29 @@ export default function InterviewPage() {
             )}
           </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>End interview?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to end the interview early?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
-            onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
-          </Button>
-        )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">End Interview</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>End interview?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to end the interview early?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          {import.meta.env.DEV && (
+            <Button variant="outline" size="sm" className="text-xs opacity-50"
+              onClick={() => sendJson({ type: "debug_force_reconnect" })}>
+              ⚡ Force reconnect
+            </Button>
+          )}
         </div>
       </div>
 

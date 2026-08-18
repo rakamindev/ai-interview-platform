@@ -1,9 +1,9 @@
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { useAtomValue, useSetAtom } from "jotai";
+import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 
@@ -30,7 +30,7 @@ export default function AssessorLayout() {
       <header className="border-b bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
+            <Link to="/assessments" className="items-center gap-2 hidden md:flex">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
@@ -40,14 +40,14 @@ export default function AssessorLayout() {
                   key={href}
                   to={href}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                    "flex items-center gap-1.5 px-3 py-3 md:py-1.5 rounded-xl md:rounded-md text-sm transition-colors",
                     location.pathname.startsWith(href)
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  {label}
+                  <span className="hidden md:block">{label}</span>
                 </Link>
               ))}
             </nav>
@@ -59,8 +59,8 @@ export default function AssessorLayout() {
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+              <LogOut className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:flex">Logout</span>
             </Button>
           </div>
         </div>

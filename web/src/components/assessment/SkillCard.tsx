@@ -1,25 +1,24 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { z } from "zod";
 import { UseFormReturn, useWatch } from "react-hook-form";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import LevelRadio from "./LevelRadio";
 import CustomSkillForm from "./CustomSkillForm";
 import { cn } from "@/lib/utils";
-import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
+import { assessmentSchema } from "@/pages/assessments/assessmentSchema";
 
 interface SkillCardProps {
   index: number;
   id: string;
-  form: UseFormReturn<AssessmentFormValues>;
+  form: UseFormReturn<z.infer<typeof assessmentSchema>>;
   onRemove: () => void;
 }
 
-export default function SkillCard({ index, id, form, onRemove }: SkillCardProps) {
+export default React.memo(function SkillCard({ index, id, form, onRemove }: SkillCardProps) {
   const [anchorsOpen, setAnchorsOpen] = useState(false);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const skill = useWatch({ control: form.control, name: `skills.${index}` });
   const isCustom = skill?.is_custom;
@@ -110,4 +109,4 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       </div>
     </div>
   );
-}
+})

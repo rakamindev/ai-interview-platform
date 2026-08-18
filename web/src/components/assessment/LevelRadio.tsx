@@ -1,3 +1,4 @@
+import React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { LEVEL_LABELS } from "@/utils/constants";
@@ -10,7 +11,7 @@ interface LevelRadioProps {
   className?: string;
 }
 
-export default function LevelRadio({ value, onChange, disabled, className }: LevelRadioProps) {
+export default React.memo(function LevelRadio({ value, onChange, disabled, className }: LevelRadioProps) {
   return (
     <RadioGroup
       value={String(value)}
@@ -28,4 +29,4 @@ export default function LevelRadio({ value, onChange, disabled, className }: Lev
       ))}
     </RadioGroup>
   );
-}
+})

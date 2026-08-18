@@ -16,13 +16,13 @@ export interface Assessment {
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: number | null;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
   display_order: number;
   scope_include?: string;
-  scope_exclude?: string;
+  scope_exclude?: string | null;
   l1_anchor?: string;
   l2_anchor?: string;
   l3_anchor?: string;
@@ -119,7 +119,7 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: number | null;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -129,7 +129,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -188,15 +188,15 @@ export type InterviewSpeaker = "ai" | "candidate" | null;
 
 export interface WsControlMessage {
   type:
-    | "session_started"
-    | "session_ended"
-    | "transcript"
-    | "transcription"
-    | "reconnecting"
-    | "reconnected"
-    | "speaker_changed"
-    | "preparing_to_end"
-    | "error";
+  | "session_started"
+  | "session_ended"
+  | "transcript"
+  | "transcription"
+  | "reconnecting"
+  | "reconnected"
+  | "speaker_changed"
+  | "preparing_to_end"
+  | "error";
   speaker?: "candidate" | "ai";
   role?: "candidate" | "ai";
   text?: string;

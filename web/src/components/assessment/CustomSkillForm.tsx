@@ -1,13 +1,20 @@
-import { UseFormReturn, useWatch } from "react-hook-form";
+import {
+  UseFormReturn,
+  useFormState,
+  useWatch,
+} from "react-hook-form";
+import { z } from "zod";
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import LevelRadio from "./LevelRadio";
-import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
+import { assessmentSchema } from "@/pages/assessments/assessmentSchema";
+import { cn } from "@/lib/utils";
 
 interface CustomSkillFormProps {
   index: number;
-  form: UseFormReturn<AssessmentFormValues>;
+  form: UseFormReturn<z.infer<typeof assessmentSchema>>;
 }
 
 const LEVEL_PLACEHOLDERS: Record<number, string> = {
@@ -18,9 +25,22 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
   5: "What does L5 look like for this skill?",
 };
 
-export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
-  const { register, setValue, formState: { errors } } = form;
-  const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
+export default function CustomSkillForm({
+  index,
+  form,
+}: CustomSkillFormProps) {
+  const { register, setValue, control } = form;
+
+  const { errors } = useFormState({
+    control,
+  });
+
+  const expectedLevel = useWatch({
+    control,
+    name: `skills.${index}.expected_level`,
+  });
+
+  const skillErrors = errors.skills?.[index];
 
   return (
     <div className="space-y-3 pt-1">
@@ -28,46 +48,94 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
         <Label htmlFor={`skills.${index}.skill_label`}>
           Name <span className="text-destructive">*</span>
         </Label>
+
         <Input
           id={`skills.${index}.skill_label`}
           placeholder="e.g. Communication"
-          {...register(`skills.${index}.skill_label`, { required: true })}
+          error={!!skillErrors?.skill_label}
+          maxLength={128}
+          {...register(`skills.${index}.skill_label`)}
         />
+
+        {skillErrors?.skill_label && (
+          <p className="text-sm font-medium text-destructive">
+            {skillErrors.skill_label.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor={`skills.${index}.scope_include`}>
-          What counts (scope include) <span className="text-destructive">*</span>
+          What counts (scope include){" "}
+          <span className="text-destructive">*</span>
         </Label>
+
         <Textarea
           id={`skills.${index}.scope_include`}
           placeholder="Clear technical explanation, stakeholder alignment, async written communication..."
           rows={2}
-          {...register(`skills.${index}.scope_include`, { required: true })}
+          className={cn(
+            skillErrors?.scope_include &&
+            "border-destructive focus-visible:ring-destructive"
+          )}
+          {...register(`skills.${index}.scope_include`)}
         />
+
+        {skillErrors?.scope_include && (
+          <p className="text-sm font-medium text-destructive">
+            {skillErrors.scope_include.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
-        {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map((key, i) => (
-          <div key={key} className="space-y-1">
-            <Label htmlFor={`skills.${index}.${key}`}>
-              L{i + 1} anchor <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id={`skills.${index}.${key}`}
-              placeholder={LEVEL_PLACEHOLDERS[i + 1]}
-              rows={2}
-              {...register(`skills.${index}.${key}`, { required: true })}
-            />
-          </div>
-        ))}
+        {(
+          [
+            "l1_anchor",
+            "l2_anchor",
+            "l3_anchor",
+            "l4_anchor",
+            "l5_anchor",
+          ] as const
+        ).map((key, i) => {
+          const fieldError = skillErrors?.[key];
+
+          return (
+            <div key={key} className="space-y-1">
+              <Label htmlFor={`skills.${index}.${key}`}>
+                L{i + 1} anchor{" "}
+                <span className="text-destructive">*</span>
+              </Label>
+
+              <Textarea
+                id={`skills.${index}.${key}`}
+                placeholder={LEVEL_PLACEHOLDERS[i + 1]}
+                rows={2}
+                className={cn(
+                  fieldError &&
+                  "border-destructive focus-visible:ring-destructive"
+                )}
+                {...register(`skills.${index}.${key}`)}
+              />
+
+              {fieldError && (
+                <p className="text-sm font-medium text-destructive">
+                  {fieldError.message}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="space-y-1.5">
         <Label>Expected level</Label>
+
         <LevelRadio
           value={expectedLevel ?? 3}
-          onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
+          onChange={(value) =>
+            setValue(`skills.${index}.expected_level`, value)
+          }
         />
       </div>
     </div>

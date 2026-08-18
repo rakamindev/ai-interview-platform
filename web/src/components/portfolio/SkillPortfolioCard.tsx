@@ -23,10 +23,10 @@ export default function SkillPortfolioCard({
     <Card>
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+        <div className="flex items-start justify-between flex-wrap sm:flex-nowrap gap-3">
+          <div className="flex items-start gap-3 grow">
             <LevelBadge level={effectiveLevel} />
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 grow">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>
                 {skill.is_discovered && (

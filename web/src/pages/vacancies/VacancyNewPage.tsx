@@ -1,53 +1,31 @@
-import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
-import type { VacancySkill } from "@/types";
-
-interface VacancyFormValues {
-  role_title: string;
-  culture_dimensions: string;
-  competency_expectations: string;
-  skills: Partial<VacancySkill>[];
-}
+import { useVacancyNewPage } from "./useVacancyNewPage";
+import LevelRadio from "@/components/assessment/LevelRadio"; // Keep this for rendering
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control, name: "skills" });
-
-  const onSubmit = async (data: VacancyFormValues) => {
-    setError(null);
-    setSubmitting(true);
-    try {
-      await vacanciesApi.create({
-        role_title: data.role_title,
-        culture_dimensions: data.culture_dimensions,
-        competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
-      });
-      navigate("/vacancies");
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const {
+    form,
+    fields,
+    submitting,
+    pickerOpen,
+    error,
+    remove,
+    addB7Skill,
+    onSubmit,
+    setPickerOpen,
+    handleSubmit,
+    setValue,
+    watch,
+  } = useVacancyNewPage();
+  const { errors } = form.formState;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -55,7 +33,9 @@ export default function VacancyNewPage() {
         <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="text-sm text-muted-foreground">Vacancies</span>
+        <span className="text-sm text-muted-foreground">
+          Vacancies
+        </span>
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">New Vacancy</span>
       </div>
@@ -63,7 +43,15 @@ export default function VacancyNewPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Input
+            id="role_title"
+            placeholder="Senior Frontend Engineer"
+            error={!!errors.role_title}
+            {...form.register("role_title")}
+          />
+          {errors.role_title && (
+            <p className="text-sm font-medium text-destructive">{errors.role_title.message}</p>
+          )}
         </div>
 
         <Separator />
@@ -73,8 +61,8 @@ export default function VacancyNewPage() {
           <Label>Expected skills</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
-              No skills added yet.
+            <div className={`border rounded-lg p-6 text-center text-sm text-muted-foreground ${errors?.skills ? "border-destructive" : ""}`}>
+              <p className={`${errors?.skills ? "text-destructive" : ""}`}>No skills added yet.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -98,6 +86,12 @@ export default function VacancyNewPage() {
             </div>
           )}
 
+          {errors.skills && (
+            <p className="text-sm font-medium text-destructive mt-2">
+              {errors.skills.message}
+            </p>
+          )}
+
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Add skill expectation
           </Button>
@@ -111,7 +105,7 @@ export default function VacancyNewPage() {
             id="culture_dimensions"
             placeholder="Ownership-driven, async-first, direct feedback culture..."
             rows={3}
-            {...register("culture_dimensions")}
+            {...form.register("culture_dimensions")}
           />
         </div>
 
@@ -121,7 +115,7 @@ export default function VacancyNewPage() {
             id="competency_expectations"
             placeholder="Strong communicator who can align cross-functional teams..."
             rows={3}
-            {...register("competency_expectations")}
+            {...form.register("competency_expectations")}
           />
         </div>
 
@@ -139,7 +133,7 @@ export default function VacancyNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        onSelect={addB7Skill}
       />
     </div>
   );

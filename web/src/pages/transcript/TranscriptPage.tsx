@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -11,9 +11,13 @@ export default function TranscriptPage() {
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetchData = useCallback(() => {
+    setLoading(true);
+    setError(null);
     Promise.all([
       sessionsApi.getTranscript(Number(sessionId)),
       sessionsApi.get(Number(sessionId)),
@@ -22,27 +26,42 @@ export default function TranscriptPage() {
         setTurns(tRes.data.turns);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => setError(true))
+      .catch(() => {
+        setError("Failed to load transcript. Please try again.");
+      })
       .finally(() => setLoading(false));
   }, [sessionId]);
 
+  useEffect(() => {
+    refetchData();
+  }, [refetchData]);
+
   const handleDownload = () => {
-    const lines = turns.map((t) => {
-      const label = t.speaker === "ai" ? "AI" : "Candidate";
-      return `[${label}]\n${t.text}`;
-    });
-    const blob = new Blob([lines.join("\n\n")], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `transcript-session-${sessionId}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      const lines = turns.map((t) => {
+        const label = t.speaker === "ai" ? "AI" : "Candidate";
+        return `[${label}]\n${t.text}`;
+      });
+      const blob = new Blob([lines.join("\n\n")], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `transcript-session-${sessionId}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Download failed:", e);
+      setDownloadError("Failed to download transcript. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap">
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
@@ -58,12 +77,24 @@ export default function TranscriptPage() {
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
-            Download .txt
-          </Button>
+          <div className="grow flex justify-end pt-3 xs:pt-0">
+            <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
+              {downloading ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Download .txt
+            </Button>
+          </div>
         )}
       </div>
+
+      {downloadError && (
+        <div className="bg-destructive/15 p-3 rounded-md text-sm text-destructive">
+          <p>{downloadError}</p>
+        </div>
+      )}
 
       {loading && (
         <div className="space-y-3">
@@ -74,8 +105,11 @@ export default function TranscriptPage() {
       )}
 
       {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
-          Failed to load transcript. Please refresh.
+        <div className="flex flex-col items-center justify-center pt-3 pb-6 min-h-[40vh] text-center">
+          <p className="mt-1 text-sm text-destructive">{error}</p>
+          <Button className="mt-3" variant="destructiveOutline" onClick={refetchData}>
+            Try Again
+          </Button>
         </div>
       )}
 
@@ -92,16 +126,14 @@ export default function TranscriptPage() {
             return (
               <div
                 key={turn.id}
-                className={`rounded-lg p-4 ${
-                  isAI
-                    ? "bg-muted border"
-                    : "bg-background border border-primary/20"
-                }`}
+                className={`rounded-lg p-4 ${isAI
+                  ? "bg-muted border"
+                  : "bg-background border border-primary/20"
+                  }`}
               >
                 <p
-                  className={`text-xs font-semibold mb-1 ${
-                    isAI ? "text-muted-foreground" : "text-primary"
-                  }`}
+                  className={`text-xs font-semibold mb-1 ${isAI ? "text-muted-foreground" : "text-primary"
+                    }`}
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>

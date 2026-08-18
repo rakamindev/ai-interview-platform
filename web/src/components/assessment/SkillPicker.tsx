@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,51 +7,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
-import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
-import type { AssessmentSkill, SkillTaxonomy } from "@/types";
+import type { AssessmentSkill } from "@/types";
+import { useSkillPicker } from "@/components/assessment/useSkillPicker";
+import { Button } from "@/components/ui/button";
 
-
-interface SkillPickerProps {
+export interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (skill: Partial<AssessmentSkill>) => void;
 }
 
-export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
-  const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    skillTaxonomiesApi
-      .list()
-      .then((res) => setSkills(res.data.skill_taxonomies ?? []))
-      .catch((err) => { console.error("skill_taxonomies fetch failed:", err); setSkills([]); })
-      .finally(() => setLoading(false));
-  }, [open]);
-
-  const filtered = skills.filter((s) =>
-    s.skill_label.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const handleSelect = (s: SkillTaxonomy) => {
-    onSelect({
-      skill_id: undefined,
-      skill_label: s.skill_label,
-      is_custom: false,
-      expected_level: 3,
-      scope_include: s.scope_include,
-      l1_anchor: s.l1_anchor,
-      l2_anchor: s.l2_anchor,
-      l3_anchor: s.l3_anchor,
-      l4_anchor: s.l4_anchor,
-      l5_anchor: s.l5_anchor,
-    });
-    onOpenChange(false);
-    setQuery("");
-  };
+export default React.memo(function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
+  const { loading, query, filtered, error, handleSelect, setQuery, getSkills } = useSkillPicker({ open, onOpenChange, onSelect });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,6 +35,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
             autoFocus
+            disabled={loading || error}
           />
         </div>
 
@@ -75,6 +43,16 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center pt-3 pb-6 text-center">
+              <p className="mt-1 text-sm text-destructive">
+                We couldn't retrieve the skill taxonomy. Please try again.
+              </p>
+
+              <Button className="mt-3" variant="destructiveOutline" onClick={getSkills}>
+                Try Again
+              </Button>
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
@@ -94,4 +72,4 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
       </DialogContent>
     </Dialog>
   );
-}
+})
