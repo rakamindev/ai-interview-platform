@@ -179,42 +179,53 @@ Nilai plus: lebih menonjol untuk kriteria "exceptional UI/UX design taste" di ru
 **Format: JANGAN aku isi. Pilih, lalu tulis alasan singkat di ruang kosong kalau perlu buat laporan PDF nanti.**
 
 ### 4.1 — Scope revamp final
-⏳ **MENUNGGU KEPUTUSAN FADHIL:**
-Dari `codebase-audit.md` §6 (F-01 s/d F-14) dan §7 (Opsi A-E), yang benar-benar dikerjakan:
-- [ ] F-01 — celah tenant isolation (P0)
-- [ ] F-02 — retensi/penghapusan data kandidat (P0)
-- [ ] F-03 — kebocoran channel B6 (P1, ada bukti konkret di kode)
-- [ ] F-04 — confidence portfolio tidak diverifikasi (P1)
-- [ ] F-05 — narasi fit/gap kurang lengkap (P1)
-- [ ] Lainnya: ______________________
-- Alasan: ______________________
+✅ **DIPUTUSKAN** (2026-08-18, ~10:45 WIB, di sesi lanjutan setelah handoff):
+- [x] F-01 — celah tenant isolation (P0)
+- [ ] F-02 — retensi/penghapusan data kandidat (P0) — tidak dipilih
+- [x] F-03 — kebocoran channel B6 (P1, ada bukti konkret di kode)
+- [x] F-04 — confidence portfolio tidak diverifikasi (P1)
+- [x] F-05 — narasi fit/gap kurang lengkap (P1)
+- Lainnya: —
+- **Alasan:** dipilih Opsi C (F-04+F-05) + Opsi A (F-01) + Opsi B (F-03) dari `codebase-audit.md`
+  §7 — lebih luas dari steer awal MY-TASK.md ("1-2 temuan"), disadari eksplisit saat diputuskan
+  (~3x footprint vs ~3.5 jam slack yang ada). **Priority order eksplisit, bukan paralel**:
+  **C → A → B**, masing-masing timeboxed. Kalau waktu mepet, **B yang dipotong duluan** (jadi
+  "documented, not implemented" di laporan) — bukan A atau C, karena B satu-satunya yang butuh
+  verifikasi audio live (paling sulit diprediksi waktunya, lihat catatan Opsi B di audit §7),
+  sementara C (2 P1 sekaligus, tidak butuh audio live, bisa full test coverage dengan stub
+  Gemini client) dan A (satu-satunya P0 defect asli, effort M terukur) adalah nilai inti yang
+  mau dijaga tuntas & teruji, bukan sekadar disentuh.
 
 ### 4.2 — Pendekatan teknis (Option A vs Option B)
-⏳ **MENUNGGU KEPUTUSAN FADHIL:**
-Untuk scope terpilih di atas, dua-tiga opsi implementasi konkret perlu kamu rumuskan sendiri
-saat sudah tahu scope-nya (brief minta ini eksplisit didokumentasikan sebagai trade-off matrix
-di laporan — Product Impact vs Cost, Maintainability, Failure Modes, Contextual Fit). Ruang
-untuk catatan cepat:
+🔄 **IN PROGRESS** — bukan lagi keputusan Fadhil sendirian; ini dirumuskan bareng Claude lewat
+Plan mode (per finding: C, lalu A, lalu B, sesuai urutan §4.1) sebelum coding mulai, supaya
+trade-off matrix (Product Impact vs Cost, Maintainability, Failure Modes, Contextual Fit) yang
+diminta brief punya isi asli, bukan diisi buru-buru cuma buat centang kotak. Lihat riwayat sesi
+untuk plan yang disetujui.
 - Option A: ______________________
 - Option B: ______________________
 - Dipilih: ______________________ karena: ______________________
 
 ### 4.3 — Struktur PR
-⏳ **MENUNGGU KEPUTUSAN FADHIL:**
-- [ ] Option A — satu PR komprehensif (lebih simpel untuk waktu mepet, review lebih berat sekali baca)
-- [ ] Option B — Umbrella PR + sub-PR (lebih rapi dipisah backend/frontend/test, overhead admin git lebih tinggi)
+✅ **DIPUTUSKAN** (sebelum handoff, di chat sebelumnya):
+- [ ] Option A — satu PR komprehensif
+- [x] Option B — Umbrella PR + sub-PR (dipisah backend/frontend/test)
+- **Catatan eksplisit dari keputusan itu**: batas antar sub-PR JANGAN diturunkan dari bug-bug
+  exploration (B-01..B-05) — harus mengikuti scope final §4.1 (C/A/B), yang baru jelas sekarang.
 
 ### 4.4 — Klaim kedalaman (backend-heavy vs frontend-heavy)
-⏳ **MENUNGGU KEPUTUSAN FADHIL:**
-Brief eksplisit: "depth on one side expected, complete absence on other is not." Berdasarkan
-F-01/F-02/F-03 (semua backend-dominant) vs kapasitas desain di §3 (frontend), mana yang mau
-kamu tekankan:
-- [ ] Backend-heavy (natural fit kalau scope §4.1 berupa F-01/F-02/F-03)
-- [ ] Frontend-heavy (natural fit kalau scope §4.1 lebih ke UI states/portfolio-fitgap presentation)
-- Catatan: ______________________
+✅ **Terjawab otomatis oleh §4.1** (bukan keputusan baru, cuma konsekuensi mekanis): F-01, F-03,
+F-04, F-05 semuanya backend-dominant per deskripsi `codebase-audit.md` §7 sendiri (Opsi C
+eksplisit ditulis "dominan backend"; Opsi A = migration+controller; Opsi B = websocket channel).
+- [x] Backend-heavy
+- [ ] Frontend-heavy
+- **Catatan:** kalau ternyata salah baca situasinya, gampang dikoreksi — tinggal bilang.
 
 ### 4.5 — Arah visual dari Langkah 3
-⏳ **MENUNGGU KEPUTUSAN FADHIL:**
+⏳ **MASIH TERBUKA — genuinely belum diputuskan** (beda dari 4.4, ini bukan konsekuensi mekanis
+dari §4.1). Dengan scope §4.1 sekarang 3 temuan backend, condong kuat ke **Arah 1** by
+necessity (budget frontend-polish realistis menyusut), tapi ini bukan keputusan yang saya buat
+untuk kamu — masih perlu kamu konfirmasi atau override kalau maunya lain:
 - [ ] Arah 1 — Polish minimal
 - [ ] Arah 2 — Ekspresif dengan micro-interaction
 
