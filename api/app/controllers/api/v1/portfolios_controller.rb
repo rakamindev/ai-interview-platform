@@ -116,6 +116,10 @@ module Api
         # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
+          if existing.generating?
+            return render json: { status: "generating" }, status: :accepted
+          end
+
           return json_response(report: fit_gap_json(existing))
         end
 
@@ -131,7 +135,15 @@ module Api
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
+          if portfolio.generating?
+            return render json: { status: "generating" }, status: :accepted
+          end
+
           return json_error("Fit/gap report not found", :not_found)
+        end
+
+        if report.generating?
+          return render json: { status: "generating" }, status: :accepted
         end
 
         json_response(report: fit_gap_json(report))
