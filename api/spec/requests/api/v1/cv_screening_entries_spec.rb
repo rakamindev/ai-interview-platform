@@ -67,6 +67,77 @@ RSpec.describe 'CV Screening Entries API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/cv_screening_entries/:id/reanalyze' do
+    it 'resets a model_failed entry to pending and re-enqueues the worker' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review',
+                                           decision_reason: 'model_failed', score: nil)
+
+      expect do
+        post "/api/v1/cv_screening_entries/#{entry.id}/reanalyze", headers: headers
+      end.to change(CvScreeningProcessEntryWorker.jobs, :size).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(entry.reload.decision).to eq('pending')
+      expect(entry.decision_reason).to be_nil
+      expect(CvScreeningProcessEntryWorker.jobs.last['args']).to eq([entry.id])
+    end
+
+    it 'refuses to re-analyze an entry that never actually failed to analyze' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review',
+                                           decision_reason: 'below_private_threshold', score: 40)
+
+      post "/api/v1/cv_screening_entries/#{entry.id}/reanalyze", headers: headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(entry.reload.decision).to eq('needs_review')
+    end
+
+    it 'also re-analyzes an entry that was manually cancelled out of a stuck pending state' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review',
+                                           decision_reason: 'cancelled')
+
+      expect do
+        post "/api/v1/cv_screening_entries/#{entry.id}/reanalyze", headers: headers
+      end.to change(CvScreeningProcessEntryWorker.jobs, :size).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(entry.reload.decision).to eq('pending')
+    end
+  end
+
+  describe 'POST /api/v1/cv_screening_entries/:id/cancel' do
+    it 'moves a stuck pending entry to needs_review, never a rejection' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'pending')
+
+      post "/api/v1/cv_screening_entries/#{entry.id}/cancel", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(entry.reload.decision).to eq('needs_review')
+      expect(entry.decision_reason).to eq('cancelled')
+    end
+
+    it 'refuses to cancel an entry that already has a real decision' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'invited',
+                                           decision_reason: 'auto_invited')
+
+      post "/api/v1/cv_screening_entries/#{entry.id}/cancel", headers: headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(entry.reload.decision).to eq('invited')
+    end
+
+    it "unblocks the batch's notification gate for entries already decided alongside the cancelled one" do
+      stuck_entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'pending')
+      create(:cv_screening_entry, cv_screening_batch: batch, decision: 'invited', decision_reason: 'auto_invited')
+
+      expect(batch.notification_status).to eq('pending')
+
+      post "/api/v1/cv_screening_entries/#{stuck_entry.id}/cancel", headers: headers
+
+      expect(batch.reload.notification_status).not_to eq('pending')
+    end
+  end
+
   describe 'GET /api/v1/cv_screening_entries/:id/file' do
     it 'streams the attached file for an authorized recruiter' do
       entry = entry_with_file

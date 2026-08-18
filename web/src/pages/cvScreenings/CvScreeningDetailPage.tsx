@@ -30,6 +30,8 @@ export default function CvScreeningDetailPage() {
   const [error, setError] = useState(false);
   const [decisionFilter, setDecisionFilter] = useState("");
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
+  const [reanalyzingEntryId, setReanalyzingEntryId] = useState<number | null>(null);
+  const [cancellingEntryId, setCancellingEntryId] = useState<number | null>(null);
   const [confirming, setConfirming] = useState(false);
 
   const loadScreening = useCallback(async () => {
@@ -81,6 +83,30 @@ export default function CvScreeningDetailPage() {
       setReviewingEntryId(null);
     } catch {
       setReviewingEntryId(null);
+      setError(true);
+    }
+  };
+
+  const handleReanalyze = async (entryId: number) => {
+    setReanalyzingEntryId(entryId);
+    try {
+      await cvScreeningsApi.reanalyzeEntry(entryId);
+      await Promise.all([loadEntries(), loadScreening()]);
+      setReanalyzingEntryId(null);
+    } catch {
+      setReanalyzingEntryId(null);
+      setError(true);
+    }
+  };
+
+  const handleCancel = async (entryId: number) => {
+    setCancellingEntryId(entryId);
+    try {
+      await cvScreeningsApi.cancelEntry(entryId);
+      await Promise.all([loadEntries(), loadScreening(), loadBatches()]);
+      setCancellingEntryId(null);
+    } catch {
+      setCancellingEntryId(null);
       setError(true);
     }
   };
@@ -233,6 +259,10 @@ export default function CvScreeningDetailPage() {
                   index={entries.length - i}
                   onReview={handleReview}
                   reviewing={reviewingEntryId === entry.id}
+                  onReanalyze={handleReanalyze}
+                  reanalyzing={reanalyzingEntryId === entry.id}
+                  onCancel={handleCancel}
+                  cancelling={cancellingEntryId === entry.id}
                 />
               ))}
             </CardContent>

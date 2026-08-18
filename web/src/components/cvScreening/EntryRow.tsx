@@ -1,6 +1,7 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cvScreeningsApi } from "@/services/cvScreenings";
-import { Check, X, Download, Loader2 } from "lucide-react";
+import { Check, X, Download, Loader2, RefreshCw, Ban } from "lucide-react";
 import type { CvScreeningEntry } from "@/types";
 
 interface EntryRowProps {
@@ -8,13 +9,28 @@ interface EntryRowProps {
   index: number;
   onReview: (entryId: number, action: "invite" | "reject") => void;
   reviewing: boolean;
+  onReanalyze: (entryId: number) => void;
+  reanalyzing: boolean;
+  onCancel: (entryId: number) => void;
+  cancelling: boolean;
 }
 
-export default function EntryRow({ entry, index, onReview, reviewing }: EntryRowProps) {
+export default function EntryRow({
+  entry,
+  index,
+  onReview,
+  reviewing,
+  onReanalyze,
+  reanalyzing,
+  onCancel,
+  cancelling,
+}: EntryRowProps) {
   const isPending = entry.decision === "pending";
   const isNeedsReview = entry.decision === "needs_review";
   const isInvited = entry.decision === "invited";
   const isNotAdvanced = entry.decision === "not_advanced";
+  const failedToAnalyze =
+    entry.decision_reason === "model_failed" || entry.decision_reason === "cancelled";
   const displayFilename = entry.filename ?? "—";
 
   return (
@@ -35,7 +51,7 @@ export default function EntryRow({ entry, index, onReview, reviewing }: EntryRow
 
       <div className="flex items-center gap-3 shrink-0">
         {typeof entry.score === "number" && (
-          <span className="text-xs font-medium text-muted-foreground">Score: {entry.score}</span>
+          <Badge variant="secondary">Score: {entry.score}</Badge>
         )}
 
         {isPending && (
@@ -73,6 +89,34 @@ export default function EntryRow({ entry, index, onReview, reviewing }: EntryRow
           >
             <Download className="h-3 w-3" />
           </Button>
+
+          {isPending && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+              disabled={cancelling}
+              title="Stop waiting for analysis and move this to Needs review"
+              onClick={() => onCancel(entry.id)}
+            >
+              <Ban className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
+          )}
+
+          {isNeedsReview && failedToAnalyze && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={reanalyzing}
+              title="The automated analysis failed (e.g. a transient Gemini error) — try it again"
+              onClick={() => onReanalyze(entry.id)}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${reanalyzing ? "animate-spin" : ""}`} />
+              Re-analyze
+            </Button>
+          )}
 
           {isNeedsReview && (
             <>

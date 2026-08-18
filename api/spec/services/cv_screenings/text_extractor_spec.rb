@@ -88,17 +88,46 @@ RSpec.describe CvScreenings::TextExtractor do
     expect(entry.cv_file).not_to have_received(:download)
   end
 
-  it 'never raises, even on a totally unexpected internal error' do
+  it 'lets ActiveStorage::FileNotFoundError propagate instead of masquerading as a corrupt file' do
     entry = create(:cv_screening_entry)
     entry.cv_file.attach(
       io: File.open(Rails.root.join('spec/fixtures/files/cv_text_layer.pdf')),
       filename: 'cv_text_layer.pdf', content_type: 'application/pdf'
     )
-    allow(Marcel::MimeType).to receive(:for).and_raise(StandardError, 'boom')
+    allow(entry.cv_file).to receive(:download).and_raise(ActiveStorage::FileNotFoundError)
 
-    result = nil
-    expect { result = described_class.new(entry.cv_file).call }.not_to raise_error
-    expect(result.status).to eq(:parse_failed)
-    expect(result.reason).to eq(:corrupt)
+    expect { described_class.new(entry.cv_file).call }.to raise_error(ActiveStorage::FileNotFoundError)
+  end
+
+  it 'raises IncompleteDownloadError (not :parse_failed) when the download is shorter than the recorded byte_size' do
+    entry = create(:cv_screening_entry)
+    entry.cv_file.attach(
+      io: File.open(Rails.root.join('spec/fixtures/files/cv_text_layer.pdf')),
+      filename: 'cv_text_layer.pdf', content_type: 'application/pdf'
+    )
+    allow(entry.cv_file).to receive(:download).and_return('truncated mid-transfer')
+
+    expect { described_class.new(entry.cv_file).call }
+      .to raise_error(described_class::IncompleteDownloadError)
+  end
+
+  it 'lets a totally unrecognized internal error propagate rather than guessing the file is corrupt' do
+    # Only PDF::Reader's/Zip's own named exceptions (rescued locally in
+    # extract_pdf/extract_docx) are trusted to mean "this file is genuinely
+    # unreadable." Anything else — like this stubbed error — has no principled
+    # basis to be labeled :corrupt, so it propagates instead, letting Sidekiq's
+    # own retry (and, if exhausted, its always-safe needs_review fallback) be
+    # the actual safety net. See the class-level comment for why: production
+    # observed bare, unnamed errors from deep inside pdf-reader that never
+    # reproduced on a retry against the same stored bytes — i.e. transient, not
+    # a real file problem.
+    entry = create(:cv_screening_entry)
+    entry.cv_file.attach(
+      io: File.open(Rails.root.join('spec/fixtures/files/cv_text_layer.pdf')),
+      filename: 'cv_text_layer.pdf', content_type: 'application/pdf'
+    )
+    allow(Marcel::MimeType).to receive(:for).and_raise(ArgumentError, 'boom')
+
+    expect { described_class.new(entry.cv_file).call }.to raise_error(ArgumentError, 'boom')
   end
 end

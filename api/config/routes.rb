@@ -73,6 +73,8 @@ Rails.application.routes.draw do
       resources :cv_screening_entries, only: [] do
         member do
           post :review
+          post :reanalyze
+          post :cancel
           get  :file
         end
       end

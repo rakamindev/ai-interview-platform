@@ -70,6 +70,21 @@ export const cvScreeningsApi = {
       action,
     }),
 
+  // Only valid for an entry that failed because the pipeline itself broke
+  // (decision_reason: "model_failed") — resets it to pending and re-enqueues
+  // the same worker, so the existing polling in CvScreeningDetailPage picks up
+  // the eventual re-decision the normal way.
+  reanalyzeEntry: (entryId: number) =>
+    api.post<{ entry: CvScreeningEntry }>(`/cv_screening_entries/${entryId}/reanalyze`),
+
+  // Only valid while an entry is still "pending" — moves it to needs_review
+  // (never a rejection) so a recruiter isn't stuck waiting forever on an entry
+  // whose worker never ran (e.g. a Sidekiq outage). Also unblocks the batch's
+  // FR5 notification gate for any other entries already decided in the same
+  // batch, which a permanently-pending entry would otherwise hold up forever.
+  cancelEntry: (entryId: number) =>
+    api.post<{ entry: CvScreeningEntry }>(`/cv_screening_entries/${entryId}/cancel`),
+
   // The file endpoint requires the same Bearer auth as everything else, so it
   // can't be a plain <a href> / window.open — those don't carry the header.
   // Fetch it through the authenticated axios instance and hand the browser a

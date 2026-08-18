@@ -18,7 +18,18 @@ function buildEntry(overrides: Partial<CvScreeningEntry> = {}): CvScreeningEntry
 
 describe("EntryRow", () => {
     it("shows a processing indicator for a pending entry, with no review actions", () => {
-        render(<EntryRow entry={buildEntry()} index={1} onReview={vi.fn()} reviewing={false} />);
+        render(
+            <EntryRow
+                entry={buildEntry()}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
 
         expect(screen.getByText("Processing")).toBeInTheDocument();
         expect(screen.queryByText("Invite")).not.toBeInTheDocument();
@@ -33,6 +44,10 @@ describe("EntryRow", () => {
                 index={1}
                 onReview={onReview}
                 reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
             />
         );
 
@@ -51,11 +66,86 @@ describe("EntryRow", () => {
                 index={1}
                 onReview={vi.fn()}
                 reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
             />
         );
 
         expect(screen.getByText("Invited")).toBeInTheDocument();
         expect(screen.queryByText("Invite")).not.toBeInTheDocument();
+    });
+
+    it("shows a Re-analyze action only when the entry failed to analyze, not for other needs_review reasons", () => {
+        const onReanalyze = vi.fn();
+        const { rerender } = render(
+            <EntryRow
+                entry={buildEntry({ decision: "needs_review", decision_reason: "model_failed" })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={onReanalyze}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        fireEvent.click(screen.getByText("Re-analyze"));
+        expect(onReanalyze).toHaveBeenCalledWith(1);
+
+        rerender(
+            <EntryRow
+                entry={buildEntry({ decision: "needs_review", decision_reason: "below_private_threshold" })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={onReanalyze}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        expect(screen.queryByText("Re-analyze")).not.toBeInTheDocument();
+    });
+
+    it("shows a Cancel action for a pending entry, and calls onCancel with the entry id", () => {
+        const onCancel = vi.fn();
+        render(
+            <EntryRow
+                entry={buildEntry({ decision: "pending" })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={onCancel}
+                cancelling={false}
+            />
+        );
+
+        fireEvent.click(screen.getByText("Cancel"));
+        expect(onCancel).toHaveBeenCalledWith(1);
+    });
+
+    it("also shows Re-analyze for an entry cancelled out of a stuck pending state", () => {
+        render(
+            <EntryRow
+                entry={buildEntry({ decision: "needs_review", decision_reason: "cancelled" })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        expect(screen.getByText("Re-analyze")).toBeInTheDocument();
+        expect(screen.queryByText("Cancel")).not.toBeInTheDocument();
     });
 
     it("falls back to a placeholder when no email was detected", () => {
@@ -65,6 +155,10 @@ describe("EntryRow", () => {
                 index={1}
                 onReview={vi.fn()}
                 reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
             />
         );
 
