@@ -179,29 +179,30 @@ Nilai plus: lebih menonjol untuk kriteria "exceptional UI/UX design taste" di ru
 **Format: JANGAN aku isi. Pilih, lalu tulis alasan singkat di ruang kosong kalau perlu buat laporan PDF nanti.**
 
 ### 4.1 — Scope revamp final
-✅ **DIPUTUSKAN** (2026-08-18, ~10:45 WIB, di sesi lanjutan setelah handoff):
-- [x] F-01 — celah tenant isolation (P0)
-- [ ] F-02 — retensi/penghapusan data kandidat (P0) — tidak dipilih
-- [x] F-03 — kebocoran channel B6 (P1, ada bukti konkret di kode)
-- [x] F-04 — confidence portfolio tidak diverifikasi (P1)
-- [x] F-05 — narasi fit/gap kurang lengkap (P1)
-- Lainnya: —
-- **Alasan:** dipilih Opsi C (F-04+F-05) + Opsi A (F-01) + Opsi B (F-03) dari `codebase-audit.md`
-  §7 — lebih luas dari steer awal MY-TASK.md ("1-2 temuan"), disadari eksplisit saat diputuskan
-  (~3x footprint vs ~3.5 jam slack yang ada). **Priority order eksplisit, bukan paralel**:
-  **C → A → B**, masing-masing timeboxed. Kalau waktu mepet, **B yang dipotong duluan** (jadi
-  "documented, not implemented" di laporan) — bukan A atau C, karena B satu-satunya yang butuh
-  verifikasi audio live (paling sulit diprediksi waktunya, lihat catatan Opsi B di audit §7),
-  sementara C (2 P1 sekaligus, tidak butuh audio live, bisa full test coverage dengan stub
-  Gemini client) dan A (satu-satunya P0 defect asli, effort M terukur) adalah nilai inti yang
-  mau dijaga tuntas & teruji, bukan sekadar disentuh.
+⏳ **DIBUKA LAGI (2026-08-18, ~11:00 WIB)** — sempat ditulis "DIPUTUSKAN" (C→A→B) sebelumnya di
+sesi ini, itu **prematur** dan sudah dikoreksi Fadhil. Brief membolehkan revamp/enhancement apa
+pun (bug dari audit, UX gap yang ditemukan sendiri saat testing, atau ide baru) selama reasoning
+& impact-nya kuat — bukan wajib pilih dari `codebase-audit.md` §6 saja, dan severity (P0-P3)
+bukan otomatis = scope terbaik untuk case study (P0 security bug bisa jadi punya product story
+yang tipis; P1 product-trust gap bisa punya surface area & ruang demonstrasi lebih luas).
+A/B/C dari audit sekarang berstatus **known findings**, bukan 3 opsi tinggal pilih satu — lihat
+tabel lengkap + klasifikasi (jenis vs severity vs kandidat-scope, tiga sumbu terpisah) di
+[EXPLORATION_LOG.md § Problem Map](EXPLORATION_LOG.md#problem-map--known-findings--exploration-belum-final).
+- [ ] F-01 — celah tenant isolation (P0)
+- [ ] F-02 — retensi/penghapusan data kandidat (P0)
+- [ ] F-03 — kebocoran channel B6 (P1, ada bukti konkret di kode)
+- [ ] F-04 — confidence portfolio tidak diverifikasi (P1)
+- [ ] F-05 — narasi fit/gap kurang lengkap (P1)
+- [ ] Sesuatu di luar audit (UX gap/enhancement baru dari exploration) — lihat tema "dead-end
+      state guidance" yang dihipotesiskan dari B-03 di Problem Map, belum ditelusuri tuntas
+- **Proses:** lanjutkan exploration journey dulu (Coverage/Live Monitor real-time, Confidence
+  standalone page, Hiring Decision, sapuan dead-end-state) sampai problem map terasa cukup
+  lengkap, baru pilih scope final — bukan dikunci lebih awal.
 
 ### 4.2 — Pendekatan teknis (Option A vs Option B)
-🔄 **IN PROGRESS** — bukan lagi keputusan Fadhil sendirian; ini dirumuskan bareng Claude lewat
-Plan mode (per finding: C, lalu A, lalu B, sesuai urutan §4.1) sebelum coding mulai, supaya
-trade-off matrix (Product Impact vs Cost, Maintainability, Failure Modes, Contextual Fit) yang
-diminta brief punya isi asli, bukan diisi buru-buru cuma buat centang kotak. Lihat riwayat sesi
-untuk plan yang disetujui.
+⏳ **MENUNGGU §4.1** — trade-off matrix (Product Impact vs Cost, Maintainability, Failure Modes,
+Contextual Fit) baru bisa dirumuskan setelah scope final jelas, supaya isinya asli bukan
+buru-buru cuma buat centang kotak.
 - Option A: ______________________
 - Option B: ______________________
 - Dipilih: ______________________ karena: ______________________
@@ -214,18 +215,18 @@ untuk plan yang disetujui.
   exploration (B-01..B-05) — harus mengikuti scope final §4.1 (C/A/B), yang baru jelas sekarang.
 
 ### 4.4 — Klaim kedalaman (backend-heavy vs frontend-heavy)
-✅ **Terjawab otomatis oleh §4.1** (bukan keputusan baru, cuma konsekuensi mekanis): F-01, F-03,
-F-04, F-05 semuanya backend-dominant per deskripsi `codebase-audit.md` §7 sendiri (Opsi C
-eksplisit ditulis "dominan backend"; Opsi A = migration+controller; Opsi B = websocket channel).
-- [x] Backend-heavy
+⏳ **MENUNGGU §4.1 lagi** — sebelumnya ditulis "terjawab otomatis" dengan asumsi scope pasti
+F-01/F-03/F-04/F-05 (semua backend-dominant); asumsi itu sudah tidak valid sejak §4.1 dibuka
+lagi. Kalau problem map akhirnya mengarah ke tema UX/frontend (mis. dead-end-state guidance),
+jawabannya bisa Frontend-heavy — genuinely tergantung hasil exploration lanjutan.
+- [ ] Backend-heavy
 - [ ] Frontend-heavy
-- **Catatan:** kalau ternyata salah baca situasinya, gampang dikoreksi — tinggal bilang.
+- Catatan: ______________________
 
 ### 4.5 — Arah visual dari Langkah 3
-⏳ **MASIH TERBUKA — genuinely belum diputuskan** (beda dari 4.4, ini bukan konsekuensi mekanis
-dari §4.1). Dengan scope §4.1 sekarang 3 temuan backend, condong kuat ke **Arah 1** by
-necessity (budget frontend-polish realistis menyusut), tapi ini bukan keputusan yang saya buat
-untuk kamu — masih perlu kamu konfirmasi atau override kalau maunya lain:
+⏳ **MASIH TERBUKA** — belum diputuskan, dan sekarang malah lebih terbuka lagi (bisa jadi arah
+visual ini melebur dengan §4.1 kalau scope akhirnya UX/frontend-heavy, bukan sekadar polish
+terpisah dari perbaikan backend):
 - [ ] Arah 1 — Polish minimal
 - [ ] Arah 2 — Ekspresif dengan micro-interaction
 

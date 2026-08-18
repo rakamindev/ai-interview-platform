@@ -53,6 +53,45 @@ HIRING DECISION                   ⚪ NOT TESTED
 
 ---
 
+## Problem Map — Known Findings + Exploration, Belum Final
+
+**Koreksi penting (2026-08-18, ~11:00 WIB):** sempat ditulis di percakapan sebagai "tugas ini
+cuma perbaiki bug dari audit" dan sempat treat C→A→B sebagai keputusan final §4.1. Itu salah,
+diluruskan oleh Fadhil: brief membolehkan revamp/enhancement apa pun (bug, UX gap, atau ide baru)
+selama reasoning & impact-nya kuat — bukan wajib pilih dari `codebase-audit.md` §6 saja. A/B/C
+(dan bug-bug B-01..B-05 di bawah) berstatus **known findings untuk problem map**, BUKAN 3 opsi
+yang tinggal dipilih satu. §4.1 di `ROADMAP.md` dibuka lagi — exploration journey lanjut dulu
+sebelum scope final dipilih.
+
+**Klasifikasi (jenis ≠ severity ≠ otomatis best scope — tiga sumbu berbeda, jangan dicampur):**
+
+| Finding | Sumber | Jenis | Severity | Kandidat scope? |
+|---|---|---|---|---|
+| A — Cross-tenant access (F-01) | Audit | 🔴 Security bug | P0 | Ya, perlu dipertimbangkan — tapi product story-nya relatif sempit ("tambah tenant scoping") |
+| B — AI internal signal leak / B6 (F-03) | Audit | 🔴 Architecture/AI safety bug | P1 (berpotensi P0) | Ya, perlu dipertimbangkan — tapi verifikasi butuh audio live (schedule risk nyata) |
+| C — Confidence self-report + Fit/Gap narrative dangkal (F-04+F-05) | Audit | 🟠 Product/AI trust gap | P1 | Sangat menarik — surface area luas (Evidence→Coverage→Confidence→Portfolio→Fit/Gap→Hiring Decision), ruang frontend besar |
+| B-03 — Empty vacancy dropdown tanpa CTA | Exploration (sudah di-patch di 1 titik) | 🟡 UX gap | Belum tahu — **contoh pertama** dari kemungkinan tema lebih besar | Perlu dicek: apakah dead-end state serupa berulang di banyak tempat (no candidate, no evidence, no portfolio, generation pending/failed, dll)? Kalau ya → tema produk sendiri yang lebih besar dari B-03 doang. **Belum ditelusuri sengaja.** |
+| B-04 — PDF export 500 (Prawn Unicode crash) + silent export failure (frontend tanpa `catch`) | Exploration (sudah difix) | 🔴 Correctness bug (fitur PRD N14) | P1-ish (fitur eksplisit PRD gagal total) | Sudah difix minimal untuk lanjut testing — bukan diklaim sebagai scope §4.1 |
+| B-05 — Export filename fallback ke label generik ("Assessment") | Exploration (sudah difix) | 🟡 Correctness bug kecil | P3 (kosmetik) | Sudah difix, satu cluster dengan B-04 — bukan scope §4.1 |
+| B-01 — Speed test false negative | Exploration (sudah difix) | 🔴 Exploration blocker | Tinggi untuk testing, tidak relevan untuk end-user asli | Bukan scope — minimal fix supaya testing bisa lanjut |
+| B-02 — Gemini API key salah tipe | Exploration (sudah difix) | ⚙️ Infra/config, bukan product bug | N/A | Bukan scope |
+
+**Yang masih perlu ditelusuri sebelum problem map bisa disebut lengkap** (per journey map di
+atas): Coverage/Live Monitor real-time dengan key baru (⚪, butuh interview baru + audio —
+di luar kemampuan saya, mic browser otomatis diblokir sistem, lihat STEP 01), Confidence sebagai
+halaman berdiri sendiri (belum dicek), Hiring Decision (⚪ NOT TESTED sama sekali), dan yang
+paling penting per diskusi ini: **sapuan sengaja lintas produk untuk pola "dead-end/incomplete-
+state guidance"** yang dihipotesiskan dari B-03 — sejauh ini sudah kelihatan sekilas beberapa
+instance lain tanpa dicatat sistematis (kotak merah "Portfolio generation failed" di STEP 03,
+spinner "Generating fit/gap report..." saat regenerasi) tapi belum di-treat sebagai satu tema.
+
+**Keputusan proses ke depan:** lanjutkan walkthrough dulu (PRD + code + audit yang sudah ada +
+browser testing + observasi baru), setiap temuan baru masuk ke tabel ini, baru §4.1 dipilih
+setelah problem map ini terasa cukup lengkap — bukan dikunci lebih awal cuma karena audit sudah
+menuliskan A/B/C duluan.
+
+---
+
 ## Bug / Problem Tracking
 
 | ID | Bug | Page | User | Blocker? | Root Cause | Fix Now? | Candidate Scope? |
