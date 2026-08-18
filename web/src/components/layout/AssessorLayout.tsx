@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const navItems = [
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
@@ -27,7 +28,7 @@ export default function AssessorLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
-      <header className="border-b bg-white sticky top-0 z-40">
+      <header className="border-b bg-background sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
@@ -58,6 +59,7 @@ export default function AssessorLayout() {
                 Tenant: {tenant.name}
               </span>
             )}
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-1.5" />
               Logout

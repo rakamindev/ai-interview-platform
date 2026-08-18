@@ -2,36 +2,36 @@ interface ConfidenceIndicatorProps {
   confidence: string; // "high" | "medium" | "low" from API
 }
 
-function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
+function getLabel(c: string): "high" | "medium" | "low" {
   const normalized = c?.toLowerCase();
-  if (normalized === "high") return "HIGH";
-  if (normalized === "medium") return "MEDIUM";
-  return "LOW";
+  if (normalized === "high") return "high";
+  if (normalized === "medium") return "medium";
+  return "low";
 }
 
 export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
   const label = getLabel(confidence);
 
-  if (label === "HIGH") {
+  if (label === "high") {
     return (
-      <span className="flex items-center gap-1 text-xs text-green-600">
-        <span className="h-2 w-2 rounded-full bg-green-500" />
-        Confidence: HIGH
+      <span className="flex items-center gap-1 text-xs text-verdict-match">
+        <span className="h-2 w-2 rounded-full bg-verdict-match" />
+        High confidence
       </span>
     );
   }
-  if (label === "MEDIUM") {
+  if (label === "medium") {
     return (
-      <span className="flex items-center gap-1 text-xs">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        Confidence: MEDIUM
+      <span className="flex items-center gap-1 text-xs text-verdict-gap">
+        <span className="h-2 w-2 rounded-full bg-verdict-gap" />
+        Medium confidence
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-1 text-xs text-destructive">
-      <span className="h-2 w-2 rounded-full bg-destructive" />
-      Confidence: LOW
+    <span className="flex items-center gap-1 text-xs text-verdict-unknown">
+      <span className="h-2 w-2 rounded-full bg-verdict-unknown" />
+      Low confidence
     </span>
   );
 }

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Inter:wght@100..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,6 +37,15 @@
         --ring: 184 99% 31%;
 
         --radius: 0.5rem;
+
+        /* Verdict tokens — light */
+        --verdict-exceed: 170 65% 34%;    /* teal-600 */
+        --verdict-match: 172 67% 29%;     /* teal-700 */
+        --verdict-gap: 38 92% 50%;        /* amber-700 */
+        --verdict-unknown: 217 19% 46%;   /* slate-500 */
+        --verdict-absent: 214 20% 80%;    /* slate-300 */
+        --rail-track: 214 20% 90%;        /* slate-200 */
+        --mark-requirement: 222 47% 11%;  /* slate-900 */
     }
 
     .dark {
@@ -65,6 +76,15 @@
         --border: 217 33% 17%;
         --input: 217 33% 17%;
         --ring: 184 99% 31%;
+
+        /* Verdict tokens — dark */
+        --verdict-exceed: 170 55% 44%;    /* teal-400 */
+        --verdict-match: 174 62% 44%;     /* teal-300 */
+        --verdict-gap: 40 96% 53%;        /* amber-400 */
+        --verdict-unknown: 215 20% 57%;   /* slate-400 */
+        --verdict-absent: 217 33% 17%;    /* slate-700 */
+        --rail-track: 217 33% 14%;        /* slate-800 */
+        --mark-requirement: 210 40% 98%;  /* slate-100 */
     }
 }
 
