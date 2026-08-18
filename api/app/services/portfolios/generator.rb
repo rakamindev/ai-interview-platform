@@ -30,6 +30,11 @@ module Portfolios
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
+    rescue Gemini::HttpClient::RateLimitError => e
+      # Reset to pending so the worker can retry without getting stuck in 'generating'
+      portfolio&.update!(generation_status: 'pending', generation_error: nil)
+      Rails.logger.warn("[N10] Rate limited for session #{@session.id} — resetting to pending for retry")
+      raise
     rescue => e
       portfolio&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")

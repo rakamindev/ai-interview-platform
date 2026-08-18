@@ -16,19 +16,22 @@ import VoiceBars from "@/components/interview/VoiceBars";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
+import InterviewPrep from "@/components/interview/InterviewPrep";
 import { useAudioCapture } from "@/hooks/useAudioCapture";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import ThankYouScreen from "@/components/interview/ThankYouScreen";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
+  const [uiStep, setUiStep] = useState<"preparation" | "hardware_check" | "ready">("preparation");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
@@ -39,14 +42,18 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
-  // Fetch candidate info
+  // Fetch candidate info — start at "preparation" step, skip straight to "complete" if session ended
   useEffect(() => {
     if (!token) return;
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") {
+          setInterviewState("complete");
+        } else {
+          setInterviewState("idle"); // "idle" = preparation screen
+        }
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
@@ -58,7 +65,6 @@ export default function InterviewPage() {
     setInterviewState(state);
 
     if (state === "draining_audio") {
-      // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
       muteRef.current?.();
       audioCompleteCalledRef.current = false;
       // Safety timeout: call audio_complete after 10s even if drain never fires
@@ -184,61 +190,52 @@ export default function InterviewPage() {
     interviewState === "reconnecting"
       ? connectionLostLong ? "lost" : "reconnecting"
       : connectionState === "connected"
-      ? "connected"
-      : "reconnecting";
+        ? "connected"
+        : "reconnecting";
 
-  // ── State A: Pre-start ──────────────────────────────────────────────────
-  if (interviewState === "idle") {
+  // ── Step 0: Loading ─────────────────────────────────────────────────────
+  if (interviewState === "idle" && !candidateInfo) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-xl mx-auto px-4 py-16 flex items-center justify-center">
+        <div className="text-sm text-muted-foreground animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  // ── Step 1: Preparation ─────────────────────────────────────────────────
+  if (interviewState === "idle" && uiStep === "preparation") {
+    return (
+      <InterviewPrep
+        candidateInfo={candidateInfo!}
+        onContinue={() => setUiStep("hardware_check")}
+      />
+    );
+  }
+
+  // ── Step 2: Hardware check ──────────────────────────────────────────────
+  if (interviewState === "idle" && uiStep === "hardware_check") {
+    return (
+      <div className="max-w-2xl mx-auto w-full px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
-          {candidateInfo && (
-            <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Device check — {candidateInfo?.time_limit_min} minutes
+          </p>
         </div>
-
-        {!hardwareCheckDone ? (
-          <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-              <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
-            </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
-              <Mic className="h-4 w-4 mr-2" />
-              Start Interview
-            </Button>
-          </div>
-        )}
+        <HardwareCheck
+          onStart={() => {
+            setHardwareCheckDone(true);
+            setUiStep("ready");
+            startInterview();
+          }}
+        />
       </div>
     );
   }
 
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
-      </div>
-    );
+    return <ThankYouScreen token={token!} initialInfo={candidateInfo} />;
   }
 
   // ── States B/C/D/E: Active interview ────────────────────────────────────
@@ -248,7 +245,7 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="flex items-center justify-between py-3 border-b sticky top-0 bg-white z-10">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -336,29 +333,29 @@ export default function InterviewPage() {
             )}
           </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>End interview?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to end the interview early?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
-            onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
-          </Button>
-        )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">End Interview</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>End interview?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to end the interview early?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          {import.meta.env.DEV && (
+            <Button variant="outline" size="sm" className="text-xs opacity-50"
+              onClick={() => sendJson({ type: "debug_force_reconnect" })}>
+              ⚡ Force reconnect
+            </Button>
+          )}
         </div>
       </div>
 

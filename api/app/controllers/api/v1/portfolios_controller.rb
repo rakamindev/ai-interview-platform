@@ -47,9 +47,11 @@ module Api
 
       # GET /api/v1/portfolios/:id/export
       def export
-        format = params.fetch(:format, "json")
+        # Use :export_format to avoid collision with Rails' reserved :format param
+        # (which is used internally for response format negotiation).
+        export_format = params.fetch(:export_format, "json")
 
-        unless %w[pdf json].include?(format)
+        unless %w[pdf json].include?(export_format)
           return json_error("Format must be 'pdf' or 'json'", :unprocessable_entity)
         end
 
@@ -57,7 +59,7 @@ module Api
           return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})", :unprocessable_entity)
         end
 
-        if format == "pdf"
+        if export_format == "pdf"
           vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
