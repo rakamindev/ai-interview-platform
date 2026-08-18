@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.for_tenant(current_tenant_id).find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -91,17 +91,23 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        report = FitGap::ReportCoordinator.new(
+          portfolio: portfolio,
+          vacancy: vacancy
+        ).call
 
-        render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+        render json: {
+          status: "generating",
+          message: "Fit/gap report regeneration queued",
+          report: fit_gap_json(report)
+        }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_tenant(current_tenant_id).find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -119,15 +125,23 @@ module Api
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        report = FitGap::ReportCoordinator.new(
+          portfolio: portfolio,
+          vacancy: vacancy
+        ).call
+
+        render json: {
+          status: "generating",
+          message: "Fit/gap report generation queued",
+          report: fit_gap_json(report)
+        }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_tenant(current_tenant_id).find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -153,7 +167,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.for_tenant(current_tenant_id).find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -198,14 +212,24 @@ module Api
       end
 
       def fit_gap_json(report)
+        comparison_payload = FitGap::ComparisonBuilder.new(
+          portfolio: report.portfolio,
+          vacancy: report.vacancy
+        ).call
+
         {
-          id:                report.id,
-          portfolio_id:      report.portfolio_id,
-          vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
-          culture_narrative: report.culture_narrative,
-          overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          id:                       report.id,
+          portfolio_id:             report.portfolio_id,
+          vacancy_id:               report.vacancy_id,
+          skill_comparisons:        comparison_payload[:skill_comparisons],
+          summary:                  comparison_payload[:summary],
+          caveats:                  comparison_payload[:caveats],
+          additional_skill_signals: comparison_payload[:additional_skill_signals],
+          culture_narrative:        report.culture_narrative,
+          overall_narrative:        report.overall_narrative,
+          narrative_status:          report.narrative_status,
+          narrative_error:           report.narrative_error,
+          generated_at:              report.generated_at
         }
       end
 

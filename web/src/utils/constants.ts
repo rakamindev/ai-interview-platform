@@ -1,4 +1,36 @@
-export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
+export const TIME_LIMIT_OPTIONS = [
+  {
+    value: 10,
+    label: "10 min",
+  },
+  {
+    value: 30,
+    label: "30 min",
+  },
+  {
+    value: 45,
+    label: "45 min",
+  },
+  {
+    value: 60,
+    label: "60 min",
+  },
+  {
+    value: 90,
+    label: "90 min",
+  },
+] as const;
+
+export const INTERVIEW_LANGUAGE = [
+  {
+    value: "en",
+    label: "English",
+  },
+  {
+    value: "id",
+    label: "Indonesia",
+  },
+] as const;
 
 /** Parse "L3" → 3, passthrough number, fallback to 1 */
 export function parseLevel(level: string | number): number {
@@ -15,6 +47,14 @@ export const LEVEL_LABELS: Record<number, string> = {
   5: "L5",
 };
 
+export const LEVEL_PLACEHOLDERS: Record<number, string> = {
+  1: "What does L1 look like for this skill?",
+  2: "What does L2 look like for this skill?",
+  3: "What does L3 look like for this skill?",
+  4: "What does L4 look like for this skill?",
+  5: "What does L5 look like for this skill?",
+};
+
 export const LEVEL_DESCRIPTIONS: Record<number, string> = {
   1: "Foundational",
   2: "Functional",
@@ -23,7 +63,6 @@ export const LEVEL_DESCRIPTIONS: Record<number, string> = {
   5: "Expert",
 };
 
-// L-badge colors (Tailwind classes)
 export const LEVEL_BADGE_CLASSES: Record<number, string> = {
   1: "bg-neutral-200 text-neutral-700",
   2: "bg-blue-100 text-blue-700",
@@ -63,8 +102,8 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "bg-green-50 text-green-700",
+  gap: "bg-amber-50 text-amber-700",
+  exceed: "bg-green-50 text-green-700",
+  not_assessed: "bg-neutral-50 text-neutral-500",
 };

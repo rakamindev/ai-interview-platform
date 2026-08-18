@@ -1,10 +1,12 @@
-# Local Development Setup
+# AI Interview Platform — Web Revamp
+
+Frontend for the AI Interview Platform. Built on **Vite + React + TypeScript** with **TanStack Router** and **TanStack Query**, styling with **Tailwind CSS v4** and **@base-ui/react**.
 
 ## Prerequisites
 
 - **Node.js** (v18+ recommended)
 - **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
+- A running backend API server (default: `http://localhost:3001`)
 
 ## Quick Start
 
@@ -19,14 +21,15 @@ cp .env.example .env
 Edit `.env` with your local values:
 
 ```env
-# Backend API base URL
+# Backend API base URL (includes /api/v1 prefix)
 VITE_API_BASE_URL=http://localhost:3001/api/v1
 
 # WebSocket base URL (no /api/v1)
 VITE_WS_BASE_URL=ws://localhost:3001
 
-# Dev auth token — replace with a real JWT from Rakamin platform
-VITE_DEV_TOKEN=<your-jwt-here>
+# Speed test endpoints — when set, used instead of external services (leave blank to use external CDN/httpbin)
+VITE_SPEED_TEST_PING_URL=http://localhost:3001/api/v1/speed_test/ping
+VITE_SPEED_TEST_UPLOAD_URL=http://localhost:3001/api/v1/speed_test/upload
 
 # Dev tenant context
 VITE_DEV_TENANT_ID=1
@@ -45,55 +48,68 @@ The app will be available at **http://localhost:5173**.
 | Command             | Description                          |
 | ------------------- | ------------------------------------ |
 | `npm run dev`       | Start Vite dev server with HMR       |
-| `npm run build`     | Type-check with `tsc` then build     |
+| `npm run build`     | Build the production bundle          |
 | `npm run preview`   | Preview the production build locally |
+| `npm run typecheck` | Type-check with `tsc --noEmit`       |
+| `npm run lint`      | Run ESLint                           |
+| `npm run test`      | Run unit tests with Vitest           |
+| `npm run format`    | Format files with Prettier           |
 
 ## Environment Variables
 
-| Variable                    | Required | Description                                         |
-| --------------------------- | -------- | --------------------------------------------------- |
-| `VITE_API_BASE_URL`        | Yes      | Backend REST API base URL                           |
-| `VITE_WS_BASE_URL`         | Yes      | WebSocket server URL (used for live audio streaming)|
-| `VITE_DEV_TOKEN`           | Yes      | JWT for authenticating in local development         |
-| `VITE_DEV_TENANT_ID`       | Yes      | Tenant ID for multi-tenant context                  |
-| `VITE_DEV_TENANT_NAME`     | Yes      | Tenant display name                                 |
-| `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint for hardware check speed test  |
-| `VITE_SPEED_TEST_UPLOAD_URL`| No      | Custom upload endpoint for speed test               |
-| `VITE_REQUIRE_CAMERA`      | No       | Set to `"true"` to enforce camera check (default: `"false"`) |
+| Variable                     | Required | Description                                                  |
+| ---------------------------- | -------- | ------------------------------------------------------------ |
+| `VITE_API_BASE_URL`          | Yes      | Backend REST API base URL (includes `/api/v1`)               |
+| `VITE_WS_BASE_URL`           | Yes      | WebSocket server URL (used for live audio streaming)         |
+| `VITE_SPEED_TEST_PING_URL`   | No       | Custom ping endpoint for hardware check speed test           |
+| `VITE_SPEED_TEST_UPLOAD_URL` | No       | Custom upload endpoint for speed test                        |
+| `VITE_REQUIRE_CAMERA`        | No       | Set to `"true"` to enforce camera check (default: `"false"`) |
+| `VITE_DEV_TENANT_ID`         | No       | Tenant ID for multi-tenant context                           |
+| `VITE_DEV_TENANT_NAME`       | No       | Tenant display name                                          |
 
 ## Tech Stack
 
-- **React 18** with TypeScript
-- **Vite 5** (build tool)
-- **Tailwind CSS 3** (styling)
-- **Radix UI** (accessible UI primitives)
+- **React** + **TypeScript**
+- **Vite** (build tool) + **TanStack Router** (file-based routing) + **TanStack Query** (server state)
+- **Tailwind CSS v4** (styling) + **tw-animate-css** + **lucide-react** (icons)
+- **@base-ui/react** (accessible UI primitives — `components/ui` are thin wrappers)
 - **Jotai** (state management)
-- **React Hook Form + Zod** (form validation)
-- **Axios** (HTTP client)
-- **React Router DOM 7** (routing)
+- **React Hook Form + Valibot** (form validation)
+- **ky** (HTTP client)
 
 ## Project Structure
 
 ```
 src/
-├── components/         # Reusable UI components
-│   ├── ui/             # Base UI primitives (shadcn/ui style)
-│   ├── interview/      # Interview session components
-│   ├── assessment/     # Assessment management components
-│   ├── portfolio/      # Candidate portfolio/results
-│   └── layout/         # Layout wrappers
-├── hooks/              # Custom React hooks (audio capture, playback, WebSocket)
-├── pages/              # Route-level page components
-├── services/           # API clients (Axios instance, endpoints)
-├── stores/             # Jotai atoms (auth, tenant)
-├── types/              # TypeScript type definitions
-└── utils/              # Utility functions
+├── components/
+│   ├── layout/         # App / auth / candidate layout wrappers, header, nav
+│   └── ui/             # Base UI primitives (@base-ui/react wrappers, shadcn/ui style)
+├── features/           # Feature-scoped modules
+│   ├── assessment/     # Assessment CRUD, invite, list/detail
+│   ├── auth/           # Login, current-user (queries /auth/me)
+│   ├── candidate/      # Candidate-facing interview (hardware check, session API)
+│   ├── portfolio/      # Portfolio results, fit/gap, overrides, export
+│   ├── session/        # Session monitor, transcript, real-time audio hooks/WS
+│   ├── skill-taxonomy/ # Reference skill data
+│   └── vacancy/        # Vacancy CRUD
+│       (each feature: components/ queries/ mutations/ schemas/ hooks/)
+├── hooks/              # Shared custom hooks
+├── lib/                # api-client (ky wrapper), utils
+├── providers/          # Theme provider
+├── routes/             # File-based routes (TanStack Router)
+│   ├── _auth/          # Login
+│   ├── _protected/     # Assessor app (requires JWT)
+│   └── _public/        # Candidate-facing pages (no auth), e.g. /interview/:token
+├── stores/             # Jotai atoms (auth)
+└── utils/              # Constants, helpers, hardware/speed-test utils
 public/
 └── audio-worklet-processor.js  # Audio worklet for real-time PCM processing
 ```
 
 ## Notes
 
-- The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
-- Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
+- The `@` path alias resolves to `./src` (configured in `tsconfig.json` / Vite `tsconfigPaths`).
+- Routes are file-based via TanStack Router — the route tree is generated from `src/routes/` on dev/build.
+- Forms use **Valibot** schemas (not zod); HTTP calls go through `apiClient` (a `ky` wrapper in `src/lib/api-client.ts`).
+- Audio features (candidate interview) require microphone/speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`. The `audio-worklet-processor.js` asset must be present in `public/`.
 - The backend must be running for authentication, session management, and real-time audio streaming to work.

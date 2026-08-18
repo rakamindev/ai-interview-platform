@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(:sessions, :assessment_skills).order(created_at: :desc)
         )
 
         json_response(
@@ -49,8 +49,11 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
+        end
       end
 
       private
@@ -79,14 +82,16 @@ module Api
         latest = assessment.sessions.max_by(&:created_at)
 
         {
-          id:             assessment.id,
-          name:           assessment.name,
-          time_limit_min: assessment.time_limit_min,
-          language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
-          created_by:     assessment.created_by,
-          created_at:     assessment.created_at,
-          updated_at:     assessment.updated_at,
+          id:               assessment.id,
+          name:             assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          language:         assessment.language || 'en',
+          system_prompt:    assessment.system_prompt,
+          created_by:       assessment.created_by,
+          created_at:       assessment.created_at,
+          updated_at:       assessment.updated_at,
+          skills_count:     assessment.assessment_skills.size,
+          candidates_count: assessment.sessions.size,
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,

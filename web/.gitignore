@@ -1,6 +1,7 @@
 node_modules
 dist
 tech-docs
+.tanstack
 
 # env
 .env
@@ -21,3 +22,7 @@ Thumbs.db
 # logs
 *.log
 npm-debug.log*
+
+
+# typescript
+*.tsbuildinfo

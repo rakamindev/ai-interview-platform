@@ -31,6 +31,17 @@ Fill in the required values in `config/application.yml`:
 
 ---
 
+## Speed test endpoints
+
+Candidate hardware checks are public and do not require JWT or tenant headers:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/speed_test/ping` | Cache-resistant latency probe |
+| `POST` | `/api/v1/speed_test/upload` | Receives upload payload and returns `received_bytes` |
+
+Upload payloads are limited to 10 MB. Frontend uses these endpoints by default; `VITE_SPEED_TEST_PING_URL` and `VITE_SPEED_TEST_UPLOAD_URL` can override them.
+
 ## 2. Install dependencies
 
 ```bash
@@ -78,7 +89,7 @@ Runs on **port 3001** by default.
 ## 7. Start the frontend
 
 ```bash
-cd ../ai-interview-web
+cd ../web
 npm install
 npm run dev
 ```
@@ -94,4 +105,4 @@ Runs on **port 5173** by default.
 | Redis | `docker run -d -p 6379:6379 --name redis redis:alpine` | 6379 |
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
-| Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+| Frontend | `npm run dev` (in `web/`) | 5173 |

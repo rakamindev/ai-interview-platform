@@ -36,8 +36,20 @@ module Exports
 
     private
 
+    # Prawn's built-in fonts only support Windows-1252 (WinAnsi). Re-encode
+    # arbitrary UTF-8 (AI-generated text, evidence quotes, emojis…) so unknown
+    # glyphs degrade to a safe placeholder instead of raising
+    # "text that's not compatible with the Windows-1252 character set".
+    def winansi_safe(text)
+      return '' if text.nil?
+
+      text.to_s
+          .encode('Windows-1252', invalid: :replace, undef: :replace, replace: '?')
+          .encode('UTF-8')
+    end
+
     def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
+      pdf.font_size(22) { pdf.text winansi_safe(@assessment.name), style: :bold }
       pdf.move_down 4
       pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
       pdf.move_down 4
@@ -79,25 +91,27 @@ module Exports
       effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text winansi_safe(skill.skill_label), style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        if override
+          level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} -> Override: #{LEVEL_LABELS[override.override_level]})"
+        end
+        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || winansi_safe(skill.ai_confidence)}"
+        pdf.text winansi_safe(level_text)
       end
 
       pdf.move_down 4
 
       if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
+        pdf.font_size(10) { pdf.text winansi_safe(skill.competency_summary) }
       end
 
       if skill.evidence.any?
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each { |quote| pdf.text "  • #{winansi_safe(quote)}" }
         end
       end
 
@@ -105,7 +119,7 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
+          pdf.text "  #{winansi_safe(override.assessor_notes)}"
         end
       end
 
@@ -116,7 +130,7 @@ module Exports
     def render_fit_gap_section(pdf)
       pdf.start_new_page
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{winansi_safe(@vacancy.role_title)}", style: :bold }
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
@@ -124,10 +138,10 @@ module Exports
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
         table_data << [
-          c['skill_label'],
+          winansi_safe(c['skill_label']),
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
+          RESULT_LABELS[c['result']] || winansi_safe(c['result']),
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
         ]
       end
@@ -143,14 +157,14 @@ module Exports
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
+        pdf.font_size(10) { pdf.text winansi_safe(@fit_gap.culture_narrative) }
       end
 
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
         pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
+        pdf.font_size(10) { pdf.text winansi_safe(@fit_gap.overall_narrative) }
       end
     end
 

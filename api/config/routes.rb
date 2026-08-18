@@ -7,14 +7,13 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      get  'auth/me',    to: 'authentication#me'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
-      post 'speed_test', to: proc { |env|
-        bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
-      }
+      # Candidate hardware checks — public, no JWT or tenant required.
+      get  'speed_test/ping',   to: 'speed_tests#ping'
+      post 'speed_test/upload', to: 'speed_tests#upload'
 
       # Assessments
       resources :assessments do
