@@ -32,6 +32,7 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [pdpConsent, setPdpConsent] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,6 +201,22 @@ export default function InterviewPage() {
           )}
         </div>
 
+        <div className="border rounded-lg p-4 space-y-2 bg-blue-50/50 border-blue-200 text-xs text-muted-foreground">
+          <p className="font-semibold text-blue-900">Privacy Notice &amp; Consent (UU PDP)</p>
+          <p>
+            By proceeding, you consent to voice recording and data processing for skills assessment in compliance with Indonesia's Personal Data Protection Law (UU PDP).
+          </p>
+          <label className="flex items-center gap-2 pt-1 font-medium text-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={pdpConsent}
+              onChange={(e) => setPdpConsent(e.target.checked)}
+              className="rounded border-muted-foreground"
+            />
+            I consent to voice recording and data processing
+          </label>
+        </div>
+
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
@@ -208,7 +225,11 @@ export default function InterviewPage() {
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            {pdpConsent ? (
+              <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            ) : (
+              <p className="text-xs text-amber-600 font-medium">Please accept the privacy consent above to begin hardware check.</p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -216,7 +237,7 @@ export default function InterviewPage() {
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
+            <Button className="w-full" size="lg" onClick={startInterview} disabled={!pdpConsent}>
               <Mic className="h-4 w-4 mr-2" />
               Start Interview
             </Button>
