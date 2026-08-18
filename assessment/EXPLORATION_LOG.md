@@ -61,6 +61,7 @@ HIRING DECISION                   ⚪ NOT TESTED
 | B-02 | Coverage analysis (N7), Portfolio generation (N10), dan Fit/Gap engine **semua gagal** dengan `Gemini::HttpClient API error 400: API_KEY_INVALID` — sementara AI Interview (Gemini Live via WebSocket) jalan normal pakai `GEMINI_API_KEY` yang **sama persis** | Assessor → Portfolio Results (`Budi` / Flutter Engineer) | Assessor (dan tidak langsung: candidate, karena Coverage juga kena) | ⚠️ Ya — untuk lanjut explore COVERAGE/LIVE MONITOR/PORTFOLIO/CONFIDENCE/FIT-GAP. Tidak blocking AI INTERVIEW/EVIDENCE (jalur terpisah). | **Dikonfirmasi:** key lama di `application.yml` adalah API key Google Cloud yang **bound ke service account** (dibuat dari Cloud Console → Credentials) — tipe key untuk akses gaya Vertex AI/Agent Platform, bukan untuk endpoint REST klasik `generativelanguage.googleapis.com/v1` yang dipakai `Gemini::HttpClient` (`api/app/clients/gemini/http_client.rb:5`) dengan header `x-goog-api-key` (pola key AI Studio biasa). Live API (WebSocket, `live_client.rb`) ternyata menerima key service-account-bound ini, REST v1 tidak. | ✅ **Sudah** — user generate key baru langsung dari aistudio.google.com/apikey (key gaya AI Studio biasa, project sama), saya update `api/config/application.yml`, restart Puma+Sidekiq, retry Portfolio dari UI assessor → `[N10] Portfolio generated for session 2` (sukses, isi lengkap: skill ratings, evidence quotes, discovered skills, Fit/Gap section aktif). Key lama/baru tidak pernah masuk git (file gitignored). | ✅ Ini murni infra/config (jenis API key salah), bukan product bug — tidak masuk case-study scope. Catatan failure-UX ("Retry generik tanpa hint kenapa/harus ngapain") masih berlaku sebagai observasi terpisah kalau mau dipakai. |
 
 | B-03 | Dropdown "Choose vacancy..." di Portfolio Results tampil kosong tanpa penjelasan saat belum ada vacancy — beda dengan halaman `/vacancies` yang sudah benar kasih empty state + CTA "Create your first vacancy" | Portfolio Results (Fit/Gap section) | Assessor | ❌ Tidak — cuma perlu tau "pergi buat vacancy dulu di menu Vacancies", tidak menghalangi journey setelah tau caranya | Dropdown vacancy di halaman ini tidak menangani kasus list kosong dengan pesan/CTA, beda dari halaman Vacancies yang sudah punya empty state layak | ✅ Sudah — [PortfolioPage.tsx:234-260](../web/src/pages/portfolio/PortfolioPage.tsx#L234), empty-state (ikon + pesan + tombol "Create your first vacancy" → `/vacancies/new`) menggantikan dropdown kosong. Verified di browser (lihat detail di STEP 04). | ✅ Product initiative yang diminta secara eksplisit — dianggap perbaikan nyata, bukan cuma exploration housekeeping |
+| B-04 | PDF export 500 (crash Prawn: teks di luar Windows-1252, mis. smart quote/em dash dari transcript & narasi AI) + frontend tidak punya `catch` jadi kegagalan (PDF maupun JSON) tidak pernah terlihat user — persis gejala "tidak berfungsi" tanpa error | Portfolio Results (tombol PDF/JSON) | Assessor | ⚠️ Ya untuk PDF (fitur PRD N14 gagal total, 500 di server); frontend silent-failure berlaku juga ke JSON meski backend JSON-nya sendiri selalu 200 di tiap tes saya | Prawn pakai font bawaan (Windows-1252 only) tanpa font Unicode terdaftar; `handleExport` di frontend cuma try/finally, tidak ada catch → unhandled promise rejection, tidak ada pesan ke user | ✅ Sudah — vendor `DejaVuSans.ttf`/`DejaVuSans-Bold.ttf` (lisensi bebas dipakai ulang) + daftarkan sebagai default font Prawn ([pdf_generator.rb](../api/app/services/exports/pdf_generator.rb)); tambah `catch`+pesan error di frontend ([PortfolioPage.tsx](../web/src/pages/portfolio/PortfolioPage.tsx)). Verified: `file` konfirmasi PDF valid, browser 200 OK. | ✅ PDF = requirement PRD eksplisit (N14, Phase 5) — worth fixing. JSON dikonfirmasi TIDAK ada di PRD manapun (dicek langsung ke wiki), murni fitur developer. Lihat STEP 05 untuk analisis PRD lengkap + catatan F-01 masih terbuka di endpoint yang sama. |
 
 *(Bug non-blocker lain akan ditambahkan ke tabel ini sambil jalan.)*
 
@@ -460,3 +461,117 @@ langsung:
 isi form → Save → **mendarat balik di Portfolio Results yang sama** dengan vacancy baru
 langsung muncul di dropdown (re-fetch otomatis karena komponennya mount ulang). Type-check
 bersih.
+
+---
+
+# STEP 05
+
+**ROLE:** Assessor
+
+**PAGE:** Portfolio Results (Budi) — tombol "PDF" dan "JSON"
+
+**USER ACTION:** Klik tombol "PDF" / "JSON" untuk download hasil portfolio.
+
+**EXPECTED:** File ke-download.
+
+**ACTUAL:** Tidak terjadi apa-apa yang terlihat — tidak ada file, tidak ada pesan error.
+Dikonfirmasi user: "tidak berfungsi".
+
+**STATUS:** 🔴 FAIL → 🟢 **RESOLVED** (lihat detail di bawah).
+
+---
+
+**TRACE — root cause ganda (dua bug independen, sama-sama nyumbang ke gejala "tidak berfungsi"):**
+
+```
+USER klik "PDF"
+ ↓
+FRONTEND (PortfolioPage.tsx handleExport) → GET /portfolios/:id/export?format=pdf
+ ↓
+BACKEND (PortfoliosController#export) → Exports::PdfGenerator (gem Prawn)
+ ↓
+❌ Prawn CRASH: font bawaan Prawn (Helvetica dkk) cuma support Windows-1252,
+   BUKAN UTF-8. Teks apa pun dari evidence quote/competency summary/narrative
+   AI yang mengandung smart quote/em dash/karakter di luar Windows-1252 bikin
+   Prawn raise exception → 500 Internal Server Error
+ ↓
+BACKEND ExceptionHandler (rescue_from StandardError) → balikin JSON {errors:[...]}
+   dengan message asli + backtrace (development only) — TAPI ini tidak pernah
+   ke-log ke development.log sebagai exception biasa (ketutup rescue_from),
+   cuma ada di response body — harus dibaca dari network tab, bukan `tail log`
+ ↓
+FRONTEND: `handleExport` TIDAK PUNYA blok `catch` — cuma try/finally.
+   Error dari axios jadi **unhandled promise rejection**, `setExporting(null)`
+   tetap jalan (tombol balik normal) tapi TIDAK ADA pesan apa pun ke user
+ ↓
+User lihat: klik tombol → sebentar loading → balik normal → tidak ada file,
+   tidak ada error. Kelihatan "tidak berfungsi" tanpa petunjuk kenapa.
+```
+
+**Kenapa saya yakin ini gejala yang sama dengan laporan user** (bukan salah reproduksi):
+direproduksi ulang di tab browser bersih (console kosong) sebelum fix — `GET
+/api/v1/portfolios/1/export?format=pdf` beneran balik **500**, dan console browser
+beneran nunjukkin **"Uncaught (in promise)" AxiosError** — persis pola "klik, tidak ada
+respons visual, tidak ada error yang di-user-facing".
+
+**Kenapa JSON juga disebut user:** endpoint JSON (`build_export_json`, murni `to_json`
+biasa, tidak lewat Prawn) ternyata **selalu berhasil (200 OK)** tiap saya tes — kemungkinan
+besar user coba PDF & JSON berdekatan waktu dan menyimpulkan "keduanya tidak berfungsi",
+padahal cuma PDF yang benar-benar crash di backend. TAPI bug frontend #2 (tidak ada
+`catch`) berlaku untuk **kedua-duanya** — kalau JSON gagal karena sebab lain kapan pun
+nanti, user juga tidak akan lihat apa-apa. Jadi tetap layak di-fix di frontend untuk
+kedua format, bukan cuma PDF.
+
+---
+
+**ANALISIS PRD — apa sebenarnya diminta, dicek langsung ke wiki
+(`github.com/rakamindev/ai-interview-platform/wiki`, PRD-02 §Phase 5):**
+
+- **PDF = requirement eksplisit PRD.** Step **N14**, Phase 5 ("Review & Fit/Gap"):
+  *"Dimas exports PDF → N14 generates document → download served"*. Isi yang diminta:
+  tabel skill comparison (skill/required/candidate/match), narasi culture & competency,
+  evidence quote per skill, competency summary per skill — **persis** yang sudah
+  diimplementasikan di `pdf_generator.rb` (dan sudah dikonfirmasi [SESUAI] oleh
+  `codebase-audit.md` §2 item 10 sebelum bug ini ditemukan — strukturnya benar, cuma
+  eksekusinya crash kalau ada karakter tertentu). **Tidak ada instruksi branding/font
+  spesifik** di PRD, jadi pemilihan font Unicode bebas. **Tidak ada acceptance criteria
+  eksplisit** selain "sistem harus generate & serve dokumennya" — yang sekarang terpenuhi.
+- **JSON = TIDAK disebut sama sekali di PRD manapun** (PRD-01 maupun PRD-02). Ini murni
+  fitur tambahan developer (kemungkinan buat debugging/integrasi data mentah), bukan
+  requirement produk. Konsisten dengan `codebase-audit.md` §2 (tabel 11 item PRD) yang
+  juga tidak menyebut JSON sama sekali.
+
+---
+
+**FIX:**
+
+1. **Root cause (backend)** — [pdf_generator.rb](../api/app/services/exports/pdf_generator.rb):
+   vendor font Unicode (`DejaVuSans.ttf` + `DejaVuSans-Bold.ttf`, lisensi Bitstream
+   Vera/DejaVu — bebas dipakai ulang & didistribusikan, sumber: paket `mpdf` open-source
+   yang sudah ada di mesin ini, diverifikasi dulu isi filenya asli & lisensinya sebelum
+   dipakai) di `api/app/assets/fonts/`, didaftarkan sebagai default font Prawn sebelum
+   render apa pun (`register_unicode_font`). Prawn sendiri yang saranin ini di pesan
+   errornya: *"If you need full UTF-8 support, use external fonts instead of PDF's
+   built-in fonts."*
+2. **Silent failure (frontend)** — [PortfolioPage.tsx](../web/src/pages/portfolio/PortfolioPage.tsx):
+   tambah blok `catch` di `handleExport` + state `exportError` yang ditampilkan ke user.
+   Termasuk helper `extractErrorMessage` khusus karena request PDF pakai
+   `responseType: "blob"` — axios membungkus error body JADI Blob juga (bukan JSON biasa),
+   jadi perlu dibaca ulang sebagai text lalu di-parse manual, kalau tidak pesan errornya
+   sendiri gagal ditampilkan.
+
+**VERIFICATION:**
+- `rails runner` langsung generate PDF (portfolio + fit/gap section, yang paling berisiko
+  karena narasi AI) → `file` konfirmasi: **"PDF document, version 1.3"**, 45.582 bytes,
+  bukan file kosong/corrupt.
+- Browser (tab bersih): `GET /portfolios/1/export?format=pdf` → **200 OK** (sebelumnya 500).
+- Type-check frontend bersih, `ruby -c` syntax check backend bersih.
+
+**⚠️ Catatan penting yang TIDAK saya sentuh:** endpoint `export` ini adalah salah satu
+endpoint yang disebut eksplisit di **F-01** (`codebase-audit.md` §4.1, §6) — `set_portfolio`
+untuk action `export` jatuh ke `Portfolio.find(params[:id])` **tanpa filter tenant**, jadi
+assessor tenant mana pun bisa export PDF/JSON milik tenant lain kalau tahu/nebak ID-nya.
+Bug yang saya perbaiki di sini (encoding crash + silent failure) **independen** dari F-01
+dan tidak memperbaikinya maupun memperparahnya — tapi karena saya baru saja "menghidupkan"
+fitur export ini, F-01 di endpoint yang sama ini jadi lebih relevan untuk diprioritaskan,
+bukan kurang.

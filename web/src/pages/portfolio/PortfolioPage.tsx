@@ -12,6 +12,19 @@ import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Briefcase, Plus } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
+// PDF requests use responseType "blob", so an error body also arrives as a Blob
+// instead of parsed JSON — read it back out to surface the real backend message.
+async function extractErrorMessage(e: any, format: "pdf" | "json"): Promise<string> {
+  const fallback = `Failed to export ${format.toUpperCase()}. Please try again.`;
+  const data = e?.response?.data;
+  try {
+    const parsed = data instanceof Blob ? JSON.parse(await data.text()) : data;
+    return parsed?.errors?.[0]?.message ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
@@ -22,6 +35,7 @@ export default function PortfolioPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
@@ -66,6 +80,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -89,6 +104,8 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch (e: any) {
+      setExportError(await extractErrorMessage(e, format));
     } finally {
       setExporting(null);
     }
@@ -152,6 +169,10 @@ export default function PortfolioPage() {
           )}
         </div>
       </div>
+
+      {exportError && (
+        <p className="text-sm text-destructive -mt-2">{exportError}</p>
+      )}
 
       {/* Generating state */}
       {generating && (
