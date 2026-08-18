@@ -1,0 +1,13 @@
+{
+  "configured_skills": [
+    {
+      "skill_id": "SK-ENG-001",
+      "skill_label": "React / Frontend Development Core",
+      "level": 3,
+      "confidence": "very high",
+      "evidence": ["A confidence value outside the high/medium/low enum."],
+      "competency_summary": "Unknown confidence vocabulary."
+    }
+  ],
+  "discovered_skills": []
+}

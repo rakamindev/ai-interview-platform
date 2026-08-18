@@ -1,0 +1,29 @@
+{
+  "configured_skills": [
+    {
+      "skill_id": "SK-ENG-001",
+      "skill_label": "React / Frontend Development Core",
+      "level": "three",
+      "confidence": "high",
+      "evidence": ["The word three is not a number on the L1-L5 scale."],
+      "competency_summary": "Non-numeric level."
+    },
+    {
+      "skill_id": "SK-ENG-002",
+      "skill_label": "Node.js / Backend Development",
+      "level": "L3",
+      "confidence": "high",
+      "evidence": ["Prefixed L3 should normalise to 3."],
+      "competency_summary": "Prefixed level representation."
+    },
+    {
+      "skill_id": "SK-ENG-003",
+      "skill_label": "System Design & Architecture",
+      "level": 3.7,
+      "confidence": "high",
+      "evidence": ["A fractional level should round to the nearest whole rating."],
+      "competency_summary": "Fractional level."
+    }
+  ],
+  "discovered_skills": []
+}

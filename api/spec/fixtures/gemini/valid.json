@@ -1,0 +1,37 @@
+{
+  "configured_skills": [
+    {
+      "skill_id": "SK-ENG-001",
+      "skill_label": "React / Frontend Development Core",
+      "level": 3,
+      "confidence": "high",
+      "evidence": [
+        "I moved the team off a hand-rolled state layer once profiling showed the re-render cost.",
+        "For the checkout flow I memoise the derived cart totals and keep the rest on plain hooks."
+      ],
+      "competency_summary": "Builds complex features end-to-end and owns component performance for their area."
+    },
+    {
+      "skill_id": "SK-ENG-002",
+      "skill_label": "Node.js / Backend Development",
+      "level": 2,
+      "confidence": "medium",
+      "evidence": [
+        "I have written CRUD endpoints and a couple of background jobs.",
+        "Validation and error middleware are something I reach for without thinking."
+      ],
+      "competency_summary": "Handles routine API work independently; less experience with distributed patterns."
+    }
+  ],
+  "discovered_skills": [
+    {
+      "skill_label": "Micro-frontend Architecture",
+      "level": 2,
+      "confidence": "low",
+      "evidence": [
+        "I split two applications into deployable modules last year."
+      ],
+      "competency_summary": "Early familiarity with module composition."
+    }
+  ]
+}

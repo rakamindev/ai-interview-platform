@@ -1,0 +1,12 @@
+{
+  "configured_skills": [
+    {
+      "skill_id": "SK-ENG-001",
+      "skill_label": "React / Frontend Development Core",
+      "level": 3,
+      "evidence": ["The model returned a level but no confidence."],
+      "competency_summary": "Confidence omitted by the model."
+    }
+  ],
+  "discovered_skills": []
+}

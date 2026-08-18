@@ -1,5 +1,28 @@
 # frozen_string_literal: true
 
+# Gemini client selection.
+#
+# GEMINI_STUB=true (the compose default, see docker-compose.yml) substitutes
+# Gemini::StubClient for Gemini::HttpClient so the whole product runs without a
+# key. The redirect lives here so no service constructor changes — every
+# service already accepts `gemini_client:` for injected clients, and the stub
+# mirrors the real interface. GEMINI_STUB_MODE selects the fixture mode
+# (:valid by default).
+
+if ENV['GEMINI_STUB'] == 'true'
+  Rails.application.config.after_initialize do
+    class Gemini::HttpClient
+      class << self
+        alias_method :__unstubbed_new, :new
+      end
+
+      def self.new(**kwargs)
+        Gemini::StubClient.new(model: kwargs[:model], timeout: kwargs[:timeout])
+      end
+    end
+  end
+end
+
 # Validate that required Gemini environment variables are present at boot.
 # Raises on startup if missing, rather than failing silently at runtime.
 Rails.application.config.after_initialize do

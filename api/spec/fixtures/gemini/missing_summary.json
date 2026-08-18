@@ -1,0 +1,12 @@
+{
+  "configured_skills": [
+    {
+      "skill_id": "SK-ENG-001",
+      "skill_label": "React / Frontend Development Core",
+      "level": 3,
+      "confidence": "high",
+      "evidence": ["A rating with the summary field omitted."]
+    }
+  ],
+  "discovered_skills": []
+}
