@@ -9,7 +9,7 @@ export interface Assessment {
   updated_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: "pending" | "active" | "ended" | "failed";
     end_reason?: string | null;
   };
 }
@@ -39,7 +39,7 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
@@ -130,10 +130,11 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 export interface SkillComparison {
   skill_label: string;
   required_level: number;
-  candidate_level?: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
   is_override?: boolean;
+  confidence?: string | null;
 }
 
 export interface FitGapReport {
@@ -164,6 +165,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
 }
 
 export interface PaginationMeta {

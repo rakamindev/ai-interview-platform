@@ -18,27 +18,44 @@ export default function FitGapReportPage() {
     vacancyId: string;
   }>();
 
+  const POLL_INTERVAL_MS = 5000;
+  const MAX_POLLS = 24; // ~2 minutes before giving up
+
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [pollCount, setPollCount] = useState(0);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
+    setPollCount((n) => {
+      if (n + 1 > MAX_POLLS) {
+        setGenerating(false);
+        setError("Report generation is taking longer than expected. Try regenerating.");
+      }
+      return n + 1;
+    });
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
+      setError(null);
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
           await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
           setGenerating(true);
-        } catch {
+        } catch (triggerErr: any) {
           setGenerating(false);
+          setError(triggerErr?.response?.data?.message || "Could not start report generation.");
         }
+      } else {
+        setGenerating(false);
+        setError(e?.response?.data?.message || "Failed to load the fit/gap report.");
       }
     }
   }, [portfolio, vacancyId]);
@@ -50,8 +67,11 @@ export default function FitGapReportPage() {
         const data = res.data as any;
         if (data.portfolio) {
           setPortfolio(data.portfolio);
+        } else {
+          setError("Portfolio is not ready yet. Generate the portfolio before viewing fit/gap.");
         }
       })
+      .catch(() => setError("Failed to load portfolio."))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -59,15 +79,19 @@ export default function FitGapReportPage() {
     if (portfolio) fetchReport();
   }, [portfolio, fetchReport]);
 
-  usePolling(fetchReport, 5000, generating && !!portfolio);
+  usePolling(fetchReport, POLL_INTERVAL_MS, generating && !!portfolio && pollCount <= MAX_POLLS);
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
     setRegenerating(true);
+    setError(null);
+    setPollCount(0);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Failed to queue regeneration.");
     } finally {
       setRegenerating(false);
     }
@@ -88,6 +112,8 @@ export default function FitGapReportPage() {
       a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setError(`Export to ${format.toUpperCase()} failed. Please try again.`);
     } finally {
       setExporting(null);
     }
@@ -105,7 +131,7 @@ export default function FitGapReportPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link
@@ -140,8 +166,18 @@ export default function FitGapReportPage() {
         )}
       </div>
 
+      {/* Error */}
+      {error && (
+        <div role="alert" className="border border-destructive/30 bg-destructive/5 text-destructive rounded-lg p-4 text-sm flex items-start justify-between gap-3">
+          <span>{error}</span>
+          <button onClick={() => { setError(null); setPollCount(0); fetchReport(); }} className="underline shrink-0">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Generating */}
-      {generating && (
+      {generating && !error && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
@@ -164,16 +200,43 @@ export default function FitGapReportPage() {
           <Separator />
 
           {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
+          {report.culture_narrative ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.culture_narrative}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm text-muted-foreground">
+                  AI narrative unavailable for this report. Regenerate to retry.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Overall recommendation */}
+          {report.overall_narrative && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Overall Recommendation</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.overall_narrative}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (

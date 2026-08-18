@@ -38,6 +38,7 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [sessionFailed, setSessionFailed] = useState(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -46,7 +47,12 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "failed") {
+          setSessionFailed(true);
+          setInterviewState("complete");
+        } else if (res.data.session_status === "ended") {
+          setInterviewState("complete");
+        }
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
@@ -228,6 +234,25 @@ export default function InterviewPage() {
 
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
+    // Failure path: session marked failed by backend, or the interview ended
+    // without a single transcript turn — nothing was recorded. Be honest.
+    const nothingRecorded = sessionFailed || (hardwareCheckDone && transcript.length === 0);
+
+    if (nothingRecorded) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="text-4xl">⚠️</div>
+          <h2 className="text-xl font-semibold">Interview Could Not Be Completed</h2>
+          <p className="text-sm text-muted-foreground">
+            A technical issue prevented the interview from being recorded.
+            This was not your fault.
+            <br />
+            The hiring team has been notified and will contact you to reschedule.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>

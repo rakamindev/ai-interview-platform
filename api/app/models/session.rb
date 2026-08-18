@@ -20,13 +20,20 @@ class Session < ApplicationRecord
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
   scope :ended,   -> { where(status: 'ended') }
+  scope :failed,  -> { where(status: 'failed') }
 
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+  def failed?  = status == 'failed'
+
+  # Terminal = no further interview activity possible
+  def terminal? = ended? || failed?
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    # APP_BASE_URL must be the FRONTEND origin (where /interview/:token lives),
+    # not the API. Wrong default here sent candidates to a Rails routing error.
+    base = ENV.fetch('APP_BASE_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
 

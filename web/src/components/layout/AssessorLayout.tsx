@@ -29,10 +29,10 @@ export default function AssessorLayout() {
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <LayoutDashboard className="h-5 w-5 text-primary shrink-0" />
+              <span className="font-semibold text-sm whitespace-nowrap hidden md:inline">Rakamin AI Interview</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -54,7 +54,7 @@ export default function AssessorLayout() {
           </div>
           <div className="flex items-center gap-3">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 whitespace-nowrap hidden sm:inline">
                 Tenant: {tenant.name}
               </span>
             )}

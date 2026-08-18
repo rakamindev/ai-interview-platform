@@ -13,7 +13,7 @@ module Sessions
 
     def call(reason: 'manual_assessor')
       # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
-      if @session.ended?
+      if @session.terminal?
         manual = %w[manual_candidate manual_assessor]
         if manual.include?(reason.to_s) && @session.end_reason == 'error'
           @session.update_column(:end_reason, reason.to_s)
@@ -23,22 +23,27 @@ module Sessions
 
       reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
 
+      # Failure path: a session that ends with zero transcript turns never had a
+      # real interview (e.g. model connection failed). Mark it failed instead of
+      # pretending success, and skip portfolio generation — there is nothing to analyze.
+      no_interview = @session.transcript_turns.none?
+
       ActiveRecord::Base.transaction do
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
 
         @session.update!(
-          status:           'ended',
-          end_reason:       reason.to_s,
+          status:           no_interview ? 'failed' : 'ended',
+          end_reason:       no_interview ? 'error' : reason.to_s,
           ended_at:         Time.current,
           duration_seconds: duration
         )
 
-        create_portfolio
+        create_portfolio unless no_interview
       end
 
-      enqueue_portfolio_generation
+      enqueue_portfolio_generation unless no_interview
       publish_status_update
-      Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
+      Rails.logger.info("[N9/EndHandler] Session #{@session.id} #{@session.status} (reason=#{@session.end_reason})")
 
       @session
     end

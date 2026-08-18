@@ -2,7 +2,8 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    # v1beta by default: preview-generation models (gemini-3-*) are not served on /v1
+    BASE_URL = ENV.fetch('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta')
 
     class ApiError < StandardError
       attr_reader :status, :body

@@ -58,7 +58,7 @@ module Api
 
       # POST /api/v1/sessions/:id/end
       def end_session
-        if @session.ended?
+        if @session.terminal?
           return json_error("Session is already ended", :unprocessable_entity)
         end
 
@@ -119,7 +119,7 @@ module Api
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
 
-        return json_response(ended: true, message: "Session already ended") if session.ended?
+        return json_response(ended: true, message: "Session already ended") if session.terminal?
 
         # No coverage re-check here. The backend WS already verified all_covered
         # before sending preparing_to_end. Re-checking here caused false negatives
@@ -149,7 +149,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason
         )
       end
 
