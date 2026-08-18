@@ -28,7 +28,7 @@ Fill in the required values in `config/application.yml`:
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` (portfolio generation) |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin(s) for the frontend, comma-separated. **Must be specific — not `*`** (cookie auth enables CORS credentials, which forbids a wildcard). e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `APP_BASE_URL` | **Candidate-facing web app** URL used to build interview invite links — must be the frontend, e.g. `http://localhost:5173` (not the API) |
 
 ---
 

@@ -172,6 +172,7 @@ module Api
 
       def skill_view_json(skill)
         {
+          portfolio_skill_id: skill.portfolio_skill_id,
           skill_id:           skill.skill_id,
           skill_label:        skill.skill_label,
           state:              skill.state,
