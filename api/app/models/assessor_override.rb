@@ -3,7 +3,7 @@
 class AssessorOverride < ApplicationRecord
   belongs_to :portfolio_skill
 
-  validates :ai_level,       numericality: { only_integer: true, in: 1..5 }
+  validates :ai_level,       numericality: { only_integer: true, in: 1..5 }, allow_nil: true
   validates :override_level, numericality: { only_integer: true, in: 1..5 }
   validates :overridden_by,  presence: true
 end
