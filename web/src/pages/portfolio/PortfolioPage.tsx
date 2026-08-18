@@ -184,10 +184,11 @@ export default function PortfolioPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 shrink-0">
+          <div className="flex flex-wrap justify-end gap-2 shrink-0">
             <Link
               to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-              className="inline-flex items-center gap-1.5 text-sm border bg-background rounded-md px-3 py-1.5 hover:bg-accent hover:shadow-sm transition-all"
+              aria-label="Transcript"
+              className="inline-flex items-center gap-1.5 text-sm border bg-background rounded-md px-2.5 sm:px-3 py-1.5 hover:bg-accent hover:shadow-sm transition-all"
             >
               <FileText className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Transcript</span>
@@ -197,32 +198,35 @@ export default function PortfolioPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-background"
+                  aria-label="Download PDF"
+                  className="bg-background px-2.5 sm:px-3"
                   onClick={() => handleExport("pdf")}
                   disabled={!!exporting}
                 >
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
+                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 sm:mr-1" />}
+                  <span className="hidden sm:inline">PDF</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-background"
+                  aria-label="Download JSON"
+                  className="bg-background px-2.5 sm:px-3"
                   onClick={() => handleExport("json")}
                   disabled={!!exporting}
                 >
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
+                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 sm:mr-1" />}
+                  <span className="hidden sm:inline">JSON</span>
                 </Button>
                 {portfolio.generation_status === "complete" && (
                   <Button
                     variant={compareOpen ? "secondary" : "outline"}
                     size="sm"
-                    className={compareOpen ? "" : "bg-background"}
+                    aria-label={compareOpen ? "Hide compare panel" : "Compare"}
+                    className={compareOpen ? "px-2.5 sm:px-3" : "bg-background px-2.5 sm:px-3"}
                     onClick={toggleCompare}
                   >
-                    <Columns2 className="h-3.5 w-3.5 mr-1" />
-                    Compare
+                    <Columns2 className="h-3.5 w-3.5 sm:mr-1" />
+                    <span className="hidden sm:inline">Compare</span>
                   </Button>
                 )}
               </>

@@ -325,7 +325,7 @@ export default function CandidateManagement({
       ) : (
         <Card>
           <CardContent className="p-0">
-            <div className="flex items-center gap-3 px-4 py-2 border-b bg-muted/30 text-xs font-medium text-muted-foreground">
+            <div className="hidden sm:flex items-center gap-3 px-4 py-2 border-b bg-muted/30 text-xs font-medium text-muted-foreground">
               <input
                 type="checkbox"
                 className="h-3.5 w-3.5 rounded border-input"
@@ -341,30 +341,33 @@ export default function CandidateManagement({
               {candidates.map((c) => {
                 const session = sessionsById.get(c.candidate_id);
                 return (
-                  <div key={c.candidate_id} className="flex items-center gap-3 px-4 py-3">
+                  <div
+                    key={c.candidate_id}
+                    className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 px-4 py-3"
+                  >
                     <input
                       type="checkbox"
                       className="h-3.5 w-3.5 rounded border-input"
                       checked={selectedIds.has(c.candidate_id)}
                       onChange={() => toggleSelect(c.candidate_id)}
                     />
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-[10rem] sm:min-w-0">
                       <div className="text-sm font-medium truncate">{c.candidate_name || `Candidate ${c.candidate_id}`}</div>
                       {c.interview_date && (
                         <div className="text-xs text-muted-foreground">{new Date(c.interview_date).toLocaleDateString()}</div>
                       )}
                     </div>
-                    <span className={`w-24 text-center text-xs rounded-full px-2 py-0.5 ${STATUS_BADGE[c.interview_status] ?? ""}`}>
+                    <span className={`sm:w-24 text-center text-xs rounded-full px-2 py-0.5 ${STATUS_BADGE[c.interview_status] ?? ""}`}>
                       {c.interview_status}
                     </span>
-                    <span className="w-20 text-center text-xs">
+                    <span className="sm:w-20 text-center text-xs">
                       {c.verdict ? (
                         <span className={`rounded-full px-2 py-0.5 ${VERDICT_BADGE_CLASSES[c.verdict]}`}>{c.verdict}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </span>
-                    <div className="w-32 flex justify-end gap-1.5">
+                    <div className="w-full sm:w-32 flex justify-end gap-1.5">
                       {c.interview_status === "pending" && session?.invite_token && (
                         <Button
                           variant="ghost"

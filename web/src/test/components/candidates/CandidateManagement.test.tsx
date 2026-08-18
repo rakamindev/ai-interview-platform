@@ -74,6 +74,24 @@ describe("CandidateManagement", () => {
     expect(screen.getByText("pass")).toBeInTheDocument();
   });
 
+  it("renders the full candidate name as one text node, not clipped to an initial, regardless of row width", async () => {
+    mockList([candidate({ candidate_name: "Budi Santoso Wijaya" })]);
+
+    render(<CandidateManagement assessmentId={1} sessions={[]} onMonitor={vi.fn()} onResults={vi.fn()} />);
+
+    expect(await screen.findByText("Budi Santoso Wijaya")).toBeInTheDocument();
+  });
+
+  it("stacks status/verdict/actions onto their own row on narrow viewports instead of sharing the name's row width", async () => {
+    mockList([candidate()]);
+
+    render(<CandidateManagement assessmentId={1} sessions={[]} onMonitor={vi.fn()} onResults={vi.fn()} />);
+    await screen.findByText("Alice Wonderland");
+
+    const actionsRow = screen.getByRole("button", { name: "Results" }).parentElement;
+    expect(actionsRow?.className).toMatch(/w-full/);
+  });
+
   it("shows the empty state when there are no candidates and no filters applied", async () => {
     mockList([], { total_count: 0, total_pages: 1 });
 

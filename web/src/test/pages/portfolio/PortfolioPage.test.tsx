@@ -193,6 +193,19 @@ describe("PortfolioPage zero-skills empty state", () => {
   });
 });
 
+describe("PortfolioPage toolbar responsiveness", () => {
+  it("keeps accessible names for Transcript/PDF/JSON/Compare when their text labels are visually hidden on mobile", async () => {
+    mockLoaded(portfolio());
+    renderPage();
+    await screen.findByText("Configured Skills");
+
+    expect(screen.getByRole("link", { name: "Transcript" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download PDF" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download JSON" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Compare" })).toBeInTheDocument();
+  });
+});
+
 describe("PortfolioPage compare", () => {
   function mockCompareCandidatePortfolio(compareResult: Portfolio | "error") {
     getPortfolioMock.mockImplementation(((sessionId: number) => {
