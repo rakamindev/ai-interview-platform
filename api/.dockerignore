@@ -1,0 +1,8 @@
+.git
+log
+tmp
+spec
+.env*
+config/application.yml
+k8s
+docs
