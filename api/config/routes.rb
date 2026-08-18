@@ -40,6 +40,7 @@ Rails.application.routes.draw do
       resources :portfolio_skills, only: [] do
         member do
           post :override
+          resources :override_events, only: %i[index]
         end
       end
 
