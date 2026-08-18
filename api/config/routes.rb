@@ -59,6 +59,19 @@ Rails.application.routes.draw do
           get  :export
         end
       end
+
+      # CV screening
+      resources :cv_screenings, only: %i[index create show update] do
+        resources :batches, only: [:create], controller: 'cv_screening_batches'
+        resources :entries, only: [:index], controller: 'cv_screening_entries'
+      end
+
+      resources :cv_screening_entries, only: [] do
+        member do
+          post :review
+          get  :file
+        end
+      end
     end
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_18_000006) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_100003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -19,11 +19,40 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_000006) do
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "confidence_level", ["high", "medium", "low"]
   create_enum "coverage_state", ["not_yet", "initiated", "partial", "covered"]
+  create_enum "cv_screening_decision", ["pending", "needs_review", "invited", "not_advanced"]
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
+
+  create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.uuid "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
 
   create_table "assessment_skills", force: :cascade do |t|
     t.bigint "assessment_id", null: false
@@ -90,6 +119,51 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_000006) do
     t.index ["session_id", "skill_label"], name: "index_coverage_maps_on_session_id_and_skill_label", unique: true
     t.index ["session_id"], name: "idx_coverage_session"
     t.index ["session_id"], name: "index_coverage_maps_on_session_id"
+  end
+
+  create_table "cv_screening_batches", force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.bigint "cv_screening_id", null: false
+    t.bigint "vacancy_id", null: false
+    t.bigint "assessment_id", null: false
+    t.bigint "vacancy_version_id"
+    t.integer "threshold"
+    t.bigint "created_by", null: false
+    t.datetime "created_at", null: false
+    t.index ["assessment_id"], name: "index_cv_screening_batches_on_assessment_id"
+    t.index ["cv_screening_id"], name: "index_cv_screening_batches_on_cv_screening_id"
+    t.index ["tenant_id"], name: "index_cv_screening_batches_on_tenant_id"
+    t.index ["vacancy_id"], name: "index_cv_screening_batches_on_vacancy_id"
+    t.index ["vacancy_version_id"], name: "index_cv_screening_batches_on_vacancy_version_id"
+    t.check_constraint "threshold IS NULL OR threshold >= 0 AND threshold <= 100", name: "chk_cv_screening_batches_threshold"
+  end
+
+  create_table "cv_screening_entries", force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.bigint "cv_screening_batch_id", null: false
+    t.string "detected_email", limit: 255
+    t.enum "decision", default: "pending", null: false, enum_type: "cv_screening_decision"
+    t.string "decision_reason", limit: 50
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cv_screening_batch_id"], name: "index_cv_screening_entries_on_cv_screening_batch_id"
+    t.index ["detected_email"], name: "index_cv_screening_entries_on_detected_email"
+    t.index ["tenant_id"], name: "index_cv_screening_entries_on_tenant_id"
+  end
+
+  create_table "cv_screenings", force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.bigint "created_by", null: false
+    t.string "name", limit: 255, null: false
+    t.bigint "vacancy_id", null: false
+    t.bigint "assessment_id", null: false
+    t.integer "threshold"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assessment_id"], name: "index_cv_screenings_on_assessment_id"
+    t.index ["tenant_id"], name: "index_cv_screenings_on_tenant_id"
+    t.index ["vacancy_id"], name: "index_cv_screenings_on_vacancy_id"
+    t.check_constraint "threshold IS NULL OR threshold >= 0 AND threshold <= 100", name: "chk_cv_screenings_threshold"
   end
 
   create_table "fit_gap_reports", force: :cascade do |t|
@@ -231,10 +305,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_000006) do
     t.index ["vacancy_id"], name: "index_vacancy_versions_on_vacancy_id"
   end
 
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessment_versions", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
+  add_foreign_key "cv_screening_batches", "assessments"
+  add_foreign_key "cv_screening_batches", "cv_screenings"
+  add_foreign_key "cv_screening_batches", "vacancies"
+  add_foreign_key "cv_screening_batches", "vacancy_versions"
+  add_foreign_key "cv_screening_entries", "cv_screening_batches"
+  add_foreign_key "cv_screenings", "assessments"
+  add_foreign_key "cv_screenings", "vacancies"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
   add_foreign_key "fit_gap_reports", "vacancy_versions"

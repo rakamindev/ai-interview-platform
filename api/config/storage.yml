@@ -1,0 +1,21 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# Cloudflare R2 — S3-compatible. Bucket is private, no custom domain; files are
+# streamed through the API (see CvScreeningEntriesController#file), never linked
+# to directly. Credentials come from a k8s Secret in staging/production, never
+# this repo or the ConfigMap — see config/application.yml.sample for the local
+# dev variable names.
+r2:
+  service: S3
+  access_key_id: <%= ENV.fetch("R2_ACCESS_KEY_ID", "") %>
+  secret_access_key: <%= ENV.fetch("R2_SECRET_ACCESS_KEY", "") %>
+  region: auto
+  bucket: <%= ENV.fetch("R2_BUCKET", "") %>
+  endpoint: https://<%= ENV.fetch("R2_ACCOUNT_ID", "") %>.r2.cloudflarestorage.com
+  force_path_style: true

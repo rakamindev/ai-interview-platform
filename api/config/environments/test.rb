@@ -48,6 +48,12 @@ Rails.application.configure do
   # Log level
   config.log_level = :warn
 
+  # Disk service (see config/storage.yml) — no R2 credentials needed to run tests.
+  config.active_storage.service = :test
+
+  # Explicit, not the silent :async fallback — see production.rb's comment.
+  config.active_job.queue_adapter = :test
+
   # Never let a test run rewrite schema.rb — it already can't reconstruct the
   # ai_interview Postgres schema (see rails_helper.rb), so it must not be trusted
   # as a source of truth.

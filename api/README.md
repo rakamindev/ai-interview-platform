@@ -28,6 +28,9 @@ Fill in the required values in `config/application.yml`:
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
 | `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `WEB_BASE_URL` | Frontend base URL — candidate invite links point here, e.g. `http://localhost:5173` |
+| `ACTIVE_STORAGE_SERVICE` | Optional in dev — `r2` to test against real Cloudflare R2 instead of the local Disk service |
+| `R2_ACCOUNT_ID` / `R2_BUCKET` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Cloudflare R2 credentials — required in staging/production, provisioned via a k8s Secret, never this repo |
 
 ---
 

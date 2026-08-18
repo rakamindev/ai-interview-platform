@@ -30,8 +30,15 @@ Rails.application.configure do
   # Log level (default: info in production)
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info").to_sym
 
-  # Use a real queuing backend for Active Job.
+  # Explicit, not the silent :async fallback. Without active_job/railtie loaded and
+  # this set, ActiveJob (and thus ActionMailer's deliver_later, and any ActiveStorage
+  # background work) would fall back to the in-process :async adapter — no
+  # persistence, no retries, silent job loss on every pod rollout.
   config.active_job.queue_adapter = :sidekiq
+
+  # Cloudflare R2 (S3-compatible) — see config/storage.yml. Credentials come from a
+  # k8s Secret, never this repo or the ConfigMap.
+  config.active_storage.service = :r2
 
   # Use default logging formatter so that PID and timestamp are not suppressed.
   config.log_tags = [:request_id]
