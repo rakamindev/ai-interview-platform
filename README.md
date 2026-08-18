@@ -15,13 +15,36 @@ The two services run together: the web app talks to the API over REST and WebSoc
 
 ## Running it locally
 
-**Quickest path — Docker Compose (no local toolchain required):**
+**Quickest path — Docker Compose via Make (no local toolchain required):**
 
 ```bash
-cp api/config/application.yml.sample api/config/application.yml   # no edits needed
-docker compose -f api/docker-compose.yml up            # API stack (postgres, redis, sidekiq)
-docker compose -f web/docker-compose.yml up              # Web (Node 24.19.0 LTS)
+make up                                # starts both stacks (API + Web)
+make logs                              # follow all output
+make down                              # stop both (keeps volumes)
+make nuke                              # stop and wipe volumes
+make test                              # rspec (API) + vitest (Web)
 ```
+
+The Makefile runs config checks before every target — `api/config/application.yml` and
+`web/.env` must exist. If missing, the target aborts with a copy-pasteable fix.
+Stub mode (`GEMINI_STUB=true`) is the default; placeholder values pass the check.
+
+```bash
+make check                             # verify config files exist and are valid
+make NO_CHECK=1 down                   # bypass checks (escape hatch for broken configs)
+```
+
+Individual stacks can be managed separately:
+
+```bash
+make api-up / api-down / api-logs      # API only (postgres, redis, sidekiq)
+make web-up / web-down / web-logs      # Web only (Node 24.19.0 LTS)
+make api-console                       # Rails console
+make api-seed                          # reset demo data
+```
+
+The Makefile is a thin wrapper around `docker compose -f api/docker-compose.yml` and
+`docker compose -f web/docker-compose.yml` — raw compose commands still work directly.
 
 | Service | URL |
 |---|---|
