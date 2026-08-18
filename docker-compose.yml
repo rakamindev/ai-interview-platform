@@ -1,0 +1,89 @@
+# Local development stack for the whole platform.
+#
+# The repo README assumes Ruby, PostgreSQL and Redis are installed on the
+# host. This file removes that assumption so the API, its database, its
+# queue and its worker all come up with one command — which is also what
+# makes the RSpec suite reproducible on a clean machine and in CI.
+#
+#   cp .env.example .env      # then fill in GEMINI_API_KEY
+#   docker compose up -d --build
+#   docker compose exec api bundle exec rails db:create db:migrate db:seed
+#
+# The web app stays on the host (npm run dev) — Vite's HMR is markedly
+# faster there, and it only needs VITE_API_BASE_URL to point at :3001.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-rakamin_development}
+    ports:
+      # 5433 on the host so this never collides with a local PostgreSQL.
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-rakamin_development}"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    command: bundle exec rails server -b 0.0.0.0 -p 3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/app
+    environment: &api_env
+      RAILS_ENV: ${RAILS_ENV:-development}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev_only_secret_key_base_not_for_production}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-rakamin_development}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_URL: redis://redis:6379/1
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL:-gemini-2.0-flash-live-001}
+      GEMINI_FLASH_MODEL: ${GEMINI_FLASH_MODEL:-gemini-2.0-flash-001}
+      GEMINI_PRO_MODEL: ${GEMINI_PRO_MODEL:-gemini-2.0-pro-001}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3001}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+      TOKEN_EXPIRATION_TIME: ${TOKEN_EXPIRATION_TIME:-259200}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    command: bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+    volumes:
+      - ./api:/app
+    environment: *api_env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
