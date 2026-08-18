@@ -15,10 +15,21 @@ The two services run together: the web app talks to the API over REST and WebSoc
 
 ## Running it locally
 
-Each service has its own setup guide. Run the API first, then the web app pointed at it.
+**Quickest path — Docker Compose (no local toolchain required):**
 
-1. **API** — see [`api/README.md`](api/README.md). Rails app; needs Ruby (see `api/.ruby-version`), PostgreSQL, and Redis. It serves on `http://localhost:3001`.
-2. **Web** — see [`web/README.md`](web/README.md). Vite app; `npm install`, copy `.env.example` to `.env`, point `VITE_API_BASE_URL` at the API, then `npm run dev`. It serves on `http://localhost:5173`.
+```bash
+cp api/config/application.yml.sample api/config/application.yml   # no edits needed
+docker compose -f api/docker-compose.yml up            # API stack (postgres, redis, sidekiq)
+docker compose -f web/docker-compose.yml up              # Web (Node 24.19.0 LTS)
+```
+
+| Service | URL |
+|---|---|
+| Web | http://localhost:5173 |
+| API | http://localhost:3001 |
+
+No Gemini API key required — `GEMINI_STUB=true` is the API compose default. See
+[`api/README.md`](api/README.md) for the optional native (mise) fast path.
 
 ## Notes for the case study
 
