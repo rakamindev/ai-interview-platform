@@ -20,6 +20,11 @@ FactoryBot.define do
     sequence(:skill_label) { |n| "Skill #{n}" }
     expected_level { 3 }
     display_order { 1 }
+    l1_anchor { 'Basic understanding' }
+    l2_anchor { 'Can work with guidance' }
+    l3_anchor { 'Proficient independent' }
+    l4_anchor { 'Advanced expert' }
+    l5_anchor { 'Industry thought leader' }
   end
 
   factory :session do
