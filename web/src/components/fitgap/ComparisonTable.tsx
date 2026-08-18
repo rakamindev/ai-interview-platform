@@ -1,66 +1,107 @@
-import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
+import { AlertTriangle, CheckCircle2, Minus, Pencil, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SkillComparison } from "@/types";
+import { FIT_GAP_RESULT_CLASSES, FIT_GAP_RESULT_LABELS, LEVEL_LABELS } from "@/utils/constants";
+import { summarizeComparisons } from "@/utils/fitGap";
+import type { SkillComparison, SkillComparisonResult } from "@/types";
 
 interface ComparisonTableProps {
   comparisons: SkillComparison[];
 }
 
-function ResultBadge({ comparison }: { comparison: SkillComparison }) {
-  const label = FIT_GAP_RESULT_LABELS[comparison.result];
-  const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
+const resultIcons: Record<SkillComparisonResult, typeof CheckCircle2> = {
+  match: CheckCircle2,
+  gap: AlertTriangle,
+  exceed: Star,
+  not_assessed: Minus,
+};
 
-  let icon = "";
-  let suffix = "";
-  if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
-  else icon = "—";
+function ResultBadge({ comparison }: { comparison: SkillComparison }) {
+  const Icon = resultIcons[comparison.result];
+  const label = FIT_GAP_RESULT_LABELS[comparison.result];
+  const suffix =
+    comparison.result === "exceed" && comparison.delta
+      ? ` +${comparison.delta}`
+      : comparison.result === "gap" && comparison.delta
+        ? ` -${Math.abs(comparison.delta)}`
+        : "";
 
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
-      {icon} {label}{suffix}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+        FIT_GAP_RESULT_CLASSES[comparison.result],
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      {label}
+      {suffix}
     </span>
   );
 }
 
+function SummaryStat({ label, value, tone }: { label: string; value: number | string; tone: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+      <div className={cn("text-lg font-bold", tone)}>{value}</div>
+      <div className="text-xs text-slate-500">{label}</div>
+    </div>
+  );
+}
+
 export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
-  const matchCount = comparisons.filter((c) => c.result === "match").length;
-  const gapCount = comparisons.filter((c) => c.result === "gap").length;
-  const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+  const summary = summarizeComparisons(comparisons);
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <SummaryStat label="Positive rate" value={summary.positiveRate == null ? "—" : `${summary.positiveRate}%`} tone="text-indigo-700" />
+        <SummaryStat label="Assessed" value={summary.assessed} tone="text-slate-950" />
+        <SummaryStat label="Matches" value={summary.matches} tone="text-emerald-700" />
+        <SummaryStat label="Gaps" value={summary.gaps} tone="text-amber-700" />
+        <SummaryStat label="Not assessed" value={summary.notAssessed} tone="text-slate-500" />
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full min-w-[650px] text-sm">
+          <caption className="sr-only">Fit and gap comparison by skill</caption>
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left">
+              <th scope="col" className="px-4 py-3 font-semibold text-slate-700">Skill</th>
+              <th scope="col" className="px-4 py-3 text-center font-semibold text-slate-700">Required</th>
+              <th scope="col" className="px-4 py-3 text-center font-semibold text-slate-700">Candidate</th>
+              <th scope="col" className="px-4 py-3 text-center font-semibold text-slate-700">Result</th>
+              <th scope="col" className="px-4 py-3 text-center font-semibold text-slate-700">Evidence state</th>
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+            {comparisons.map((comparison, index) => (
+              <tr key={`${comparison.skill_id ?? comparison.skill_label}-${index}`} className="border-b border-slate-100 last:border-0">
+                <th scope="row" className="max-w-[260px] break-words px-4 py-3 text-left font-medium text-slate-900">
+                  {comparison.skill_label}
+                </th>
+                <td className="px-4 py-3 text-center text-slate-600">
+                  {comparison.required_level == null ? "—" : LEVEL_LABELS[comparison.required_level] ?? `L${comparison.required_level}`}
                 </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
+                <td className="px-4 py-3 text-center">
+                  {comparison.candidate_level == null ? (
+                    <span className="text-slate-400">Not assessed</span>
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                      {LEVEL_LABELS[comparison.candidate_level] ?? `L${comparison.candidate_level}`}
+                      {comparison.is_override && (
+                        <span title="Assessor override applied" className="inline-flex items-center gap-1 text-xs text-indigo-700">
+                          <Pencil className="h-3 w-3" aria-hidden="true" />
+                          human
+                        </span>
+                      )}
+                    </span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
+                <td className="px-4 py-3 text-center">
+                  <ResultBadge comparison={comparison} />
+                </td>
+                <td className="px-4 py-3 text-center text-xs text-slate-500">
+                  {comparison.rating_status === "not_assessed" ? "No rating" : comparison.confidence ?? "Recorded"}
                 </td>
               </tr>
             ))}
@@ -68,12 +109,10 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
         </table>
       </div>
 
-      {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+        <span>{summary.total} skill{summary.total === 1 ? "" : "s"} compared</span>
+        <span className="inline-flex items-center gap-1"><Pencil className="h-3 w-3" aria-hidden="true" /> Human override applied</span>
+        {summary.exceeds > 0 && <span className="text-emerald-700">{summary.exceeds} exceeds requirement</span>}
       </div>
     </div>
   );

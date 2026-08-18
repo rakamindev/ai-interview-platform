@@ -2,6 +2,7 @@
 
 class PortfolioSkill < ApplicationRecord
   CONFIDENCE_LEVELS = %w[high medium low].freeze
+  RATING_STATUSES = %w[rated not_assessed].freeze
 
   belongs_to :portfolio
   has_one :assessor_override, dependent: :destroy
@@ -9,6 +10,7 @@ class PortfolioSkill < ApplicationRecord
   validates :skill_label, presence: true
   validates :ai_level, numericality: { only_integer: true, in: 1..5 }
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }
+  validates :rating_status, inclusion: { in: RATING_STATUSES }
   validates :competency_summary, presence: true
 
   # evidence is stored as JSONB array of quote strings

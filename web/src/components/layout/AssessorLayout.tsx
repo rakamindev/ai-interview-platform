@@ -28,13 +28,14 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:h-14 sm:flex-nowrap sm:justify-between sm:gap-y-0 sm:py-0">
+          <div className="flex min-w-0 shrink-0 items-center gap-3 sm:gap-6">
+            <Link to="/assessments" className="flex shrink-0 items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
-            <nav className="flex items-center gap-1">
+          </div>
+          <nav className="order-3 flex basis-full items-center gap-1 overflow-x-auto pb-1 sm:order-none sm:basis-auto sm:pb-0">
               {navItems.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
@@ -50,11 +51,10 @@ export default function AssessorLayout() {
                   {label}
                 </Link>
               ))}
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
+          </nav>
+          <div className="ml-auto flex min-w-0 items-center gap-3">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="hidden max-w-[180px] truncate rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground sm:inline-flex">
                 Tenant: {tenant.name}
               </span>
             )}

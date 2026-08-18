@@ -9,7 +9,7 @@ export interface Assessment {
   updated_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: "pending" | "active" | "ended" | "failed";
     end_reason?: string | null;
   };
 }
@@ -39,7 +39,7 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
@@ -90,8 +90,9 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: number;
+  rating_status: "rated" | "not_assessed";
+  ai_confidence: "high" | "medium" | "low";
   evidence: string[];
   competency_summary: string;
 }
@@ -101,7 +102,7 @@ export interface AssessorOverride {
   portfolio_skill_id: number;
   ai_level: number;
   override_level: number;
-  assessor_notes: string;
+  assessor_notes: string | null;
   overridden_by?: number;
   overridden_at?: string;
 }
@@ -129,17 +130,22 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  required_level: number | null;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
   is_override?: boolean;
+  confidence?: "high" | "medium" | "low" | null;
+  rating_status?: "rated" | "not_assessed";
 }
 
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
+  generation_status: "pending" | "generating" | "complete" | "failed";
+  generation_error?: string | null;
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;

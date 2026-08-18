@@ -10,10 +10,13 @@ api/config/application.yml
 **/log/*.log
 **/tmp/
 api/storage/
+/work/
 
 # Build output
 web/dist/
 web/.vite/
+web/.playwright-cli/
+.serena/
 
 # OS
 .DS_Store
