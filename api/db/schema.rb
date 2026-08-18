@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_19_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -22,6 +22,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "rating_state", ["rated", "unrated"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
 
@@ -56,6 +57,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
 
+  create_table "assessor_override_events", force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.bigint "portfolio_skill_id", null: false
+    t.integer "ai_level", null: false
+    t.integer "override_level", null: false
+    t.text "assessor_notes"
+    t.bigint "overridden_by", null: false
+    t.datetime "overridden_at"
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.index ["portfolio_skill_id"], name: "index_assessor_override_events_on_portfolio_skill_id"
+    t.index ["tenant_id"], name: "index_assessor_override_events_on_tenant_id"
+  end
+
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
     t.integer "ai_level", null: false
@@ -63,7 +77,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
+    t.bigint "tenant_id", null: false
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
+    t.index ["tenant_id"], name: "index_assessor_overrides_on_tenant_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
   end
@@ -89,8 +105,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.bigint "tenant_id", null: false
+    t.enum "status", default: "pending", null: false, enum_type: "generation_status"
+    t.text "generation_error"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
+    t.index ["tenant_id"], name: "index_fit_gap_reports_on_tenant_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
   end
 
@@ -112,12 +132,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.bigint "tenant_id", null: false
+    t.enum "rating_state", default: "rated", null: false, enum_type: "rating_state"
+    t.index ["portfolio_id", "skill_label"], name: "idx_portfolio_skills_uniq_label", unique: true
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.index ["tenant_id"], name: "index_portfolio_skills_on_tenant_id"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -126,8 +150,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.bigint "tenant_id", null: false
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -143,8 +169,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "invite_expires_at", null: false
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
+    t.index ["invite_expires_at"], name: "index_sessions_on_invite_expires_at"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
     t.index ["tenant_id", "status"], name: "idx_sessions_tenant_status"
   end
@@ -201,6 +229,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.integer "expected_level", null: false
+    t.index ["vacancy_id", "skill_label"], name: "idx_vacancy_skills_uniq_label", unique: true
     t.index ["vacancy_id"], name: "index_vacancy_skills_on_vacancy_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
