@@ -443,3 +443,20 @@ sudah dipakai di 2 halaman lain.
 **Scope note:** ini genuinely improvement (bukan cuma minimal-fix-buat-lanjut-testing) —
 disimpan terpisah dari B-01/B-02 yang murni exploration blocker, karena ini murni product
 polish/initiative yang diminta secara sadar, bukan sekadar buka jalan eksplorasi.
+
+**Refinement (masih B-03):** dua tambahan diminta setelah lihat hasil fix di atas secara
+langsung:
+1. Blok Fit/Gap tidak punya judul section seperti "Configured Skills"/"Discovered Skills"
+   di atasnya — ditambah `<h2>Fit/Gap Analysis</h2>` supaya konsisten.
+2. Tombol "Create your first vacancy" tadinya `navigate("/vacancies/new")` polos — setelah
+   assessor save vacancy baru, dia mendarat di `/vacancies` (list), bukan balik ke Portfolio
+   Results yang jadi titik berangkatnya. Di-fix pakai React Router location state:
+   `PortfolioPage.tsx` kirim `{ state: { returnTo: '/assessments/:id/sessions/:sessionId/portfolio' } }`
+   saat navigate ke `/vacancies/new`; `VacancyNewPage.tsx` baca `location.state?.returnTo` dan
+   redirect ke situ setelah create sukses (fallback ke `/vacancies` kalau diakses langsung dari
+   list, seperti biasa — tidak ada regresi untuk entry point lain).
+
+**Verified:** dari Portfolio Results (vacancy kosong) → klik "Create your first vacancy" →
+isi form → Save → **mendarat balik di Portfolio Results yang sama** dengan vacancy baru
+langsung muncul di dropdown (re-fetch otomatis karena komponennya mount ulang). Type-check
+bersih.
