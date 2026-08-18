@@ -6,16 +6,33 @@ class FitGapGeneratorWorker
   sidekiq_options queue: :default, retry: 2
 
   def perform(portfolio_id, vacancy_id)
-    # Workers have no request context (no TenantScoped default_scope),
-    # so unscoped is explicit to make the intent clear.
-    portfolio = Portfolio.unscoped.find(portfolio_id)
-    vacancy   = Vacancy.unscoped.find(vacancy_id)
+    lock_key = Zlib.crc32("fitgap:#{portfolio_id}:#{vacancy_id}")
 
-    FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
-  rescue ActiveRecord::RecordNotFound => e
-    Rails.logger.warn("[N13] Record not found: #{e.message}")
-  rescue StandardError => e
-    Rails.logger.error("[N13] FitGapGeneratorWorker failed for portfolio=#{portfolio_id} vacancy=#{vacancy_id}: #{e.class}: #{e.message}")
-    raise
+    acquired = ActiveRecord::Base.connection.select_value(
+      ActiveRecord::Base.sanitize_sql_array(["SELECT pg_try_advisory_lock(?)", lock_key])
+    )
+
+    unless acquired
+      Rails.logger.info("[N13] Advisory lock not acquired for portfolio=#{portfolio_id} vacancy=#{vacancy_id}, skipping")
+      return
+    end
+
+    begin
+      # Workers have no request context (no TenantScoped default_scope),
+      # so unscoped is explicit to make the intent clear.
+      portfolio = Portfolio.unscoped.find(portfolio_id)
+      vacancy   = Vacancy.unscoped.find(vacancy_id)
+
+      FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+    rescue ActiveRecord::RecordNotFound => e
+      Rails.logger.warn("[N13] Record not found: #{e.message}")
+    rescue StandardError => e
+      Rails.logger.error("[N13] FitGapGeneratorWorker failed for portfolio=#{portfolio_id} vacancy=#{vacancy_id}: #{e.class}: #{e.message}")
+      raise
+    ensure
+      ActiveRecord::Base.connection.execute(
+        ActiveRecord::Base.sanitize_sql_array(["SELECT pg_advisory_unlock(?)", lock_key])
+      )
+    end
   end
 end
