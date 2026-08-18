@@ -38,7 +38,6 @@ export default function SkillPortfolioCard({
               <ConfidenceIndicator confidence={skill.ai_confidence} />
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
         </div>
 
         {/* Low confidence note */}
@@ -75,6 +74,9 @@ export default function SkillPortfolioCard({
             </p>
           </div>
         )}
+
+        {/* Override panel — sits at the bottom of the card */}
+        <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
       </CardContent>
     </Card>
   );

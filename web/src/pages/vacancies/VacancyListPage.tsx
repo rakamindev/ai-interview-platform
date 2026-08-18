@@ -40,9 +40,17 @@ export default function VacancyListPage() {
           {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
       ) : vacancies.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No vacancies yet.</p>
-          <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
+        <div className="border rounded-lg p-12 text-center space-y-4">
+          <div className="mx-auto w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+            <Briefcase className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">No vacancies yet</p>
+            <p className="text-xs text-muted-foreground">
+              Create a vacancy to run fit/gap analyses against candidate portfolios.
+            </p>
+          </div>
+          <Button onClick={() => navigate("/vacancies/new")}>
             <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy
           </Button>
         </div>
@@ -54,12 +62,19 @@ export default function VacancyListPage() {
               className="cursor-pointer hover:border-primary/40 transition-colors"
               onClick={() => navigate(`/vacancies/${v.id}/edit`)}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium text-sm">{v.role_title}</p>
+              <CardContent className="py-3 px-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{v.role_title}</p>
+                    {v.skills && v.skills.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {v.skills.length} skill{v.skills.length !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </CardContent>
             </Card>
           ))}

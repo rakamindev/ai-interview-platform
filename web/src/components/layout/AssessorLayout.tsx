@@ -3,7 +3,8 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import BrandLogo from "@/components/layout/BrandLogo";
+import { ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 
@@ -31,8 +32,7 @@ export default function AssessorLayout() {
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <BrandLogo as="div" size="sm" />
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (

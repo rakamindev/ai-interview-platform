@@ -34,6 +34,7 @@ module Sessions
         )
 
         create_portfolio
+        supersede_pending_sessions if successful_completion?(reason.to_s)
       end
 
       enqueue_portfolio_generation
@@ -62,6 +63,59 @@ module Sessions
         candidate_id:      @session.candidate_id,
         generation_status: 'pending'
       )
+    end
+
+    # A session completed successfully — any other PENDING session for the
+    # same candidate (same assessment) should be marked superseded so they
+    # can't be used for a duplicate interview.
+    #
+    # Identity priority: candidate_id > candidate_email > (none — don't group by name alone)
+    # Only supersedes within the same assessment to avoid cross-assessment collateral.
+    def supersede_pending_sessions
+      identity_scope = candidate_identity_scope
+      return unless identity_scope
+
+      siblings = identity_scope
+                   .where(assessment_id: @session.assessment_id)
+                   .where(status: 'pending')
+                   .where.not(id: @session.id)
+
+      return if siblings.empty?
+
+      superseded_at = Time.current
+      siblings.each do |sibling|
+        sibling.update_columns(
+          status:     'ended',
+          end_reason: 'superseded',
+          ended_at:   superseded_at
+        )
+        Rails.logger.info(
+          "[EndHandler] Session #{sibling.id} superseded by #{@session.id} " \
+          "(candidate_identity: #{@session.candidate_identity_key})"
+        )
+      end
+    end
+
+    # Only supersede on genuine completion — never on error or superseded itself.
+    SUPERSEDE_ON_REASONS = %w[all_covered manual_candidate manual_assessor time_ceiling].freeze
+
+    def successful_completion?(reason)
+      SUPERSEDE_ON_REASONS.include?(reason)
+    end
+
+    # Returns an AR relation scoped to sessions with the same candidate identity,
+    # or nil if the session has no usable identity (no id, no email).
+    def candidate_identity_scope
+      if @session.candidate_id.present?
+        Session.unscoped.where(tenant_id: @session.tenant_id, candidate_id: @session.candidate_id)
+      elsif @session.candidate_email.present?
+        Session.unscoped.where(
+          tenant_id:       @session.tenant_id,
+          candidate_email: @session.candidate_email.downcase.strip
+        )
+      else
+        nil # name-only sessions — cannot safely group
+      end
     end
 
     def enqueue_portfolio_generation

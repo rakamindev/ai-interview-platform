@@ -134,50 +134,58 @@ export default function AssessmentNewPage() {
           )}
         </div>
 
-        {/* Time limit */}
-        <div className="space-y-1.5">
-          <Label>
-            Session time limit <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            defaultValue="45"
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_LIMIT_OPTIONS.map((min) => (
-                <SelectItem key={min} value={String(min)}>
-                  {min} min
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Time limit + Language — side by side */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>
+              Session time limit <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              defaultValue="45"
+              onValueChange={(v) => setValue("time_limit_min", Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_LIMIT_OPTIONS.map((min) => (
+                  <SelectItem key={min} value={String(min)}>
+                    {min} min
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Language */}
-        <div className="space-y-1.5">
-          <Label>Interview language</Label>
-          <Select
-            defaultValue="en"
-            onValueChange={(v) => setValue("language", v as "en" | "id")}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="id">Indonesian</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label>Interview language</Label>
+            <Select
+              defaultValue="en"
+              onValueChange={(v) => setValue("language", v as "en" | "id")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="id">Indonesian</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Separator />
 
         {/* Skills section */}
         <div className="space-y-3">
-          <Label>Skills to assess</Label>
+          <div className="flex items-center justify-between">
+            <Label>Skills to assess</Label>
+            {fields.length > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {fields.length} skill{fields.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
@@ -233,23 +241,24 @@ export default function AssessmentNewPage() {
 
         <Separator />
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-
-        {/* Actions */}
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/assessments")}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
-          </Button>
+        {/* Actions — error shown inline next to submit */}
+        <div className="space-y-2">
+          {error && (
+            <p className="text-sm text-destructive text-right">{error}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/assessments")}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save &amp; Create Session →
+            </Button>
+          </div>
         </div>
       </form>
 

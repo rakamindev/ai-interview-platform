@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { Loader2 } from "lucide-react";
 
 export default function SignupPage() {
@@ -38,9 +39,11 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create an account</p>
+        <div className="text-center space-y-1">
+          <div className="flex justify-center mb-3">
+            <BrandLogo as="div" size="md" />
+          </div>
+          <p className="text-sm text-muted-foreground">Create an account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

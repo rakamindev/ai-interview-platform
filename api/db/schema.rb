@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -19,7 +19,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "confidence_level", ["high", "medium", "low"]
   create_enum "coverage_state", ["not_yet", "initiated", "partial", "covered"]
-  create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
+  create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error", "superseded"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
@@ -143,6 +143,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.string "candidate_email", limit: 255
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
