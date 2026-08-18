@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, FileText, Loader2, Trophy } from "lucide-react";
+import { ArrowLeft, Clock, FileText, Loader2, Trophy, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,15 +10,16 @@ import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import { sessionsApi } from "@/services/sessions";
 import { assessmentsApi } from "@/services/assessments";
 import { vacanciesApi } from "@/services/vacancies";
+import { portfoliosApi } from "@/services/portfolios";
 import { candidatesApi, type MatchEntry } from "@/services/candidates";
 import type { Assessment, AssessorOverride, Portfolio, SkillComparison, Vacancy } from "@/types";
 
 function StatusBadge({ status, endReason }: { status?: string; endReason?: string | null }) {
-  if (status === "active") return <span className="text-xs text-primary">Live now</span>;
+  if (status === "active") return <span className="text-xs text-primary font-medium">Live now</span>;
   if (status === "ended" && endReason === "error")
-    return <span className="text-xs text-destructive">Failed</span>;
-  if (status === "ended") return <span className="text-xs text-muted-foreground">Completed</span>;
-  return <span className="text-xs text-muted-foreground">Awaiting</span>;
+    return <span className="text-xs text-destructive font-medium">Failed</span>;
+  if (status === "ended") return <span className="text-xs text-muted-foreground font-medium">Completed</span>;
+  return <span className="text-xs text-muted-foreground font-medium">Awaiting</span>;
 }
 
 export default function CandidateDetailPage() {
@@ -33,6 +34,8 @@ export default function CandidateDetailPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [match, setMatch] = useState<MatchEntry | null>(null);
   const [matchLoading, setMatchLoading] = useState(false);
+  const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = Number(sessionId);
@@ -91,6 +94,47 @@ export default function CandidateDetailPage() {
     }
   };
 
+  const handleExport = async (format: "pdf" | "json", vacancyId?: number) => {
+    if (!portfolio) return;
+    setExporting(format);
+    setExportError(null);
+    try {
+      const res = await portfoliosApi.exportPortfolio(
+        portfolio.id,
+        format,
+        vacancyId
+      );
+      const nameSlug = session?.candidate_name
+        ? `-${session.candidate_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+        : "";
+      const prefix = vacancyId
+        ? `fitgap${nameSlug}-session-${sessionId}-vacancy-${vacancyId}`
+        : `portfolio${nameSlug}-session-${sessionId}`;
+
+      if (format === "json") {
+        const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${prefix}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${prefix}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      setExportError("Export failed. Please try again.");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const comparisons: SkillComparison[] | null = match
     ? match.skills.map((s: any) => ({
         skill_label: s.skill_label,
@@ -114,20 +158,75 @@ export default function CandidateDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Link to="/candidates" className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("/candidates")}
+            className="h-8 w-8 shrink-0"
+            aria-label="Back"
+          >
             <ArrowLeft className="h-4 w-4" />
-          </Link>
+          </Button>
           <div>
-            <h1 className="text-lg font-semibold">
-              {session?.candidate_name ?? `Candidate #${sessionId}`}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">
+                {session?.candidate_name ?? `Candidate #${sessionId}`}
+              </h1>
+              <StatusBadge status={session?.status} endReason={session?.end_reason} />
+            </div>
             <p className="text-sm text-muted-foreground">{session?.assessment?.name}</p>
           </div>
         </div>
-        <StatusBadge status={session?.status} endReason={session?.end_reason} />
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
+          {session?.assessment_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-8 gap-1.5"
+              onClick={() => navigate(`/assessments/${session.assessment_id}/sessions/${session.id}/transcript`)}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              <span>Transcript</span>
+            </Button>
+          )}
+
+          {portfolio && portfolioStatus === "complete" && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 gap-1.5"
+                onClick={() => handleExport("pdf")}
+                disabled={!!exporting}
+              >
+                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                <span>Export PDF</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 gap-1.5"
+                onClick={() => handleExport("json")}
+                disabled={!!exporting}
+              >
+                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                <span>Export JSON</span>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      {exportError && (
+        <div className="border border-destructive/40 bg-destructive/5 rounded-lg p-3 text-xs text-destructive">
+          {exportError}
+        </div>
+      )}
 
       {/* Session metadata — interview context the AI result depends on */}
       {session && (
@@ -238,22 +337,35 @@ export default function CandidateDetailPage() {
           <Skeleton className="h-32 w-full" />
         ) : comparisons ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/30 p-3 rounded-lg border">
               <p className="text-sm">
                 Match score:{" "}
-                <span className={`font-semibold ${match!.score >= 80 ? "text-green-600" : match!.score >= 60 ? "text-amber-600" : "text-destructive"}`}>
+                <span className={`font-semibold ${match!.score >= 80 ? "text-primary" : match!.score >= 60 ? "text-secondary-foreground" : "text-destructive"}`}>
                   {match!.score}%
                 </span>
               </p>
-              {session?.assessment_id && (
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/assessments/${session.assessment_id}/sessions/${sessionId}/fitgap/${selectedVacancy}`)}
+                  className="h-8 text-xs gap-1"
+                  onClick={() => handleExport("pdf", Number(selectedVacancy))}
+                  disabled={!!exporting}
                 >
-                  View Full Fit/Gap Report →
+                  <Download className="h-3 w-3" />
+                  <span>Export Fit/Gap PDF</span>
                 </Button>
-              )}
+                {session?.assessment_id && (
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    onClick={() => navigate(`/assessments/${session.assessment_id}/sessions/${sessionId}/fitgap/${selectedVacancy}`)}
+                  >
+                    <span>Full Report</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
             <ComparisonTable comparisons={comparisons} />
           </div>
