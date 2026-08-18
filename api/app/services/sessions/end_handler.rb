@@ -58,6 +58,18 @@ module Sessions
       # Idempotent — only create if one doesn't exist yet
       return if @session.portfolio.present?
 
+      quality = TranscriptIntegrity.for_session(@session)
+
+      if quality.unverifiable?
+        @session.create_portfolio!(
+          candidate_id:      @session.candidate_id,
+          generation_status: 'unverifiable',
+          generation_error:  TranscriptIntegrity::REASON_MESSAGES[quality.reason]
+        )
+        Rails.logger.warn("[N9/EndHandler] Session #{@session.id} transcript unverifiable (#{quality.reason}) — skipping portfolio generation")
+        return
+      end
+
       @session.create_portfolio!(
         candidate_id:      @session.candidate_id,
         generation_status: 'pending'
@@ -67,6 +79,7 @@ module Sessions
     def enqueue_portfolio_generation
       portfolio = @session.reload.portfolio
       return unless portfolio
+      return if portfolio.unverifiable?
 
       PortfolioGeneratorWorker.perform_async(@session.id)
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")

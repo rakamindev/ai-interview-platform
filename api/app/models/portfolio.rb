@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Portfolio < ApplicationRecord
-  GENERATION_STATUSES = %w[pending generating complete failed].freeze
+  GENERATION_STATUSES = %w[pending generating complete failed unverifiable].freeze
 
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy
@@ -12,8 +12,10 @@ class Portfolio < ApplicationRecord
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
+  scope :unverifiable, -> { where(generation_status: 'unverifiable') }
 
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
+  def unverifiable? = generation_status == 'unverifiable'
 end
