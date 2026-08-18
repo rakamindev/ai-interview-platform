@@ -35,7 +35,7 @@ export const assessmentsApi = {
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
   createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
-    api.post<{ session: Session; invite_url: string }>(
+    api.post<{ session: Session; invite_url: string; reused?: boolean }>(
       `/assessments/${assessmentId}/sessions`,
       { session: { candidate_name: candidateName, candidate_id: candidateId } }
     ),

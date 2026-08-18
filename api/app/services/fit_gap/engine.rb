@@ -55,14 +55,20 @@ module FitGap
           result          = 'not_assessed'
         end
 
+        overridden = portfolio_skill&.dig(:overridden) || false
+
         {
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
+          # expected_level is the API canonical name; required_level is the FE contract alias
           expected_level:  expected_level,
+          required_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          overridden:      overridden,
+          is_override:     overridden
         }
       end
 

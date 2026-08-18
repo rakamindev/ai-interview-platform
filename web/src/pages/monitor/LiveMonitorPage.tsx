@@ -15,8 +15,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { LoadingBlock } from "@/components/shared/EmptyState";
+import { StatusPill } from "@/components/shared/StatusPill";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import {
@@ -24,9 +26,8 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
-import { cn } from "@/lib/utils";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -65,7 +66,6 @@ export default function LiveMonitorPage() {
   const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
     useCoverageWebSocket(Number(sessionId));
 
-  // On session_ended from WS — stop polling, update local state
   useEffect(() => {
     if (sessionEnded) {
       setSessionActive(false);
@@ -73,7 +73,6 @@ export default function LiveMonitorPage() {
     }
   }, [sessionEnded]);
 
-  // Initial load
   useEffect(() => {
     Promise.all([
       sessionsApi.get(Number(sessionId)),
@@ -94,7 +93,6 @@ export default function LiveMonitorPage() {
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  // Poll transcript every 3s while session is active
   const fetchNewTurns = useCallback(async () => {
     try {
       const res = await sessionsApi.getTranscript(
@@ -129,10 +127,8 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-32 w-full" />
+      <div className="max-w-5xl space-y-6">
+        <LoadingBlock rows={3} />
       </div>
     );
   }
@@ -141,49 +137,52 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
-          </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
-            <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
-          </span>
-        </div>
-      </div>
-
-      {/* Session ended banner */}
-      {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-          <div>
-            <span className="font-medium">Session ended</span>
-            {sessionEndReason && (
-              <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
-              </span>
+    <div className="max-w-5xl space-y-6">
+      <PageHeader
+        breadcrumb={
+          <Link
+            to={`/assessments/${id}/invite`}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to assessment
+          </Link>
+        }
+        title="Live Monitor"
+        description={assessmentName ? <span className="break-anywhere">{assessmentName}</span> : undefined}
+        actions={
+          <>
+            {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
+            {sessionActive && isConnected ? (
+              <StatusPill tone="live" pulse>
+                Live
+              </StatusPill>
+            ) : sessionActive ? (
+              <StatusPill tone="awaiting">Reconnecting…</StatusPill>
+            ) : (
+              <StatusPill tone="completed">Ended</StatusPill>
             )}
+          </>
+        }
+      />
+
+      {sessionEnded && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm bg-muted/50 border rounded-lg px-4 py-3">
+          <div className="flex items-start gap-2 min-w-0">
+            <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="font-medium">Session ended</span>
+              {sessionEndReason && (
+                <span className="text-muted-foreground ml-1.5 break-anywhere">
+                  — {sessionEndReason.replace(/_/g, " ")}
+                </span>
+              )}
+            </div>
           </div>
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto"
+            className="sm:ml-auto shrink-0"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
             View portfolio →
@@ -191,7 +190,6 @@ export default function LiveMonitorPage() {
         </div>
       )}
 
-      {/* Coverage map */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Coverage Status</CardTitle>
@@ -202,9 +200,9 @@ export default function LiveMonitorPage() {
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{skill.skill_label}</span>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
+                  <span className="font-medium break-anywhere min-w-0">{skill.skill_label}</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                     {skill.probe_count > 0 && (
                       <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                     )}
@@ -217,15 +215,14 @@ export default function LiveMonitorPage() {
                   className="h-2"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    "{skill.last_signal}"
+                  <p className="text-xs text-muted-foreground break-anywhere">
+                    &ldquo;{skill.last_signal}&rdquo;
                   </p>
                 )}
               </div>
             ))
           )}
 
-          {/* Discovered skills */}
           {discoveredSkills.length > 0 && (
             <>
               {configuredSkills.length > 0 && <Separator />}
@@ -235,12 +232,12 @@ export default function LiveMonitorPage() {
                 </p>
                 {discoveredSkills.map((skill) => (
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
-                        {skill.skill_label}
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+                        <span className="break-anywhere">{skill.skill_label}</span>
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                         {skill.probe_count > 0 && (
                           <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                         )}
@@ -253,8 +250,8 @@ export default function LiveMonitorPage() {
                       className="h-2"
                     />
                     {skill.last_signal && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        "{skill.last_signal}"
+                      <p className="text-xs text-muted-foreground break-anywhere">
+                        &ldquo;{skill.last_signal}&rdquo;
                       </p>
                     )}
                   </div>
@@ -265,7 +262,6 @@ export default function LiveMonitorPage() {
         </CardContent>
       </Card>
 
-      {/* Live transcript */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Live Transcript</CardTitle>
@@ -284,12 +280,11 @@ export default function LiveMonitorPage() {
       </Card>
 
       {endError && (
-        <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive break-anywhere">
           Failed to end session. Please try again.
         </div>
       )}
 
-      {/* End Session */}
       <div className="flex justify-end">
         {sessionActive ? (
           <AlertDialog>

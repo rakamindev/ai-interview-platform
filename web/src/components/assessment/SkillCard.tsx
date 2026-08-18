@@ -54,7 +54,11 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">{skillLabel}</span>
             <span className="text-xs text-muted-foreground shrink-0">
-              {isCustom ? "Custom" : skill?.skill_id ? `SK-${String(skill.skill_id).padStart(3, "0")}` : ""}
+              {isCustom
+                ? "Custom"
+                : skill?.skill_id
+                  ? String(skill.skill_id)
+                  : "Taxonomy"}
             </span>
           </div>
         </div>

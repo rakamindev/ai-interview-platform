@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript destroy]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -21,10 +21,25 @@ module Api
       # POST /api/v1/assessments/:assessment_id/sessions
       def create
         assessment = Assessment.find(params[:assessment_id])
+        candidate_id   = params.dig(:session, :candidate_id)
+        candidate_name = params.dig(:session, :candidate_name).presence
+
+        existing = Session.pending_invite_for(
+          assessment,
+          candidate_id:   candidate_id,
+          candidate_name: candidate_name
+        )
+        if existing
+          return json_response(
+            session:    session_json(existing),
+            invite_url: existing.invite_url,
+            reused:     true
+          )
+        end
 
         session = assessment.sessions.new(
-          candidate_id:   params.dig(:session, :candidate_id),
-          candidate_name: params.dig(:session, :candidate_name).presence,
+          candidate_id:   candidate_id,
+          candidate_name: candidate_name,
           tenant_id:      current_tenant_id
         )
 
@@ -41,6 +56,16 @@ module Api
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
+      end
+
+      # DELETE /api/v1/sessions/:id — revoke an unused (pending) invite only
+      def destroy
+        unless @session.pending?
+          return json_error("Only awaiting invites can be revoked", :unprocessable_entity)
+        end
+
+        @session.destroy!
+        json_response(message: "Invite revoked")
       end
 
       # GET /api/v1/sessions/:id
@@ -149,7 +174,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason,
         )
       end
 

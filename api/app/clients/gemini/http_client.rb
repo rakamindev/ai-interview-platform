@@ -2,7 +2,9 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    # Preview / current text models (e.g. gemini-3-flash-preview) require v1beta.
+    # Live interview already uses the v1beta WebSocket endpoint.
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body

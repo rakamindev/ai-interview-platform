@@ -30,8 +30,9 @@ Rails.application.configure do
   # Log level (default: info in production)
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info").to_sym
 
-  # Use a real queuing backend for Active Job.
-  config.active_job.queue_adapter = :sidekiq
+  # Jobs use Sidekiq::Worker, not Active Job. This app is api_only and does not
+  # load the active_job railtie, so config.active_job is undefined.
+  # config.active_job.queue_adapter = :sidekiq
 
   # Use default logging formatter so that PID and timestamp are not suppressed.
   config.log_tags = [:request_id]

@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, AlertCircle } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -46,13 +46,17 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") {
+          setInterviewState(res.data.end_reason === "error" ? "failed" : "complete");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("failed"));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
+  const stopCaptureRef = useRef<(() => void) | null>(null);
+  const stopPlaybackRef = useRef<(() => void) | null>(null);
 
   const handleStateChange = useCallback((state: InterviewState) => {
     setInterviewState(state);
@@ -66,6 +70,13 @@ export default function InterviewPage() {
         callAudioComplete();
       }, 10_000);
       waitForDrain(() => callAudioComplete());
+      return;
+    }
+
+    if (state === "complete" || state === "failed") {
+      muteRef.current?.();
+      stopCaptureRef.current?.();
+      stopPlaybackRef.current?.();
       return;
     }
 
@@ -146,6 +157,8 @@ export default function InterviewPage() {
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+  stopCaptureRef.current = stopCapture;
+  stopPlaybackRef.current = stopPlayback;
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
@@ -190,53 +203,92 @@ export default function InterviewPage() {
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
-          {candidateInfo && (
-            <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
-            </p>
+      <div className="flex-1 flex items-center px-4 py-8 sm:py-12">
+        <div className="w-full max-w-md mx-auto rounded-xl border bg-white shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="text-center space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight break-anywhere">
+              {candidateInfo?.role_title ?? "AI Interview"}
+            </h1>
+            {candidateInfo && (
+              <p className="text-sm text-muted-foreground">
+                Up to {candidateInfo.time_limit_min} minutes · voice interview
+              </p>
+            )}
+          </div>
+
+          {!hardwareCheckDone ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-1.5 text-muted-foreground leading-relaxed">
+                <p>• This is a voice interview. Make sure you're in a quiet place.</p>
+                <p>• The AI will ask follow-up questions — there are no scripts.</p>
+                <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
+                <p>• Your mic will be active throughout. You can end anytime.</p>
+              </div>
+              <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                <span>Hardware checks passed. You're ready to start.</span>
+              </div>
+              <Button className="w-full" size="lg" onClick={startInterview}>
+                <Mic className="h-4 w-4 mr-2" />
+                Start Interview
+              </Button>
+            </div>
           )}
         </div>
-
-        {!hardwareCheckDone ? (
-          <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-              <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
-            </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
-              <Mic className="h-4 w-4 mr-2" />
-              Start Interview
-            </Button>
-          </div>
-        )}
       </div>
     );
   }
 
-  // ── State F: Complete ───────────────────────────────────────────────────
+  // ── State F: Complete (successful end) ──────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
+      <div className="flex-1 flex items-center px-4 py-10 sm:py-16">
+        <div className="w-full max-w-md mx-auto rounded-xl border bg-white shadow-sm p-6 sm:p-8 text-center space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 border border-emerald-200">
+            <CheckCircle className="h-6 w-6 text-emerald-600" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-semibold tracking-tight">Interview Complete</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Thank you. The interview has been recorded.
+              <br />
+              The hiring team will review your results and follow up with you.
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground border-t pt-4">
+            You can close this tab. No further action is needed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── State G: Failed (end_reason=error / unrecoverable) ──────────────────
+  if (interviewState === "failed") {
+    return (
+      <div className="flex-1 flex items-center px-4 py-10 sm:py-16">
+        <div className="w-full max-w-md mx-auto rounded-xl border border-destructive/25 bg-white shadow-sm p-6 sm:p-8 text-center space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 border border-destructive/20">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-semibold tracking-tight">Interview Interrupted</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Something went wrong and this interview could not be completed.
+            </p>
+          </div>
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-left text-sm text-muted-foreground leading-relaxed">
+            <p className="font-medium text-foreground mb-1">What to do next</p>
+            <p>
+              Contact the hiring team and ask for a <span className="font-medium text-foreground">new interview link</span>.
+              Your previous attempt was recorded as interrupted — this does not mean you failed the assessment.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -248,8 +300,8 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
-        <span className="text-sm font-medium">AI Interview</span>
+      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-[hsl(184_20%_98%)]/95 backdrop-blur z-10">
+        <span className="text-sm font-medium">Live session</span>
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}

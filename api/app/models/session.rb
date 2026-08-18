@@ -25,6 +25,22 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # One unused invite per person: reuse pending by candidate_id, then by name.
+  # Unnamed invites are never reused — each is a distinct session.
+  def self.pending_invite_for(assessment, candidate_id: nil, candidate_name: nil)
+    relation = assessment.sessions.pending.order(created_at: :desc)
+
+    if candidate_id.present?
+      found = relation.find_by(candidate_id: candidate_id)
+      return found if found
+    end
+
+    name = candidate_name.to_s.strip
+    return nil if name.blank?
+
+    relation.where("LOWER(BTRIM(candidate_name)) = ?", name.downcase).first
+  end
+
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
     "#{base}/interview/#{invite_token}"

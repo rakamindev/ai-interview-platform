@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState, ErrorState, LoadingBlock } from "@/components/shared/EmptyState";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, MessageSquare } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -13,7 +14,9 @@ export default function TranscriptPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     Promise.all([
       sessionsApi.getTranscript(Number(sessionId)),
       sessionsApi.get(Number(sessionId)),
@@ -25,6 +28,10 @@ export default function TranscriptPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -41,48 +48,45 @@ export default function TranscriptPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="max-w-5xl space-y-6">
+      <PageHeader
+        breadcrumb={
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to portfolio
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
-          </div>
-        </div>
-        {!loading && !error && turns.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
-            Download .txt
-          </Button>
-        )}
-      </div>
+        }
+        title="Interview Transcript"
+        description={candidateName ?? undefined}
+        actions={
+          !loading && !error && turns.length > 0 ? (
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Download .txt
+            </Button>
+          ) : undefined
+        }
+      />
 
-      {loading && (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      )}
+      {loading && <LoadingBlock rows={4} />}
 
-      {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
-          Failed to load transcript. Please refresh.
-        </div>
+      {error && (
+        <ErrorState
+          title="Failed to load transcript"
+          description="Check your connection and try again."
+          onRetry={load}
+        />
       )}
 
       {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-          No transcript available for this session.
-        </div>
+        <EmptyState
+          icon={MessageSquare}
+          title="No transcript available"
+          description="This session does not have a transcript yet."
+        />
       )}
 
       {!loading && !error && turns.length > 0 && (
@@ -92,20 +96,18 @@ export default function TranscriptPage() {
             return (
               <div
                 key={turn.id}
-                className={`rounded-lg p-4 ${
-                  isAI
-                    ? "bg-muted border"
-                    : "bg-background border border-primary/20"
-                }`}
+                className={`rounded-lg p-4 ${isAI
+                  ? "bg-muted border"
+                  : "bg-background border border-primary/20"
+                  }`}
               >
                 <p
-                  className={`text-xs font-semibold mb-1 ${
-                    isAI ? "text-muted-foreground" : "text-primary"
-                  }`}
+                  className={`text-xs font-semibold mb-1 ${isAI ? "text-muted-foreground" : "text-primary"
+                    }`}
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>
-                <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
+                <p className="text-sm break-anywhere whitespace-pre-wrap">{turn.text}</p>
               </div>
             );
           })}

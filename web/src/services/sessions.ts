@@ -12,6 +12,9 @@ export const sessionsApi = {
       session: { reason },
     }),
 
+  revoke: (id: number) =>
+    api.delete<{ message: string }>(`/sessions/${id}`),
+
   getCoverage: (id: number) =>
     api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
@@ -21,7 +24,11 @@ export const sessionsApi = {
     }),
 
   getPortfolio: (id: number) =>
-    api.get<{ portfolio: Portfolio } | { status: string }>(`/sessions/${id}/portfolio`),
+    api.get<{
+      status?: string;
+      portfolio?: Portfolio;
+      error?: string | null;
+    }>(`/sessions/${id}/portfolio`),
 
   regeneratePortfolio: (id: number) =>
     api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),

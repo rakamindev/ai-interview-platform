@@ -10,18 +10,22 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @portfolio.nil? || @portfolio.generating? || @portfolio.generation_status == 'pending'
           return render json: { status: "generating" }, status: :accepted
         end
 
         if @portfolio.failed?
           return json_response(
+            status:   "failed",
             portfolio: portfolio_json(@portfolio),
-            error: @portfolio.generation_error
+            error:    @portfolio.generation_error
           )
         end
 
-        json_response(portfolio: portfolio_json(@portfolio))
+        json_response(
+          status:    "complete",
+          portfolio: portfolio_json(@portfolio)
+        )
       end
 
       # POST /api/v1/sessions/:id/portfolio/regenerate
