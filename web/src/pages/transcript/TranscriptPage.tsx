@@ -10,6 +10,7 @@ export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<"pending" | "active" | "ended" | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -21,10 +22,17 @@ export default function TranscriptPage() {
       .then(([tRes, sRes]) => {
         setTurns(tRes.data.turns);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setSessionStatus(sRes.data.session.status);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  const emptyStateMessage = (() => {
+    if (sessionStatus === "pending") return "Candidate hasn't started the interview yet.";
+    if (sessionStatus === "active") return "Interview is still in progress — the transcript will be available once it ends.";
+    return "Interview ended but no transcript was captured. This may indicate a recording issue — check the session logs.";
+  })();
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -80,8 +88,12 @@ export default function TranscriptPage() {
       )}
 
       {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-          No transcript available for this session.
+        <div
+          className={`border rounded-lg p-6 text-center text-sm ${
+            sessionStatus === "ended" ? "border-destructive/40 text-destructive" : "text-muted-foreground"
+          }`}
+        >
+          {emptyStateMessage}
         </div>
       )}
 

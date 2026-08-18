@@ -134,7 +134,7 @@ export default function FitGapReportPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+              to={`/assessments/${id}/sessions/${sessionId}/portfolio?vacancy=${vacancyId}`}
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />

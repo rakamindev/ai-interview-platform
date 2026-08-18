@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
+import { formatDuration, formatTime } from "@/utils/formatDuration";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
@@ -45,10 +46,19 @@ function SessionRow({
         </div>
         <div className="space-y-0.5">
           <div className="text-sm font-medium">{displayName}</div>
-          {session.started_at && (
+          {isEnded && session.ended_at ? (
             <div className="text-xs text-muted-foreground">
-              {new Date(session.started_at).toLocaleDateString()}
+              Completed {formatTime(session.ended_at)}
+              {typeof session.duration_seconds === "number" && (
+                <> · {formatDuration(session.duration_seconds)}</>
+              )}
             </div>
+          ) : (
+            session.started_at && (
+              <div className="text-xs text-muted-foreground">
+                {new Date(session.started_at).toLocaleDateString()}
+              </div>
+            )
           )}
         </div>
       </div>

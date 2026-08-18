@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,8 +10,9 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { exportFilename } from "@/utils/exportFilename";
+import { formatDuration, formatTime } from "@/utils/formatDuration";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Briefcase, Plus } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import type { Portfolio, AssessorOverride, Vacancy, Session } from "@/types";
 
 // PDF requests use responseType "blob", so an error body also arrives as a Blob
 // instead of parsed JSON — read it back out to surface the real backend message.
@@ -29,16 +30,29 @@ async function extractErrorMessage(e: any, format: "pdf" | "json"): Promise<stri
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
-  const [selectedVacancy, setSelectedVacancy] = useState<string>("");
+  // Selected vacancy lives in the URL (?vacancy=<id>), not component state — it must
+  // survive unmount/remount when navigating to/from Fit/Gap. See EXPLORATION_LOG.md
+  // "Vacancy-context persistence" for the full trace/design.
+  const selectedVacancy = searchParams.get("vacancy") ?? "";
+  const setSelectedVacancy = (vacancyId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("vacancy", vacancyId);
+    setSearchParams(next, { replace: true });
+  };
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [roleTitle, setRoleTitle] = useState<string | null>(null);
+  const [sessionTiming, setSessionTiming] = useState<Pick<
+    Session,
+    "status" | "started_at" | "ended_at" | "duration_seconds"
+  > | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -63,10 +77,30 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data?.session?.candidate_name ?? null);
         setRoleTitle(sRes.data?.session?.assessment?.name ?? null);
+        setSessionTiming(sRes.data?.session ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
+
+  // The URL only carries intent ("I meant to look at vacancy 7") — the fetched
+  // vacancies list is what actually validates it. Runs once vacancies have loaded;
+  // if the id in the URL doesn't match a real vacancy (deleted, typo'd, stale
+  // bookmark), fall back to unselected and scrub the dead param.
+  useEffect(() => {
+    if (loading || !selectedVacancy) return;
+    const exists = vacancies.some((v) => String(v.id) === selectedVacancy);
+    if (!exists) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("vacancy");
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [loading, vacancies, selectedVacancy, setSearchParams]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -137,6 +171,14 @@ export default function PortfolioPage() {
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}
+            {sessionTiming?.status === "ended" && sessionTiming.ended_at && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Completed {formatTime(sessionTiming.ended_at)}
+                {typeof sessionTiming.duration_seconds === "number" && (
+                  <> · {formatDuration(sessionTiming.duration_seconds)}</>
+                )}
+              </p>
+            )}
           </div>
         </div>
 
@@ -194,6 +236,9 @@ export default function PortfolioPage() {
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          {portfolio.generation_error && (
+            <p className="text-xs text-muted-foreground">{portfolio.generation_error}</p>
+          )}
           <Button
             variant="outline"
             size="sm"
