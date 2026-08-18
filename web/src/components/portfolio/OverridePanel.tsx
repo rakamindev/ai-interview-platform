@@ -2,10 +2,19 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
+import OverrideHistory from "./OverrideHistory";
 import { portfoliosApi } from "@/services/portfolios";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, ShieldCheck, ArrowDownCircle } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -17,20 +26,31 @@ interface OverridePanelProps {
 
 export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
-  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+  const [overrideLevel, setOverrideLevel] = useState(
+    existingOverride?.override_level ?? parseLevel(skill.ai_level),
+  );
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
   const hasOverride = !!existingOverride;
+  const canSave = notes.trim().length > 0 && !saving;
+
+  const handleOpen = () => {
+    setOverrideLevel(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+    setNotes(existingOverride?.assessor_notes ?? "");
+    setSaveError(false);
+    setOpen(true);
+  };
 
   const handleSave = async () => {
+    if (!canSave) return;
     setSaving(true);
     setSaveError(false);
     try {
       const res = await portfoliosApi.getOverride(skill.id, {
         override_level: overrideLevel,
-        assessor_notes: notes,
+        assessor_notes: notes.trim(),
       });
       onSaved(res.data.override);
       setOpen(false);
@@ -41,64 +61,73 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
     }
   };
 
-  if (!open) {
-    return (
-      <div className="flex items-center gap-2">
-        {hasOverride ? (
-          <>
-            <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
-              <span className="text-muted-foreground text-xs">AI</span>
-              <span className="text-muted-foreground">→</span>
-              <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-verdict-match font-medium">You Overridden ✓</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-              <Pencil className="h-3 w-3 mr-1" /> Edit override
-            </Button>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            Override rating ▼
-          </Button>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Override
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">Your rating:</Label>
-        <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor={`notes-${skill.id}`} className="text-sm">Notes (optional):</Label>
-        <Textarea
-          id={`notes-${skill.id}`}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          placeholder="Add context for your override..."
-        />
-      </div>
-
-      {saveError && (
-        <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
+    <>
+      {hasOverride ? (
+        <Button variant="ghost" size="sm" onClick={handleOpen}>
+          <ShieldCheck className="h-3.5 w-3.5 mr-1 text-verdict-match" /> Override applied
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" onClick={handleOpen}>
+          <ArrowDownCircle className="h-3.5 w-3.5 mr-1" /> Override rating
+        </Button>
       )}
 
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-        <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-          Save override
-        </Button>
-      </div>
-    </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{hasOverride ? "Edit override" : "Override rating"}</DialogTitle>
+            <DialogDescription>
+              {hasOverride
+                ? "Adjust the level and update your reasoning."
+                : "Select a level and explain your reasoning. This replaces the AI rating for this skill."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {hasOverride && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Current:</span>
+              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
+              <span className="text-muted-foreground">→</span>
+              <LevelBadge level={existingOverride!.override_level} size="sm" />
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label className="text-sm">Your rating</Label>
+            <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={`notes-${skill.id}`} className="text-sm">
+              Reason <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id={`notes-${skill.id}`}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Explain why you are overriding the AI rating…"
+            />
+          </div>
+
+          {saveError && (
+            <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={!canSave}>
+              {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+              Save override
+            </Button>
+          </DialogFooter>
+
+          <OverrideHistory portfolioSkillId={skill.id} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
