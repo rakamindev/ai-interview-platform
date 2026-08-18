@@ -30,50 +30,87 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
 
+  // Group comparisons
+  const gaps = comparisons.filter((c) => c.result === "gap");
+  const matches = comparisons.filter((c) => c.result === "match");
+  const exceeds = comparisons.filter((c) => c.result === "exceed");
+  const notAssessed = comparisons.filter((c) => c.result === "not_assessed");
+  
+  const renderRow = (c: SkillComparison, i: number) => (
+    <tr key={`${c.skill_label}-${i}`} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+      <td className="px-4 py-2.5 font-medium">{c.skill_label}</td>
+      <td className="px-4 py-2.5 text-center text-muted-foreground">
+        {LEVEL_LABELS[c.required_level]}
+      </td>
+      <td className="px-4 py-2.5 text-center">
+        {c.candidate_level != null ? (
+          <span>
+            {LEVEL_LABELS[c.candidate_level]}
+            {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </td>
+      <td className="px-4 py-2.5 text-center">
+        <ResultBadge comparison={c} />
+      </td>
+    </tr>
+  );
+
   return (
-    <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="flex flex-wrap items-center gap-4 text-sm font-medium bg-muted/30 px-4 py-3 rounded-lg border">
+        {gapCount > 0 && <span className="text-red-600 dark:text-red-400">⚠ Gaps: {gapCount}</span>}
+        {matchCount > 0 && <span className="text-green-600 dark:text-green-400">✅ Matches: {matchCount}</span>}
+        {exceedCount > 0 && <span className="text-amber-600 dark:text-amber-500">⭐ Exceeds: {exceedCount}</span>}
+        <span className="ml-auto text-xs text-muted-foreground font-normal">✏ = human override applied</span>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
+              <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Skill</th>
+              <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Required</th>
+              <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Candidate</th>
+              <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Result</th>
             </tr>
           </thead>
-          <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
+          {gaps.length > 0 && (
+            <tbody className="group">
+              <tr className="bg-red-50/50 dark:bg-red-950/20 border-b">
+                <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wider">Priority Gaps</td>
               </tr>
-            ))}
-          </tbody>
+              {gaps.map(renderRow)}
+            </tbody>
+          )}
+          {matches.length > 0 && (
+            <tbody className="group border-t-2 border-t-muted/50">
+              <tr className="bg-green-50/50 dark:bg-green-950/20 border-b">
+                <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">Matched Requirements</td>
+              </tr>
+              {matches.map(renderRow)}
+            </tbody>
+          )}
+          {exceeds.length > 0 && (
+            <tbody className="group border-t-2 border-t-muted/50">
+              <tr className="bg-amber-50/50 dark:bg-amber-950/20 border-b">
+                <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-amber-700 dark:text-amber-500 uppercase tracking-wider">Exceeding Expectations</td>
+              </tr>
+              {exceeds.map(renderRow)}
+            </tbody>
+          )}
+          {notAssessed.length > 0 && (
+            <tbody className="group border-t-2 border-t-muted/50">
+              <tr className="bg-neutral-50/50 dark:bg-neutral-900/20 border-b">
+                <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Not Assessed</td>
+              </tr>
+              {notAssessed.map(renderRow)}
+            </tbody>
+          )}
         </table>
-      </div>
-
-      {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
       </div>
     </div>
   );
