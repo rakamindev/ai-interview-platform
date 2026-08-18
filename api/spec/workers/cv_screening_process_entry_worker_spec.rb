@@ -34,6 +34,13 @@ RSpec.describe CvScreeningProcessEntryWorker do
     expect(RequestStore.store.key?(:tenant_id)).to be(false)
   end
 
+  it 'lets a transient storage error propagate out of #perform so Sidekiq actually retries the job' do
+    allow(CvScreenings::DecisionEngine).to receive(:new).and_raise(ActiveStorage::FileNotFoundError)
+
+    expect { described_class.new.perform(entry.id) }.to raise_error(ActiveStorage::FileNotFoundError)
+    expect(entry.reload.decision).to eq('pending')
+  end
+
   describe 'sidekiq_retries_exhausted' do
     it 'marks the entry needs_review with model_failed — never not_advanced' do
       described_class.sidekiq_retries_exhausted_block.call({ 'args' => [entry.id] }, StandardError.new('boom'))

@@ -17,7 +17,10 @@ class CvScreeningProcessEntryWorker
       # 'pending' may be what makes the rest of the batch ready to evaluate.
       CvScreenings::BatchNotifier.new(entry.cv_screening_batch).evaluate_after_entry_decision
     end
-    Rails.logger.error("[CvScreeningProcessEntryWorker] retries exhausted for entry_id=#{entry_id}")
+    Rails.logger.error(
+      "[CvScreeningProcessEntryWorker] retries exhausted for entry_id=#{entry_id}: " \
+      "#{msg['error_class']}: #{msg['error_message']}"
+    )
   end
 
   def perform(entry_id)
