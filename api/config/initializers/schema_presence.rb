@@ -9,7 +9,11 @@
 # it already exists; raises nothing when the database does not exist yet
 # (db:create / db:prepare handle that path).
 begin
-  ActiveRecord::Base.connection.execute("CREATE SCHEMA IF NOT EXISTS ai_interview")
+  ActiveRecord::Base.connection.execute(<<~SQL)
+    DO $$ BEGIN
+      CREATE SCHEMA ai_interview;
+    EXCEPTION WHEN duplicate_schema THEN null; END $$;
+  SQL
 rescue ActiveRecord::NoDatabaseError, PG::ConnectionBad => e
   Rails.logger.debug("ai_interview schema not created yet — database unavailable: #{e.message}")
 end
