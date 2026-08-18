@@ -247,7 +247,7 @@ class AudioWebSocketMiddleware
 
       # Safety net: if AI said closing words, set coverage_pending and schedule a 15s fallback
       # finalizer in case on_model_turn_complete never fires (Gemini sometimes skips turnComplete).
-      if !state.ending_scheduled && ai_closing_detected?(text)
+      if !state.ending_scheduled && ai_closing_detected?(text, language: session.assessment.language)
         unless state.coverage_pending
           Rails.logger.warn("[AudioWS] AI closed without system signal — forcing coverage_pending (session=#{session.id})")
           state.coverage_pending = true
@@ -705,29 +705,33 @@ class AudioWebSocketMiddleware
     state.sent_time_warnings.add(key)
   end
 
-  CLOSING_PHRASES = [
-    # English
-    'you\'ll hear back from the team',
-    'you\'ll hear from the team',
-    'thank you for your time',
-    'thanks for your time',
-    'that concludes our interview',
-    'that\'s all for today',
-    'good luck',
-    # Indonesian — formal (Anda) and informal (kamu), partial matches cover variations
-    'akan mendengar kabar',           # covers "Anda/kamu akan mendengar kabar dari tim / selanjutnya"
-    'terima kasih atas waktu',        # covers "waktumu", "waktunya", "waktu Anda"
-    'terima kasih banyak atas waktu',
-    'semoga sukses',
-    'sampai jumpa',
-    'sampai bertemu lagi',
-    'sesi wawancara ini telah selesai',
-    'wawancara kita sudah selesai'
-  ].freeze
+  CLOSING_PHRASES = {
+    'en' => [
+      'you\'ll hear back from the team',
+      'you\'ll hear from the team',
+      'thank you for your time',
+      'thanks for your time',
+      'that concludes our interview',
+      'that\'s all for today',
+      'good luck'
+    ],
+    'id' => [
+      # formal (Anda) and informal (kamu), partial matches cover variations
+      'akan mendengar kabar',           # covers "Anda/kamu akan mendengar kabar dari tim / selanjutnya"
+      'terima kasih atas waktu',        # covers "waktumu", "waktunya", "waktu Anda"
+      'terima kasih banyak atas waktu',
+      'semoga sukses',
+      'sampai jumpa',
+      'sampai bertemu lagi',
+      'sesi wawancara ini telah selesai',
+      'wawancara kita sudah selesai'
+    ]
+  }.freeze
 
-  def ai_closing_detected?(text)
+  def ai_closing_detected?(text, language:)
     downcased = text.downcase
-    CLOSING_PHRASES.any? { |phrase| downcased.include?(phrase) }
+    phrases = CLOSING_PHRASES.fetch(language) { return false }
+    phrases.any? { |phrase| downcased.include?(phrase) }
   end
 
   def authenticate_and_load(env, session_id)
