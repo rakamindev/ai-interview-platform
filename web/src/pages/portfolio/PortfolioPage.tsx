@@ -62,7 +62,7 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data?.session?.candidate_name ?? null);
-        setRoleTitle(sRes.data?.assessment?.name ?? null);
+        setRoleTitle(sRes.data?.session?.assessment?.name ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -81,7 +81,6 @@ export default function PortfolioPage() {
   };
 
   const handleExport = async (format: "pdf" | "json") => {
-    console.log("DEBUG handleExport roleTitle=", JSON.stringify(roleTitle), "candidateName=", JSON.stringify(candidateName));
     if (!portfolio) return;
     setExporting(format);
     setExportError(null);

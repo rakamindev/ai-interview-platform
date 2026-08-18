@@ -62,6 +62,7 @@ HIRING DECISION                   ⚪ NOT TESTED
 
 | B-03 | Dropdown "Choose vacancy..." di Portfolio Results tampil kosong tanpa penjelasan saat belum ada vacancy — beda dengan halaman `/vacancies` yang sudah benar kasih empty state + CTA "Create your first vacancy" | Portfolio Results (Fit/Gap section) | Assessor | ❌ Tidak — cuma perlu tau "pergi buat vacancy dulu di menu Vacancies", tidak menghalangi journey setelah tau caranya | Dropdown vacancy di halaman ini tidak menangani kasus list kosong dengan pesan/CTA, beda dari halaman Vacancies yang sudah punya empty state layak | ✅ Sudah — [PortfolioPage.tsx:234-260](../web/src/pages/portfolio/PortfolioPage.tsx#L234), empty-state (ikon + pesan + tombol "Create your first vacancy" → `/vacancies/new`) menggantikan dropdown kosong. Verified di browser (lihat detail di STEP 04). | ✅ Product initiative yang diminta secara eksplisit — dianggap perbaikan nyata, bukan cuma exploration housekeeping |
 | B-04 | PDF export 500 (crash Prawn: teks di luar Windows-1252, mis. smart quote/em dash dari transcript & narasi AI) + frontend tidak punya `catch` jadi kegagalan (PDF maupun JSON) tidak pernah terlihat user — persis gejala "tidak berfungsi" tanpa error | Portfolio Results (tombol PDF/JSON) | Assessor | ⚠️ Ya untuk PDF (fitur PRD N14 gagal total, 500 di server); frontend silent-failure berlaku juga ke JSON meski backend JSON-nya sendiri selalu 200 di tiap tes saya | Prawn pakai font bawaan (Windows-1252 only) tanpa font Unicode terdaftar; `handleExport` di frontend cuma try/finally, tidak ada catch → unhandled promise rejection, tidak ada pesan ke user | ✅ Sudah — vendor `DejaVuSans.ttf`/`DejaVuSans-Bold.ttf` (lisensi bebas dipakai ulang) + daftarkan sebagai default font Prawn ([pdf_generator.rb](../api/app/services/exports/pdf_generator.rb)); tambah `catch`+pesan error di frontend ([PortfolioPage.tsx](../web/src/pages/portfolio/PortfolioPage.tsx)). Verified: `file` konfirmasi PDF valid, browser 200 OK. | ✅ PDF = requirement PRD eksplisit (N14, Phase 5) — worth fixing. JSON dikonfirmasi TIDAK ada di PRD manapun (dicek langsung ke wiki), murni fitur developer. Lihat STEP 05 untuk analisis PRD lengkap + catatan F-01 masih terbuka di endpoint yang sama. |
+| B-05 | Export filename di Portfolio Results selalu fallback ke label generik "Assessment" bukan nama role asli ("Flutter Engineer") | Portfolio Results (tombol PDF/JSON) | Assessor | ❌ Tidak — file tetap valid & terunduh, cuma kurang deskriptif | `PortfolioPage.tsx:65` baca `sRes.data.assessment.name`, padahal backend nest `assessment` DI DALAM `session` (`sessions_controller.rb#show`), bukan sibling — path-nya salah, 100% konsisten salah, bukan race/intermittent seperti sempat diduga sesi sebelumnya (lihat STEP 06 untuk koreksi diagnosis lengkap) | ✅ Sudah — path akses dibetulkan + tipe TS di [sessions.ts](../web/src/services/sessions.ts) diperbaiki supaya tidak menyesatkan lagi, `console.log` debug ketinggalan dihapus. Verified 3 kombinasi export (Portfolio PDF/JSON, FitGap JSON) di browser — semua filename benar, 0 console error. | ✅ Housekeeping lanjutan dari B-04 (fitur export yang sama), bukan F-01..F-05 |
 
 *(Bug non-blocker lain akan ditambahkan ke tabel ini sambil jalan.)*
 
@@ -578,7 +579,7 @@ bukan kurang.
 
 ---
 
-# STEP 06 — ⚠️ BELUM SELESAI, di-handoff ke sesi baru
+# STEP 06 — 🟢 RESOLVED (sesi baru)
 
 **Task:** ganti nama file export dari `portfolio-1.pdf` (tidak informatif) jadi
 `{Candidate}-{Role}-Portfolio-{Date}.pdf`.
@@ -588,31 +589,62 @@ method `export_filename`) — **selesai & aman**, langsung baca dari
 `portfolio.session.candidate_name` / `portfolio.session.assessment.name`, tidak ada async race,
 tidak perlu disentuh lagi.
 
-**Frontend** — mencoba pola yang sama (fetch `session.candidate_name` +
-`assessment.name` lewat `sessionsApi.get()`, sudah ada di response, tidak perlu request
-tambahan) di `PortfolioPage.tsx` dan `FitGapReportPage.tsx`. **Ditemukan bug aneh saat
-verifikasi**: `candidateName` ("Budi") selalu berhasil ke-set, tapi `roleTitle` seringkali
-tetap `null` walau `JSON.stringify(sRes.data)` di baris SEBELUMNYA, dalam callback yang
-SAMA, terbukti sudah berisi `assessment: {name: "Flutter Engineer"}` lengkap. Ditelusuri
-sampai ke: `sRes.data.assessment.name` kadang lempar `TypeError: Cannot read properties of
-undefined (reading 'name')` — seolah `sRes.data` berubah bentuk DI ANTARA dua baris kode
-yang sama-sama membaca objek yang sama.
+**Frontend — akar masalah sebenarnya ditemukan (⚠️ AI VERIFICATION MOMENT):**
 
-**Sudah dicoba & TIDAK menyelesaikan akar masalah** (tapi berguna buat eliminasi):
-tab browser baru, restart Vite dev server + hapus cache `node_modules/.vite` — bug tetap
-sama persis. Jadi ini BUKAN masalah cache/HMR.
+Sesi sebelumnya (dicatat di handoff) menduga bug `roleTitle` yang gagal ke-populate ini
+adalah **race condition** — kombinasi React 18 Strict Mode double-invoke + response
+interceptor axios yang mutate `response.data` in-place. Dugaan itu **salah**, dan tidak
+pernah dikonfirmasi (sudah ditandai eksplisit "BELUM diverifikasi" di catatan handoff-nya
+sendiri — bukan diklaim sebagai fakta). Begitu dibaca ulang kodenya dengan tenang di sesi
+ini, akar masalahnya ternyata sepele dan **100% deterministic, bukan intermittent**:
 
-**Dugaan terkuat yang BELUM diverifikasi**: `web/src/services/api.ts` punya response
-interceptor yang "membuka bungkus" amplop backend (`if ('data' in response.data)
-response.data = response.data.data`). Curiga ini yang berperilaku tidak konsisten —
-mungkin terkait race antara React 18 Strict Mode yang me-invoke effect 2x di development
-(sempat kelihatan `Promise.all` jalan 1x vs 2x di run yang berbeda-beda), dikombinasi
-dengan interceptor yang me-mutasi `response.data` in-place. Belum sempat dikonfirmasi —
-**ini titik lanjut yang paling masuk akal buat sesi berikutnya.**
+`sessions_controller.rb#show` (baris 47-57) nest `assessment` **DI DALAM** `session`, bukan
+sibling-nya:
+```ruby
+json_response(
+  session: session_json(@session).merge(assessment: { id:, name:, time_limit_min: })
+)
+```
+Jadi bentuk response asli (setelah axios interceptor buka bungkus envelope) adalah
+`{ session: { ...field lain, assessment: {...} } }` — TIDAK PERNAH ada `assessment` di
+level teratas. Tapi kode frontend (`PortfolioPage.tsx:65`) baca `sRes.data.assessment.name`
+— path yang salah, konsisten salah tiap kali, bukan kadang-kadang. Ini juga persis kenapa
+sebelumnya sempat terlihat error `TypeError: Cannot read properties of undefined (reading
+'name')` — bukan gejala race, itu memang selalu `undefined` di path itu. Kesan "intermittent"
+kemungkinan besar dari membaca sekilas `JSON.stringify(sRes.data)` yang panjang dan
+mengira `"assessment":{"name":...}` yang muncul di dalam string itu ada di level teratas,
+padahal itu nested satu level di dalam `"session":{...}`. Tipe TypeScript di
+`sessionsApi.get()` ([sessions.ts](../web/src/services/sessions.ts)) juga ikut menyesatkan
+— dideklarasikan `{ session: Session; assessment: {...} }` (assessment sebagai sibling),
+padahal runtime-nya nested. Kemungkinan besar tipe yang salah inilah yang membuat kode
+pertama kali ditulis dengan path yang salah.
 
-**Mitigasi sementara yang SUDAH diterapkan** (defensif, bukan fix akar masalah): ganti ke
-optional chaining (`sRes.data?.assessment?.name`) di kedua file supaya minimal TIDAK CRASH
-kalau race ini kejadian — fallback ke label generik "Assessment" di nama file kalau
-`roleTitle` gagal ke-populate, tapi `candidateName` ("Budi") tetap selalu benar. **Belum
-diverifikasi ulang di browser setelah perubahan defensif ini** — itu langkah pertama yang
-perlu dilakukan sesi baru.
+**Fix:**
+1. [sessions.ts](../web/src/services/sessions.ts) — perbaiki tipe jadi
+   `{ session: Session & { assessment: {...} } }`, sesuai bentuk runtime asli, supaya tidak
+   menyesatkan lagi ke depannya.
+2. [PortfolioPage.tsx:65](../web/src/pages/portfolio/PortfolioPage.tsx#L65) — path akses
+   dibetulkan jadi `sRes.data?.session?.assessment?.name` (bukan `sRes.data?.assessment?.name`).
+3. Hapus `console.log("DEBUG handleExport ...")` yang ketinggalan dari sesi investigasi
+   sebelumnya di file yang sama.
+4. `FitGapReportPage.tsx` **ternyata tidak pernah kena bug ini** — `roleTitle` di halaman
+   itu diambil dari path lain (`vRes.data.vacancy.role_title`, dari vacancy yang dipilih),
+   sudah benar sejak awal, tidak disentuh.
+
+**VERIFICATION** (browser asli via automated tab, login `assessor@test-corp.local`):
+- `npx tsc --noEmit` — bersih.
+- Portfolio Results (Budi) → PDF → filename `Budi-Flutter-Engineer-Portfolio-2026-08-18.pdf` ✅
+- Portfolio Results (Budi) → JSON → filename `Budi-Flutter-Engineer-Portfolio-2026-08-18.json` ✅
+- Fit/Gap Report (vacancy "Flutter Engineer") → JSON → filename
+  `Budi-Flutter-Engineer-FitGap-2026-08-18.json` ✅ (jalur ini konfirmasi memang tidak pernah
+  rusak — dites untuk konsistensi, bukan karena diduga kena bug yang sama).
+- Console browser bersih (0 error) di ketiga export di atas.
+- Dikonfirmasi filename dibaca langsung dari atribut `download` elemen `<a>` sesaat sebelum
+  `.click()` (instrumented via `document.createElement` override), bukan cuma dari asumsi
+  kode — jadi ini bukti device behavior asli, bukan pembacaan kode semata.
+
+**Kenapa ini relevan buat laporan:** ini contoh konkret "AI kasih diagnosis salah, lalu
+dikoreksi" yang diminta checklist submission (`ROADMAP.md` §Langkah 6) — sesi sebelumnya
+menduga race condition (masuk akal secara teori, tapi salah), sesi ini baca ulang kode
+tanpa asumsi itu dan ketemu akar masalah sebenarnya yang jauh lebih sederhana & 100%
+reproducible. Screenshot/log di atas bisa langsung dipakai sebagai bukti momen ini.
