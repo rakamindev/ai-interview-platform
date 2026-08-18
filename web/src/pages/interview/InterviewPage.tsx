@@ -21,14 +21,17 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Clock, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { Card } from "@/components/ui/card";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
+  const [linkExpired, setLinkExpired] = useState(false);
+  const [expiredMessage, setExpiredMessage] = useState<string | null>(null);
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
@@ -48,7 +51,15 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        const errorData = err?.response?.data;
+        if (err?.response?.status === 410 || errorData?.error === "link_expired") {
+          setLinkExpired(true);
+          setExpiredMessage(errorData?.message || null);
+        } else {
+          setInterviewState("complete");
+        }
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -184,8 +195,30 @@ export default function InterviewPage() {
     interviewState === "reconnecting"
       ? connectionLostLong ? "lost" : "reconnecting"
       : connectionState === "connected"
-      ? "connected"
-      : "reconnecting";
+        ? "connected"
+        : "reconnecting";
+
+  if (linkExpired) {
+    const roleTitle = candidateInfo?.role_title || "AI Interview";
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full text-center p-8 space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center mx-auto">
+            <Clock className="h-6 w-6" />
+          </div>
+          <h2 className="text-xl font-semibold">Interview Link Expired</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {expiredMessage || (
+              <>The deadline to complete your interview for <strong>{roleTitle}</strong> has passed.</>
+            )}
+          </p>
+          <div className="bg-muted/60 p-3.5 rounded-lg text-xs text-muted-foreground leading-normal">
+            If you need an extension or a new link, please reach out to your recruiter or the hiring team.
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
@@ -336,29 +369,29 @@ export default function InterviewPage() {
             )}
           </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>End interview?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to end the interview early?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
-            onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
-          </Button>
-        )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">End Interview</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>End interview?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to end the interview early?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          {import.meta.env.DEV && (
+            <Button variant="outline" size="sm" className="text-xs opacity-50"
+              onClick={() => sendJson({ type: "debug_force_reconnect" })}>
+              ⚡ Force reconnect
+            </Button>
+          )}
         </div>
       </div>
 

@@ -31,4 +31,10 @@ export const sessionsApi = {
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+
+  extendExpiry: (id: number, params?: { days?: number; minutes?: number }) =>
+    api.post<{ session: Session; message: string }>(`/sessions/${id}/extend_expiry`, params),
+
+  regenerateLink: (id: number, params?: { days?: number; minutes?: number }) =>
+    api.post<{ session: Session; invite_url: string; message: string }>(`/sessions/${id}/regenerate_link`, params),
 };

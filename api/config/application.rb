@@ -19,6 +19,10 @@ module AiInterview
     # API-only mode
     config.api_only = true
 
+    # Timezone: Jakarta (WIB / UTC+7)
+    config.time_zone = 'Jakarta'
+    config.active_record.default_timezone = :utc
+
     # Auto-load paths
     config.autoload_paths += %W[
       #{config.root}/app/auth

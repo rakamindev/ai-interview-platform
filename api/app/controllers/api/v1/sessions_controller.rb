@@ -6,12 +6,13 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript extend_expiry regenerate_link]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
         sessions = assessment.sessions.order(created_at: :desc)
+        sessions.each(&:current_status)
 
         json_response(sessions: sessions.map(&method(:session_json)))
       rescue ActiveRecord::RecordNotFound
@@ -53,6 +54,38 @@ module Api
               time_limit_min: @session.assessment.time_limit_min
             }
           )
+        )
+      end
+
+      # POST /api/v1/sessions/:id/extend_expiry
+      def extend_expiry
+        duration = if params[:minutes].present?
+                     params[:minutes].to_i.minutes
+                   elsif params[:days].present?
+                     params[:days].to_i.days
+                   else
+                     Session::DEFAULT_EXPIRY
+                   end
+
+        @session.extend_expiry!(duration)
+        json_response(session: session_json(@session), message: "Link extended")
+      end
+
+      # POST /api/v1/sessions/:id/regenerate_link
+      def regenerate_link
+        duration = if params[:minutes].present?
+                     params[:minutes].to_i.minutes
+                   elsif params[:days].present?
+                     params[:days].to_i.days
+                   else
+                     Session::DEFAULT_EXPIRY
+                   end
+
+        @session.regenerate_token!(duration)
+        json_response(
+          session: session_json(@session),
+          invite_url: @session.invite_url,
+          message: "New link generated"
         )
       end
 
@@ -132,8 +165,21 @@ module Api
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
 
-        unless session
-          return json_error("Invalid or expired invite token", :not_found)
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.expired?
+          session.current_status
+          return render json: {
+            error: "link_expired",
+            message: "This interview invitation expired on #{session.expires_at.strftime('%d %b %Y, %H:%M')}. Please reach out to your recruiter to request a new link."
+          }, status: :gone
+        end
+
+        if session.ended?
+          return render json: {
+            error: "session_ended",
+            message: "This interview has already been completed"
+          }, status: :forbidden
         end
 
         # Resolve tenant from the session's own tenant_id so we can load the assessment
@@ -149,7 +195,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.current_status,
+          expires_at:      session.expires_at
         )
       end
 
@@ -170,11 +217,12 @@ module Api
           candidate_name:   session.candidate_name,
           invite_token:     session.invite_token,
           invite_url:       session.invite_url,
-          status:           session.status,
+          status:           session.current_status,
           end_reason:       session.end_reason,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          expires_at:       session.expires_at,
           created_at:       session.created_at
         }
       end
