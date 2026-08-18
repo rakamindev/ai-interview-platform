@@ -62,6 +62,7 @@ module Api
           :role_title,
           :culture_dimensions,
           :competency_expectations,
+          :public_requirement_text,
           vacancy_skills_attributes: %i[
             id skill_id skill_label expected_level _destroy
           ]
@@ -74,6 +75,7 @@ module Api
           role_title:               vacancy.role_title,
           culture_dimensions:       vacancy.culture_dimensions,
           competency_expectations:  vacancy.competency_expectations,
+          public_requirement_text:  vacancy.public_requirement_text,
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
           updated_at:               vacancy.updated_at

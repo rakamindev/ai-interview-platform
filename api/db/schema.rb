@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_000006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -41,6 +41,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.integer "display_order", default: 0, null: false
     t.index ["assessment_id"], name: "index_assessment_skills_on_assessment_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_assessment_skills_expected_level"
+  end
+
+  create_table "assessment_versions", force: :cascade do |t|
+    t.bigint "assessment_id", null: false
+    t.string "name", limit: 255, null: false
+    t.integer "time_limit_min", null: false
+    t.string "language", default: "en"
+    t.jsonb "skills_snapshot", default: [], null: false
+    t.datetime "created_at", null: false
+    t.index ["assessment_id"], name: "index_assessment_versions_on_assessment_id"
   end
 
   create_table "assessments", force: :cascade do |t|
@@ -89,9 +99,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.bigint "vacancy_version_id"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.index ["vacancy_version_id"], name: "index_fit_gap_reports_on_vacancy_version_id"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -143,7 +155,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.bigint "assessment_version_id"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
+    t.index ["assessment_version_id"], name: "index_sessions_on_assessment_version_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
     t.index ["tenant_id", "status"], name: "idx_sessions_tenant_status"
@@ -193,6 +207,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "public_requirement_text"
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
   end
 
@@ -205,14 +220,29 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
 
+  create_table "vacancy_versions", force: :cascade do |t|
+    t.bigint "vacancy_id", null: false
+    t.string "role_title", limit: 255, null: false
+    t.text "culture_dimensions"
+    t.text "competency_expectations"
+    t.text "public_requirement_text"
+    t.jsonb "skills_snapshot", default: [], null: false
+    t.datetime "created_at", null: false
+    t.index ["vacancy_id"], name: "index_vacancy_versions_on_vacancy_id"
+  end
+
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessment_versions", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "fit_gap_reports", "vacancy_versions"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
+  add_foreign_key "sessions", "assessment_versions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
   add_foreign_key "vacancy_skills", "vacancies"
+  add_foreign_key "vacancy_versions", "vacancies"
 end
