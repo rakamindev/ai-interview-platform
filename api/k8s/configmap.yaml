@@ -24,3 +24,9 @@ data:
   APP_BASE_URL: https://ai-interview-api.rakamin.com
   WEB_BASE_URL: "https://<your-frontend-domain>"
   ALLOWED_ORIGINS: "https://<your-frontend-domain>"
+  MAIL_FROM: "no-reply@<your-sending-domain>"
+  MAIL_ENABLED: "false"  # deliberate kill switch — no sender domain/SPF/DKIM exists yet
+  SMTP_ADDRESS: "<your-smtp-host>"
+  SMTP_PORT: "587"
+  SMTP_DOMAIN: "<your-sending-domain>"
+  CV_RETENTION_DAYS: "90"

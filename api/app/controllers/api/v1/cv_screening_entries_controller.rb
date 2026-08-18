@@ -31,13 +31,16 @@ module Api
           # doc), so a recruiter can still manually invite without one.
           CvScreenings::Inviter.new(entry: @entry).call
           @entry.update!(decision: 'invited', decision_reason: 'recruiter_invited')
+          # A single recruiter action bypasses FR5's batch confirm gate — they just
+          # explicitly decided this one outcome, so send immediately.
+          CvScreenings::BatchNotifier.send_now!(@entry)
         when 'reject'
           feedback = CvScreenings::FeedbackGenerator.new(
             public_requirement_text: @entry.cv_screening_batch.vacancy_version&.public_requirement_text ||
                                       @entry.cv_screening_batch.vacancy.public_requirement_text
           ).call
           @entry.update!(decision: 'not_advanced', decision_reason: 'recruiter_rejected', feedback_text: feedback)
-          # Phase 7's mailer hooks in here to actually send @entry.feedback_text.
+          CvScreenings::BatchNotifier.send_now!(@entry)
         else
           return json_error("action must be 'invite' or 'reject'", :unprocessable_entity)
         end

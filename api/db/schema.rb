@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_18_200001) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_300001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -130,6 +130,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_200001) do
     t.integer "threshold"
     t.bigint "created_by", null: false
     t.datetime "created_at", null: false
+    t.string "notification_status", default: "pending", null: false
     t.index ["assessment_id"], name: "index_cv_screening_batches_on_assessment_id"
     t.index ["cv_screening_id"], name: "index_cv_screening_batches_on_cv_screening_id"
     t.index ["tenant_id"], name: "index_cv_screening_batches_on_tenant_id"
@@ -147,8 +148,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_200001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "feedback_text"
+    t.bigint "session_id"
+    t.datetime "notified_at"
     t.index ["cv_screening_batch_id"], name: "index_cv_screening_entries_on_cv_screening_batch_id"
     t.index ["detected_email"], name: "index_cv_screening_entries_on_detected_email"
+    t.index ["session_id"], name: "index_cv_screening_entries_on_session_id"
     t.index ["tenant_id"], name: "index_cv_screening_entries_on_tenant_id"
   end
 
@@ -317,6 +321,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_18_200001) do
   add_foreign_key "cv_screening_batches", "vacancies"
   add_foreign_key "cv_screening_batches", "vacancy_versions"
   add_foreign_key "cv_screening_entries", "cv_screening_batches"
+  add_foreign_key "cv_screening_entries", "sessions"
   add_foreign_key "cv_screenings", "assessments"
   add_foreign_key "cv_screenings", "vacancies"
   add_foreign_key "fit_gap_reports", "portfolios"

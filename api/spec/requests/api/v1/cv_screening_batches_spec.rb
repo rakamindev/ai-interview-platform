@@ -37,6 +37,29 @@ RSpec.describe 'CV Screening Batches API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/cv_screenings/:cv_screening_id/batches/:id/confirm' do
+    it 'releases a held batch and sends its queued notification' do
+      batch = create(:cv_screening_batch, cv_screening: screening, notification_status: 'held')
+      session = create(:session, assessment: screening.assessment, tenant_id: screening.tenant_id)
+      create(:cv_screening_entry, cv_screening_batch: batch, decision: 'invited',
+                                   detected_email: 'jordan.example@test.invalid', session: session)
+
+      post "/api/v1/cv_screenings/#{screening.id}/batches/#{batch.id}/confirm", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.dig('batch', 'notification_status')).to eq('released')
+      expect(ActionMailer::Base.deliveries.size).to eq(1)
+    end
+
+    it 'rejects confirming a batch that is not awaiting confirmation' do
+      batch = create(:cv_screening_batch, cv_screening: screening, notification_status: 'pending')
+
+      post "/api/v1/cv_screenings/#{screening.id}/batches/#{batch.id}/confirm", headers: headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   describe 'the upload throttle', :rack_attack do
     # `around` runs its pre-example.run code BEFORE the global `before` in
     # spec/support/rack_attack.rb (which sets enabled = false) even fires — that

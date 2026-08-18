@@ -31,6 +31,10 @@ Fill in the required values in `config/application.yml`:
 | `WEB_BASE_URL` | Frontend base URL — candidate invite links point here, e.g. `http://localhost:5173` |
 | `ACTIVE_STORAGE_SERVICE` | Optional in dev — `r2` to test against real Cloudflare R2 instead of the local Disk service |
 | `R2_ACCOUNT_ID` / `R2_BUCKET` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Cloudflare R2 credentials — required in staging/production, provisioned via a k8s Secret, never this repo |
+| `MAIL_FROM` | Sender address for candidate emails |
+| `MAIL_ENABLED` | Defaults to `false` — a deliberate kill switch. `true` is required for production SMTP delivery to actually happen |
+| `SMTP_ADDRESS` / `SMTP_PORT` / `SMTP_DOMAIN` / `SMTP_USERNAME` / `SMTP_PASSWORD` | Only used when `MAIL_ENABLED=true`; the last two are secret-only, never the ConfigMap |
+| `CV_RETENTION_DAYS` | Defaults to 90 — see `lib/tasks/cv_screening.rake` |
 
 ---
 

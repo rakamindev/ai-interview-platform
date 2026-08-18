@@ -11,7 +11,12 @@ class CvScreeningProcessEntryWorker
   sidekiq_retries_exhausted do |msg, _ex|
     entry_id = msg['args'].first
     entry = CvScreeningEntry.unscoped.find_by(id: entry_id)
-    entry&.update(decision: 'needs_review', decision_reason: 'model_failed')
+    if entry
+      entry.update(decision: 'needs_review', decision_reason: 'model_failed')
+      # This entry won't be emailed (needs_review never is), but it leaving
+      # 'pending' may be what makes the rest of the batch ready to evaluate.
+      CvScreenings::BatchNotifier.new(entry.cv_screening_batch).evaluate_after_entry_decision
+    end
     Rails.logger.error("[CvScreeningProcessEntryWorker] retries exhausted for entry_id=#{entry_id}")
   end
 
@@ -28,6 +33,7 @@ class CvScreeningProcessEntryWorker
     Current.tenant_id = entry.tenant_id
 
     CvScreenings::DecisionEngine.new(entry: entry).call
+    CvScreenings::BatchNotifier.new(entry.cv_screening_batch).evaluate_after_entry_decision
   rescue StandardError => e
     Rails.logger.error("[CvScreeningProcessEntryWorker] failed for entry_id=#{entry_id}: #{e.class}: #{e.message}")
     raise

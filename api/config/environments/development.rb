@@ -19,9 +19,11 @@ Rails.application.configure do
   # to test against real Cloudflare R2 credentials without touching this file.
   config.active_storage.service = ENV.fetch('ACTIVE_STORAGE_SERVICE', 'local').to_sym
 
-  # Don't care if the mailer can't send.
-  # config.action_mailer.raise_delivery_errors = false
-  # config.action_mailer.perform_caching = false
+  # Built into Rails, no gem, reviewable with `cat tmp/mails/*` — letter_opener
+  # needs a desktop browser and is useless in Docker or over SSH.
+  config.action_mailer.delivery_method = :file
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.raise_delivery_errors = true
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log

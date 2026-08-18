@@ -54,6 +54,10 @@ Rails.application.configure do
   # Explicit, not the silent :async fallback — see production.rb's comment.
   config.active_job.queue_adapter = :test
 
+  # Deliveries land in ActionMailer::Base.deliveries, not a real inbox.
+  config.action_mailer.delivery_method = :test
+  config.action_mailer.perform_deliveries = true
+
   # Never let a test run rewrite schema.rb — it already can't reconstruct the
   # ai_interview Postgres schema (see rails_helper.rb), so it must not be trusted
   # as a source of truth.

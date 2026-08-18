@@ -13,11 +13,14 @@ module CvScreenings
     def call
       batch = @entry.cv_screening_batch
 
-      Sessions::Creator.new(
+      session = Sessions::Creator.new(
         assessment:     batch.assessment,
         tenant_id:      @entry.tenant_id,
         candidate_name: @entry.detected_email
       ).call
+
+      @entry.update!(session_id: session.id) if session.persisted?
+      session
     end
   end
 end
