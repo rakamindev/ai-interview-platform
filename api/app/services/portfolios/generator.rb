@@ -17,7 +17,8 @@ module Portfolios
     def call
       portfolio = @session.portfolio || @session.create_portfolio!(
         candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
+        generation_status: 'pending',
+        tenant_id:         @session.tenant_id
       )
 
       portfolio.update!(generation_status: 'generating')
@@ -161,7 +162,8 @@ module Portfolios
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'],
+          tenant_id:          portfolio.tenant_id
         )
       end
 
@@ -173,7 +175,8 @@ module Portfolios
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'],
+          tenant_id:          portfolio.tenant_id
         )
       end
     end

@@ -85,7 +85,8 @@ def demo_portfolio!(session, status: 'complete')
   Portfolio.create!(
     session_id: session.id,
     candidate_id: session.candidate_id,
-    generation_status: status
+    generation_status: status,
+    tenant_id: session.tenant_id
   )
 end
 
@@ -97,7 +98,8 @@ def demo_portfolio_skill!(portfolio, skill_id: nil, label:, level:, confidence: 
     ai_level: level,
     ai_confidence: confidence,
     evidence: Array(evidence),
-    competency_summary: summary
+    competency_summary: summary,
+    tenant_id: portfolio.tenant_id
   )
 end
 
@@ -224,7 +226,8 @@ skill_c_override = demo_portfolio_skill!(portfolio_c, skill_id: 'SK-ENG-001', la
   summary: 'Solid foundations, under-read by the model.')
 skill_c_override.create_assessor_override!(
   ai_level: 2, override_level: 4, assessor_notes: 'Underrated — the profiling detail is L4 behaviour.',
-  overridden_by: dev_user.id, overridden_at: Time.current
+  overridden_by: dev_user.id, overridden_at: Time.current,
+  tenant_id: portfolio_c.tenant_id
 )
 demo_portfolio_skill!(portfolio_c, skill_id: 'SK-SOFT-001', label: 'Communication', level: 3, confidence: 'high',
   evidence: ['Writes things down before debating them.'],
@@ -251,6 +254,17 @@ demo_portfolio_skill!(portfolio_g, label: long_label, level: 3, confidence: 'hig
   summary: 'Long-form answer; layout must clamp without breaking.')
 
 puts "  Demo fixtures: #{Portfolio.count} portfolios, #{Vacancy.count} vacancy, 2 organizations, assessments en+id"
+
+# ── Rival org portfolio (cross-tenant hand verification, docs/07 §5) ──────────
+rival_assessment = demo_assessment!(
+  tenant_id: rival_corp.id, created_by: dev_user.id,
+  name: 'Backend Engineer', language: 'en', time_limit_min: 30
+)
+rival_session = demo_session!(assessment: rival_assessment, candidate_name: 'Rival Candidate', candidate_id: 2001)
+rival_portfolio = demo_portfolio!(rival_session)
+demo_portfolio_skill!(rival_portfolio, skill_id: 'SK-ENG-002', label: 'Node.js / Backend Development', level: 3, confidence: 'high',
+  evidence: ['Built a REST API with retry logic and backoff.'],
+  summary: 'Solid backend fundamentals.')
 
 # ── Fit/gap report for the primary portfolio (real engine path, then narratives) ─
 begin

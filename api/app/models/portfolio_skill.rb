@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PortfolioSkill < ApplicationRecord
+  include TenantScoped
+
   CONFIDENCE_LEVELS = %w[high medium low].freeze
 
   belongs_to :portfolio

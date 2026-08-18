@@ -60,7 +60,8 @@ module Sessions
 
       @session.create_portfolio!(
         candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
+        generation_status: 'pending',
+        tenant_id:         @session.tenant_id
       )
     end
 
