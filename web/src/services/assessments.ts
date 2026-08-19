@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Assessment, AssessmentSkill, PaginationMeta, Session } from "@/types";
+import type { Assessment, AssessmentSkill, PaginationMeta, Session, DeletionCheckResult } from "@/types";
 
 export interface AssessmentPayload {
   name: string;
@@ -30,6 +30,9 @@ export const assessmentsApi = {
     ),
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
+
+  deletionCheck: (id: number) =>
+    api.get<DeletionCheckResult>(`/assessments/${id}/deletion_check`),
 
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),

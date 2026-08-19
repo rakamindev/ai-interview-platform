@@ -19,6 +19,9 @@ Rails.application.routes.draw do
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
+        member do
+          get :deletion_check
+        end
       end
 
       # Sessions
@@ -48,7 +51,11 @@ Rails.application.routes.draw do
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
       # Vacancies
-      resources :vacancies
+      resources :vacancies do
+        member do
+          get :deletion_check
+        end
+      end
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do
@@ -57,6 +64,21 @@ Rails.application.routes.draw do
           post :regenerate_fitgap
           get  'fitgap/:vacancy_id', to: 'portfolios#show_fitgap', as: :fitgap_vacancy
           get  :export
+        end
+      end
+
+      # CV screening
+      resources :cv_screenings, only: %i[index create show update destroy] do
+        resources :batches, only: %i[index create], controller: 'cv_screening_batches'
+        resources :entries, only: [:index], controller: 'cv_screening_entries'
+      end
+
+      resources :cv_screening_entries, only: [] do
+        member do
+          post :review
+          post :reanalyze
+          post :cancel
+          get  :file
         end
       end
     end

@@ -45,6 +45,9 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  // Present only for sessions CvScreenings::Inviter created from a screening entry.
+  cv_screening_entry_id?: number | null;
+  cv_screening_score?: number | null;
 }
 
 export interface CoverageSkill {
@@ -111,6 +114,7 @@ export interface Vacancy {
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  public_requirement_text?: string | null;
   created_by?: number;
   created_at?: string;
   updated_at?: string;
@@ -185,6 +189,72 @@ export type InterviewState =
   | "complete";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
+
+// CV Screening
+
+export interface CvScreeningSummary {
+  total: number;
+  pending: number;
+  needs_review: number;
+  invited: number;
+  not_advanced: number;
+}
+
+export interface CvScreening {
+  id: number;
+  name: string;
+  vacancy_id: number;
+  assessment_id: number;
+  threshold?: number | null;
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+  summary?: CvScreeningSummary;
+}
+
+export type CvScreeningNotificationStatus = "pending" | "held" | "released";
+
+export interface CvScreeningBatch {
+  id: number;
+  cv_screening_id: number;
+  vacancy_id: number;
+  assessment_id: number;
+  vacancy_version_id?: number | null;
+  vacancy_version_approximate: boolean;
+  threshold?: number | null;
+  notification_status: CvScreeningNotificationStatus;
+  created_by?: number;
+  created_at?: string;
+}
+
+export type CvScreeningDecision = "pending" | "needs_review" | "invited" | "not_advanced";
+
+export interface CvScreeningEntry {
+  id: number;
+  cv_screening_batch_id: number;
+  detected_email?: string | null;
+  decision: CvScreeningDecision;
+  decision_reason?: string | null;
+  score?: number | null;
+  filename?: string | null;
+  created_at?: string;
+  // The entry's own batch-snapshotted vacancy/assessment/threshold — not
+  // necessarily the screening's current ones, which may have changed since
+  // (see CvScreeningEditPage).
+  vacancy_role_title?: string;
+  assessment_name?: string;
+  threshold?: number | null;
+}
+
+// Response shape for GET /vacancies/:id/deletion_check and
+// /assessments/:id/deletion_check — checked eagerly when a recruiter clicks
+// Delete, so the confirm dialog can show the right variant immediately
+// instead of only discovering a block after they've typed a confirmation.
+export interface DeletionCheckResult {
+  deletable: boolean;
+  reason?: "cv_screenings" | "sessions";
+  blocking_cv_screenings?: { id: number; name: string }[];
+}
 
 export interface WsControlMessage {
   type:

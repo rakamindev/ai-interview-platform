@@ -7,9 +7,11 @@ class Session < ApplicationRecord
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
   belongs_to :assessment
+  belongs_to :assessment_version, optional: true
   has_many :transcript_turns, dependent: :destroy
   has_many :coverage_maps, dependent: :destroy
   has_one  :portfolio, dependent: :destroy
+  has_one  :cv_screening_entry, dependent: :nullify
 
   validates :invite_token, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
@@ -26,7 +28,7 @@ class Session < ApplicationRecord
   def pending? = status == 'pending'
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('WEB_BASE_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
 

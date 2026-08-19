@@ -5,7 +5,10 @@ require_relative 'boot'
 require 'rails'
 require 'active_model/railtie'
 require 'active_record/railtie'
+require 'active_storage/engine'
+require 'active_job/railtie'
 require 'action_controller/railtie'
+require 'action_mailer/railtie'
 
 require_relative '../app/middlewares/application_middleware'
 require_relative '../app/middlewares/tenant_resolver_middleware'
@@ -34,6 +37,10 @@ module AiInterview
     config.generators do |g|
       g.orm :active_record, primary_key_type: :uuid
     end
+
+    # No image-processing tooling needed in the container — CVs are PDF/DOCX only.
+    config.active_storage.analyzers = []
+    config.active_storage.previewers = []
 
     # ── Middleware stack ────────────────────────────────────────────────────────
     #

@@ -5,6 +5,7 @@ class FitGapReport < ApplicationRecord
 
   belongs_to :portfolio
   belongs_to :vacancy
+  belongs_to :vacancy_version, optional: true
 
   validates :skill_comparisons, presence: true
 end

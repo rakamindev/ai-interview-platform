@@ -1,0 +1,46 @@
+# Daily CV retention sweep — reuses the same image as the API/Sidekiq deployments.
+# Purges attachments and PII older than CV_RETENTION_DAYS (default 90, see
+# app/services/cv_screenings/retention_sweep.rb).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ai-interview-cv-retention
+  namespace: default
+spec:
+  schedule: "0 3 * * *" # daily at 03:00
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: paragon-t2d-tau-pool
+
+          tolerations:
+            - key: cloud.google.com/compute-class
+              operator: Equal
+              value: paragon-compute-class-tau-nodepool
+              effect: NoSchedule
+
+          restartPolicy: Never
+          containers:
+            - name: cv-retention-sweep
+              image: asia-southeast2-docker.pkg.dev/rakamin-poc/rakamin-images/ai-interview-api:latest
+              imagePullPolicy: Always
+              command: ["bundle"]
+              args: ["exec", "rails", "cv_screening:purge_expired"]
+
+              envFrom:
+                - configMapRef:
+                    name: ai-interview-config
+
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"

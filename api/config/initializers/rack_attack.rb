@@ -16,6 +16,12 @@ class Rack::Attack
     req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})
   end
 
+  # Throttle CV batch uploads: 10 per minute per IP. Multipart file uploads are the
+  # most expensive request this API accepts — rate-limit them explicitly.
+  throttle('cv_screening/upload', limit: 10, period: 1.minute) do |req|
+    req.ip if req.path.match?(%r{\A/api/v1/cv_screenings/\d+/batches\z}) && req.post?
+  end
+
   # Return 429 JSON instead of the default plain-text response.
   self.throttled_responder = lambda do |_req|
     [

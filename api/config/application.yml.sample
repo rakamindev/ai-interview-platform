@@ -20,6 +20,9 @@ GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
 # App URL (for invite links)
 APP_BASE_URL: "http://localhost:3001"
 
+# Frontend URL — invite links point candidates here, not at the API host (F2)
+WEB_BASE_URL: "http://localhost:5173"
+
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds
 
@@ -28,3 +31,27 @@ ALLOWED_ORIGINS: "*"
 
 # Sidekiq / Redis
 REDIS_URL: "redis://localhost:6379/1"
+
+# File storage — Cloudflare R2 (S3-compatible). Not needed in dev/test (Disk
+# service is the default there — see config/storage.yml). Only required if you
+# set ACTIVE_STORAGE_SERVICE=r2 locally to test against real R2.
+ACTIVE_STORAGE_SERVICE: "r2"
+R2_ACCOUNT_ID: "your_cloudflare_account_id"
+R2_BUCKET: "your_bucket_name"
+R2_ACCESS_KEY_ID: "your_r2_access_key_id"
+R2_SECRET_ACCESS_KEY: "your_r2_secret_access_key"
+
+# Mail — MAIL_ENABLED defaults to false (see config/environments/production.rb).
+# No sender domain/SPF/DKIM exists for this project yet; enabling real delivery
+# is a separate, deliberate decision. Not needed in dev (uses the :file delivery
+# method — see tmp/mails/) or test (uses :test delivery).
+MAIL_FROM: "no-reply@example.com"
+MAIL_ENABLED: "false"
+SMTP_ADDRESS: "smtp.example.com"
+SMTP_PORT: "587"
+SMTP_DOMAIN: "example.com"
+SMTP_USERNAME: "your_smtp_username"
+SMTP_PASSWORD: "your_smtp_password"
+
+# Retention (see lib/tasks/cv_screening.rake, cv_screening:purge_expired)
+CV_RETENTION_DAYS: "90"

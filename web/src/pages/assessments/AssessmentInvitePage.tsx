@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import DeleteResourceDialog from "@/components/DeleteResourceDialog";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, ListChecks, UserPlus } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -54,6 +55,17 @@ function SessionRow({
       </div>
 
       <div className="flex items-center gap-3">
+        {session.cv_screening_entry_id != null ? (
+          <span className="flex items-center gap-1 text-xs text-primary bg-primary/10 rounded-full px-2 py-0.5">
+            <ListChecks className="h-3 w-3" />
+            CV screening
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+            <UserPlus className="h-3 w-3" />
+            Manual invite
+          </span>
+        )}
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -223,6 +235,15 @@ export default function AssessmentInvitePage() {
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
+          {assessment && (
+            <DeleteResourceDialog
+              resourceLabel="assessment"
+              resourceName={assessment.name}
+              checkEligibility={() => assessmentsApi.deletionCheck(Number(id)).then((res) => res.data)}
+              onConfirmDelete={() => assessmentsApi.delete(Number(id)).then(() => {})}
+              onDeleted={() => navigate("/assessments")}
+            />
+          )}
         </div>
       </div>
 

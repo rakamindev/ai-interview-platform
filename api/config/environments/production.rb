@@ -30,8 +30,31 @@ Rails.application.configure do
   # Log level (default: info in production)
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info").to_sym
 
-  # Use a real queuing backend for Active Job.
+  # Explicit, not the silent :async fallback. Without active_job/railtie loaded and
+  # this set, ActiveJob (and thus ActionMailer's deliver_later, and any ActiveStorage
+  # background work) would fall back to the in-process :async adapter — no
+  # persistence, no retries, silent job loss on every pod rollout.
   config.active_job.queue_adapter = :sidekiq
+
+  # Cloudflare R2 (S3-compatible) — see config/storage.yml. Credentials come from a
+  # k8s Secret, never this repo or the ConfigMap.
+  config.active_storage.service = :r2
+
+  # MAIL_ENABLED defaults to false: shipping a feature that auto-emails rejected
+  # candidates with no kill switch is a compliance and reputational risk. When
+  # false, perform_deliveries is false and every .deliver_now becomes a no-op —
+  # no per-call-site conditionals needed anywhere in app/.
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.perform_deliveries = ENV.fetch('MAIL_ENABLED', 'false') == 'true'
+  config.action_mailer.smtp_settings = {
+    address:              ENV['SMTP_ADDRESS'],
+    port:                 ENV.fetch('SMTP_PORT', 587).to_i,
+    domain:               ENV['SMTP_DOMAIN'],
+    user_name:            ENV['SMTP_USERNAME'],
+    password:             ENV['SMTP_PASSWORD'],
+    authentication:       'plain',
+    enable_starttls_auto: true
+  }
 
   # Use default logging formatter so that PID and timestamp are not suppressed.
   config.log_tags = [:request_id]

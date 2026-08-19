@@ -27,7 +27,8 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        generated_at:       Time.current,
+        vacancy_version_id: current_vacancy_version&.id
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -35,6 +36,12 @@ module FitGap
     end
 
     private
+
+    # The vacancy's most recent snapshot — guaranteed to exist because Vacancy's
+    # after_save callback creates one on every save (see Vacancy#create_vacancy_version).
+    def current_vacancy_version
+      @vacancy.vacancy_versions.order(created_at: :desc).first
+    end
 
     def build_skill_comparisons
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)

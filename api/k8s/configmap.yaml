@@ -1,3 +1,7 @@
+# R2_ACCOUNT_ID / R2_BUCKET / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY and every
+# other genuinely secret value (SECRET_KEY_BASE, GEMINI_API_KEY, DB_PASSWORD,
+# REDIS_URL, ...) deliberately do NOT live here — same as the rest of this file's
+# existing secrets. They're provisioned via a k8s Secret outside this repo.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -18,4 +22,11 @@ data:
   GEMINI_PRO_MODEL: gemini-2.5-pro
   PROACTIVE_RECONNECT_AFTER: "510"
   APP_BASE_URL: https://ai-interview-api.rakamin.com
+  WEB_BASE_URL: "https://<your-frontend-domain>"
   ALLOWED_ORIGINS: "https://<your-frontend-domain>"
+  MAIL_FROM: "no-reply@<your-sending-domain>"
+  MAIL_ENABLED: "false"  # deliberate kill switch — no sender domain/SPF/DKIM exists yet
+  SMTP_ADDRESS: "<your-smtp-host>"
+  SMTP_PORT: "587"
+  SMTP_DOMAIN: "<your-sending-domain>"
+  CV_RETENTION_DAYS: "90"

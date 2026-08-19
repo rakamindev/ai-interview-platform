@@ -1,13 +1,19 @@
 # frozen_string_literal: true
 
+require 'ostruct'
+
 module Assessments
   # Compiles the system prompt for a Gemini Live session from an assessment config.
   # This is pure string interpolation — no LLM call needed.
   # Template follows PRD 01 Section 2 exactly.
   class SystemPromptCompiler
-    def initialize(assessment)
-      @assessment = assessment
-      @skills = assessment.assessment_skills.order(:display_order)
+    # `skills` accepts either a live AssessmentSkill relation/array (method-style
+    # attribute access) or the jsonb skills_snapshot array from an AssessmentVersion
+    # (plain hashes with string keys) — normalized to OpenStructs here so the rest
+    # of this class doesn't need to care which one it got.
+    def initialize(language:, skills:)
+      @language = language
+      @skills = skills.map { |skill| skill.is_a?(Hash) ? OpenStruct.new(skill) : skill }
     end
 
     def call
@@ -25,7 +31,7 @@ module Assessments
     private
 
     def intro_section
-      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
+      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@language.presence || 'en', 'English')
 
       <<~TEXT.strip
         You are an expert skills assessor conducting a live audio interview.

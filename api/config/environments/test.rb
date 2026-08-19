@@ -47,4 +47,19 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Disk service (see config/storage.yml) — no R2 credentials needed to run tests.
+  config.active_storage.service = :test
+
+  # Explicit, not the silent :async fallback — see production.rb's comment.
+  config.active_job.queue_adapter = :test
+
+  # Deliveries land in ActionMailer::Base.deliveries, not a real inbox.
+  config.action_mailer.delivery_method = :test
+  config.action_mailer.perform_deliveries = true
+
+  # Never let a test run rewrite schema.rb — it already can't reconstruct the
+  # ai_interview Postgres schema (see rails_helper.rb), so it must not be trusted
+  # as a source of truth.
+  config.active_record.dump_schema_after_migration = false
 end

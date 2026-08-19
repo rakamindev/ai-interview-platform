@@ -5,7 +5,7 @@ module Api
     class AssessmentsController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_assessment, only: %i[show update destroy]
+      before_action :set_assessment, only: %i[show update destroy deletion_check]
 
       # GET /api/v1/assessments
       def index
@@ -47,13 +47,42 @@ module Api
         end
       end
 
+      # GET /api/v1/assessments/:id/deletion_check
+      def deletion_check
+        blockers = deletion_blockers(@assessment)
+        json_response(blockers || { deletable: true })
+      end
+
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        blockers = deletion_blockers(@assessment)
+        if blockers
+          return json_error("This assessment can't be deleted yet.", :unprocessable_entity, details: blockers)
+        end
+
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          json_error(@assessment.errors.full_messages.to_sentence, :unprocessable_entity)
+        end
       end
 
       private
+
+      # Re-run on both #deletion_check and #destroy — never trust a prior
+      # client-side check as the actual safety boundary. CV screenings block
+      # first (has a concrete "go delete that" navigation target on the
+      # frontend); existing candidate sessions block second (nothing lets a
+      # recruiter delete a Session directly, so there's nowhere to send them).
+      def deletion_blockers(assessment)
+        screenings = assessment.cv_screenings.select(:id, :name)
+        return { deletable: false, reason: "cv_screenings",
+                 blocking_cv_screenings: screenings.map { |cs| { id: cs.id, name: cs.name } } } if screenings.any?
+
+        return { deletable: false, reason: "sessions" } if assessment.sessions.exists?
+
+        nil
+      end
 
       def set_assessment
         @assessment = Assessment.find(params[:id])
