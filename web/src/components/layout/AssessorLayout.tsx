@@ -3,13 +3,16 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Briefcase, Users, UserCog, LogOut, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
+import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
   { href: "/vacancies", label: "Vacancies", icon: Briefcase },
+  { href: "/candidates", label: "Candidates", icon: Users },
+  { href: "/team", label: "Team", icon: UserCog },
 ];
 
 export default function AssessorLayout() {
@@ -17,6 +20,7 @@ export default function AssessorLayout() {
   const setAuth = useSetAtom(authAtom);
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     clearToken();
@@ -27,12 +31,12 @@ export default function AssessorLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
-      <header className="border-b bg-white sticky top-0 z-40">
+      <header className="border-b bg-background sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <span className="font-heading font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -58,6 +62,14 @@ export default function AssessorLayout() {
                 Tenant: {tenant.name}
               </span>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-1.5" />
               Logout
