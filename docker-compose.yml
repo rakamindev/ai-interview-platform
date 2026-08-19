@@ -1,0 +1,114 @@
+x-api-environment: &api-environment
+  RAILS_ENV: development
+  PORT: 3001
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_NAME: ${DB_NAME}
+  DB_USERNAME: ${DB_USERNAME}
+  DB_PASSWORD: ${DB_PASSWORD}
+  GEMINI_API_KEY: ${GEMINI_API_KEY}
+  GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL}
+  GEMINI_FLASH_MODEL: ${GEMINI_FLASH_MODEL}
+  GEMINI_PRO_MODEL: ${GEMINI_PRO_MODEL}
+  TOKEN_EXPIRATION_TIME: 259200
+  REDIS_URL: redis://redis:6379/1
+  APP_BASE_URL: http://localhost:3001
+  ALLOWED_ORIGINS: http://localhost:5173
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rakamin_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      args:
+        BUNDLE_WITHOUT: test
+        BUNDLE_DEPLOYMENT: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *api-environment
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/ai-interview
+      - bundle_cache:/usr/local/bundle
+    command: >
+      sh -lc "mkdir -p tmp/pids && rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec puma -C config/puma.rb"
+
+  sidekiq:
+    build:
+      context: ./api
+      args:
+        BUNDLE_WITHOUT: test
+        BUNDLE_DEPLOYMENT: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *api-environment
+    volumes:
+      - ./api:/ai-interview
+      - bundle_cache:/usr/local/bundle
+    command: >
+      sh -lc "bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml"
+
+  web:
+    build:
+      context: ./web
+      target: dev
+    depends_on:
+      - api
+    environment:
+      VITE_API_BASE_URL: http://localhost:3001/api/v1
+      VITE_WS_BASE_URL: ws://localhost:3001
+      VITE_DEV_TOKEN: ${VITE_DEV_TOKEN:-}
+      VITE_DEV_TENANT_ID: ${VITE_DEV_TENANT_ID:-1}
+      VITE_DEV_TENANT_NAME: ${VITE_DEV_TENANT_NAME:-Demo Tenant}
+      VITE_SPEED_TEST_PING_URL: ${VITE_SPEED_TEST_PING_URL:-}
+      VITE_SPEED_TEST_UPLOAD_URL: ${VITE_SPEED_TEST_UPLOAD_URL:-}
+      VITE_REQUIRE_CAMERA: ${VITE_REQUIRE_CAMERA:-false}
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - web_node_modules:/app/node_modules
+
+volumes:
+  postgres_data:
+  redis_data:
+  bundle_cache:
+  web_node_modules:

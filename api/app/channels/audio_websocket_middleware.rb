@@ -28,6 +28,8 @@ class AudioWebSocketMiddleware
     path = env['PATH_INFO']
     match = AUDIO_PATH_PATTERN.match(path)
 
+    puts "DEBUG AudioWS: path=#{path.inspect} match=#{match.inspect} ws?=#{Faye::WebSocket.websocket?(env).inspect}"
+
     return @app.call(env) unless match && Faye::WebSocket.websocket?(env)
 
     handle_audio_websocket(env, match[1])

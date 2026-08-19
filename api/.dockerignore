@@ -1,0 +1,8 @@
+.bundle
+log
+tmp
+storage
+config/application.yml
+config/master.key
+vertex_ai_credentials.json
+.byebug_history
