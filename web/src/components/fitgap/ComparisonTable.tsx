@@ -43,27 +43,36 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
-              </tr>
-            ))}
+            {comparisons.map((c, i) => {
+              const reqLevel = c.expected_level ?? c.required_level;
+              const reqLabel = reqLevel ? (LEVEL_LABELS[reqLevel] ?? `L${reqLevel}`) : "—";
+
+              return (
+                <tr key={i} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-2.5 font-medium">{c.skill_label}</td>
+                  <td className="px-4 py-2.5 text-center text-muted-foreground font-medium">
+                    {reqLabel}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    {c.candidate_level != null ? (
+                      <span className="inline-flex items-center justify-center gap-1">
+                        <span className="font-semibold">{LEVEL_LABELS[c.candidate_level] ?? `L${c.candidate_level}`}</span>
+                        {c.is_override && (
+                          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-0.2" title="Human Assessor Override Applied">
+                            ✏ Override
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <ResultBadge comparison={c} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

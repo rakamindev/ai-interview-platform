@@ -31,7 +31,7 @@ module Api
 
         if assessment.save
           SystemPromptGeneratorWorker.perform_async(assessment.id)
-          json_response({ assessment:, system_prompt_generated: true }, :created)
+          json_response({ assessment: assessment_with_skills_json(assessment), system_prompt_generated: true }, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
         end

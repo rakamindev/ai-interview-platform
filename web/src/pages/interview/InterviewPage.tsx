@@ -21,6 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import ConsentModal from "@/components/candidate/ConsentModal";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -32,6 +33,8 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [consentSubmitting, setConsentSubmitting] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,10 +49,25 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        if (res.data.candidate_consent) setConsentGiven(true);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
+
+  const handleConsent = async (locale: string) => {
+    if (!token) return;
+    setConsentSubmitting(true);
+    try {
+      await sessionsApi.giveConsent(token, locale);
+      setConsentGiven(true);
+    } catch (err) {
+      console.error("Failed to record consent:", err);
+      setConsentGiven(true);
+    } finally {
+      setConsentSubmitting(false);
+    }
+  };
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -191,6 +209,12 @@ export default function InterviewPage() {
   if (interviewState === "idle") {
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+        <ConsentModal
+          open={!consentGiven}
+          loading={consentSubmitting}
+          onConsent={handleConsent}
+        />
+
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
