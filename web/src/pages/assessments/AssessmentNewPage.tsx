@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
@@ -51,7 +52,7 @@ export default function AssessmentNewPage() {
   });
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+  const { fields, append, remove, move } = useFieldArray({ control, name: "skills", keyName: "_key" });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -61,8 +62,8 @@ export default function AssessmentNewPage() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = fields.findIndex((f) => f.id === active.id);
-      const newIndex = fields.findIndex((f) => f.id === over.id);
+      const oldIndex = fields.findIndex((f) => f._key === active.id);
+      const newIndex = fields.findIndex((f) => f._key === over.id);
       move(oldIndex, newIndex);
     }
   };
@@ -98,9 +99,12 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
+      toast.success("Assessment created");
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+      const message = e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -191,14 +195,14 @@ export default function AssessmentNewPage() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={fields.map((f) => f.id)}
+                items={fields.map((f) => f._key)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-2">
                   {fields.map((field, index) => (
                     <SkillCard
-                      key={field.id}
-                      id={field.id}
+                      key={field._key}
+                      id={field._key}
                       index={index}
                       form={form}
                       onRemove={() => remove(index)}

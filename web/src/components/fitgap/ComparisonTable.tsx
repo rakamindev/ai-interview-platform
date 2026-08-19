@@ -1,5 +1,6 @@
 import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
 import { cn } from "@/lib/utils";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption } from "@/components/ui/table";
 import type { SkillComparison } from "@/types";
 
 interface ComparisonTableProps {
@@ -25,47 +26,53 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
 }
 
 export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="rounded-lg border">
+        <Table>
+          <TableCaption className="sr-only">
+            Comparison of candidate skill levels against role requirements
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Skill</TableHead>
+              <TableHead className="text-center">Required</TableHead>
+              <TableHead className="text-center">Candidate</TableHead>
+              <TableHead className="text-center">Result</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
+              <TableRow key={i}>
+                <TableCell>{c.skill_label}</TableCell>
+                <TableCell className="text-center text-muted-foreground">
+                  {c.expected_level != null ? LEVEL_LABELS[c.expected_level] : "—"}
+                </TableCell>
+                <TableCell className="text-center">
                   {c.candidate_level != null ? (
                     <span>
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.is_override && (
+                        <span className="text-xs text-muted-foreground ml-1" title="Human override applied">
+                          ✏
+                        </span>
+                      )}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
+                </TableCell>
+                <TableCell className="text-center">
                   <ResultBadge comparison={c} />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Summary */}
