@@ -22,7 +22,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const res = await authApi.signup({ email, password, role });
-      setAuth(res.data.token, res.data.user);
+      setAuth(res.data.access_token, res.data.user);
       navigate("/assessments");
     } catch {
       setError("Signup failed. Please try again.");

@@ -20,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authApi.login({ email, password });
-      setAuth(res.data.token, res.data.user);
+      setAuth(res.data.access_token, res.data.user);
       navigate("/assessments");
     } catch {
       setError("Invalid email or password.");
