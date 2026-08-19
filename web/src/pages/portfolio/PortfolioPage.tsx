@@ -32,7 +32,6 @@ export default function PortfolioPage() {
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
-      // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
         overrideMap[o.portfolio_skill_id] = o;
@@ -169,7 +168,9 @@ export default function PortfolioPage() {
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          <p className="text-sm text-destructive">
+            {portfolio?.generation_error || "Portfolio generation failed."}
+          </p>
           <Button
             variant="outline"
             size="sm"

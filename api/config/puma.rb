@@ -7,7 +7,16 @@ max_threads_count = ENV.fetch('RAILS_MAX_THREADS', 16)
 min_threads_count = ENV.fetch('RAILS_MIN_THREADS') { max_threads_count }
 threads min_threads_count, max_threads_count
 
-workers ENV.fetch('WEB_CONCURRENCY', 2)
+
+# Cluster mode (preload_app! + fork) below is only safe when nothing but the
+# main thread is running at fork time. In development, Rails' file-watcher
+# (the `listen` gem, for autoloading/reload) and the EventMachine reactor
+# thread are both alive during boot; forking mid-flight can copy one of their
+# locks into the child as permanently held, deadlocking every request in that
+# worker. Default to single-process mode (no fork) in development to avoid
+# that entirely; production keeps the original 2-worker capacity.
+default_workers = ENV.fetch('RAILS_ENV', 'development') == 'development' ? 0 : 2
+workers ENV.fetch('WEB_CONCURRENCY', default_workers).to_i
 
 worker_timeout 3600 if ENV.fetch('RAILS_ENV', 'development') == 'development'
 

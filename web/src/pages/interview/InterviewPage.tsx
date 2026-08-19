@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import VoiceBars from "@/components/interview/VoiceBars";
+import InterviewOrb from "@/components/interview/InterviewOrb";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
@@ -21,6 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import InfoStep from "@/pages/interview/steps/InfoStep";
+import BiodataStep from "@/pages/interview/steps/BiodataStep";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -32,6 +34,7 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [onboardingStep, setOnboardingStep] = useState<"info" | "biodata" | "hardware">("info");
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,7 +42,6 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
-  // Fetch candidate info
   useEffect(() => {
     if (!token) return;
     sessionsApi.getCandidateInfo(token)
@@ -48,7 +50,12 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        const status = err?.response?.status;
+        if (status === 410) setInterviewState("expired");
+        else if (status === 404) setInterviewState("invalid");
+        else setInterviewState("complete");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -187,8 +194,27 @@ export default function InterviewPage() {
       ? "connected"
       : "reconnecting";
 
-  // ── State A: Pre-start ──────────────────────────────────────────────────
+  // ── State A: Pre-start (4-step onboarding: info → biodata → hardware → interview) ──
   if (interviewState === "idle") {
+    if (onboardingStep === "info") {
+      return (
+        <InfoStep
+          candidateInfo={candidateInfo}
+          onContinue={() => setOnboardingStep("biodata")}
+        />
+      );
+    }
+
+    if (onboardingStep === "biodata") {
+      return (
+        <BiodataStep
+          token={token!}
+          candidateInfo={candidateInfo}
+          onContinue={() => setOnboardingStep("hardware")}
+        />
+      );
+    }
+
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
@@ -212,7 +238,7 @@ export default function InterviewPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
+            <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900 rounded-lg px-4 py-2.5">
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
@@ -222,6 +248,36 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State: Expired invite link ──────────────────────────────────────────
+  if (interviewState === "expired") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⏰</div>
+        <h2 className="text-xl font-semibold">This link has expired</h2>
+        <p className="text-sm text-muted-foreground">
+          Your interview invite link is no longer valid.
+          <br />
+          Please contact the hiring team to request a new link.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State: Invalid invite link ──────────────────────────────────────────
+  if (interviewState === "invalid") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Invite link not found</h2>
+        <p className="text-sm text-muted-foreground">
+          This interview link doesn't look right.
+          <br />
+          Please check the link or contact the hiring team.
+        </p>
       </div>
     );
   }
@@ -248,7 +304,7 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -262,12 +318,12 @@ export default function InterviewPage() {
       {/* Reconnecting banner */}
       {interviewState === "reconnecting" && (
         connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
+          <div className="flex items-center gap-2 text-sm bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-400 rounded-lg px-4 py-2.5 mt-2">
             <span className="animate-pulse">●</span>
             <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
+          <div className="flex items-center gap-2 text-sm bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-900 text-yellow-800 dark:text-yellow-400 rounded-lg px-4 py-2.5 mt-2">
             <span className="animate-pulse">●</span>
             <span>Briefly reconnecting — please wait a moment.</span>
           </div>
@@ -276,9 +332,15 @@ export default function InterviewPage() {
 
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
+        <div className="flex items-center justify-between text-sm bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-blue-800 dark:text-blue-400 rounded-lg px-4 py-2.5 mt-2">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+          <button
+            className="ml-3 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0"
+            onClick={() => setReconnectedPrompt(false)}
+            aria-label="Dismiss reconnected notice"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -288,24 +350,15 @@ export default function InterviewPage() {
           <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
+            <InterviewOrb state="ai" label="AI speaking" />
             <p className="text-xs text-muted-foreground">Wrapping up...</p>
           </div>
         ) : (
           <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
+            <InterviewOrb
+              state={aiSpeaking ? "ai" : candidateSpeaking ? "candidate" : "idle"}
+              label={aiSpeaking ? "AI speaking" : candidateSpeaking ? "You're speaking" : "Listening..."}
             />
-
-            {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
-            )}
 
             {/* Transcript */}
             {transcript.length > 0 && (
@@ -320,7 +373,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">

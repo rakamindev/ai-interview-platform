@@ -4,6 +4,10 @@ export default {
     content: ["./index.html", "./src/**/*.{ts,tsx}"],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ["IBM Plex Sans", "system-ui", "sans-serif"],
+                heading: ["Lexend", "system-ui", "sans-serif"],
+            },
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
@@ -57,11 +61,21 @@ export default {
                     "0%, 100%": { height: "4px" },
                     "50%": { height: "32px" },
                 },
+                "orb-breathe": {
+                    "0%, 100%": { transform: "scale(1)" },
+                    "50%": { transform: "scale(1.04)" },
+                },
+                "orb-pulse": {
+                    "0%, 100%": { transform: "scale(1)" },
+                    "50%": { transform: "scale(1.12)" },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
                 "voice-bar": "voice-bar 0.8s ease-in-out infinite",
+                "orb-breathe": "orb-breathe 3s ease-in-out infinite",
+                "orb-pulse": "orb-pulse 1.1s ease-in-out infinite",
             },
         },
     },

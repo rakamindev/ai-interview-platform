@@ -21,9 +21,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Trash2, Archive } from "lucide-react";
+import { toast } from "sonner";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
@@ -36,13 +47,26 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [hasSessions, setHasSessions] = useState(false);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
   });
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+  const { fields, append, remove, move, update } = useFieldArray({ control, name: "skills", keyName: "_key" });
+
+  const handleRemoveSkill = (index: number) => {
+    const skill = fields[index];
+    if (skill.id) {
+      update(index, { ...skill, _destroy: true });
+    } else {
+      remove(index);
+    }
+  };
 
   useEffect(() => {
     assessmentsApi
@@ -50,6 +74,7 @@ export default function AssessmentEditPage() {
       .then((res) => {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        setHasSessions(Boolean(a.has_sessions));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -63,8 +88,8 @@ export default function AssessmentEditPage() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = fields.findIndex((f) => f.id === active.id);
-      const newIndex = fields.findIndex((f) => f.id === over.id);
+      const oldIndex = fields.findIndex((f) => f._key === active.id);
+      const newIndex = fields.findIndex((f) => f._key === over.id);
       move(oldIndex, newIndex);
     }
   };
@@ -79,11 +104,39 @@ export default function AssessmentEditPage() {
         time_limit_min: data.time_limit_min,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
+      toast.success("Assessment saved");
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
+      const message = e?.response?.data?.errors?.[0]?.message ?? "Failed to save.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Assessments with sessions can't be hard-deleted (would destroy candidate
+  // interview history) — archive instead, which just hides it from active use.
+  const handleDeleteOrArchive = async () => {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      if (hasSessions) {
+        await assessmentsApi.archive(Number(id));
+        toast.success("Assessment archived");
+      } else {
+        await assessmentsApi.delete(Number(id));
+        toast.success("Assessment deleted");
+      }
+      navigate("/assessments");
+    } catch (e: any) {
+      const fallback = hasSessions ? "Failed to archive assessment." : "Failed to delete assessment.";
+      const message = e?.response?.data?.errors?.[0]?.message ?? fallback;
+      setDeleteError(message);
+      toast.error(message);
+      setConfirmOpen(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -134,16 +187,18 @@ export default function AssessmentEditPage() {
 
         <div className="space-y-3">
           <Label>Skills to assess</Label>
-          {fields.length === 0 ? (
+          {fields.filter((f) => !f._destroy).length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
               No skills added yet.
             </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={fields.filter((f) => !f._destroy).map((f) => f._key)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    field._destroy ? null : (
+                      <SkillCard key={field._key} id={field._key} index={index} form={form} onRemove={() => handleRemoveSkill(index)} />
+                    )
                   ))}
                 </div>
               </SortableContext>
@@ -162,16 +217,64 @@ export default function AssessmentEditPage() {
         <Separator />
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Changes
+        <div className="flex justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className={hasSessions ? "" : "text-destructive hover:text-destructive"}
+            onClick={() => setConfirmOpen(true)}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : hasSessions ? (
+              <Archive className="h-4 w-4 mr-2" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {hasSessions ? "Archive Assessment" : "Delete Assessment"}
           </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Changes
+            </Button>
+          </div>
         </div>
+        {deleteError && <p className="text-sm text-destructive text-right">{deleteError}</p>}
       </form>
 
       <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {hasSessions ? "Archive this assessment?" : "Delete this assessment?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {hasSessions
+                ? "This assessment has invite links / sessions tied to it, so it can't be deleted outright — that would destroy candidates' interview history. Archiving removes it from your active list; existing sessions, transcripts, and results are kept untouched."
+                : "This cannot be undone. No invite links have been created for this assessment yet, so it can be deleted safely."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={hasSessions ? "" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteOrArchive();
+              }}
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {hasSessions ? "Archive" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

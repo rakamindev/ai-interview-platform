@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_160714) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -24,6 +24,47 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "admin_invites", force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.string "email", limit: 255, null: false
+    t.string "role", limit: 20, null: false
+    t.string "invite_token", limit: 64, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "accepted_at"
+    t.bigint "created_by", null: false
+    t.datetime "created_at", null: false
+    t.index ["invite_token"], name: "index_admin_invites_on_invite_token", unique: true
+    t.index ["tenant_id", "email"], name: "index_admin_invites_on_tenant_id_and_email"
+  end
 
   create_table "assessment_skills", force: :cascade do |t|
     t.bigint "assessment_id", null: false
@@ -52,6 +93,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.datetime "archived_at"
+    t.index ["archived_at"], name: "index_assessments_on_archived_at"
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
@@ -66,6 +109,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
+  end
+
+  create_table "candidates", force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.string "email", limit: 255, null: false
+    t.string "name", limit: 255
+    t.string "phone", limit: 50
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "address"
+    t.index ["tenant_id", "email"], name: "index_candidates_on_tenant_id_and_email", unique: true
   end
 
   create_table "coverage_maps", force: :cascade do |t|
@@ -133,7 +187,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_table "sessions", force: :cascade do |t|
     t.bigint "tenant_id", null: false
     t.bigint "assessment_id", null: false
-    t.bigint "candidate_id"
     t.string "invite_token", limit: 64, null: false
     t.enum "status", default: "pending", null: false, enum_type: "session_status"
     t.enum "end_reason", enum_type: "end_reason"
@@ -143,6 +196,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.bigint "candidate_id"
+    t.datetime "expires_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
@@ -193,6 +248,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "address"
+    t.string "city", limit: 120
+    t.string "work_arrangement", limit: 20
+    t.string "employment_type", limit: 20
+    t.string "department", limit: 120
+    t.integer "salary_min"
+    t.integer "salary_max"
+    t.boolean "salary_visible", default: false, null: false
+    t.text "description"
+    t.date "application_deadline"
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
   end
 
@@ -205,6 +270,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
 
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
@@ -213,6 +280,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
+  add_foreign_key "sessions", "candidates"
   add_foreign_key "transcript_turns", "sessions"
   add_foreign_key "vacancy_skills", "vacancies"
 end

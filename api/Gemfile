@@ -38,6 +38,9 @@ gem 'matrix' # required by prawn on Ruby >= 3.1
 gem 'prawn', '~> 2.4'
 gem 'prawn-table', '~> 0.2'
 
+# Email delivery (net-smtp removed from Ruby stdlib default gems since 3.1)
+gem 'net-smtp', require: false
+
 # Misc
 gem 'bootsnap', require: false
 gem 'kaminari'
@@ -52,6 +55,7 @@ group :development, :test do
 end
 
 group :development do
+  gem 'letter_opener' # previews outgoing emails in the browser instead of real SMTP
   gem 'rubocop', require: false
   gem 'rubocop-rails', require: false
   gem 'rubocop-rspec', require: false

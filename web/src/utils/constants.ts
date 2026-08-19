@@ -23,13 +23,14 @@ export const LEVEL_DESCRIPTIONS: Record<number, string> = {
   5: "Expert",
 };
 
-// L-badge colors (Tailwind classes)
+// L-badge colors: neutral → teal ramp (matches brand hue) → brand secondary at the top tier.
+// Each pair is pre-verified for light/dark contrast (Tailwind's own teal-950/teal-300 combo).
 export const LEVEL_BADGE_CLASSES: Record<number, string> = {
-  1: "bg-neutral-200 text-neutral-700",
-  2: "bg-blue-100 text-blue-700",
-  3: "bg-teal-100 text-teal-700",
-  4: "bg-purple-100 text-purple-700",
-  5: "bg-yellow-100 text-yellow-700",
+  1: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
+  2: "bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300",
+  3: "bg-primary/15 text-primary dark:bg-primary/25 dark:text-teal-300",
+  4: "bg-teal-700 text-white dark:bg-teal-600 dark:text-white",
+  5: "bg-secondary text-secondary-foreground",
 };
 
 // Coverage state display
@@ -47,11 +48,12 @@ export const COVERAGE_STATE_WIDTH: Record<string, number> = {
   covered: 100,
 };
 
+// Progress fill colors — same teal ramp as LEVEL_BADGE_CLASSES for a coherent progression.
 export const COVERAGE_STATE_COLOR: Record<string, string> = {
-  not_yet: "bg-neutral-200",
-  initiated: "bg-blue-300",
-  partial: "bg-teal-400",
-  covered: "bg-teal-600",
+  not_yet: "bg-neutral-300 dark:bg-neutral-700",
+  initiated: "bg-teal-300 dark:bg-teal-700",
+  partial: "bg-teal-400 dark:bg-teal-500",
+  covered: "bg-teal-600 dark:bg-teal-400",
 };
 
 // Fit/Gap result display
@@ -62,9 +64,11 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   not_assessed: "Not assessed",
 };
 
+// Semantic status colors (universal green/amber, not brand-derived) — pass/fail/warning
+// needs to read instantly, so intentionally kept outside the teal ramp above.
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-green-700 bg-green-50 dark:bg-green-950/40 dark:text-green-400",
+  gap: "text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400",
+  exceed: "text-green-700 bg-green-50 dark:bg-green-950/40 dark:text-green-400",
+  not_assessed: "text-neutral-500 bg-neutral-50 dark:bg-neutral-800/60 dark:text-neutral-400",
 };

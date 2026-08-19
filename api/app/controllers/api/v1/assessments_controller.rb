@@ -5,13 +5,15 @@ module Api
     class AssessmentsController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_assessment, only: %i[show update destroy]
+      before_action :set_assessment, only: %i[show update destroy archive]
+      before_action :set_archived_assessment, only: %i[unarchive]
 
       # GET /api/v1/assessments
+      # GET /api/v1/assessments?archived=true
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = params[:archived] == 'true' ? Assessment.archived : Assessment.all
+        scope = scope.where('name ILIKE ?', "%#{params[:q]}%") if params[:q].present?
+        assessments = paginate(scope.includes(:sessions).order(created_at: :desc))
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -49,8 +51,28 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          # `sessions: dependent: :restrict_with_error` blocks destroy() without
+          # raising — it just returns false and adds an error, which the caller
+          # must check explicitly or the delete silently no-ops.
+          json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
+        end
+      end
+
+      # POST /api/v1/assessments/:id/archive
+      # Hides the assessment from active use without touching its sessions'
+      # history — the supported alternative when `destroy` is blocked.
+      def archive
+        @assessment.update!(archived_at: Time.current)
+        json_response({ message: "Assessment archived" })
+      end
+
+      # POST /api/v1/assessments/:id/unarchive
+      def unarchive
+        @assessment.update!(archived_at: nil)
+        json_response({ message: "Assessment restored", assessment: assessment_json(@assessment) })
       end
 
       private
@@ -59,6 +81,15 @@ module Api
         @assessment = Assessment.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
+      end
+
+      # Archived records are hidden by Assessment's default_scope — this looks
+      # them up via the `archived` scope instead, which keeps tenant scoping
+      # intact (unlike `.unscoped`, which would also drop tenant isolation).
+      def set_archived_assessment
+        @assessment = Assessment.archived.find(params[:id])
+      rescue ActiveRecord::RecordNotFound
+        json_error("Archived assessment not found", :not_found)
       end
 
       def assessment_params
@@ -87,6 +118,8 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          has_sessions:   assessment.sessions.exists?,
+          archived_at:    assessment.archived_at,
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,

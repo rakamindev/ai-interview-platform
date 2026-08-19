@@ -8,6 +8,8 @@ Rails.application.configure do
   # While tests run files are not watched, reloading is not necessary.
   config.cache_classes = true
 
+  config.active_storage.service = :test
+
   # Eager loading loads your whole application. When running a single test locally,
   # this might not be necessary. It's recommended that you set this to true in CI though.
   config.eager_load = ENV["CI"].present?
@@ -47,4 +49,11 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Rack::Attack rate-limits (e.g. 5 logins/min) are an infra concern orthogonal to
+  # correctness — without this, request specs that fire multiple requests at the same
+  # endpoint start failing with 429s once the real throttle limit is hit.
+  config.after_initialize do
+    Rack::Attack.enabled = false
+  end
 end

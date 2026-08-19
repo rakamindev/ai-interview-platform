@@ -7,6 +7,12 @@ module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
   class PdfGenerator
+    # Prawn's built-in fonts only support Windows-1252 and crash on anything
+    # outside it — a real risk here since portfolio text comes from an LLM,
+    # which can emit em dashes, curly quotes, or non-Latin script at any time.
+    # Noto Sans (OFL) gives full Unicode coverage instead.
+    FONT_DIR = Rails.root.join('app', 'assets', 'fonts')
+
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
     RESULT_LABELS = {
@@ -27,6 +33,7 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        register_unicode_font(pdf)
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -35,6 +42,16 @@ module Exports
     end
 
     private
+
+    def register_unicode_font(pdf)
+      pdf.font_families.update(
+        'NotoSans' => {
+          normal: FONT_DIR.join('NotoSans-Regular.ttf').to_s,
+          bold:   FONT_DIR.join('NotoSans-Bold.ttf').to_s
+        }
+      )
+      pdf.font('NotoSans')
+    end
 
     def render_header(pdf)
       pdf.font_size(22) { pdf.text @assessment.name, style: :bold }

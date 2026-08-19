@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -11,6 +12,9 @@ import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
 import FitGapReportPage from "@/pages/fitgap/FitGapReportPage";
 import TranscriptPage from "@/pages/transcript/TranscriptPage";
+import CandidateListPage from "@/pages/candidates/CandidateListPage";
+import AdminInviteListPage from "@/pages/admin/AdminInviteListPage";
+import AdminSetupPage from "@/pages/admin/AdminSetupPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
@@ -18,6 +22,8 @@ import InterviewPage from "@/pages/interview/InterviewPage";
 
 export default function App() {
   return (
+    <>
+    <Toaster position="top-right" richColors closeButton />
     <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
@@ -46,16 +52,20 @@ export default function App() {
           path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
           element={<FitGapReportPage />}
         />
+        <Route path="/candidates" element={<CandidateListPage />} />
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        <Route path="/team" element={<AdminInviteListPage />} />
       </Route>
       </Route>
 
-      {/* Candidate route (public) */}
+      {/* Public routes — no auth */}
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
+        <Route path="/admin/setup/:token" element={<AdminSetupPage />} />
       </Route>
     </Routes>
+    </>
   );
 }

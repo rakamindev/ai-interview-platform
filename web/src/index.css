@@ -13,8 +13,8 @@
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
+        /* Rakamin teal, darkened from #01959f (184 99% 31%) to meet WCAG AA 4.5:1 text contrast */
+        --primary: 184 99% 25%;
         --primary-foreground: 0 0% 98%;
 
         /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
@@ -38,33 +38,35 @@
     }
 
     .dark {
-        --background: 222 47% 11%;
+        /* Tonal staircase so layers stay visible: bg 8% < card 13% < muted/accent 18% < border 24% */
+        --background: 222 47% 8%;
         --foreground: 210 40% 98%;
 
-        --card: 222 47% 11%;
+        --card: 222 35% 13%;
         --card-foreground: 210 40% 98%;
 
-        --popover: 222 47% 11%;
+        --popover: 222 35% 13%;
         --popover-foreground: 210 40% 98%;
 
-        --primary: 184 99% 31%;
+        --primary: 184 99% 25%;
         --primary-foreground: 0 0% 98%;
 
         --secondary: 43 96% 60%;
         --secondary-foreground: 26 47% 25%;
 
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
+        --muted: 217 30% 18%;
+        --muted-foreground: 215 20% 68%;
 
-        --accent: 217 33% 17%;
+        --accent: 217 30% 18%;
         --accent-foreground: 210 40% 98%;
 
         --destructive: 0 63% 31%;
         --destructive-foreground: 0 0% 98%;
 
-        --border: 217 33% 17%;
-        --input: 217 33% 17%;
-        --ring: 184 99% 31%;
+        --border: 217 25% 28%;
+        --input: 217 25% 28%;
+        /* Brighter than --primary so focus rings stay visible against dark backgrounds */
+        --ring: 184 90% 45%;
     }
 }
 
@@ -74,6 +76,19 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-sans;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-heading;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
