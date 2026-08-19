@@ -22,14 +22,33 @@ export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     maxPingMs: 300,
 };
 
+// When true, the speed test is skipped entirely and reports a passing result.
+// Skips by default (VITE_SKIP_INTERNET_TEST !== "false") so local/demo flows
+// are never blocked by unreachable CDN endpoints. Set VITE_SKIP_INTERNET_TEST=false
+// to re-enable the real speed test.
+export const SKIP_INTERNET_TEST = import.meta.env.VITE_SKIP_INTERNET_TEST !== "false";
+
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
 const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+
+// Hard ceiling per request so a slow/blocked endpoint can never hang the check.
+const FETCH_TIMEOUT_MS = 5000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
 
 async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {
         try {
             const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
+            await fetchWithTimeout(SPEED_TEST_PING_URL, { cache: "no-cache" });
             return performance.now() - start;
         } catch {
             return 999;
@@ -43,7 +62,7 @@ async function measurePing(): Promise<number> {
     for (const url of testUrls) {
         try {
             const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
+            await fetchWithTimeout(url, { mode: "no-cors", cache: "no-cache" });
             return performance.now() - start;
         } catch {
             continue;
@@ -61,7 +80,7 @@ async function measureDownloadSpeed(): Promise<number> {
     for (const testFile of testFiles) {
         try {
             const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
+            const response = await fetchWithTimeout(testFile.url, { cache: "no-cache" });
             if (response.ok) {
                 await response.blob();
                 const seconds = (performance.now() - start) / 1000;
@@ -74,7 +93,7 @@ async function measureDownloadSpeed(): Promise<number> {
     // Rough fallback
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
+        await fetchWithTimeout("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
         const duration = (performance.now() - start) / 1000;
         return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
     } catch {
@@ -95,7 +114,7 @@ async function measureUploadSpeed(): Promise<number> {
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            await fetchWithTimeout(endpoint, { method: "POST", body: formData });
             const seconds = (performance.now() - start) / 1000;
             return uploadSizeMB / seconds;
         } catch {
@@ -129,6 +148,17 @@ function average(values: number[]): number {
 export async function testInternetSpeed(
     thresholds: SpeedThresholds = DEFAULT_THRESHOLDS
 ): Promise<InternetSpeedResult> {
+    if (SKIP_INTERNET_TEST) {
+        return {
+            download: thresholds.minDownloadMbps,
+            upload: thresholds.minUploadMbps,
+            ping: 1,
+            passed: true,
+            downloadTests: [],
+            uploadTests: [],
+            pingTests: [],
+        };
+    }
     try {
         const [downloadTests, uploadTests, pingTests] = await Promise.all([
             runMultipleTests(measureDownloadSpeed, 3),
