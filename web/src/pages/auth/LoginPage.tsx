@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
+import { authAtom, setAuthenticated } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,18 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await authApi.login({ email, password });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
+      await authApi.login({ email, password });
+      setAuthenticated();
+      setAuth({ authenticated: true });
       navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 || status === 403) {
+        setError("Invalid email or password.");
+      } else {
+        console.error("[Login] request failed", err);
+        setError("Something went wrong signing in. Please try again in a moment.");
+      }
     } finally {
       setLoading(false);
     }

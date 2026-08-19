@@ -20,6 +20,7 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
 
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
   const { register, setValue, formState: { errors } } = form;
+  const skillErrors = errors.skills?.[index];
   const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
 
   return (
@@ -33,6 +34,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
           placeholder="e.g. Communication"
           {...register(`skills.${index}.skill_label`, { required: true })}
         />
+        {skillErrors?.skill_label && <p className="text-xs text-destructive">Name is required.</p>}
       </div>
 
       <div className="space-y-1.5">
@@ -45,6 +47,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
           rows={2}
           {...register(`skills.${index}.scope_include`, { required: true })}
         />
+        {skillErrors?.scope_include && <p className="text-xs text-destructive">Scope is required.</p>}
       </div>
 
       <div className="space-y-2">
@@ -59,6 +62,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
               rows={2}
               {...register(`skills.${index}.${key}`, { required: true })}
             />
+            {skillErrors?.[key] && <p className="text-xs text-destructive">L{i + 1} anchor is required.</p>}
           </div>
         ))}
       </div>

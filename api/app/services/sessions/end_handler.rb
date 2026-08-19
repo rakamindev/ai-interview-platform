@@ -12,33 +12,35 @@ module Sessions
     end
 
     def call(reason: 'manual_assessor')
-      # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
-      if @session.ended?
-        manual = %w[manual_candidate manual_assessor]
-        if manual.include?(reason.to_s) && @session.end_reason == 'error'
-          @session.update_column(:end_reason, reason.to_s)
-        end
-        return @session
-      end
-
       reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
+      newly_ended = false
 
-      ActiveRecord::Base.transaction do
-        duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
+      @session.with_lock do
+        if @session.ended?
+          manual = %w[manual_candidate manual_assessor]
+          if manual.include?(reason.to_s) && @session.end_reason == 'error'
+            @session.update_column(:end_reason, reason.to_s)
+          end
+        else
+          duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
 
-        @session.update!(
-          status:           'ended',
-          end_reason:       reason.to_s,
-          ended_at:         Time.current,
-          duration_seconds: duration
-        )
+          @session.update!(
+            status:           'ended',
+            end_reason:       reason.to_s,
+            ended_at:         Time.current,
+            duration_seconds: duration
+          )
 
-        create_portfolio
+          create_portfolio
+          newly_ended = true
+        end
       end
 
-      enqueue_portfolio_generation
-      publish_status_update
-      Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
+      if newly_ended
+        enqueue_portfolio_generation
+        publish_status_update
+        Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
+      end
 
       @session
     end
@@ -46,12 +48,14 @@ module Sessions
     private
 
     def publish_status_update
-      redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
-      redis.publish("coverage:#{@session.id}", { type: 'session_status', status: @session.status, end_reason: @session.end_reason }.to_json)
+      Sidekiq.redis do |conn|
+        conn.publish(
+          "coverage:#{@session.id}",
+          { type: 'session_status', status: @session.status, end_reason: @session.end_reason }.to_json
+        )
+      end
     rescue => e
       Rails.logger.error("[EndHandler] Failed to publish status update: #{e.message}")
-    ensure
-      redis&.close
     end
 
     def create_portfolio

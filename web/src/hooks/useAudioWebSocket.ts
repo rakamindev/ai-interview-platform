@@ -32,7 +32,10 @@ export function useAudioWebSocket({
   );
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    const existing = wsRef.current;
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
 
     sessionEndedRef.current = false;
     setConnectionState("connecting");
@@ -130,7 +133,7 @@ export function useAudioWebSocket({
         onStateChange("complete");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onReconnected]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -152,8 +155,14 @@ export function useAudioWebSocket({
 
   useEffect(() => {
     return () => {
+      sessionEndedRef.current = true;
+      reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      wsRef.current?.close();
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+        ws.close();
+      }
     };
   }, []);
 

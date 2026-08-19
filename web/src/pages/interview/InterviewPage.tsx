@@ -71,6 +71,7 @@ export default function InterviewPage() {
 
     if (state === "reconnecting") {
       muteRef.current?.();
+      if (connectionLostTimerRef.current) clearTimeout(connectionLostTimerRef.current);
       connectionLostTimerRef.current = setTimeout(() => {
         setConnectionLostLong(true);
       }, 60_000);
@@ -97,6 +98,7 @@ export default function InterviewPage() {
   const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
   const audioCompleteCalledRef = useRef(false);
   const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCompleteRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const callAudioComplete = useCallback(async () => {
     if (audioCompleteCalledRef.current || !token) return;
@@ -108,11 +110,18 @@ export default function InterviewPage() {
     }
     // Retry until success — endpoint now always returns ended:true or an error.
     // ended:false is no longer a valid response; any success means the session ended.
+    const MAX_ATTEMPTS = 5;
+    let attempts = 0;
     const attempt = async (delay: number) => {
       try {
         await sessionsApi.audioComplete(token);
       } catch {
-        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
+        attempts += 1;
+        if (attempts >= MAX_ATTEMPTS) return;
+        audioCompleteRetryTimerRef.current = setTimeout(
+          () => attempt(Math.min(delay * 2, 8000)),
+          delay
+        );
       }
     };
     attempt(2000);
@@ -146,6 +155,31 @@ export default function InterviewPage() {
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+
+  const stopMediaRef = useRef<() => void>(() => {});
+  stopMediaRef.current = () => {
+    stopCapture();
+    stopPlayback();
+    disconnect();
+  };
+
+  useEffect(() => {
+    if (interviewState === "complete") stopMediaRef.current();
+  }, [interviewState]);
+
+  useEffect(() => {
+    return () => {
+      stopMediaRef.current();
+      [
+        reconnectedPromptTimerRef,
+        connectionLostTimerRef,
+        audioCompleteSafetyTimerRef,
+        audioCompleteRetryTimerRef,
+      ].forEach((r) => {
+        if (r.current) clearTimeout(r.current);
+      });
+    };
+  }, []);
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {

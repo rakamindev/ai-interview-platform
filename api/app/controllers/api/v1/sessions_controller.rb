@@ -11,9 +11,17 @@ module Api
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        sessions = paginate(assessment.sessions.order(created_at: :desc))
 
-        json_response(sessions: sessions.map(&method(:session_json)))
+        json_response(
+          sessions: sessions.map(&method(:session_json)),
+          meta: {
+            current_page: sessions.current_page,
+            total_pages:  sessions.total_pages,
+            total_count:  sessions.total_count,
+            per_page:     sessions.limit_value
+          }
+        )
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -108,7 +116,7 @@ module Api
               created_at:     t.created_at
             }
           end,
-          total: turns.count
+          total: @session.transcript_turns.count
         )
       end
 

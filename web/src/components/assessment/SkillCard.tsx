@@ -43,6 +43,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       <div className="flex items-center gap-2 px-3 py-2.5">
         <button
           type="button"
+          aria-label="Drag to reorder"
           className="cursor-grab text-muted-foreground hover:text-foreground touch-none"
           {...attributes}
           {...listeners}

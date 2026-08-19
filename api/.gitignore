@@ -24,6 +24,9 @@
 config/application.yml
 vertex_ai_credentials.json
 
+# Redis dump artifact
+dump.rdb
+
 
 # Ignore Public Docs
 /tech-docs

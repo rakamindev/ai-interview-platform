@@ -32,7 +32,10 @@ export const assessmentsApi = {
   delete: (id: number) => api.delete(`/assessments/${id}`),
 
   getSessions: (assessmentId: number) =>
-    api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
+    api.get<{ sessions: Session[]; meta: PaginationMeta }>(
+      `/assessments/${assessmentId}/sessions`,
+      { params: { per_page: 100 } }
+    ),
 
   createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
     api.post<{ session: Session; invite_url: string }>(

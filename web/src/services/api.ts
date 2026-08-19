@@ -1,34 +1,37 @@
 import axios from "axios";
-import { getStoredToken, clearToken } from "@/stores/authAtom";
+import { getDevToken, clearAuth } from "@/stores/authAtom";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1";
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
+function requiredEnv(name: string, devFallback: string): string {
+  const value = import.meta.env[name] as string | undefined;
+  if (value) return value;
+  if (import.meta.env.PROD) {
+    throw new Error(`[config] ${name} must be set in production`);
+  }
+  return devFallback;
+}
+
+const BASE_URL = requiredEnv("VITE_API_BASE_URL", "http://localhost:3001/api/v1");
+const WS_BASE_URL = requiredEnv("VITE_WS_BASE_URL", "ws://localhost:3001");
 
 export const WS_URL = WS_BASE_URL;
 
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
-  const token = getStoredToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const devToken = getDevToken();
+  if (devToken) config.headers.Authorization = `Bearer ${devToken}`;
   return config;
 });
 
-// Unwrap backend envelope: { data: { ... } } → { ... }
-// On 401/403, clear stored credentials and redirect to login.
 api.interceptors.response.use(
-  (response) => {
-    if (response.data && typeof response.data === "object" && "data" in response.data) {
-      response.data = response.data.data;
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      clearToken();
+    if (error.response?.status === 401 && window.location.pathname !== "/login") {
+      clearAuth();
       window.location.href = "/login";
     }
     return Promise.reject(error);

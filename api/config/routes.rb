@@ -7,13 +7,25 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      post 'auth/logout', to: 'authentication#logout'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
+      # Upload speed test — accepts a bounded payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+        if bytes > 10 * 1024 * 1024
+          [413, { 'Content-Type' => 'application/json' }, [{ error: 'Payload too large' }.to_json]]
+        else
+          [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+        end
+      }
+
+      # Download speed test — serves a bounded byte payload (default 1 MB, capped at 5 MB)
+      get 'speed_test', to: proc { |env|
+        requested = Rack::Request.new(env).params['bytes'].to_i
+        size = requested.positive? ? [requested, 5 * 1024 * 1024].min : 1024 * 1024
+        [200, { 'Content-Type' => 'application/octet-stream', 'Cache-Control' => 'no-store' }, ['0' * size]]
       }
 
       # Assessments

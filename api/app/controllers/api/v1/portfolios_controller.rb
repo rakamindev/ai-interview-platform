@@ -17,11 +17,12 @@ module Api
         if @portfolio.failed?
           return json_response(
             portfolio: portfolio_json(@portfolio),
+            integrity: integrity_json(@session),
             error: @portfolio.generation_error
           )
         end
 
-        json_response(portfolio: portfolio_json(@portfolio))
+        json_response(portfolio: portfolio_json(@portfolio), integrity: integrity_json(@session))
       end
 
       # POST /api/v1/sessions/:id/portfolio/regenerate
@@ -79,7 +80,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = tenant_scoped_portfolio(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +102,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_scoped_portfolio(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +128,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_scoped_portfolio(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -148,15 +149,44 @@ module Api
       end
 
       def set_portfolio
-        # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
-        if @session
-          @portfolio = @session.portfolio
-        else
-          @portfolio = Portfolio.find(params[:id])
-        end
+        @portfolio = @session ? @session.portfolio : tenant_scoped_portfolio(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
+      end
+
+      def tenant_scoped_portfolio(id)
+        Portfolio.joins(:session)
+                 .where(sessions: { tenant_id: current_tenant_id })
+                 .find(id)
+      end
+
+      def integrity_json(session)
+        view = Portfolios::Presenter.new(session: session).call
+        {
+          summary:           view[:summary],
+          generation_status: view[:generation_status],
+          generation_error:  view[:generation_error],
+          skills:            view[:skills].map(&method(:skill_view_json))
+        }
+      end
+
+      def skill_view_json(skill)
+        {
+          portfolio_skill_id: skill.portfolio_skill_id,
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          state:              skill.state,
+          effective_level:    skill.effective_level,
+          ai_level:           (skill.state == 'not_assessed' ? nil : skill.ai_level),
+          ai_confidence:      skill.ai_confidence,
+          coverage_state:     skill.coverage_state,
+          probe_count:        skill.probe_count,
+          evidence:           skill.evidence,
+          competency_summary: skill.competency_summary,
+          expected_level:     skill.expected_level,
+          is_discovered:      skill.is_discovered,
+          override:           skill.override
+        }
       end
 
       def portfolio_json(portfolio)
@@ -212,7 +242,8 @@ module Api
       def build_export_json(portfolio, vacancy_id = nil)
         data = {
           exported_at: Time.current.iso8601,
-          portfolio:   portfolio_json(portfolio)
+          portfolio:   portfolio_json(portfolio),
+          integrity:   integrity_json(portfolio.session)
         }
 
         if vacancy_id.present?

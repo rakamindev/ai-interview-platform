@@ -106,6 +106,52 @@ export interface AssessorOverride {
   overridden_at?: string;
 }
 
+// ── Portfolio Integrity (derived per-skill assessment state) ──────────────────
+export type AssessmentState =
+  | "assessed"
+  | "partially_assessed"
+  | "not_assessed"
+  | "discovered";
+
+export interface SkillOverride {
+  level: number;
+  reason: string;
+  by?: number;
+  at?: string;
+}
+
+export interface SkillView {
+  portfolio_skill_id: number | null;
+  skill_id: string | null;
+  skill_label: string;
+  state: AssessmentState;
+  effective_level: number | null;
+  ai_level: number | null;
+  ai_confidence: string | null;
+  coverage_state: string;
+  probe_count: number;
+  evidence: string[];
+  competency_summary: string | null;
+  expected_level: number | null;
+  is_discovered: boolean;
+  override: SkillOverride | null;
+}
+
+export interface PortfolioSummary {
+  assessed: number;
+  partially_assessed: number;
+  not_assessed: number;
+  discovered: number;
+  total: number;
+}
+
+export interface PortfolioIntegrity {
+  summary: PortfolioSummary;
+  generation_status: string;
+  generation_error?: string | null;
+  skills: SkillView[];
+}
+
 export interface Vacancy {
   id: number;
   role_title: string;

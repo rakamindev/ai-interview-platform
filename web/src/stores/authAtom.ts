@@ -1,23 +1,34 @@
 import { atom } from "jotai";
 
 export interface AuthState {
-  token: string | null;
+  authenticated: boolean;
 }
 
-const STORAGE_KEY = "auth_token";
+const AUTH_FLAG = "authenticated";
 
-export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null;
+export function getDevToken(): string | null {
+  if (import.meta.env.DEV) return import.meta.env.VITE_DEV_TOKEN ?? null;
+  return null;
 }
 
-export function saveToken(token: string) {
-  localStorage.setItem(STORAGE_KEY, token);
+export function isAuthenticated(): boolean {
+  if (localStorage.getItem(AUTH_FLAG) === "true") return true;
+  return !!getDevToken();
 }
 
-export function clearToken() {
-  localStorage.removeItem(STORAGE_KEY);
+export function setAuthenticated() {
+  localStorage.setItem(AUTH_FLAG, "true");
+}
+
+export function clearAuth() {
+  localStorage.removeItem(AUTH_FLAG);
 }
 
 export const authAtom = atom<AuthState>({
-  token: getStoredToken(),
+  authenticated: isAuthenticated(),
+});
+
+export const logoutAtom = atom(null, (_get, set) => {
+  clearAuth();
+  set(authAtom, { authenticated: false });
 });

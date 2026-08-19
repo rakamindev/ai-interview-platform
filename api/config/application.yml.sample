@@ -17,14 +17,16 @@ GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
 GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
 GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
 
-# App URL (for invite links)
-APP_BASE_URL: "http://localhost:3001"
+# Candidate-facing WEB app URL — used to build interview invite links (/interview/:token).
+# Must point at the frontend (Vite), NOT the API.
+APP_BASE_URL: "http://localhost:5173"
 
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds
 
-# CORS
-ALLOWED_ORIGINS: "*"
+# CORS — must be specific origins (comma-separated), NOT "*", because CORS
+# credentials are enabled for cookie-based auth.
+ALLOWED_ORIGINS: "http://localhost:5173"
 
 # Sidekiq / Redis
 REDIS_URL: "redis://localhost:6379/1"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_16_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -78,7 +78,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "last_signal"
     t.datetime "updated_at", default: -> { "now()" }
     t.index ["session_id", "skill_label"], name: "index_coverage_maps_on_session_id_and_skill_label", unique: true
-    t.index ["session_id"], name: "idx_coverage_session"
     t.index ["session_id"], name: "index_coverage_maps_on_session_id"
   end
 
@@ -182,7 +181,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "role", limit: 20, default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "organization_id"
+    t.boolean "active", default: true, null: false
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
+    t.index ["organization_id"], name: "index_users_on_organization_id"
   end
 
   create_table "vacancies", force: :cascade do |t|
