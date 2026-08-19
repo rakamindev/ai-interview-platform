@@ -44,8 +44,8 @@ api.interceptors.response.use(
       error.config._retry = true;
       try {
         const res = await api.post("/auth/refresh");
-        setAuth(res.data.token, res.data.user);
-        error.config.headers.Authorization = `Bearer ${res.data.token}`;
+        setAuth(res.data.access_token, res.data.user);
+        error.config.headers.Authorization = `Bearer ${res.data.access_token}`;
         return api(error.config);
       } catch {
         clearAuth();
@@ -55,5 +55,31 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// --- Proactive token rotation ---
+
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+const REFRESH_INTERVAL = 12 * 60 * 1000; // 12 minutes (80% of 15min TTL)
+
+export function startRefreshTimer() {
+  stopRefreshTimer();
+  refreshTimer = setTimeout(async () => {
+    try {
+      const res = await api.post("/auth/refresh");
+      setAuth(res.data.access_token, res.data.user);
+      startRefreshTimer(); // restart
+    } catch {
+      clearAuth();
+      window.location.href = "/login";
+    }
+  }, REFRESH_INTERVAL);
+}
+
+export function stopRefreshTimer() {
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+}
 
 export default api;

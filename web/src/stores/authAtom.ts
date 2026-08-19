@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import { startRefreshTimer } from "@/services/api";
 
 export interface AuthState {
   accessToken: string | null;
@@ -26,6 +27,7 @@ export function setAuth(authOrToken: AuthState | string, user?: { id: string; em
     _authState = authOrToken;
   }
   notify();
+  startRefreshTimer();
 }
 
 export function clearAuth() {
