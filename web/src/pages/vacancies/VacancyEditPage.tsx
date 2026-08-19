@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, Users } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -26,6 +27,7 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [candidates, setCandidates] = useState<any[]>([]);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -37,6 +39,10 @@ export default function VacancyEditPage() {
       const v = res.data.vacancy;
       reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
     }).catch(() => {}).finally(() => setLoading(false));
+
+    vacanciesApi.getCandidates(Number(id)).then((res) => {
+      setCandidates(res.data.candidates);
+    }).catch(() => {});
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
@@ -98,6 +104,44 @@ export default function VacancyEditPage() {
           <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
         </div>
       </form>
+
+      {/* Evaluated candidates */}
+      {candidates.length > 0 && (
+        <>
+          <Separator className="my-8" />
+          <div className="space-y-4">
+            <h2 className="text-base font-semibold flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              Evaluated Candidates for this Vacancy
+            </h2>
+            <div className="space-y-2">
+              {candidates.map((c) => (
+                <Card
+                  key={c.fit_gap_report_id}
+                  className="cursor-pointer hover:border-primary/40 transition-colors"
+                  onClick={() =>
+                    navigate(
+                      `/assessments/${c.assessment_id}/sessions/${c.session_id}/fitgap/${id}`
+                    )
+                  }
+                >
+                  <CardContent className="py-3 px-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{c.candidate_name}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                        {c.overall_narrative || "Fit/Gap report available"}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-xs">
+                      View Report →
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
     </div>

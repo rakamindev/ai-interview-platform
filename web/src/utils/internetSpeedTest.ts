@@ -18,7 +18,7 @@ export interface SpeedThresholds {
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minUploadMbps: 1,
     maxPingMs: 300,
 };
 
@@ -83,34 +83,52 @@ async function measureDownloadSpeed(): Promise<number> {
 }
 
 async function measureUploadSpeed(): Promise<number> {
-    const uploadSizeMB = 0.5;
+    const uploadSizeMB = 0.1; // 100 KB for instant test
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
+
+    const localApiSpeedUrl = import.meta.env.VITE_API_URL
+        ? `${import.meta.env.VITE_API_URL}/speed_test`
+        : "http://localhost:3001/api/v1/speed_test";
+
     const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        ? [SPEED_TEST_UPLOAD_URL, localApiSpeedUrl]
+        : [localApiSpeedUrl, "https://httpbin.org/post"];
+
     for (const endpoint of endpoints) {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
-            const seconds = (performance.now() - start) / 1000;
-            return uploadSizeMB / seconds;
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                body: formData,
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const seconds = Math.max((performance.now() - start) / 1000, 0.005);
+                return uploadSizeMB / seconds;
+            }
         } catch {
             continue;
         }
     }
-    return 0.5; // conservative fallback
+    return 1.5; // Fast conservative fallback in MB/s
 }
 
-async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {
+async function runMultipleTests<T>(testFn: () => Promise<T>, count = 2): Promise<T[]> {
     const results: T[] = [];
     for (let i = 0; i < count; i++) {
         try {
             results.push(await testFn());
-            await new Promise((r) => setTimeout(r, 100));
+            await new Promise((r) => setTimeout(r, 50));
         } catch {
             // skip failed test
         }

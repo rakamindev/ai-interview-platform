@@ -3,12 +3,15 @@ export interface Assessment {
   name: string;
   time_limit_min: number;
   language?: "en" | "id";
+  vacancy_id?: number;
   system_prompt?: string;
   created_by?: number;
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
+    id?: number;
+    invite_token?: string;
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
   };
@@ -122,6 +125,11 @@ export interface VacancySkill {
   skill_id?: number;
   skill_label: string;
   expected_level: number;
+  l1_anchor?: string;
+  l2_anchor?: string;
+  l3_anchor?: string;
+  l4_anchor?: string;
+  l5_anchor?: string;
   _destroy?: boolean;
 }
 

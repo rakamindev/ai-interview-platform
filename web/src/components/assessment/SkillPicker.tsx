@@ -38,7 +38,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({
-      skill_id: undefined,
+      skill_id: s.skill_id ? Number(s.skill_id) : undefined,
       skill_label: s.skill_label,
       is_custom: false,
       expected_level: 3,
@@ -55,23 +55,23 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-xl sm:rounded-2xl p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Add from B7 taxonomy</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">Add from B7 taxonomy</DialogTitle>
         </DialogHeader>
 
-        <div className="relative">
+        <div className="relative mt-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search skills..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 text-sm h-10 sm:h-9"
             autoFocus
           />
         </div>
 
-        <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
+        <div className="mt-2 max-h-[55vh] sm:max-h-64 overflow-y-auto space-y-1 pr-0.5">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -84,7 +84,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
                 key={s.skill_id}
                 type="button"
                 onClick={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
+                className="w-full text-left px-3 py-2.5 sm:py-2 rounded-lg hover:bg-muted active:bg-muted/80 transition-colors text-sm font-medium"
               >
                 {s.skill_label}
               </button>

@@ -49,6 +49,31 @@ module Api
         json_response(message: "Vacancy deleted")
       end
 
+      # GET /api/v1/vacancies/:id/candidates
+      def candidates
+        vacancy = Vacancy.find(params[:id])
+        reports = FitGapReport.where(vacancy_id: vacancy.id).includes(portfolio: :session)
+
+        candidate_reports = reports.map do |r|
+          portfolio = r.portfolio
+          session   = portfolio&.session
+          {
+            fit_gap_report_id: r.id,
+            portfolio_id:      r.portfolio_id,
+            session_id:        session&.id,
+            assessment_id:     session&.assessment_id,
+            candidate_name:    session&.candidate_name.presence || "Candidate ##{session&.candidate_id || session&.id || r.portfolio_id}",
+            overall_narrative: r.overall_narrative,
+            skill_comparisons: r.skill_comparisons,
+            generated_at:      r.generated_at
+          }
+        end
+
+        json_response(candidates: candidate_reports)
+      rescue ActiveRecord::RecordNotFound
+        json_error("Vacancy not found", :not_found)
+      end
+
       private
 
       def set_vacancy

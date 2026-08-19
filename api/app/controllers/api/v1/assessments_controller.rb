@@ -9,9 +9,15 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.includes(:sessions).order(created_at: :desc)
+        if current_user.role != 'admin'
+          user_email = User.find_by(id: current_user.id)&.email.to_s.downcase
+          scope = scope.joins(:sessions)
+                       .where("sessions.candidate_id = ? OR LOWER(sessions.candidate_name) = ?", current_user.id, user_email)
+                       .distinct
+        end
+
+        assessments = paginate(scope)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -26,6 +32,8 @@ module Api
 
       # POST /api/v1/assessments
       def create
+        return json_error('Only admins can create assessments', :forbidden) unless current_user.role == 'admin'
+
         assessment = Assessment.new(assessment_params)
         assessment.created_by = current_user.id
 
@@ -39,6 +47,8 @@ module Api
 
       # PUT /api/v1/assessments/:id
       def update
+        return json_error('Only admins can update assessments', :forbidden) unless current_user.role == 'admin'
+
         if @assessment.update(assessment_params)
           SystemPromptGeneratorWorker.perform_async(@assessment.id)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
@@ -49,6 +59,8 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
+        return json_error('Only admins can delete assessments', :forbidden) unless current_user.role == 'admin'
+
         @assessment.destroy
         json_response({ message: "Assessment deleted" })
       end
@@ -56,7 +68,11 @@ module Api
       private
 
       def set_assessment
-        @assessment = Assessment.find(params[:id])
+        scope = Assessment
+        if current_user.role != 'admin'
+          scope = scope.joins(:sessions).where(sessions: { candidate_id: current_user.id })
+        end
+        @assessment = scope.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -66,6 +82,7 @@ module Api
           :name,
           :time_limit_min,
           :language,
+          :vacancy_id,
           assessment_skills_attributes: %i[
             id skill_id skill_label is_custom
             scope_include scope_exclude
@@ -83,14 +100,16 @@ module Api
           name:           assessment.name,
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
+          vacancy_id:     assessment.vacancy_id,
           system_prompt:  assessment.system_prompt,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
           latest_session: latest && {
-            id:         latest.id,
-            status:     latest.status,
-            end_reason: latest.end_reason
+            id:           latest.id,
+            invite_token: latest.invite_token,
+            status:       latest.status,
+            end_reason:   latest.end_reason
           }
         }
       end

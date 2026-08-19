@@ -5,8 +5,15 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface UserInfo {
+  id: number;
+  email: string;
+  role: "admin" | "user";
+}
+
 export interface LoginResponse {
   token: string;
+  user: UserInfo;
 }
 
 export const authApi = {

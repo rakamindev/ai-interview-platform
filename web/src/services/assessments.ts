@@ -5,6 +5,7 @@ export interface AssessmentPayload {
   name: string;
   time_limit_min: number;
   language?: "en" | "id";
+  vacancy_id?: number;
   assessment_skills_attributes: Partial<AssessmentSkill>[];
 }
 
@@ -34,9 +35,20 @@ export const assessmentsApi = {
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
-  createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
+  createSession: (
+    assessmentId: number,
+    candidateEmail: string,
+    candidateName?: string,
+    candidateId?: number
+  ) =>
     api.post<{ session: Session; invite_url: string }>(
       `/assessments/${assessmentId}/sessions`,
-      { session: { candidate_name: candidateName, candidate_id: candidateId } }
+      {
+        session: {
+          candidate_email: candidateEmail,
+          candidate_name: candidateName,
+          candidate_id: candidateId,
+        },
+      }
     ),
 };
