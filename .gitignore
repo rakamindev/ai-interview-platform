@@ -17,3 +17,11 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Local working notes (case study assessment scratch files, not part of the PR)
+/docs/
+/.playwright-mcp/
+
+# Personal local tooling preferences (not assumed for all contributors)
+api/mise.toml
+web/bun.lock

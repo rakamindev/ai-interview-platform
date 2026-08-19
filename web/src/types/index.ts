@@ -39,6 +39,7 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
+  invite_expires_at?: string;
   status: "pending" | "active" | "ended";
   end_reason?: string;
   started_at?: string;
@@ -182,7 +183,9 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "expired"
+  | "invalid";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

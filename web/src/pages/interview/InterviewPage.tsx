@@ -48,7 +48,16 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        const code = err?.response?.data?.errors?.[0]?.code;
+        if (code === "invite_expired") {
+          setInterviewState("expired");
+        } else if (code === "invite_not_found") {
+          setInterviewState("invalid");
+        } else {
+          setInterviewState("complete");
+        }
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -222,6 +231,34 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── Invite expired ──────────────────────────────────────────────────────
+  if (interviewState === "expired") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⏰</div>
+        <h2 className="text-xl font-semibold">This invite has expired</h2>
+        <p className="text-sm text-muted-foreground">
+          Your interview link is no longer valid. Please contact the hiring
+          team to request a new invite.
+        </p>
+      </div>
+    );
+  }
+
+  // ── Invalid link ────────────────────────────────────────────────────────
+  if (interviewState === "invalid") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Invalid interview link</h2>
+        <p className="text-sm text-muted-foreground">
+          This link doesn't match any interview invite. Please check the link
+          or contact the hiring team.
+        </p>
       </div>
     );
   }
