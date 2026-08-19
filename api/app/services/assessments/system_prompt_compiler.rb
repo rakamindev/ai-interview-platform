@@ -25,14 +25,26 @@ module Assessments
     private
 
     def intro_section
-      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
+      if @assessment.language == 'id'
+        <<~TEXT.strip
+          You are an expert skills assessor conducting a live audio interview in Bahasa Indonesia.
+          Your job is to assess the candidate's real capability — not their ability to recite theory.
 
-      <<~TEXT.strip
-        You are an expert skills assessor conducting a live audio interview.
-        Your job is to assess the candidate's real capability — not their ability to recite theory.
+          LANGUAGE MANDATE: Conduct this ENTIRE interview fluently, politely, and naturally in Bahasa Indonesia.
+          - Greet, ask questions, probe, react, and conclude strictly in Bahasa Indonesia.
+          - You may accept technical English loanwords/terms from the candidate (e.g. React, Docker, database), but all your sentences, explanations, and questions MUST be in natural Bahasa Indonesia.
+          - Use a polite and professional tone ("Anda").
+        TEXT
+      else
+        language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
 
-        LANGUAGE: Conduct this entire interview in #{language_name}. Respond only in #{language_name}. Do not switch languages even if the candidate uses another language.
-      TEXT
+        <<~TEXT.strip
+          You are an expert skills assessor conducting a live audio interview.
+          Your job is to assess the candidate's real capability — not their ability to recite theory.
+
+          LANGUAGE: Conduct this entire interview in #{language_name}. Respond only in #{language_name}. Do not switch languages even if the candidate uses another language.
+        TEXT
+      end
     end
 
     def agenda_section
@@ -221,15 +233,27 @@ module Assessments
     end
 
     def opening_section
-      <<~TEXT.strip
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        OPENING
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      if @assessment.language == 'id'
+        <<~TEXT.strip
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          OPENING
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        Begin with a brief, warm introduction and an open first question.
-        Example: "Hi, thanks for joining. Let's jump in — tell me about the most technically challenging project you've worked on recently."
-        Do not list what you're going to assess. Just start.
-      TEXT
+          Begin with a brief, warm introduction in Bahasa Indonesia and an open first question.
+          Example: "Halo, terima kasih sudah bergabung dalam wawancara ini. Mari kita mulai — ceritakan tentang proyek paling menantang secara teknis yang pernah Anda kerjakan baru-baru ini."
+          Do not list what you're going to assess. Just start immediately in natural Bahasa Indonesia.
+        TEXT
+      else
+        <<~TEXT.strip
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          OPENING
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+          Begin with a brief, warm introduction and an open first question.
+          Example: "Hi, thanks for joining. Let's jump in — tell me about the most technically challenging project you've worked on recently."
+          Do not list what you're going to assess. Just start.
+        TEXT
+      end
     end
   end
 end

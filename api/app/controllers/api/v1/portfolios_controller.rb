@@ -3,7 +3,7 @@
 module Api
   module V1
     class PortfoliosController < ApiController
-      authorize_auth_token! :assessor
+      authorize_auth_token! :portal
 
       before_action :set_session,   only: %i[show regenerate]
       before_action :set_portfolio, only: %i[show export]

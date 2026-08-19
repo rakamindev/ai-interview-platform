@@ -6,9 +6,17 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Auth
-      post 'auth/login', to: 'authentication#authenticate'
+      post 'auth/login',  to: 'authentication#authenticate'
+      post 'auth/signup', to: 'authentication#signup'
+      post 'signup',      to: 'authentication#signup'
+      get  'auth/me',      to: 'authentication#me'
+      get  'me',           to: 'authentication#me'
+
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+
+      # Dashboard
+      get 'dashboard/stats', to: 'dashboard#stats'
 
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
@@ -18,10 +26,18 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
-        resources :sessions, only: %i[index create]
+        member do
+          post :duplicate
+        end
+        resources :sessions, only: %i[index create] do
+          collection do
+            post :bulk, to: 'sessions#bulk_create'
+          end
+        end
       end
 
-      # Sessions
+      # Cross-assessment sessions & single session
+      get 'sessions', to: 'sessions#all_sessions'
       resources :sessions, only: %i[show] do
         member do
           post :end_session
@@ -33,8 +49,14 @@ Rails.application.routes.draw do
       end
 
       # Candidate-facing (no JWT — invite token only)
-      get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
-      post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      get   'sessions/:token/candidate',      to: 'sessions#candidate_info'
+      post  'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      post  'sessions/:token/progress',       to: 'sessions#update_progress'
+      patch 'sessions/:token/progress',       to: 'sessions#update_progress'
+
+      # Admin: Users and Organization
+      resources :users, only: %i[index create update destroy]
+      resource  :organization, only: %i[show update]
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

@@ -27,9 +27,16 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    const isAuthEndpoint = error.config?.url?.includes("/auth/login") || error.config?.url?.includes("/auth/signup");
+    const isAlreadyOnLogin = typeof window !== "undefined" && window.location.pathname === "/login";
+
     if (error.response?.status === 401 || error.response?.status === 403) {
-      clearToken();
-      window.location.href = "/login";
+      if (!isAuthEndpoint) {
+        clearToken();
+        if (!isAlreadyOnLogin) {
+          window.location.href = "/login";
+        }
+      }
     }
     return Promise.reject(error);
   }

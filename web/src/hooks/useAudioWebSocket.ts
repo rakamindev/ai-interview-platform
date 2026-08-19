@@ -70,7 +70,8 @@ export function useAudioWebSocket({
             case "transcription":
             case "transcript":
               if (msg.speaker && msg.text) {
-                onTranscript({ speaker: msg.speaker === "candidate" ? "candidate" : "assessor", text: msg.text });
+                const spk = msg.speaker === "candidate" ? "candidate" : "ai";
+                onTranscript({ speaker: spk, text: msg.text });
               }
               break;
             case "speaker_changed":

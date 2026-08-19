@@ -7,9 +7,9 @@ require 'ostruct'
 # Returns { user_id:, role:, scheme: } from the decoded JWT.
 # Does NOT hit the database for user lookup — trusts the JWT claims.
 class AuthorizeApiRequest
-  # Roles that map to "assessor" permission in the AI interview context.
-  # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
+  PORTAL_ROLES   = %w[admin assessor hiring_manager].freeze
   ASSESSOR_ROLES = %w[admin assessor].freeze
+  ADMIN_ROLES    = %w[admin].freeze
 
   def initialize(headers = {}, required_roles = [])
     @headers = headers
@@ -41,14 +41,24 @@ class AuthorizeApiRequest
   def check_role!(user)
     allowed = @required_roles.map(&:to_s)
 
-    # :any means no role restriction
+    # :any means no role restriction for authenticated users
     return if allowed.include?('any')
 
-    # Support logical grouping: :assessor_or_admin
     effective_role = user.role
+
+    # :portal or :read_only allows admin, assessor, and hiring_manager
+    if allowed.include?('portal') || allowed.include?('read_only') || allowed.include?('hiring_manager')
+      return if PORTAL_ROLES.include?(effective_role)
+    end
+
+    # :assessor allows admin and assessor
     if allowed.include?('assessor')
-      # Allow anyone whose role is in ASSESSOR_ROLES
       return if ASSESSOR_ROLES.include?(effective_role)
+    end
+
+    # :admin allows admin only
+    if allowed.include?('admin')
+      return if ADMIN_ROLES.include?(effective_role)
     end
 
     return if allowed.include?(effective_role)

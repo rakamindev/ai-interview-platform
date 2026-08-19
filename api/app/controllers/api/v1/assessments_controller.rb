@@ -3,15 +3,20 @@
 module Api
   module V1
     class AssessmentsController < ApiController
-      authorize_auth_token! :assessor
-
-      before_action :set_assessment, only: %i[show update destroy]
+      authorize_auth_token! :portal
+      before_action :require_assessor!, only: %i[create update destroy duplicate]
+      before_action :set_assessment, only: %i[show update destroy duplicate]
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.includes(:sessions).where(tenant_id: current_tenant_id).order(created_at: :desc)
+
+        if params[:search].present?
+          query = "%#{params[:search].to_s.downcase}%"
+          scope = scope.where('LOWER(name) LIKE ?', query)
+        end
+
+        assessments = paginate(scope)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -28,19 +33,42 @@ module Api
       def create
         assessment = Assessment.new(assessment_params)
         assessment.created_by = current_user.id
+        assessment.tenant_id  = current_tenant_id
 
         if assessment.save
-          SystemPromptGeneratorWorker.perform_async(assessment.id)
-          json_response({ assessment:, system_prompt_generated: true }, :created)
+          SystemPromptGeneratorWorker.perform_async(assessment.id) if defined?(SystemPromptGeneratorWorker)
+          json_response({ assessment: assessment_with_skills_json(assessment), system_prompt_generated: true }, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
+        end
+      end
+
+      # POST /api/v1/assessments/:id/duplicate
+      def duplicate
+        new_assessment = @assessment.dup
+        new_assessment.name = "#{@assessment.name} (Copy)"
+        new_assessment.created_by = current_user.id
+        new_assessment.created_at = nil
+        new_assessment.updated_at = nil
+
+        if new_assessment.save
+          @assessment.assessment_skills.each do |skill|
+            new_skill = skill.dup
+            new_skill.assessment_id = new_assessment.id
+            new_skill.save!
+          end
+
+          SystemPromptGeneratorWorker.perform_async(new_assessment.id) if defined?(SystemPromptGeneratorWorker)
+          json_response({ assessment: assessment_with_skills_json(new_assessment) }, :created)
+        else
+          json_error(new_assessment.errors.full_messages.first, :unprocessable_entity)
         end
       end
 
       # PUT /api/v1/assessments/:id
       def update
         if @assessment.update(assessment_params)
-          SystemPromptGeneratorWorker.perform_async(@assessment.id)
+          SystemPromptGeneratorWorker.perform_async(@assessment.id) if defined?(SystemPromptGeneratorWorker)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
         else
           json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
@@ -54,6 +82,12 @@ module Api
       end
 
       private
+
+      def require_assessor!
+        return if current_user && %w[admin assessor].include?(current_user.role)
+
+        raise ExceptionHandler::Unauthorized, "Assessor or Admin permissions required"
+      end
 
       def set_assessment
         @assessment = Assessment.find(params[:id])

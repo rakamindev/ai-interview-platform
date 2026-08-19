@@ -8,11 +8,19 @@ export interface AssessmentPayload {
   assessment_skills_attributes: Partial<AssessmentSkill>[];
 }
 
+export interface AssessmentListParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+}
+
 export const assessmentsApi = {
-  list: (page = 1) =>
-    api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
-    }),
+  list: (params?: AssessmentListParams | number) => {
+    const query = typeof params === "number" ? { page: params } : params;
+    return api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
+      params: query,
+    });
+  },
 
   get: (id: number) =>
     api.get<{ assessment: Assessment }>(`/assessments/${id}`),
@@ -30,6 +38,9 @@ export const assessmentsApi = {
     ),
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
+
+  duplicate: (id: number) =>
+    api.post<{ assessment: Assessment }>(`/assessments/${id}/duplicate`),
 
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),

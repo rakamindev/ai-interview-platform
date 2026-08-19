@@ -34,6 +34,8 @@ export interface AssessmentSkill {
 export interface Session {
   id: number;
   assessment_id: number;
+  assessment_name?: string;
+  time_limit_min?: number;
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
@@ -44,6 +46,9 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  candidate_stage?: string;
+  portfolio_id?: number;
+  portfolio_status?: string;
   created_at?: string;
 }
 
@@ -159,11 +164,53 @@ export interface SkillTaxonomy {
   l5_anchor: string;
 }
 
+export interface CandidateTestedSkill {
+  id?: number;
+  skill_label: string;
+  expected_level: number;
+  scope_include?: string;
+}
+
 export interface CandidateInfo {
   session_id: number;
   role_title: string;
   time_limit_min: number;
+  language?: "en" | "id";
   session_status: string;
+  candidate_name?: string;
+  candidate_stage?: "welcome" | "device_check" | "live" | "complete";
+  consent_accepted_at?: string | null;
+  device_check_passed_at?: string | null;
+  started_at?: string | null;
+  duration_seconds?: number | null;
+  skills?: CandidateTestedSkill[];
+}
+
+export interface DashboardStats {
+  live_count: number;
+  live_sessions: Array<{
+    id: number;
+    assessment_id: number;
+    assessment_name?: string;
+    candidate_name?: string;
+    status: string;
+    started_at?: string;
+  }>;
+  awaiting_review_count: number;
+  awaiting_review_sessions: Array<{
+    id: number;
+    assessment_id: number;
+    assessment_name?: string;
+    candidate_name?: string;
+    status: string;
+    ended_at?: string;
+    portfolio_id?: number;
+    portfolio_status?: string;
+  }>;
+  total_assessments: number;
+  total_sessions: number;
+  total_vacancies: number;
+  recent_sessions: Session[];
 }
 
 export interface PaginationMeta {

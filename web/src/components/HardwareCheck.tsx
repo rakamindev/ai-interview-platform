@@ -13,6 +13,8 @@ import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
+    onPassedChange?: (passed: boolean) => void;
+    showStartButton?: boolean;
 }
 
 function StateIcon({ state }: { state: ProctoringState }) {
@@ -34,7 +36,7 @@ function stateLabel(state: ProctoringState) {
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
-const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
+const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart, onPassedChange, showStartButton = false }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
         osAndBrowser: ProctoringState.WAITING,
         internet: ProctoringState.WAITING,
@@ -50,14 +52,16 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
-        setAllPassed(
+        const passed =
             osAndBrowser === ProctoringState.PASSED &&
             internet === ProctoringState.PASSED &&
             camera === ProctoringState.PASSED &&
             audio === ProctoringState.PASSED &&
-            microphone === ProctoringState.PASSED
-        );
-    }, [progress]);
+            microphone === ProctoringState.PASSED;
+
+        setAllPassed(passed);
+        onPassedChange?.(passed);
+    }, [progress, onPassedChange]);
 
     useEffect(() => {
         if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
@@ -271,22 +275,26 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
-                {hasError && (
-                    <Button variant="outline" size="sm" onClick={retryAll}>
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Retry
-                    </Button>
-                )}
-                <Button
-                    size="sm"
-                    className="ml-auto"
-                    disabled={!allPassed}
-                    onClick={onStart}
-                >
-                    Start Interview
-                </Button>
-            </div>
+            {(hasError || showStartButton) && (
+                <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
+                    {hasError && (
+                        <Button variant="outline" size="sm" onClick={retryAll}>
+                            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                            Retry
+                        </Button>
+                    )}
+                    {showStartButton && (
+                        <Button
+                            size="sm"
+                            className="ml-auto"
+                            disabled={!allPassed}
+                            onClick={onStart}
+                        >
+                            Start Interview
+                        </Button>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
