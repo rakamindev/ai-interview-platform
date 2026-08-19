@@ -6,6 +6,12 @@ AI Interview helps assessors, recruiters, and hiring managers evaluate candidate
 
 Claimed depth: frontend-depth fullstack slice. Backend changes are intentionally additive to stabilize the API contract; the main craft focus is the assessor-facing report experience.
 
+Repository branch:
+
+- Fork branch: `https://github.com/samudrazulqifli/ai-interview-platform/tree/frontend-depth-fitgap-report`
+- Pull Request creation URL: `https://github.com/rakamindev/ai-interview-platform/compare/main...samudrazulqifli:ai-interview-platform:frontend-depth-fitgap-report?expand=1`
+- Pull Request link: pending final GitHub submission URL after creating the PR from the fork branch.
+
 ## 2. Core Problem
 
 The existing Fit/Gap Report compares candidate skill levels with vacancy requirements, but it reads like a raw table. It does not clearly answer the assessor's decision questions:
