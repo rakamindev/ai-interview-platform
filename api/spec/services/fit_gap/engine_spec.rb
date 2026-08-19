@@ -4,8 +4,10 @@ require 'rails_helper'
 
 RSpec.describe FitGap::Engine do
   describe '#build_skill_comparisons (via #call)' do
-    let(:portfolio) { instance_double('Portfolio', id: 1) }
-    let(:vacancy) { instance_double('Vacancy', id: 1, role_title: 'Senior Engineer') }
+    let(:assessment) { double('Assessment') }
+    let(:portfolio_session) { double('Session', assessment: assessment) }
+    let(:portfolio) { double('Portfolio', id: 1, session: portfolio_session) }
+    let(:vacancy) { double('Vacancy', id: 1, role_title: 'Senior Engineer') }
     let(:gemini_client) { instance_double('Gemini::HttpClient') }
 
     subject { described_class.new(portfolio: portfolio, vacancy: vacancy, gemini_client: gemini_client) }
@@ -18,7 +20,7 @@ RSpec.describe FitGap::Engine do
 
     context 'when portfolio has a skill with nil ai_level (unassessed)' do
       let(:portfolio_skill) do
-        instance_double('PortfolioSkill',
+        double('PortfolioSkill',
           id: 10,
           skill_id: 'SK-ENG-001',
           skill_label: 'React',
@@ -31,7 +33,7 @@ RSpec.describe FitGap::Engine do
       let(:override_relation) { nil }
 
       let(:vacancy_skill) do
-        instance_double('VacancySkill',
+        double('VacancySkill',
           skill_id: 'SK-ENG-001',
           skill_label: 'React',
           expected_level: 3
