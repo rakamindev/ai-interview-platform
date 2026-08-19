@@ -43,6 +43,7 @@ const reportFixture: FitGapReport = {
   ],
   culture_narrative: "Strong culture alignment with async-first teams.",
   overall_narrative: "",
+  generation_status: "complete",
 } as FitGapReport;
 
 const portfolioFixture: Portfolio = {
@@ -224,5 +225,35 @@ describe("FitGapReportPage", () => {
     expect(await screen.findByText("Ops Lead")).toBeInTheDocument();
     // The "· N skills · expected …" annotation is omitted and nothing throws.
     expect(screen.queryByText(/skills · expected/)).not.toBeInTheDocument();
+  });
+
+  it("keeps polling while the report is still generating", async () => {
+    mockLoaded();
+    portfoliosApiMock.getFitGap.mockResolvedValue({
+      data: { report: { ...reportFixture, generation_status: "generating" } },
+    });
+    renderFitGap();
+
+    expect(await screen.findByText("Generating fit/gap report...")).toBeInTheDocument();
+    expect(screen.queryByText("Skill Comparison")).not.toBeInTheDocument();
+  });
+
+  it("shows a failure state with retry when generation failed", async () => {
+    mockLoaded();
+    portfoliosApiMock.getFitGap.mockResolvedValue({
+      data: { report: { ...reportFixture, generation_status: "failed" } },
+    });
+    portfoliosApiMock.regenerateFitGap.mockResolvedValue({ data: {} });
+    renderFitGap();
+
+    expect(
+      await screen.findByText("Fit/gap generation failed. Please try again."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Skill Comparison")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Retry/ }));
+    await waitFor(() => {
+      expect(portfoliosApiMock.regenerateFitGap).toHaveBeenCalledWith(11, 5);
+    });
   });
 });

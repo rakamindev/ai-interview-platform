@@ -24,6 +24,7 @@ export default function FitGapReportPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [vacancy, setVacancy] = useState<Vacancy | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
@@ -33,8 +34,18 @@ export default function FitGapReportPage() {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
+      const r = res.data.report;
+      if (r.generation_status === "failed") {
+        setReport(null);
+        setGenerating(false);
+        setGenError(true);
+      } else if (r.generation_status === "generating") {
+        setGenerating(true);
+      } else {
+        setReport(r);
+        setGenerating(false);
+        setGenError(false);
+      }
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
@@ -76,6 +87,7 @@ export default function FitGapReportPage() {
   const handleRegenerate = async () => {
     if (!portfolio) return;
     setRegenerating(true);
+    setGenError(false);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
@@ -209,6 +221,14 @@ export default function FitGapReportPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
         </div>
+      )}
+
+      {/* Generation failed */}
+      {genError && !generating && (
+        <ErrorRetryState
+          message="Fit/gap generation failed. Please try again."
+          onRetry={() => void handleRegenerate()}
+        />
       )}
 
       {/* Report ready */}
