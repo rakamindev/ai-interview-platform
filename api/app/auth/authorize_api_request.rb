@@ -11,9 +11,10 @@ class AuthorizeApiRequest
   # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
   ASSESSOR_ROLES = %w[admin assessor].freeze
 
-  def initialize(headers = {}, required_roles = [])
+  def initialize(headers = {}, required_roles = [], cookies: {})
     @headers = headers
     @required_roles = Array(required_roles)
+    @cookies = cookies
   end
 
   # Returns an OpenStruct with :id, :role, :scheme
@@ -28,7 +29,7 @@ class AuthorizeApiRequest
 
   private
 
-  attr_reader :headers
+  attr_reader :headers, :cookies
 
   def build_user_struct(claims)
     OpenStruct.new(
@@ -65,6 +66,31 @@ class AuthorizeApiRequest
   def http_auth_header
     return headers["Authorization"].split.last if headers["Authorization"].present?
 
+    token = extract_from_cookie
+    return token if token.present?
+
     raise(ExceptionHandler::MissingToken, Message.missing_token)
+  end
+
+  def extract_from_cookie
+    refresh_token_value = cookies[:refresh_token]
+    return nil if refresh_token_value.blank?
+
+    token_hash = Digest::SHA256.hexdigest(refresh_token_value)
+    refresh_token = RefreshToken.find_by_token_hash(token_hash)
+
+    return nil unless refresh_token&.valid_token?
+
+    user = refresh_token.user
+    generate_access_token(user)
+  end
+
+  def generate_access_token(user)
+    JsonWebToken.encode(
+      user_id: user.id,
+      role: user.role,
+      scheme: user.scheme,
+      exp: 15.minutes.from_now.to_i
+    )
   end
 end
