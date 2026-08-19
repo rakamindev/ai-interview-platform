@@ -31,12 +31,39 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # generation_error is shown to the candidate/assessor as-is, so it needs
+      # to explain what happened in plain terms, not leak "API returned 404".
+      # Full technical detail (class, raw message) still goes to the log.
+      portfolio&.update!(generation_status: 'failed', generation_error: user_facing_error(e))
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
 
     private
+
+    def user_facing_error(error)
+      case error
+      when Gemini::HttpClient::RateLimitError
+        'The AI service has reached its usage limit. Please try again in a few minutes.'
+      when Gemini::HttpClient::TimeoutError
+        'The AI service took too long to respond. This can happen with long interviews — please try again.'
+      when Gemini::HttpClient::ApiError
+        case error.status
+        when 503
+          'The AI service is currently overloaded. Please try again in a moment.'
+        when 404
+          'The AI model is misconfigured on our end. Please contact support — this is not something a retry will fix.'
+        when 400..499
+          'The AI service rejected this request. Please contact support if this keeps happening.'
+        else
+          'The AI service returned an unexpected error. Please try again, or contact support if it persists.'
+        end
+      when JSON::ParserError
+        "The AI's response couldn't be understood. Please try regenerating."
+      else
+        'Portfolio generation failed unexpectedly. Please try again, or contact support if it persists.'
+      end
+    end
 
     def build_prompt
       assessment       = @session.assessment
