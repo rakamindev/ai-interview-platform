@@ -98,12 +98,10 @@ class CoverageWebSocketMiddleware
     Thread.new do
       redis.subscribe(channel) do |on|
         on.message do |_channel, message|
-          EM.schedule do
-            ws.send(message)
-          rescue => e
-            Rails.logger.debug("[CoverageWS] Failed to forward update: #{e.message}")
-            redis.unsubscribe(channel)
-          end
+          ws.send(message)
+        rescue => e
+          Rails.logger.debug("[CoverageWS] Failed to forward update: #{e.message}")
+          redis.unsubscribe(channel)
         end
       end
     rescue => e

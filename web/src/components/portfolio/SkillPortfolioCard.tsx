@@ -35,7 +35,7 @@ export default function SkillPortfolioCard({
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              {effectiveLevel > 0 && <ConfidenceIndicator confidence={skill.ai_confidence} />}
             </div>
           </div>
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
@@ -56,7 +56,7 @@ export default function SkillPortfolioCard({
             </span>
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
+                <li key={i} className="text-sm text-foreground break-words">
                   • "{quote}"
                 </li>
               ))}
@@ -70,7 +70,7 @@ export default function SkillPortfolioCard({
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Competency summary
             </span>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed break-words">
               {skill.competency_summary}
             </p>
           </div>

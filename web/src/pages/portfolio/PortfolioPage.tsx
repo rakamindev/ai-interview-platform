@@ -96,10 +96,35 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 rounded" />
+            <div className="space-y-1">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        </div>
+        {/* Card skeletons */}
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-8 w-12 rounded" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        ))}
       </div>
     );
   }

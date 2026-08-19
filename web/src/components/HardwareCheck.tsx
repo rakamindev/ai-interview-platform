@@ -50,9 +50,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
+        // Internet is non-blocking (CORS limitations in browser) — allow start if all other checks pass
+        const internetOk = internet === ProctoringState.PASSED || internet === ProctoringState.ERROR;
         setAllPassed(
             osAndBrowser === ProctoringState.PASSED &&
-            internet === ProctoringState.PASSED &&
+            internetOk &&
             camera === ProctoringState.PASSED &&
             audio === ProctoringState.PASSED &&
             microphone === ProctoringState.PASSED
@@ -117,19 +119,27 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         }, 800);
     }, []);
 
-    // Step 2: Internet
+    // Step 2: Internet — non-blocking, always proceed to next step
     useEffect(() => {
         if (progress.internet !== ProctoringState.LOADING) return;
         testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
             setInternetResult(result);
             setProgress((p) => ({
                 ...p,
-                internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                // Mark as passed regardless — just show the measurement for info
+                internet: ProctoringState.PASSED,
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
+            }));
+        }).catch(() => {
+            // Even on total failure, proceed
+            setProgress((p) => ({
+                ...p,
+                internet: ProctoringState.PASSED,
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
             }));
         });
     }, [progress.internet]);

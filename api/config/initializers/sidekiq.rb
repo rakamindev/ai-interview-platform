@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+return unless defined?(Sidekiq)
+
 SIDEKIQ_STATUS_FILE = Rails.root.join('tmp/sidekiq_status').freeze
 
 Sidekiq.configure_server do |config|

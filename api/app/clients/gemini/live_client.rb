@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
-require 'faye/websocket'
+require 'websocket-client-simple'
 require 'json'
 require 'base64'
+require 'uri'
 
 module Gemini
   # Manages a persistent WebSocket connection to Gemini Live API.
   class LiveClient
-    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
+    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent'
 
     INACTIVITY_TIMEOUT = 30 # reconnect if Gemini produces no meaningful response
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
@@ -63,16 +64,18 @@ module Gemini
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
       @setup_complete = false
-      @ws = Faye::WebSocket::Client.new(
-        GEMINI_WS_URL,
-        nil,
-        headers: { 'x-goog-api-key' => @api_key }
-      )
 
-      @ws.on(:open)    { |_event| handle_ws_open(resumption_handle) }
-      @ws.on(:message) { |event|  handle_message(event.data) }
-      @ws.on(:close)   { |event|  handle_ws_close(event) }
-      @ws.on(:error)   { |event|  handle_ws_error(event) }
+      # Pass API key as URL query param — the documented method for Gemini Live WebSocket.
+      # websocket-client-simple does not reliably forward custom headers during TLS handshake.
+      url = "#{GEMINI_WS_URL}?key=#{@api_key}"
+
+      client = self
+      @ws = WebSocket::Client::Simple.connect(url) do |ws|
+        ws.on(:open)    { client.send(:handle_ws_open, resumption_handle) }
+        ws.on(:message) { |msg| client.send(:handle_message, msg.data) }
+        ws.on(:close)   { |e| client.send(:handle_ws_close, e) }
+        ws.on(:error)   { |e| client.send(:handle_ws_error, e) }
+      end
 
       @ws
     end
@@ -88,19 +91,19 @@ module Gemini
       @ws.send(audio_message(pcm_bytes))
     end
 
-    # Injects hidden context via realtimeInput.text — same channel as audio, no interleaving conflicts.
+    # Injects hidden context via clientContent — same channel as audio, no interleaving conflicts.
     def inject_context(text, turn_complete: true) # turn_complete kept for interface compat, ignored
       return false unless @connected && @ws
 
-      @ws.send({ realtimeInput: { text: text } }.to_json)
+      @ws.send({ clientContent: { turns: [{ role: 'user', parts: [{ text: text }] }], turnComplete: turn_complete } }.to_json)
       true
     end
 
-    # Prompts Gemini to speak first via realtimeInput.text.
+    # Prompts Gemini to speak first via clientContent.
     def trigger_opening
       return unless @connected && @ws
 
-      @ws.send({ realtimeInput: { text: '[Start the interview. Greet the candidate and ask your first question.]' } }.to_json)
+      @ws.send({ clientContent: { turns: [{ role: 'user', parts: [{ text: '[Start the interview. Greet the candidate and ask your first question.]' }] }], turnComplete: true } }.to_json)
       Rails.logger.info('[Gemini::LiveClient] trigger_opening sent')
     end
 
@@ -115,8 +118,8 @@ module Gemini
 
     # Gracefully closes the connection.
     def close
-      @inactivity_timer&.cancel
-      @gate_timer&.cancel
+      @inactivity_timer&.kill
+      @gate_timer&.kill
       stop_silence_pump
       @ws&.close
       @connected = false
@@ -125,8 +128,8 @@ module Gemini
     # Silences callbacks before this client is replaced on GoAway reconnect, preventing event bleed.
     def supersede!
       @superseded = true
-      @inactivity_timer&.cancel
-      @gate_timer&.cancel
+      @inactivity_timer&.kill
+      @gate_timer&.kill
       stop_silence_pump
     end
 
@@ -139,14 +142,14 @@ module Gemini
 
     def handle_ws_close(event)
       @connected = false
-      Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{event.code} reason=#{event.reason} superseded=#{@superseded}")
+      Rails.logger.info("[Gemini::LiveClient] Connection closed superseded=#{@superseded}")
       # Skip on_close for superseded clients to avoid duplicate reconnect from the replaced instance.
-      @on_close&.call(code: event.code, reason: event.reason) unless @superseded
+      @on_close&.call(code: 1000, reason: "Closed") unless @superseded
     end
 
     def handle_ws_error(event)
-      Rails.logger.error("[Gemini::LiveClient] WebSocket error: #{event.message}")
-      @on_error&.call(event.message) unless @superseded
+      Rails.logger.error("[Gemini::LiveClient] WebSocket error: #{event}")
+      @on_error&.call(event.to_s) unless @superseded
     end
 
     def activate_connection!
@@ -190,7 +193,8 @@ module Gemini
 
       return if @silence_pump_timer
 
-      @silence_pump_timer = EM::Timer.new(SILENCE_PUMP_DELAY) do
+      @silence_pump_timer = Thread.new do
+        sleep(SILENCE_PUMP_DELAY)
         @silence_pump_timer = nil
         check_silence_pump_ready
       end
@@ -203,10 +207,11 @@ module Gemini
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - @last_real_audio_at
       remaining = SILENCE_PUMP_DELAY - elapsed
 
-      if remaining <= 0.02 # close enough — EM timer precision is ~10ms
+      if remaining <= 0.02 # close enough
         start_silence_pump
       else
-        @silence_pump_timer = EM::Timer.new(remaining) do
+        @silence_pump_timer = Thread.new do
+          sleep(remaining)
           @silence_pump_timer = nil
           check_silence_pump_ready
         end
@@ -229,20 +234,24 @@ module Gemini
       }.to_json.freeze
 
       # Pump until: real audio arrives, Gemini responds (turnComplete), or connection closes/supersedes.
-      @silence_pump_periodic = EM::PeriodicTimer.new(SILENCE_PUMP_INTERVAL) do
-        if !@connected || !@ws || @superseded
-          stop_silence_pump
-        else
-          @ws.send(silence_msg)
+      @silence_pump_periodic = Thread.new do
+        loop do
+          sleep(SILENCE_PUMP_INTERVAL)
+          if !@connected || !@ws || @superseded
+            stop_silence_pump
+            break
+          else
+            @ws.send(silence_msg)
+          end
         end
       end
     end
 
     def stop_silence_pump
-      @silence_pump_timer&.cancel
+      @silence_pump_timer&.kill
       @silence_pump_timer = nil
       @last_real_audio_at = nil
-      @silence_pump_periodic&.cancel
+      @silence_pump_periodic&.kill
       @silence_pump_periodic = nil
       @silence_pumping = false
     end
@@ -252,18 +261,21 @@ module Gemini
       return if @inactivity_timer || @superseded
 
       record_activity! unless @last_activity_at
-      @inactivity_timer = EM::PeriodicTimer.new(10) do
-        next unless @connected && @last_activity_at
+      @inactivity_timer = Thread.new do
+        loop do
+          sleep(10)
+          next unless @connected && @last_activity_at
 
-        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        idle = now - @last_activity_at
-        next unless @silence_pumping && idle >= INACTIVITY_TIMEOUT
+          now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          idle = now - @last_activity_at
+          next unless @silence_pumping && idle >= INACTIVITY_TIMEOUT
 
-        Rails.logger.warn("[Gemini::LiveClient] Inactivity detected (#{idle.round(1)}s, silence pumping) — forcing reconnect")
-        @inactivity_timer&.cancel
-        @inactivity_timer = nil
-        @inactivity_close = true
-        @ws&.close
+          Rails.logger.warn("[Gemini::LiveClient] Inactivity detected (#{idle.round(1)}s, silence pumping) — forcing reconnect")
+          @inactivity_timer = nil
+          @inactivity_close = true
+          @ws&.close
+          break
+        end
       end
     end
 
@@ -397,8 +409,9 @@ module Gemini
       flush_output_buffer
 
       if emitted_audio
-        @gate_timer&.cancel
-        @gate_timer = EM::Timer.new(GATE_OPEN_DELAY) do
+        @gate_timer&.kill
+        @gate_timer = Thread.new do
+          sleep(GATE_OPEN_DELAY)
           unless @superseded
             Rails.logger.info('[Gemini::LiveClient] Gate open — firing on_model_turn_complete')
             @on_model_turn_complete&.call
@@ -416,7 +429,7 @@ module Gemini
 
       @model_emitting_audio = false
       @model_interrupted = true
-      @gate_timer&.cancel
+      @gate_timer&.kill
       Rails.logger.info('[Gemini::LiveClient] Model interrupted — resetting audio gate immediately')
       flush_output_buffer
       @on_model_turn_complete&.call
@@ -486,3 +499,4 @@ module Gemini
     end
   end
 end
+

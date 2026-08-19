@@ -17,3 +17,7 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# 
+*.fixing.md
+*.task.md

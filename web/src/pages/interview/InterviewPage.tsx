@@ -285,7 +285,19 @@ export default function InterviewPage() {
       {/* Voice indicator */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
         {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+            <div className="text-center space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {connectionState === "connected" ? "AI is preparing..." : "Connecting..."}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {connectionState === "connected"
+                  ? "The interviewer AI is getting ready. Please wait."
+                  : "Establishing a secure audio connection."}
+              </p>
+            </div>
+          </div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
             <VoiceBars active={true} label="AI speaking" variant="ai" />

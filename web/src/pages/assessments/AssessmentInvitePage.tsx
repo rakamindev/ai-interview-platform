@@ -145,7 +145,7 @@ export default function AssessmentInvitePage() {
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => { }).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -176,7 +176,16 @@ export default function AssessmentInvitePage() {
   };
 
   const copyLink = (session: Session, id: number) => {
-    navigator.clipboard.writeText(session.invite_url);
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+
+    const baseUrl = port === "" || port === "80" || port === "443"
+      ? `${protocol}//${hostname}`
+      : `${protocol}//${hostname}:${port}`;
+
+    const fullUrl = `${baseUrl}/interview/${session.invite_token}`;
+    navigator.clipboard.writeText(fullUrl);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };

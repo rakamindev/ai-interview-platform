@@ -15,18 +15,22 @@ module Portfolios
 
     # Returns the Portfolio record with skills populated.
     def call
-      portfolio = @session.portfolio || @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
-      )
+      portfolio = nil
 
-      portfolio.update!(generation_status: 'generating')
+      ActiveRecord::Base.transaction do
+        portfolio = @session.portfolio || @session.create_portfolio!(
+          candidate_id:      @session.candidate_id,
+          generation_status: 'pending'
+        )
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+        portfolio.update!(generation_status: 'generating')
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+        prompt   = build_prompt
+        response = @gemini_client.generate_content(prompt, temperature: 0.2)
+
+        save_skills(portfolio, response)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
@@ -154,26 +158,32 @@ module Portfolios
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        level = skill_data['level'].to_i
+        next if level <= 0 # Skip if AI failed to assign a level, leaving it as not_assessed
+
         portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level.clamp(1, 5),
+          ai_confidence:      skill_data['confidence'] || 'low',
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'] || 'No summary provided.'
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        level = skill_data['level'].to_i
+        next if level <= 0
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level.clamp(1, 5),
+          ai_confidence:      skill_data['confidence'] || 'low',
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'] || 'No summary provided.'
         )
       end
     end

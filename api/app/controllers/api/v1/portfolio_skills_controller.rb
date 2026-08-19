@@ -14,7 +14,7 @@ module Api
         if existing
           if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
             regenerate_stale_fitgap_reports
-            json_response(override: override_json(existing))
+            json_response({ override: override_json(existing) })
           else
             json_error(existing.errors.full_messages.first, :unprocessable_entity)
           end

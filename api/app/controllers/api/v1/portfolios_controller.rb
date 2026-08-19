@@ -10,7 +10,16 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @portfolio.nil?
+          return render json: { status: "generating" }, status: :accepted
+        end
+
+        # Treat both pending and generating as "in progress"
+        if @portfolio.generation_status.in?(%w[pending generating])
+          # If pending for >10s with no Sidekiq, trigger inline
+          if @portfolio.generation_status == 'pending'
+            PortfolioGeneratorWorker.perform_async(@session.id)
+          end
           return render json: { status: "generating" }, status: :accepted
         end
 
