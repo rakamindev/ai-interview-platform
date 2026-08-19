@@ -10,7 +10,9 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        heal_stalled_portfolio
+
+        if @portfolio.nil? || @portfolio.pending? || @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
 
@@ -32,11 +34,15 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        if portfolio.complete?
+          return json_error("Portfolio is already complete", :unprocessable_entity)
         end
 
-        portfolio.update!(generation_status: "pending", generation_error: nil)
+        portfolio.update!(
+          generation_status:       'pending',
+          generation_error:        nil,
+          generation_attempted_at: nil
+        )
         PortfolioGeneratorWorker.perform_async(@session.id)
 
         json_response(
@@ -157,6 +163,34 @@ module Api
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
+      end
+
+      # Read-time self-heal: never let an assessor poll a stranded portfolio
+      # (pending/generating past the recovery TTL) forever. If generation is
+      # missing or stalled, put it back in the queue. All writes are idempotent
+      # and are guarded by the Recovery service's row lock.
+      def heal_stalled_portfolio
+        if @portfolio.nil?
+          return unless @session&.ended?
+
+          @portfolio = Portfolio.find_or_create_by!(session_id: @session.id) do |p|
+            p.candidate_id      = @session.candidate_id
+            p.generation_status = 'pending'
+          end
+          safe_enqueue_generation(@session.id)
+          return
+        end
+
+        return unless %w[pending generating].include?(@portfolio.generation_status)
+
+        Portfolios::Recovery.new.recover_stuck!(@portfolio)
+        @portfolio = @portfolio.reload
+      end
+
+      def safe_enqueue_generation(session_id)
+        PortfolioGeneratorWorker.perform_async(session_id)
+      rescue => e
+        Rails.logger.error("[Recovery] Self-heal enqueue failed for session #{session_id}: #{e.class} #{e.message}")
       end
 
       def portfolio_json(portfolio)

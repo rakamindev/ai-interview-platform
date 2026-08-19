@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -9,8 +9,13 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, TriangleAlert } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+
+// After this long stuck in the generating/pending state, the page stops pretending
+// generation is healthy and offers a working Retry (the backend now allows
+// regenerate from pending/generating/failed).
+const GENERATION_TIMEOUT_MS = 3 * 60 * 1000;
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -18,20 +23,26 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [generatingSince, setGeneratingSince] = useState<number | null>(null);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [, forceTick] = useState(0);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
+      setFetchError(null);
+      setGeneratingSince((prev) => prev ?? Date.now());
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
+      setGeneratingSince(null);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -47,12 +58,32 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setFetchError("Could not load this portfolio. Check your connection and try again."))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
+
+  // While stuck generating, re-render every 30s so the "taking longer than
+  // expected" banner can appear exactly when the timeout budget elapses.
+  useEffect(() => {
+    if (!generating || generatingSince == null) return;
+    const id = setInterval(() => forceTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, [generating, generatingSince]);
+
+  const handleRetry = async () => {
+    setFetchError(null);
+    try {
+      await sessionsApi.regeneratePortfolio(Number(sessionId));
+      setGenerating(true);
+      setGeneratingSince(Date.now());
+      await fetchPortfolio();
+    } catch {
+      setFetchError("Could not queue a retry. Please try again.");
+    }
+  };
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -104,6 +135,8 @@ export default function PortfolioPage() {
     );
   }
 
+  const generationTimedOut = generating && generatingSince != null && Date.now() - generatingSince > GENERATION_TIMEOUT_MS;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
@@ -128,7 +161,7 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {!generating && portfolio && portfolio.generation_status === "complete" && (
             <>
               <Button
                 variant="outline"
@@ -153,8 +186,21 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Generating state */}
-      {generating && (
+      {/* Fetch error state (distinct, actionable) */}
+      {!generating && fetchError && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <TriangleAlert className="h-6 w-6 text-destructive mx-auto" />
+          <p className="text-sm text-destructive">{fetchError}</p>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchPortfolio().catch(() => {}).finally(() => setLoading(false)); }}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry load
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Generating state (healthy, within timeout budget) */}
+      {generating && !generationTimedOut && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
@@ -166,18 +212,35 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {/* Generating state (stuck past the timeout budget) */}
+      {generating && generationTimedOut && (
+        <div className="border border-amber-500/40 bg-amber-500/5 rounded-lg p-6 text-center space-y-3">
+          <TriangleAlert className="h-6 w-6 text-amber-500 mx-auto" />
+          <div>
+            <p className="font-medium">This is taking longer than expected.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generation normally finishes in about 2 minutes. You can wait a little longer or retry now.
+            </p>
+          </div>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry generation
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <TriangleAlert className="h-6 w-6 text-destructive mx-auto" />
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
-          >
+          {portfolio.generation_error && (
+            <p className="text-xs text-muted-foreground break-words">
+              {portfolio.generation_error}
+            </p>
+          )}
+          <Button variant="outline" size="sm" onClick={handleRetry}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
           </Button>
         </div>
@@ -250,6 +313,16 @@ export default function PortfolioPage() {
             </Button>
           </div>
         </>
+      )}
+
+      {/* Empty/loading-but-not-generating fallback */}
+      {!generating && !fetchError && !portfolio && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <TriangleAlert className="h-6 w-6 text-muted-foreground mx-auto" />
+          <p className="text-sm text-muted-foreground">
+            No portfolio has been generated for this session yet.
+          </p>
+        </div>
       )}
     </div>
   );
