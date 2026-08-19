@@ -43,6 +43,14 @@ module Api
         json_error("Assessment not found", :not_found)
       end
 
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error('Session not found', :not_found) unless session
+
+        session.update!(consented_at: Time.current)
+        json_response(consented_at: session.consented_at)
+      end
+
       # GET /api/v1/sessions/:id
       def show
         json_response(
