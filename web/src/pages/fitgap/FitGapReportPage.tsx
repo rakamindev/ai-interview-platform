@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -8,8 +9,10 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { AlertCircle, ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+
+type PortfolioStatus = "loading" | "generating" | "failed" | "ready";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -20,8 +23,9 @@ export default function FitGapReportPage() {
 
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [portfolioStatus, setPortfolioStatus] = useState<PortfolioStatus>("loading");
   const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
@@ -31,33 +35,39 @@ export default function FitGapReportPage() {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
-    } catch (e: any) {
-      if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
-        }
+    } catch (e) {
+      if (!axios.isAxiosError(e) || e.response?.status !== 404) return;
+      if (generating) return;
+      const trig = await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+      if ("report" in trig.data) {
+        setReport(trig.data.report);
+        setGenerating(false);
+      } else {
+        setGenerating(true);
       }
     }
-  }, [portfolio, vacancyId]);
+  }, [portfolio, vacancyId, generating]);
 
   useEffect(() => {
     sessionsApi
       .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
+      .then((res) => {
+        const data = res.data;
+        if (!("portfolio" in data)) {
+          setPortfolioStatus("generating");
+          return;
         }
+        const p = data.portfolio;
+        setPortfolio(p);
+        setPortfolioStatus(p.generation_status === "failed" ? "failed" : "ready");
       })
-      .finally(() => setLoading(false));
+      .catch(() => setLoadError("Could not load this portfolio."))
+      .finally(() => setPortfolioStatus((prev) => (prev === "loading" ? "ready" : prev)));
   }, [sessionId]);
 
   useEffect(() => {
-    if (portfolio) fetchReport();
-  }, [portfolio, fetchReport]);
+    if (portfolio && portfolioStatus === "ready") fetchReport();
+  }, [portfolio, portfolioStatus, fetchReport]);
 
   usePolling(fetchReport, 5000, generating && !!portfolio);
 
@@ -93,7 +103,7 @@ export default function FitGapReportPage() {
     }
   };
 
-  if (loading) {
+  if (portfolioStatus === "loading") {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
@@ -118,7 +128,7 @@ export default function FitGapReportPage() {
           </div>
         </div>
 
-        {portfolio && (
+        {portfolio && portfolioStatus === "ready" && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
@@ -140,8 +150,45 @@ export default function FitGapReportPage() {
         )}
       </div>
 
+      {/* Portfolio not ready yet */}
+      {portfolioStatus === "generating" && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <div>
+            <p className="font-medium">Portfolio is still generating...</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              The fit/gap analysis will be available once the portfolio is ready.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Portfolio failed */}
+      {portfolioStatus === "failed" && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-2">
+          <AlertCircle className="h-6 w-6 text-destructive mx-auto" />
+          <p className="text-sm">
+            The portfolio failed to generate, so a fit/gap report cannot be produced.
+          </p>
+          <Link to={`/assessments/${id}/sessions/${sessionId}/portfolio`} className="inline-block">
+            <Button variant="outline" size="sm">Back to portfolio</Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Load error */}
+      {loadError && portfolioStatus === "ready" && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-2">
+          <AlertCircle className="h-6 w-6 text-destructive mx-auto" />
+          <p className="text-sm">{loadError}</p>
+          <Link to={`/assessments/${id}/sessions/${sessionId}/portfolio`} className="inline-block">
+            <Button variant="outline" size="sm">Back to portfolio</Button>
+          </Link>
+        </div>
+      )}
+
       {/* Generating */}
-      {generating && (
+      {portfolioStatus === "ready" && generating && !report && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
@@ -149,7 +196,7 @@ export default function FitGapReportPage() {
       )}
 
       {/* Report ready */}
-      {report && (
+      {portfolioStatus === "ready" && report && (
         <>
           {/* Skill comparison */}
           <Card>

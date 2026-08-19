@@ -1,11 +1,13 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, PortfolioResponse } from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
-    api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
-      `/sessions/${id}`
-    ),
+    api.get<{
+      session: Session & {
+        assessment: { id: number; name: string; time_limit_min: number };
+      };
+    }>(`/sessions/${id}`),
 
   endSession: (id: number, reason = "manual_assessor") =>
     api.post<{ session: Session }>(`/sessions/${id}/end_session`, {
@@ -21,7 +23,7 @@ export const sessionsApi = {
     }),
 
   getPortfolio: (id: number) =>
-    api.get<{ portfolio: Portfolio } | { status: string }>(`/sessions/${id}/portfolio`),
+    api.get<PortfolioResponse>(`/sessions/${id}/portfolio`),
 
   regeneratePortfolio: (id: number) =>
     api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),

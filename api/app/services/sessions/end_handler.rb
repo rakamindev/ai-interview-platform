@@ -12,18 +12,16 @@ module Sessions
     end
 
     def call(reason: 'manual_assessor')
-      # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
-      if @session.ended?
-        manual = %w[manual_candidate manual_assessor]
-        if manual.include?(reason.to_s) && @session.end_reason == 'error'
-          @session.update_column(:end_reason, reason.to_s)
-        end
-        return @session
-      end
+      return handle_already_ended(reason) if @session.ended?
 
-      reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
+      # Serialize concurrent end calls (audio_complete + assessor end_session +
+      # auto-end can race). `with_lock` takes a row lock so only one caller can
+      # mutate the session at a time; the second caller sees `ended?` and exits.
+      @session.with_lock do
+        return handle_already_ended(reason) if @session.ended?
 
-      ActiveRecord::Base.transaction do
+        reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
+
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
 
         @session.update!(
@@ -41,9 +39,23 @@ module Sessions
       Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
 
       @session
+    rescue ActiveRecord::RecordNotUnique
+      # Belt-and-suspenders: lost a race on portfolios.session_id unique index.
+      # The concurrent caller already created the portfolio; treat as success.
+      Rails.logger.warn("[N9/EndHandler] Concurrent end detected for session #{@session.id}; portfolio already created")
+      @session.reload
     end
 
     private
+
+    # Handles an already-ended session. Allows upgrading end_reason from
+    # 'error' to a manual reason (candidate/assessor ended cleanly).
+    def handle_already_ended(reason)
+      if %w[manual_candidate manual_assessor].include?(reason.to_s) && @session.end_reason == 'error'
+        @session.update_column(:end_reason, reason.to_s)
+      end
+      @session
+    end
 
     def publish_status_update
       redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))

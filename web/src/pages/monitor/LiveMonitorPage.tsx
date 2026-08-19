@@ -80,7 +80,7 @@ export default function LiveMonitorPage() {
       sessionsApi.getTranscript(Number(sessionId)),
     ])
       .then(([sRes, tRes]) => {
-        const s = sRes.data.session as any;
+        const s = sRes.data.session;
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
         if (s.status !== "active") setSessionActive(false);
