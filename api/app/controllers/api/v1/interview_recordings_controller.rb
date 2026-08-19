@@ -3,15 +3,19 @@
 module Api
   module V1
     class InterviewRecordingsController < ApiController
-      authorize_auth_token! :assessor
+      authorize_auth_token! :assessor, except: :create_candidate
 
       def create
-        session = Session.find(params[:session_id])
-        return json_error('Recording already exists', :unprocessable_entity) if session.interview_recording
+        create_for_session(Session.where(tenant_id: current_tenant_id).find(params[:session_id]))
+      rescue ActiveRecord::RecordNotFound
+        json_error('Session not found', :not_found)
+      end
 
-        recording = session.create_interview_recording!(recording_attributes)
-        url = InterviewRecordings::Storage.new.upload_url(key: recording.object_key, content_type: recording.content_type)
-        json_response({ recording: recording_json(recording), upload_url: url }, :created)
+      # Candidate-only upload capability; invite token never grants playback.
+      def create_candidate
+        create_for_session(Session.find_by!(invite_token: params[:token]))
+      rescue ActiveRecord::RecordNotFound
+        json_error('Session not found', :not_found)
       end
 
       def playback
@@ -27,9 +31,25 @@ module Api
 
       private
 
+      def create_for_session(session)
+        return json_error('Recording already exists', :unprocessable_entity) if session.interview_recording
+
+        recording = session.create_interview_recording!(recording_attributes)
+        url = InterviewRecordings::Storage.new.upload_url(key: recording.object_key, content_type: recording.content_type)
+        json_response({ recording: recording_json(recording), upload_url: url }, :created)
+      end
+
       def recording_attributes
-        params.require(:recording).permit(:object_key, :content_type, :byte_size, :duration_ms, :checksum)
-              .merge(captured_at: Time.current, expires_at: InterviewRecording::RETENTION_DAYS.days.from_now)
+        params.require(:recording).permit(:content_type, :byte_size, :duration_ms, :checksum)
+              .merge(
+                object_key: "recordings/#{recording_scope}/#{SecureRandom.uuid}",
+                captured_at: Time.current,
+                expires_at: InterviewRecording::RETENTION_DAYS.days.from_now
+              )
+      end
+
+      def recording_scope
+        params[:session_id] || params[:token]
       end
 
       def recording_json(recording)

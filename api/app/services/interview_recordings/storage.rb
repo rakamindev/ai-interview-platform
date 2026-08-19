@@ -25,6 +25,10 @@ module InterviewRecordings
       @client.delete_object(bucket: @bucket, key:)
     end
 
+    def upload(key:, body:, content_type:)
+      @client.put_object(bucket: @bucket, key:, body:, content_type:)
+    end
+
     private
 
     def presigner

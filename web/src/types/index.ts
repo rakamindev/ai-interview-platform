@@ -83,6 +83,26 @@ export interface TranscriptRevision {
   created_at: string;
 }
 
+export interface InterviewRecording {
+  id: number;
+  session_id: number;
+  content_type: string;
+  byte_size: number;
+  duration_ms: number;
+  checksum: string;
+  captured_at: string;
+  expires_at: string;
+}
+
+export interface PortfolioNote {
+  id: number;
+  portfolio_id: number;
+  body: string;
+  category: "review" | "evidence" | "follow_up";
+  created_by: number;
+  created_at: string;
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;

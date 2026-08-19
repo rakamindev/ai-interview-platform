@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, TranscriptRevision } from "@/types";
+import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, TranscriptRevision, InterviewRecording } from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
@@ -36,4 +36,10 @@ export const sessionsApi = {
     api.post<{ revision: TranscriptRevision }>(`/transcript_turns/${id}/revise`, {
       revision: { revised_text: revisedText, reason },
     }),
+
+  createCandidateRecording: (token: string, recording: Omit<InterviewRecording, "id" | "session_id" | "captured_at" | "expires_at">) =>
+    api.post<{ recording: InterviewRecording; upload_url: string }>(`/sessions/${token}/recording`, { recording }),
+
+  getRecordingPlayback: (sessionId: number) =>
+    api.get<{ playback_url: string }>(`/sessions/${sessionId}/recording/playback`),
 };

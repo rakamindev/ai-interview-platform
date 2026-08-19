@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Volume2 } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -16,6 +16,7 @@ export default function TranscriptPage() {
   const [draft, setDraft] = useState("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
 
   const saveRevision = async (event: FormEvent, turn: TranscriptTurn) => {
     event.preventDefault();
@@ -42,6 +43,15 @@ export default function TranscriptPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  const loadRecording = async () => {
+    try {
+      const response = await sessionsApi.getRecordingPlayback(Number(sessionId));
+      setPlaybackUrl(response.data.playback_url);
+    } catch {
+      setPlaybackUrl(null);
+    }
+  };
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -81,6 +91,19 @@ export default function TranscriptPage() {
           </Button>
         )}
       </div>
+
+      {!loading && !error && !playbackUrl && (
+        <Button variant="outline" size="sm" onClick={loadRecording}>
+          <Volume2 className="h-3.5 w-3.5 mr-1.5" />
+          Load recording
+        </Button>
+      )}
+
+      {playbackUrl && (
+        <audio className="w-full" controls src={playbackUrl}>
+          Your browser cannot play this recording.
+        </audio>
+      )}
 
       {loading && (
         <div className="space-y-3">

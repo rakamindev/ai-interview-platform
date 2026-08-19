@@ -6,7 +6,9 @@ module Api
       authorize_auth_token! :assessor
 
       def revise
-        turn = TranscriptTurn.find(params[:id])
+        turn = TranscriptTurn.joins(:session)
+                             .where(sessions: { tenant_id: current_tenant_id })
+                             .find(params[:id])
         revision = turn.transcript_revisions.create!(revision_params.merge(revised_by: current_user.id))
         json_response({ revision: revision_json(revision) }, :created)
       rescue ActiveRecord::RecordNotFound

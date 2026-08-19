@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { FormEvent, useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +10,7 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { AssessorOverride, Portfolio, Vacancy } from "@/types";
+import type { AssessorOverride, Portfolio, PortfolioNote, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -23,6 +23,9 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [notes, setNotes] = useState<PortfolioNote[]>([]);
+  const [noteBody, setNoteBody] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -51,6 +54,13 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
+  useEffect(() => {
+    if (!portfolio) return;
+    portfoliosApi.getNotes(portfolio.id)
+      .then((response) => setNotes(response.data.notes))
+      .catch(() => setNotes([]));
+  }, [portfolio?.id]);
+
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
 
@@ -61,6 +71,19 @@ export default function PortfolioPage() {
   const handleRunFitGap = () => {
     if (!selectedVacancy || !portfolio) return;
     navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`);
+  };
+
+  const saveNote = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!portfolio || !noteBody.trim()) return;
+    setSavingNote(true);
+    try {
+      const response = await portfoliosApi.createNote(portfolio.id, noteBody.trim(), "review");
+      setNotes((current) => [response.data.note, ...current]);
+      setNoteBody("");
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   const handleExport = async (format: "pdf" | "json") => {
@@ -186,6 +209,22 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          <section className="rounded-lg border p-4 space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold">Reviewer notes</h2>
+              <p className="text-xs text-muted-foreground">Included in the PDF export.</p>
+            </div>
+            <form className="space-y-2" onSubmit={saveNote}>
+              <textarea className="min-h-20 w-full rounded border bg-background p-2 text-sm" value={noteBody} onChange={(event) => setNoteBody(event.target.value)} placeholder="Add an interview review note" required />
+              <Button size="sm" disabled={savingNote}>{savingNote ? "Saving…" : "Add note"}</Button>
+            </form>
+            {notes.length > 0 && (
+              <div className="space-y-2">
+                {notes.map((note) => <p className="rounded bg-muted p-2 text-sm" key={note.id}>{note.body}</p>)}
+              </div>
+            )}
+          </section>
+
           {/* Configured skills */}
           <div className="space-y-3">
             <div>

@@ -7,6 +7,7 @@
 # bundle exec rails "demo:seed_interview[http://localhost:5173/interview/TOKEN]" PROFILE=mid
 #
 require 'base64'
+require 'digest'
 require 'fileutils'
 require 'uri'
 
@@ -39,6 +40,7 @@ namespace :demo do
     answers = skills.map { |skill| synthetic_answer(skill.skill_label, profile) }
     pcm = synthesize(answers.join("\n\n"))
     audio_path = write_wav(session, pcm)
+    seed_recording(session, audio_path, duration_ms(pcm))
 
     Session.transaction do
       session.update!(status: 'active', started_at: Time.current)
@@ -48,7 +50,7 @@ namespace :demo do
 
     Sessions::EndHandler.new(session).call(reason: 'manual_assessor')
     puts "Seeded synthetic session #{session.id} (#{profile}, target L#{level})."
-    puts "Candidate WAV: #{audio_path}"
+    puts "Candidate WAV: #{audio_path} (also stored as the session recording)"
     puts 'Portfolio remains an unreviewed AI draft. Start Sidekiq to generate it normally.'
   rescue URI::InvalidURIError
     raise ArgumentError, 'URL must be valid'
@@ -124,5 +126,20 @@ namespace :demo do
     header = ['RIFF', 36 + pcm.bytesize, 'WAVE', 'fmt ', 16, 1, 1, TTS_SAMPLE_RATE, TTS_BYTES_PER_SECOND, 2, 16, 'data', pcm.bytesize].pack('A4VA4A4VvvVVvvA4V')
     File.binwrite(path, header + pcm)
     path
+  end
+
+  def seed_recording(session, audio_path, recording_duration_ms)
+    audio = File.binread(audio_path)
+    key = "recordings/#{session.tenant_id}/#{session.id}/synthetic-#{SecureRandom.uuid}"
+    InterviewRecordings::Storage.new.upload(key: key, body: audio, content_type: 'audio/wav')
+    session.create_interview_recording!(
+      object_key: key,
+      content_type: 'audio/wav',
+      byte_size: audio.bytesize,
+      duration_ms: recording_duration_ms,
+      checksum: Digest::SHA256.hexdigest(audio),
+      captured_at: Time.current,
+      expires_at: InterviewRecording::RETENTION_DAYS.days.from_now
+    )
   end
 end

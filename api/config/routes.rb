@@ -35,6 +35,7 @@ Rails.application.routes.draw do
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      post 'sessions/:token/recording',      to: 'interview_recordings#create_candidate'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do
@@ -54,7 +55,7 @@ Rails.application.routes.draw do
       end
 
       resources :portfolios, only: [] do
-        resources :notes, only: :create, controller: 'portfolio_notes'
+        resources :notes, only: %i[index create], controller: 'portfolio_notes'
       end
 
       # B7 Skill Taxonomy (read-only reference data)
