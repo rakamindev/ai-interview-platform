@@ -60,6 +60,41 @@ describe("EntryRow", () => {
         expect(onReview).toHaveBeenCalledWith(1, "reject");
     });
 
+    it("has no Download button — Preview covers viewing the CV", () => {
+        render(
+            <EntryRow
+                entry={buildEntry({ decision: "needs_review" })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        expect(screen.queryByTitle("Download original file")).not.toBeInTheDocument();
+    });
+
+    it("keeps the Preview button as the last action, after Invite/Reject", () => {
+        render(
+            <EntryRow
+                entry={buildEntry({ decision: "needs_review" })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        const buttons = screen.getAllByRole("button");
+        expect(buttons[buttons.length - 1]).toHaveAttribute("title", "Preview CV");
+    });
+
     it("renders an invited entry with no review actions", () => {
         render(
             <EntryRow
@@ -95,6 +130,10 @@ describe("EntryRow", () => {
 
         fireEvent.click(screen.getByText("Re-analyze"));
         expect(onReanalyze).toHaveBeenCalledWith(1);
+        expect(screen.getByText("Analysis failed")).toBeInTheDocument();
+        expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
+        expect(screen.queryByText("Invite")).not.toBeInTheDocument();
+        expect(screen.queryByText("Reject")).not.toBeInTheDocument();
 
         rerender(
             <EntryRow
@@ -110,6 +149,10 @@ describe("EntryRow", () => {
         );
 
         expect(screen.queryByText("Re-analyze")).not.toBeInTheDocument();
+        expect(screen.getByText("Needs review")).toBeInTheDocument();
+        expect(screen.queryByText("Analysis failed")).not.toBeInTheDocument();
+        expect(screen.getByText("Invite")).toBeInTheDocument();
+        expect(screen.getByText("Reject")).toBeInTheDocument();
     });
 
     it("shows a Cancel action for a pending entry, and calls onCancel with the entry id", () => {
@@ -147,6 +190,9 @@ describe("EntryRow", () => {
 
         expect(screen.getByText("Re-analyze")).toBeInTheDocument();
         expect(screen.queryByText("Cancel")).not.toBeInTheDocument();
+        expect(screen.getByText("Analysis failed")).toBeInTheDocument();
+        expect(screen.queryByText("Invite")).not.toBeInTheDocument();
+        expect(screen.queryByText("Reject")).not.toBeInTheDocument();
     });
 
     it("opens an email dialog instead of calling onReview when the entry has no detected email", () => {

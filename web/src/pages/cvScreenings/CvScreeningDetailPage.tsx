@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import UploadDropzone from "@/components/cvScreening/UploadDropzone";
-import EntryRow from "@/components/cvScreening/EntryRow";
+import EntryRow, { CANDIDATE_GRID_COLS } from "@/components/cvScreening/EntryRow";
 import { cvScreeningsApi } from "@/services/cvScreenings";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, FileSearch2, Users } from "lucide-react";
@@ -145,6 +145,11 @@ export default function CvScreeningDetailPage() {
   }
 
   const summary = screening?.summary;
+  // The batch's own snapshotted threshold is what actually decided the candidates
+  // on screen (decision_engine.rb compares against cv_screening_batch.threshold,
+  // frozen at upload time) — fall back to the screening's current setting only
+  // when no batch has been uploaded yet, so there's nothing snapshotted to show.
+  const effectiveThreshold = latestBatch?.threshold ?? screening?.threshold;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -159,6 +164,27 @@ export default function CvScreeningDetailPage() {
             {summary?.total ?? 0} candidate{summary?.total === 1 ? "" : "s"}
           </div>
         </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground border rounded-md px-3 py-2 bg-muted/40">
+        {typeof effectiveThreshold === "number" ? (
+          <>
+            Auto-invite threshold: <strong className="text-foreground">{effectiveThreshold}</strong>.
+            A candidate is <strong className="text-foreground">auto-invited</strong> when it meets
+            the public requirements and scores ≥ {effectiveThreshold},{" "}
+            <strong className="text-foreground">auto-rejected</strong> when it doesn't meet the
+            public requirements, and left for{" "}
+            <strong className="text-foreground">manual Invite/Reject</strong> when it meets
+            requirements but scores below {effectiveThreshold}.
+          </>
+        ) : (
+          <>
+            No auto-invite threshold is set. A candidate is{" "}
+            <strong className="text-foreground">auto-rejected</strong> when it doesn't meet the
+            public requirements; everything else is left for{" "}
+            <strong className="text-foreground">manual Invite/Reject</strong> review.
+          </>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -224,13 +250,13 @@ export default function CvScreeningDetailPage() {
       <div className="space-y-2">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-sm font-semibold">Candidates</h2>
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap bg-[#EEF0F3] p-1 rounded-[10px]">
             {DECISION_FILTERS.map((f) => (
               <Button
                 key={f.value}
                 variant={decisionFilter === f.value ? "secondary" : "ghost"}
                 size="sm"
-                className="h-7 px-2 text-xs"
+                className="h-7 px-3 text-xs"
                 onClick={() => setDecisionFilter(f.value)}
               >
                 {f.label}
@@ -250,21 +276,33 @@ export default function CvScreeningDetailPage() {
             </div>
           </div>
         ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
-              {entries.map((entry, i) => (
-                <EntryRow
-                  key={entry.id}
-                  entry={entry}
-                  index={entries.length - i}
-                  onReview={handleReview}
-                  reviewing={reviewingEntryId === entry.id}
-                  onReanalyze={handleReanalyze}
-                  reanalyzing={reanalyzingEntryId === entry.id}
-                  onCancel={handleCancel}
-                  cancelling={cancellingEntryId === entry.id}
-                />
-              ))}
+          <Card className="overflow-x-auto">
+            <CardContent className="p-0 min-w-[594px]">
+              <div
+                className={`grid ${CANDIDATE_GRID_COLS} items-center gap-3 py-3 px-5 border-b text-xs font-semibold uppercase tracking-wide text-[#8A8F98]`}
+              >
+                <div />
+                <div>Candidate</div>
+                <div>Status</div>
+                <div>Score</div>
+                <div>Actions</div>
+                <div />
+              </div>
+              <div className="divide-y">
+                {entries.map((entry, i) => (
+                  <EntryRow
+                    key={entry.id}
+                    entry={entry}
+                    index={entries.length - i}
+                    onReview={handleReview}
+                    reviewing={reviewingEntryId === entry.id}
+                    onReanalyze={handleReanalyze}
+                    reanalyzing={reanalyzingEntryId === entry.id}
+                    onCancel={handleCancel}
+                    cancelling={cancellingEntryId === entry.id}
+                  />
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

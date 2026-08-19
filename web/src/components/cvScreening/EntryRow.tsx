@@ -11,10 +11,20 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cvScreeningsApi } from "@/services/cvScreenings";
-import { Check, X, Download, Loader2, RefreshCw, Ban, Eye } from "lucide-react";
+import { Check, X, Loader2, RefreshCw, Ban, Eye } from "lucide-react";
 import type { CvScreeningEntry } from "@/types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Shared with CvScreeningDetailPage's header row so the column labels always
+// line up with these rows — one definition, never two hand-copied strings.
+export const CANDIDATE_GRID_COLS = "grid-cols-[44px_1fr_130px_100px_220px_40px]";
+
+function scoreTierClasses(score: number) {
+  if (score >= 70) return "bg-[#E4F6EA] text-[#1E9E5A]";
+  if (score >= 40) return "bg-[#FDF1DD] text-[#C97A16]";
+  return "bg-[#FCE9E9] text-[#D64545]";
+}
 
 interface EntryRowProps {
   entry: CvScreeningEntry;
@@ -92,139 +102,143 @@ export default function EntryRow({
   };
 
   return (
-    <div className="flex items-center justify-between py-3 px-4 gap-3 flex-wrap sm:flex-nowrap">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground shrink-0">
-          {index}
+    <div className={`grid ${CANDIDATE_GRID_COLS} items-center gap-3 py-4 px-5 hover:bg-[#FAFBFC]`}>
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-xs font-medium text-muted-foreground shrink-0">
+        {index}
+      </div>
+
+      <div className="space-y-0.5 min-w-0">
+        <div className="text-sm font-medium truncate" title={displayFilename}>
+          {displayFilename}
         </div>
-        <div className="space-y-0.5 min-w-0">
-          <div className="text-sm font-medium truncate max-w-[220px]" title={displayFilename}>
-            {displayFilename}
-          </div>
-          <div className="text-xs text-muted-foreground truncate max-w-[220px]">
-            {entry.detected_email ?? "No email detected"}
-          </div>
+        <div className="text-xs text-muted-foreground truncate">
+          {entry.detected_email ?? "No email detected"}
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
-        {typeof entry.score === "number" && (
-          <Badge variant="secondary">Score: {entry.score}</Badge>
-        )}
-
+      <div>
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <Loader2 className="h-3 w-3 animate-spin" />
+          <span className="flex items-center gap-1 text-xs text-[#8A8F98]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#8A8F98] shrink-0" />
             Processing
           </span>
         )}
-        {isNeedsReview && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        {isNeedsReview && failedToAnalyze && (
+          <span className="flex items-center gap-1 text-xs text-[#D64545]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D64545] shrink-0" />
+            Analysis failed
+          </span>
+        )}
+        {isNeedsReview && !failedToAnalyze && (
+          <span className="flex items-center gap-1 text-xs text-[#D6941C]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D6941C] shrink-0" />
             Needs review
           </span>
         )}
         {isInvited && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span className="flex items-center gap-1 text-xs text-[#1E9E5A]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1E9E5A] shrink-0" />
             Invited
           </span>
         )}
         {isNotAdvanced && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+          <span className="flex items-center gap-1 text-xs text-[#8A8F98]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#8A8F98] shrink-0" />
             Not advanced
           </span>
         )}
+      </div>
 
-        <div className="flex items-center gap-1.5">
+      <div>
+        {typeof entry.score === "number" ? (
+          <Badge
+            variant="outline"
+            className={`min-w-[46px] justify-center border-transparent ${scoreTierClasses(entry.score)}`}
+          >
+            Score: {entry.score}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {isPending && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs"
-            title="Preview CV"
-            disabled={previewLoading}
-            onClick={openPreview}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            disabled={cancelling}
+            title="Stop waiting for analysis and move this to Needs review"
+            onClick={() => onCancel(entry.id)}
           >
-            {previewLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Eye className="h-3 w-3" />
-            )}
+            <Ban className="h-3 w-3 mr-1" />
+            Cancel
           </Button>
+        )}
 
+        {isNeedsReview && failedToAnalyze && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="h-7 px-2 text-xs"
-            title="Download original file"
-            onClick={() => cvScreeningsApi.downloadFile(entry.id, entry.filename ?? undefined)}
+            disabled={reanalyzing}
+            title="The automated analysis failed (e.g. a transient Gemini error) — try it again"
+            onClick={() => onReanalyze(entry.id)}
           >
-            <Download className="h-3 w-3" />
+            <RefreshCw className={`h-3 w-3 mr-1 ${reanalyzing ? "animate-spin" : ""}`} />
+            Re-analyze
           </Button>
+        )}
 
-          {isPending && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
-              disabled={cancelling}
-              title="Stop waiting for analysis and move this to Needs review"
-              onClick={() => onCancel(entry.id)}
-            >
-              <Ban className="h-3 w-3 mr-1" />
-              Cancel
-            </Button>
-          )}
-
-          {isNeedsReview && failedToAnalyze && (
+        {isNeedsReview && !failedToAnalyze && (
+          <>
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
-              disabled={reanalyzing}
-              title="The automated analysis failed (e.g. a transient Gemini error) — try it again"
-              onClick={() => onReanalyze(entry.id)}
+              className="h-7 px-2 text-xs border-[#DADDE3] text-[#17181C] hover:bg-[#F1F2F4]"
+              disabled={reviewing}
+              onClick={() => requestReview("invite")}
             >
-              <RefreshCw className={`h-3 w-3 mr-1 ${reanalyzing ? "animate-spin" : ""}`} />
-              Re-analyze
+              {reviewing && inFlightAction === "invite" ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Check className="h-3 w-3 mr-1" />
+              )}
+              Invite
             </Button>
-          )}
-
-          {isNeedsReview && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                disabled={reviewing}
-                onClick={() => requestReview("invite")}
-              >
-                {reviewing && inFlightAction === "invite" ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <Check className="h-3 w-3 mr-1" />
-                )}
-                Invite
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                disabled={reviewing}
-                onClick={() => requestReview("reject")}
-              >
-                {reviewing && inFlightAction === "reject" ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <X className="h-3 w-3 mr-1" />
-                )}
-                Reject
-              </Button>
-            </>
-          )}
-        </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs border-[#F3D3D3] bg-[#FFF6F6] text-[#D64545] hover:bg-[#FCE9E9] hover:text-[#D64545]"
+              disabled={reviewing}
+              onClick={() => requestReview("reject")}
+            >
+              {reviewing && inFlightAction === "reject" ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <X className="h-3 w-3 mr-1" />
+              )}
+              Reject
+            </Button>
+          </>
+        )}
       </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 text-[#9297A1] hover:bg-[#F1F2F4] hover:text-[#9297A1]"
+        title="Preview CV"
+        disabled={previewLoading}
+        onClick={openPreview}
+      >
+        {previewLoading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Eye className="h-3.5 w-3.5" />
+        )}
+      </Button>
 
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
         <DialogContent>
