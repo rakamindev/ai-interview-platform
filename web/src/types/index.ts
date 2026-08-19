@@ -86,14 +86,16 @@ export interface Portfolio {
 }
 
 export interface PortfolioSkill {
-  id: number;
-  skill_id?: number;
+  id: number | null;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /** false when Gemini never returned a rating for this configured skill */
+  is_assessed: boolean;
+  ai_level: number | null;
+  ai_confidence: "high" | "medium" | "low" | null;
   evidence: string[];
-  competency_summary: string;
+  competency_summary: string | null;
 }
 
 export interface AssessorOverride {

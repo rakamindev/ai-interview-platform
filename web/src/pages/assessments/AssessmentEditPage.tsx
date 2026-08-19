@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, RefreshCw } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
@@ -36,6 +36,7 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -44,16 +45,20 @@ export default function AssessmentEditPage() {
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
-  useEffect(() => {
+  const loadAssessment = () => {
+    setLoading(true);
+    setLoadError(false);
     assessmentsApi
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, [id, reset]);
+  };
+
+  useEffect(loadAssessment, [id, reset]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -94,6 +99,17 @@ export default function AssessmentEditPage() {
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
         <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto border border-destructive/40 rounded-lg p-12 text-center space-y-3">
+        <p className="font-medium text-destructive">Couldn't load this assessment.</p>
+        <Button variant="outline" size="sm" onClick={loadAssessment}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+        </Button>
       </div>
     );
   }

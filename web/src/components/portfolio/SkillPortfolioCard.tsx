@@ -17,7 +17,26 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  if (!skill.is_assessed) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="inline-flex items-center justify-center rounded px-3 py-2 min-w-14 text-base font-semibold bg-neutral-100 text-neutral-400">
+            —
+          </div>
+          <div>
+            <span className="font-semibold text-muted-foreground">{skill.skill_label}</span>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Not assessed — the AI didn't return a rating for this skill during the interview.
+              Consider a follow-up conversation before scoring it.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level!);
 
   return (
     <Card>
@@ -35,7 +54,7 @@ export default function SkillPortfolioCard({
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              <ConfidenceIndicator confidence={skill.ai_confidence!} />
             </div>
           </div>
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />

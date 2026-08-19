@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, RefreshCw } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -26,18 +26,23 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
-  useEffect(() => {
+  const loadVacancy = () => {
+    setLoading(true);
+    setLoadError(false);
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
       reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id, reset]);
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
+  };
+
+  useEffect(loadVacancy, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
     setSubmitting(true);
@@ -55,6 +60,17 @@ export default function VacancyEditPage() {
   };
 
   if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto border border-destructive/40 rounded-lg p-12 text-center space-y-3">
+        <p className="font-medium text-destructive">Couldn't load this vacancy.</p>
+        <Button variant="outline" size="sm" onClick={loadVacancy}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">

@@ -23,6 +23,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -41,15 +42,22 @@ export default function PortfolioPage() {
     }
   }, [sessionId]);
 
-  useEffect(() => {
+  const loadAll = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
+
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -100,6 +108,22 @@ export default function PortfolioPage() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="border border-destructive/40 rounded-lg p-12 text-center space-y-3">
+          <p className="font-medium text-destructive">Couldn't load this portfolio.</p>
+          <p className="text-sm text-muted-foreground">
+            The session, vacancies, or portfolio data failed to load. Check your connection and try again.
+          </p>
+          <Button variant="outline" size="sm" onClick={loadAll}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+          </Button>
+        </div>
       </div>
     );
   }
@@ -193,10 +217,10 @@ export default function PortfolioPage() {
               .filter((s) => !s.is_discovered)
               .map((skill) => (
                 <SkillPortfolioCard
-                  key={skill.id}
+                  key={skill.id ?? `unassessed-${skill.skill_label}`}
                   skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  override={skill.id != null ? overrides[skill.id] : undefined}
+                  onOverrideSaved={(o) => skill.id != null && handleOverrideSaved(skill.id, o)}
                 />
               ))}
           </div>
@@ -219,10 +243,10 @@ export default function PortfolioPage() {
                   .filter((s) => s.is_discovered)
                   .map((skill) => (
                     <SkillPortfolioCard
-                      key={skill.id}
+                      key={skill.id ?? `unassessed-${skill.skill_label}`}
                       skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      override={skill.id != null ? overrides[skill.id] : undefined}
+                      onOverrideSaved={(o) => skill.id != null && handleOverrideSaved(skill.id, o)}
                     />
                   ))}
               </div>

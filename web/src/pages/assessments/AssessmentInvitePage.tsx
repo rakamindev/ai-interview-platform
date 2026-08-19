@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, RefreshCw } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -132,21 +132,26 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [loadError, setLoadError] = useState(false);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
     setSessions(res.data.sessions);
   }, [id]);
 
-  useEffect(() => {
+  const loadAll = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(loadAll, [loadAll]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -194,6 +199,17 @@ export default function AssessmentInvitePage() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto border border-destructive/40 rounded-lg p-12 text-center space-y-3">
+        <p className="font-medium text-destructive">Couldn't load this assessment.</p>
+        <Button variant="outline" size="sm" onClick={loadAll}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+        </Button>
       </div>
     );
   }
