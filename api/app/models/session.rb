@@ -14,6 +14,7 @@ class Session < ApplicationRecord
   validates :invite_token, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
   validates :end_reason, inclusion: { in: END_REASONS }, allow_nil: true
+  validate :candidate_name_locked_after_pending, on: :update
 
   before_validation :generate_invite_token, on: :create
   before_validation :set_invite_expiry, on: :create
@@ -54,5 +55,12 @@ class Session < ApplicationRecord
 
   def set_invite_expiry
     self.invite_expires_at ||= Time.current + Session.invite_token_ttl
+  end
+
+  def candidate_name_locked_after_pending
+    return unless candidate_name_changed?
+    return if status_was == 'pending'
+
+    errors.add(:candidate_name, "cannot be changed once the interview is no longer pending")
   end
 end

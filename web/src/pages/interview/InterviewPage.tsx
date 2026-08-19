@@ -209,6 +209,13 @@ export default function InterviewPage() {
           )}
         </div>
 
+        {candidateInfo?.candidate_name && (
+          <div className="text-sm text-center text-muted-foreground bg-muted/50 rounded-lg px-4 py-2.5">
+            You are identified as <strong>{candidateInfo.candidate_name}</strong>.
+            {" "}If this is not you, do not proceed.
+          </div>
+        )}
+
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">

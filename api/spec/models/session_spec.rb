@@ -51,6 +51,43 @@ RSpec.describe Session, type: :model do
     end
   end
 
+  describe 'candidate_name integrity (F-003)' do
+    it 'allows changing candidate_name while the session is still pending' do
+      session = create(:session, candidate_name: 'Original Name')
+
+      session.update(candidate_name: 'Corrected Typo')
+
+      expect(session.reload.candidate_name).to eq('Corrected Typo')
+    end
+
+    it 'rejects changing candidate_name once the session is active' do
+      session = create(:session, candidate_name: 'Original Name', status: 'active', started_at: Time.current)
+
+      result = session.update(candidate_name: 'Different Name')
+
+      expect(result).to be false
+      expect(session.errors[:candidate_name]).to be_present
+      expect(session.reload.candidate_name).to eq('Original Name')
+    end
+
+    it 'rejects changing candidate_name once the session has ended' do
+      session = create(:session, candidate_name: 'Original Name', status: 'ended', started_at: 1.hour.ago, ended_at: Time.current)
+
+      result = session.update(candidate_name: 'Different Name')
+
+      expect(result).to be false
+      expect(session.reload.candidate_name).to eq('Original Name')
+    end
+
+    it 'allows other fields to change on a non-pending session (only candidate_name is locked)' do
+      session = create(:session, status: 'active', started_at: Time.current)
+
+      result = session.update(status: 'ended', ended_at: Time.current, end_reason: 'manual_assessor')
+
+      expect(result).to be true
+    end
+  end
+
   describe '#extend_invite!' do
     it 'pushes invite_expires_at forward from now, on the same record' do
       session = create(:session)
