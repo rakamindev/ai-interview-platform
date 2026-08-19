@@ -9,7 +9,9 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        scope = Vacancy.all
+        scope = scope.where('role_title ILIKE ?', "%#{params[:q]}%") if params[:q].present?
+        vacancies = paginate(scope.order(created_at: :desc))
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
@@ -62,6 +64,16 @@ module Api
           :role_title,
           :culture_dimensions,
           :competency_expectations,
+          :address,
+          :city,
+          :work_arrangement,
+          :employment_type,
+          :department,
+          :salary_min,
+          :salary_max,
+          :salary_visible,
+          :description,
+          :application_deadline,
           vacancy_skills_attributes: %i[
             id skill_id skill_label expected_level _destroy
           ]
@@ -74,6 +86,17 @@ module Api
           role_title:               vacancy.role_title,
           culture_dimensions:       vacancy.culture_dimensions,
           competency_expectations:  vacancy.competency_expectations,
+          address:                  vacancy.address,
+          city:                     vacancy.city,
+          work_arrangement:         vacancy.work_arrangement,
+          employment_type:          vacancy.employment_type,
+          department:               vacancy.department,
+          salary_min:               vacancy.salary_min,
+          salary_max:               vacancy.salary_max,
+          salary_visible:           vacancy.salary_visible,
+          description:              vacancy.description,
+          application_deadline:     vacancy.application_deadline,
+          closed:                   vacancy.closed?,
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
           updated_at:               vacancy.updated_at
