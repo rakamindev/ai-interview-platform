@@ -48,7 +48,9 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => {
+        toast.error("Failed to fetch portfolio data. Please try again.");
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
