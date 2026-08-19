@@ -37,7 +37,7 @@ module Gemini
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-2.5-flash-native-audio-latest')
       @voice = voice
       @resumption_token = nil
       @connected = false
@@ -102,6 +102,14 @@ module Gemini
 
       @ws.send({ realtimeInput: { text: '[Start the interview. Greet the candidate and ask your first question.]' } }.to_json)
       Rails.logger.info('[Gemini::LiveClient] trigger_opening sent')
+    end
+
+    def end_audio_stream
+      return unless @connected && @ws
+
+      stop_silence_pump
+      @ws.send({ realtimeInput: { audioStreamEnd: true } }.to_json)
+      Rails.logger.info('[Gemini::LiveClient] audioStreamEnd sent')
     end
 
     # True when this client is ready to accept audio frames.
@@ -317,6 +325,17 @@ module Gemini
           },
           systemInstruction: {
             parts: [{ text: @system_prompt }]
+          },
+          realtimeInputConfig: {
+            automaticActivityDetection: {
+              disabled: false,
+              startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
+              endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+              prefixPaddingMs: 150,
+              silenceDurationMs: 900
+            },
+            activityHandling: 'START_OF_ACTIVITY_INTERRUPTS',
+            turnCoverage: 'TURN_INCLUDES_ONLY_ACTIVITY'
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},

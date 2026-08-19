@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_HOST = 'https://generativelanguage.googleapis.com'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -17,10 +17,11 @@ module Gemini
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
 
-    def initialize(model: nil, api_key: nil, timeout: 60)
+    def initialize(model: nil, api_key: nil, timeout: 60, api_version: nil)
       @model = model
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
       @timeout = timeout
+      @api_version = api_version || ENV.fetch('GEMINI_API_VERSION', 'v1beta')
       @connection = build_connection
     end
 
@@ -38,7 +39,7 @@ module Gemini
     private
 
     def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+      "#{BASE_HOST}/#{@api_version}/models/#{@model}:generateContent"
     end
 
     def request_headers
@@ -74,9 +75,12 @@ module Gemini
 
     def parse_response(response)
       unless response.success?
-        raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
+        if response.status == 429
+          raise RateLimitError.new(api_error_message(response), status: response.status, body: response.body)
+        end
+
         Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
-        raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
+        raise ApiError.new(api_error_message(response), status: response.status, body: response.body)
       end
 
       data = JSON.parse(response.body)
@@ -92,6 +96,15 @@ module Gemini
       rescue JSON::ParserError
         cleaned
       end
+    end
+
+    def api_error_message(response)
+      api_message = JSON.parse(response.body).dig('error', 'message')
+      return "API returned #{response.status}: #{api_message}" if api_message.present?
+
+      "API returned #{response.status}"
+    rescue JSON::ParserError
+      "API returned #{response.status}"
     end
   end
 end

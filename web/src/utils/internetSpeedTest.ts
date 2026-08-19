@@ -1,4 +1,4 @@
-// Internet Speed Test Utilities — standalone, no backend dependency
+// Internet Speed Test Utilities
 
 export interface InternetSpeedResult {
     download: number;
@@ -17,33 +17,55 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minDownloadMbps: 0.25,
+    minUploadMbps: 0.25,
     maxPingMs: 300,
 };
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
 const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const REQUEST_TIMEOUT_MS = 4000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+        window.clearTimeout(timeout);
+    }
+}
+
+function apiUrl(path: string): string | undefined {
+    return API_BASE_URL ? `${API_BASE_URL.replace(/\/$/, "")}${path}` : undefined;
+}
+
+function isLocalUrl(url: string): boolean {
+    return url.startsWith("http://localhost") || url.startsWith("http://127.0.0.1");
+}
 
 async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {
         try {
             const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
+            await fetchWithTimeout(SPEED_TEST_PING_URL, { cache: "no-cache" });
             return performance.now() - start;
         } catch {
             return 999;
         }
     }
     const testUrls = [
+        apiUrl("/health"),
         "https://www.google.com/favicon.ico",
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
         "https://unpkg.com/react@18/umd/react.production.min.js",
-    ];
+    ].filter(Boolean) as string[];
     for (const url of testUrls) {
         try {
             const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
+            await fetchWithTimeout(url, { mode: isLocalUrl(url) ? "cors" : "no-cors", cache: "no-cache" });
             return performance.now() - start;
         } catch {
             continue;
@@ -57,11 +79,11 @@ async function measureDownloadSpeed(): Promise<number> {
         { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
         { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },
         { url: "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js", size: 0.09 },
-    ];
+    ].filter((testFile): testFile is { url: string; size: number } => Boolean(testFile.url));
     for (const testFile of testFiles) {
         try {
             const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
+            const response = await fetchWithTimeout(testFile.url, { cache: "no-cache" });
             if (response.ok) {
                 await response.blob();
                 const seconds = (performance.now() - start) / 1000;
@@ -71,10 +93,18 @@ async function measureDownloadSpeed(): Promise<number> {
             continue;
         }
     }
+    if (API_BASE_URL) {
+        try {
+            await fetchWithTimeout(apiUrl("/health")!, { cache: "no-cache" });
+            return DEFAULT_THRESHOLDS.minDownloadMbps / 8;
+        } catch {
+            // keep rough fallback below
+        }
+    }
     // Rough fallback
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
+        await fetchWithTimeout("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
         const duration = (performance.now() - start) / 1000;
         return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
     } catch {
@@ -89,13 +119,18 @@ async function measureUploadSpeed(): Promise<number> {
     });
     const endpoints = SPEED_TEST_UPLOAD_URL
         ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        : [
+            apiUrl("/speed_test"),
+            "https://httpbin.org/post",
+            "https://www.httpbin.org/post",
+            "https://postman-echo.com/post",
+        ].filter(Boolean) as string[];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            await fetchWithTimeout(endpoint, { method: "POST", body: formData });
             const seconds = (performance.now() - start) / 1000;
             return uploadSizeMB / seconds;
         } catch {

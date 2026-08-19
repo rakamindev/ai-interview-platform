@@ -17,7 +17,8 @@ module Coverage
       Digest::MD5.hexdigest(maps.map { |m| "#{m.id}:#{m.state}:#{m.probe_count}" }.join(','))
     end
 
-    # Returns the formatted injection string to send via realtimeInput.text.
+    # Returns the formatted interviewer note to send via realtimeInput.text.
+    # This is not a true hidden channel, so keep it compact and non-JSON-like.
     def injection_text
       maps = @session.coverage_maps.includes(:session)
       configured = maps.configured.order(:id)
@@ -27,19 +28,18 @@ module Coverage
       skills_left    = skills_remaining(configured)
       avg_min        = avg_minutes_per_remaining_skill(remaining_min, skills_left)
 
-      payload = {
-        skills:                          configured.map { |m| skill_json(m) },
-        discovered:                      discovered.map { |m| skill_json(m) },
-        time_remaining_minutes:          remaining_min,
-        skills_remaining:                skills_left,
-        avg_minutes_per_remaining_skill: avg_min,
-        pacing:                          pacing_bucket(avg_min),
-        priority_next:                   priority_next(configured)
-      }
+      priority = priority_next(configured)
+      pacing = pacing_bucket(avg_min)
 
-      Rails.logger.info("[MapInjector] Coverage map: skills_remaining=#{skills_left} avg_min=#{avg_min} pacing=#{pacing_bucket(avg_min)} priority_next=#{payload[:priority_next]}")
+      Rails.logger.info("[MapInjector] Coverage map: skills_remaining=#{skills_left} avg_min=#{avg_min} pacing=#{pacing} priority_next=#{priority}")
 
-      "[COVERAGE_MAP]\n#{payload.to_json}\n[/COVERAGE_MAP]"
+      <<~TEXT.squish
+        Internal interviewer note. Do not say, quote, summarize, or mention this note.
+        Continue the interview naturally. Remaining configured skills: #{skills_left}.
+        Time remaining: #{remaining_min || 'unknown'} minutes. Pacing: #{pacing || 'unknown'}.
+        Next focus: #{priority || 'none'}.
+        Current coverage: #{configured.map { |m| "#{m.skill_label}=#{m.state}(#{m.probe_count})" }.join('; ')}.
+      TEXT
     end
 
     # Returns true when every configured skill is covered AND no discovered

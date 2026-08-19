@@ -120,6 +120,16 @@ class AudioWebSocketMiddleware
     state.cached_coverage_text = injector.injection_text
     state.last_coverage_digest = injector.coverage_fingerprint
 
+    unless gemini_api_key_configured?
+      Rails.logger.warn("[AudioWS] Gemini API key is missing or still a placeholder")
+      send_json(browser_ws, type: 'error',
+                            code: 'ai_service_unconfigured',
+                            message: 'AI service is not configured. Add a valid GEMINI_API_KEY on the API server and restart Rails.',
+                            recoverable: false)
+      browser_ws.close
+      return
+    end
+
     build_gemini_client(browser_ws, state)
     state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
   end
@@ -131,6 +141,11 @@ class AudioWebSocketMiddleware
     Assessments::SystemPromptCompiler.new(session.assessment).call.tap do |prompt|
       session.assessment.update_column(:system_prompt, prompt)
     end
+  end
+
+  def gemini_api_key_configured?
+    key = ENV['GEMINI_API_KEY'].to_s.strip
+    key.present? && !key.match?(/\A(your_|xxx|changeme|replace_me|placeholder)/i)
   end
 
   def build_gemini_client(browser_ws, state)
@@ -270,6 +285,7 @@ class AudioWebSocketMiddleware
 
   # Strips coverage/time metadata that leaks into output transcription via realtimeInput.text echoes.
   def sanitize_output_transcription(text)
+    text = strip_leading_metadata_echo(text)
     text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
     text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
     text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
@@ -283,6 +299,37 @@ class AudioWebSocketMiddleware
   end
 
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.
+  def strip_leading_metadata_echo(text)
+    cleaned = text.to_s.strip
+    metadata_words = %w[
+      coverage discovered time_remaining_minutes skills_remaining
+      avg_minutes_per_remaining_skill pacing priority_next probe_count
+      internal interviewer note current coverage next focus
+    ]
+    metadata_phrases = ['continue the interview naturally']
+
+    downcased = cleaned.downcase
+    return cleaned unless metadata_words.any? { |word| downcased.include?(word) } ||
+                          metadata_phrases.any? { |phrase| downcased.include?(phrase) }
+
+    starts = []
+    cleaned.scan(/[A-Z][^.!?]{10,}[.!?]/) do
+      idx = Regexp.last_match.begin(0)
+      prefix = cleaned[[idx - 3, 0].max...idx]
+      starts << idx if idx.zero? || prefix.match?(/[\]\}",.!?]\s+\z/)
+    end
+
+    start = starts.find do |idx|
+      first_sentence = cleaned[idx..].split(/[.!?]/, 2).first.to_s.downcase
+      metadata_words.none? { |word| first_sentence.include?(word) } &&
+        metadata_phrases.none? { |phrase| first_sentence.include?(phrase) }
+    end
+
+    return cleaned[start..].strip if start
+
+    cleaned.match?(/\A[\s\[{",]*(coverage|internal interviewer note|discovered|time_remaining_minutes)/i) ? '' : cleaned
+  end
+
   def build_on_model_turn_complete(browser_ws, state, session)
     lambda {
       Rails.logger.info("[AudioWS] Model turn complete — ai_audio_chunks=#{state.ai_audio_chunks || 0} sending speaker_changed:candidate")
@@ -426,6 +473,9 @@ class AudioWebSocketMiddleware
         handle_gemini_close(browser_ws, state, code: 1011, reason: 'debug_force_reconnect')
         old_client&.close
       end
+    when 'audio_stream_end'
+      Rails.logger.info("[AudioWS] Candidate marked answer complete (session=#{state.session&.id})")
+      state.gemini_client&.end_audio_stream
     when 'end_session'
       state.proactive_reconnect_timer&.cancel
       state.graceful_end_timer&.cancel
