@@ -15,7 +15,7 @@ interface SkillPortfolioCardProps {
 export default function SkillPortfolioCard({
   skill,
   override,
-  onOverrideSaved,
+  onOverrideSaved
 }: SkillPortfolioCardProps) {
   const rawLevel = override?.override_level ?? parseLevel(skill.ai_level);
   const effectiveLevel = rawLevel || 1; // fallback to L1 when level is 0 (garbage input)
@@ -30,8 +30,8 @@ export default function SkillPortfolioCard({
               Evidence from interview
             </span>
             <ul className="space-y-1">
-              {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground line-clamp-3">
+              {skill.evidence.map((quote) => (
+                <li key={quote} className="text-sm text-foreground line-clamp-3">
                   • "{quote}"
                 </li>
               ))}
@@ -61,7 +61,8 @@ export default function SkillPortfolioCard({
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
           <div className="text-xs text-muted-foreground bg-verdict-gap/10 border border-verdict-gap/20 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+            Only briefly explored. Confidence is low — warrants a dedicated session if this skill
+            matters.
           </div>
         )}
 

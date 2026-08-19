@@ -22,6 +22,7 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
       .getOverrideHistory(portfolioSkillId)
       .then((res) => {
         if (!cancelled) setEvents(res.data.override_events);
+        return;
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -44,9 +45,7 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
   }
 
   if (error) {
-    return (
-      <p className="text-xs text-muted-foreground py-2">Could not load override history.</p>
-    );
+    return <p className="text-xs text-muted-foreground py-2">Could not load override history.</p>;
   }
 
   if (events.length === 0) return null;
@@ -65,13 +64,9 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
               <LevelBadge level={ev.override_level} size="sm" />
             </div>
             <div className="min-w-0">
-              {ev.assessor_notes && (
-                <p className="text-sm break-words">{ev.assessor_notes}</p>
-              )}
+              {ev.assessor_notes && <p className="text-sm break-words">{ev.assessor_notes}</p>}
               <time className="text-xs text-muted-foreground">
-                {ev.overridden_at
-                  ? new Date(ev.overridden_at).toLocaleString()
-                  : "unknown date"}
+                {ev.overridden_at ? new Date(ev.overridden_at).toLocaleString() : "unknown date"}
               </time>
             </div>
           </li>

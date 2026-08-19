@@ -14,9 +14,9 @@ module Api
         # Single windowed query: DISTINCT ON picks the most recent session per assessment.
         assessment_ids = assessments.map(&:id)
         latest_sessions = Session.where(assessment_id: assessment_ids)
-                                 .select('DISTINCT ON (assessment_id) sessions.*')
-                                 .order(assessment_id: :asc, created_at: :desc)
-                                 .index_by(&:assessment_id)
+          .select("DISTINCT ON (assessment_id) sessions.*")
+          .order(assessment_id: :asc, created_at: :desc)
+          .index_by(&:assessment_id)
 
         json_response(
           assessments: assessments.map { |a| assessment_json(a, latest_sessions[a.id]) },
@@ -87,17 +87,17 @@ module Api
         latest ||= assessment.sessions.order(created_at: :desc).first
 
         {
-          id:             assessment.id,
-          name:           assessment.name,
+          id: assessment.id,
+          name: assessment.name,
           time_limit_min: assessment.time_limit_min,
-          language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
-          created_by:     assessment.created_by,
-          created_at:     assessment.created_at,
-          updated_at:     assessment.updated_at,
+          language: assessment.language || "en",
+          system_prompt: assessment.system_prompt,
+          created_by: assessment.created_by,
+          created_at: assessment.created_at,
+          updated_at: assessment.updated_at,
           latest_session: latest && {
-            id:         latest.id,
-            status:     latest.status,
+            id: latest.id,
+            status: latest.status,
             end_reason: latest.end_reason
           }
         }
@@ -107,17 +107,17 @@ module Api
         assessment_json(assessment).merge(
           skills: assessment.assessment_skills.order(:display_order).map do |s|
             {
-              id:            s.id,
-              skill_id:      s.skill_id,
-              skill_label:   s.skill_label,
-              is_custom:     s.is_custom,
+              id: s.id,
+              skill_id: s.skill_id,
+              skill_label: s.skill_label,
+              is_custom: s.is_custom,
               scope_include: s.scope_include,
               scope_exclude: s.scope_exclude,
-              l1_anchor:     s.l1_anchor,
-              l2_anchor:     s.l2_anchor,
-              l3_anchor:     s.l3_anchor,
-              l4_anchor:     s.l4_anchor,
-              l5_anchor:     s.l5_anchor,
+              l1_anchor: s.l1_anchor,
+              l2_anchor: s.l2_anchor,
+              l3_anchor: s.l3_anchor,
+              l4_anchor: s.l4_anchor,
+              l5_anchor: s.l5_anchor,
               expected_level: s.expected_level,
               display_order: s.display_order
             }
@@ -128,9 +128,9 @@ module Api
       def pagination_meta(collection)
         {
           current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
+          total_pages: collection.total_pages,
+          total_count: collection.total_count,
+          per_page: collection.limit_value
         }
       end
     end

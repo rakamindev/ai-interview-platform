@@ -14,8 +14,8 @@ module Gemini
   # the failure paths the acceptance criteria require are per-call injectable.
   class StubClient
     RAISING_MODES = {
-      timeout:       HttpClient::TimeoutError,
-      rate_limited:  HttpClient::RateLimitError
+      timeout: HttpClient::TimeoutError,
+      rate_limited: HttpClient::RateLimitError
     }.freeze
 
     FIXTURE_MODES = %i[
@@ -26,15 +26,18 @@ module Gemini
 
     def initialize(model: nil, mode: nil, api_key: nil, timeout: 60)
       @model = model
-      @mode = (mode || ENV.fetch('GEMINI_STUB_MODE', 'valid')).to_sym
+      @mode = (mode || ENV.fetch("GEMINI_STUB_MODE", "valid")).to_sym
       @timeout = timeout
-      @fixture_dir = ENV['GEMINI_FIXTURE_DIR'] || File.expand_path('../../../spec/fixtures/gemini', __dir__)
+      @fixture_dir = ENV["GEMINI_FIXTURE_DIR"] || File.expand_path("../../../spec/fixtures/gemini", __dir__)
     end
 
     # Mirrors HttpClient#generate_content: returns a parsed Hash, or a String
     # when the fixture is not valid JSON (the malformed-json case).
     def generate_content(_prompt, temperature: 0.2)
-      raise RAISING_MODES.fetch(@mode).new("stubbed #{@mode}", status: 429, body: 'stub response') if RAISING_MODES.key?(@mode)
+      if RAISING_MODES.key?(@mode)
+        raise RAISING_MODES.fetch(@mode).new("stubbed #{@mode}", status: 429,
+                                                                 body: "stub response")
+      end
 
       raw = File.read(File.join(@fixture_dir, "#{@mode}.json"))
       JSON.parse(raw)

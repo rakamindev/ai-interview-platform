@@ -8,7 +8,7 @@ unless EventMachine.reactor_running?
   Thread.new do
     EventMachine.run do
       ready.push(:ok)
-      Rails.logger.info('[EM] EventMachine reactor started')
+      Rails.logger.info("[EM] EventMachine reactor started")
     end
   end
 

@@ -7,8 +7,8 @@ import type { PortfolioSkill, AssessorOverride } from "@/types";
 vi.mock("@/services/portfolios", () => ({
   portfoliosApi: {
     getOverride: vi.fn(),
-    getOverrideHistory: vi.fn().mockResolvedValue({ data: { override_events: [] } }),
-  },
+    getOverrideHistory: vi.fn().mockResolvedValue({ data: { override_events: [] } })
+  }
 }));
 
 function makeSkill(overrides: Partial<PortfolioSkill> = {}): PortfolioSkill {
@@ -21,7 +21,7 @@ function makeSkill(overrides: Partial<PortfolioSkill> = {}): PortfolioSkill {
     ai_confidence: "high",
     evidence: [],
     competency_summary: "",
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -34,7 +34,7 @@ function makeOverride(overrides: Partial<AssessorOverride> = {}): AssessorOverri
     assessor_notes: "Demonstrated advanced patterns in interview",
     overridden_by: 1,
     overridden_at: "2025-01-15T10:30:00Z",
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -94,11 +94,7 @@ describe("OverridePanel", () => {
   // Shows correct button for existing override
   it("renders edit button when override exists", () => {
     render(
-      <OverridePanel
-        skill={makeSkill()}
-        existingOverride={makeOverride()}
-        onSaved={vi.fn()}
-      />,
+      <OverridePanel skill={makeSkill()} existingOverride={makeOverride()} onSaved={vi.fn()} />
     );
     expect(screen.getByRole("button", { name: /override applied/i })).toBeInTheDocument();
   });

@@ -23,7 +23,7 @@ class AddUniquenessAndFitgapStatus < ActiveRecord::Migration[7.0]
             "Duplicate vacancy_skills rows found — resolve before migrating:\n#{msg}"
     end
 
-    add_index :vacancy_skills, [:vacancy_id, :skill_label],
+    add_index :vacancy_skills, %i[vacancy_id skill_label],
               unique: true, name: "idx_vacancy_skills_uniq_label"
 
     # ── portfolio_skills unique index ────────────────────────────────────────
@@ -35,17 +35,19 @@ class AddUniquenessAndFitgapStatus < ActiveRecord::Migration[7.0]
     SQL
 
     if duplicates.any?
-      msg = duplicates.map { |r| "portfolio_id=#{r['portfolio_id']} label=#{r['skill_label']} ids=#{r['ids']}" }.join("\n")
+      msg = duplicates.map do |r|
+        "portfolio_id=#{r['portfolio_id']} label=#{r['skill_label']} ids=#{r['ids']}"
+      end.join("\n")
       raise ActiveRecord::IrreversibleMigration,
             "Duplicate portfolio_skills rows found — resolve before migrating:\n#{msg}"
     end
 
-    add_index :portfolio_skills, [:portfolio_id, :skill_label],
+    add_index :portfolio_skills, %i[portfolio_id skill_label],
               unique: true, name: "idx_portfolio_skills_uniq_label"
 
     # ── fit_gap_reports status columns ───────────────────────────────────────
     add_column :fit_gap_reports, :status,
-               'ai_interview.generation_status', default: 'pending', null: false
+               "ai_interview.generation_status", default: "pending", null: false
     add_column :fit_gap_reports, :generation_error, :text
   end
 

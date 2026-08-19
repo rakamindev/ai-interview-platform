@@ -8,5 +8,5 @@ export interface TenantState {
 // Dev: seed from env; replace with platform context later
 export const tenantAtom = atom<TenantState>({
   id: import.meta.env.VITE_DEV_TENANT_ID ?? null,
-  name: import.meta.env.VITE_DEV_TENANT_NAME ?? "Demo Tenant",
+  name: import.meta.env.VITE_DEV_TENANT_NAME ?? "Demo Tenant"
 });

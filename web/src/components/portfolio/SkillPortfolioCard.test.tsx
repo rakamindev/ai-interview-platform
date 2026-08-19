@@ -5,8 +5,8 @@ import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 vi.mock("@/services/portfolios", () => ({
   portfoliosApi: {
-    getOverride: vi.fn(),
-  },
+    getOverride: vi.fn()
+  }
 }));
 
 function makeSkill(overrides: Partial<PortfolioSkill> = {}): PortfolioSkill {
@@ -19,7 +19,7 @@ function makeSkill(overrides: Partial<PortfolioSkill> = {}): PortfolioSkill {
     ai_confidence: "high",
     evidence: ["Built a component library"],
     competency_summary: "Strong React fundamentals",
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -27,9 +27,7 @@ const noopOverrideSaved = () => {};
 
 describe("SkillPortfolioCard", () => {
   it("renders skill label and level badge", () => {
-    render(
-      <SkillPortfolioCard skill={makeSkill()} onOverrideSaved={noopOverrideSaved} />,
-    );
+    render(<SkillPortfolioCard skill={makeSkill()} onOverrideSaved={noopOverrideSaved} />);
     expect(screen.getByText("React")).toBeInTheDocument();
     expect(screen.getByText("L3")).toBeInTheDocument();
   });
@@ -40,10 +38,10 @@ describe("SkillPortfolioCard", () => {
       <SkillPortfolioCard
         skill={makeSkill({
           evidence: ["Quote A", "Quote B"],
-          competency_summary: "Summary text",
+          competency_summary: "Summary text"
         })}
         onOverrideSaved={noopOverrideSaved}
-      />,
+      />
     );
     const evidenceHeading = screen.getByText("Evidence from interview");
     const summaryHeading = screen.getByText("Competency summary");
@@ -58,7 +56,7 @@ describe("SkillPortfolioCard", () => {
       <SkillPortfolioCard
         skill={makeSkill({ evidence: ["Very long quote that should be clamped"] })}
         onOverrideSaved={noopOverrideSaved}
-      />,
+      />
     );
     const quote = screen.getByText(/Very long quote/);
     expect(quote.className).toContain("line-clamp-3");
@@ -69,7 +67,7 @@ describe("SkillPortfolioCard", () => {
       <SkillPortfolioCard
         skill={makeSkill({ competency_summary: "Long summary text" })}
         onOverrideSaved={noopOverrideSaved}
-      />,
+      />
     );
     const summary = screen.getByText("Long summary text");
     expect(summary.className).toContain("line-clamp-4");
@@ -80,7 +78,7 @@ describe("SkillPortfolioCard", () => {
       <SkillPortfolioCard
         skill={makeSkill({ is_discovered: true })}
         onOverrideSaved={noopOverrideSaved}
-      />,
+      />
     );
     expect(screen.getByText("Discovered")).toBeInTheDocument();
   });
@@ -91,7 +89,7 @@ describe("SkillPortfolioCard", () => {
       <SkillPortfolioCard
         skill={makeSkill({ ai_level: "garbage" as any })}
         onOverrideSaved={noopOverrideSaved}
-      />,
+      />
     );
     expect(screen.getByText("L1")).toBeInTheDocument();
   });
@@ -102,14 +100,14 @@ describe("SkillPortfolioCard", () => {
       portfolio_skill_id: 1,
       ai_level: 3,
       override_level: 5,
-      assessor_notes: "",
+      assessor_notes: ""
     };
     render(
       <SkillPortfolioCard
         skill={makeSkill()}
         override={override}
         onOverrideSaved={noopOverrideSaved}
-      />,
+      />
     );
     // L5 appears in both SkillPortfolioCard's LevelBadge and OverridePanel's AI→override display
     const l5Elements = screen.getAllByText("L5");

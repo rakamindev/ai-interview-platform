@@ -25,7 +25,7 @@ module Assessments
     private
 
     def intro_section
-      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
+      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || "en", "English")
 
       <<~TEXT.strip
         You are an expert skills assessor conducting a live audio interview.
@@ -67,6 +67,7 @@ module Assessments
       lines.join("\n")
     end
 
+    # rubocop:disable Metrics/MethodLength
     def rules_section
       <<~TEXT.strip
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -129,6 +130,7 @@ module Assessments
         Good: "That's a really thoughtful approach — I can see you've dealt with this hands-on. I think I've got a clear picture, thank you for your time. You'll hear back from the team soon."
       TEXT
     end
+    # rubocop:enable Metrics/MethodLength
 
     def coverage_guidance_section
       <<~TEXT.strip

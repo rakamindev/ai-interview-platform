@@ -9,9 +9,9 @@ module Api
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
-        return json_error('Invalid email or password', :unauthorized) unless user&.authenticate(params[:password])
+        return json_error("Invalid email or password", :unauthorized) unless user&.authenticate(params[:password])
 
-        return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
+        return json_error("Invalid email or password", :unauthorized) unless user.role == "admin"
 
         scheme = resolve_scheme
         token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
@@ -27,8 +27,8 @@ module Api
         # Use the referer host to resolve the scheme, falling back to the first org.
         scheme_from_referer ||
           ActiveRecord::Base.connection.select_value(
-            'SELECT scheme FROM organizations LIMIT 1'
-          ) || 'test-corp'
+            "SELECT scheme FROM organizations LIMIT 1"
+          ) || "test-corp"
       end
 
       def scheme_from_referer

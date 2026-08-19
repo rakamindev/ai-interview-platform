@@ -10,8 +10,8 @@ class CreateOrganizations < ActiveRecord::Migration[7.0]
       t.string :alias_hosts, array: true, default: [], null: false
       t.jsonb  :config,      default: {}, null: false
 
-      t.timestamptz :created_at, null: false, default: -> { 'now()' }
-      t.timestamptz :updated_at, null: false, default: -> { 'now()' }
+      t.timestamptz :created_at, null: false, default: -> { "now()" }
+      t.timestamptz :updated_at, null: false, default: -> { "now()" }
     end
 
     add_index :organizations, :scheme, unique: true

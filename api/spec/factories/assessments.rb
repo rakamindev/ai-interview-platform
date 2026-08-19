@@ -6,6 +6,6 @@ FactoryBot.define do
     created_by { 1 }
     sequence(:name) { |n| "Assessment #{n}" }
     time_limit_min { 45 }
-    language { 'en' }
+    language { "en" }
   end
 end

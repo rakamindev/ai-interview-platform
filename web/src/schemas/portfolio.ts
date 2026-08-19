@@ -8,7 +8,7 @@ export const PortfolioSkillSchema = z.object({
   ai_level: z.number(),
   ai_confidence: z.string(),
   evidence: z.array(z.string()),
-  competency_summary: z.string(),
+  competency_summary: z.string()
 });
 
 export const AssessorOverrideSchema = z.object({
@@ -18,7 +18,7 @@ export const AssessorOverrideSchema = z.object({
   override_level: z.number(),
   assessor_notes: z.string(),
   overridden_by: z.number().nullable().optional(),
-  overridden_at: z.string().nullable().optional(),
+  overridden_at: z.string().nullable().optional()
 });
 
 export const PortfolioSchema = z.object({
@@ -29,7 +29,7 @@ export const PortfolioSchema = z.object({
   generated_at: z.string().nullable().optional(),
   generation_error: z.string().nullable().optional(),
   skills: z.array(PortfolioSkillSchema),
-  overrides: z.array(AssessorOverrideSchema),
+  overrides: z.array(AssessorOverrideSchema)
 });
 
 export type Portfolio = z.infer<typeof PortfolioSchema>;

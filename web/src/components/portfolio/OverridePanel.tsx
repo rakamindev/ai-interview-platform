@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
+  DialogDescription
 } from "@/components/ui/dialog";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
@@ -27,7 +27,7 @@ interface OverridePanelProps {
 export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
   const [overrideLevel, setOverrideLevel] = useState(
-    existingOverride?.override_level ?? parseLevel(skill.ai_level),
+    existingOverride?.override_level ?? parseLevel(skill.ai_level)
   );
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
@@ -50,7 +50,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
     try {
       const res = await portfoliosApi.getOverride(skill.id, {
         override_level: overrideLevel,
-        assessor_notes: notes.trim(),
+        assessor_notes: notes.trim()
       });
       onSaved(res.data.override);
       setOpen(false);

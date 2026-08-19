@@ -1,25 +1,18 @@
 // Re-export inferred types from zod schemas.
 // The schemas ARE the source of truth; these types cannot drift.
-export type {
-  Portfolio,
-  PortfolioSkill,
-  AssessorOverride,
-} from "@/schemas/portfolio";
+export type { Portfolio, PortfolioSkill, AssessorOverride } from "@/schemas/portfolio";
 
 export type {
   Session,
   CoverageSkill,
   CoverageMap,
   TranscriptTurn,
-  CandidateInfo,
+  CandidateInfo
 } from "@/schemas/session";
 
 export type { Vacancy, VacancySkill } from "@/schemas/vacancy";
 
-export type {
-  SkillComparisonResult,
-  SkillComparison,
-} from "@/schemas/comparison";
+export type { SkillComparisonResult, SkillComparison } from "@/schemas/comparison";
 
 export type { FitGapReport } from "@/schemas/fitgap";
 

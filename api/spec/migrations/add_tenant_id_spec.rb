@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe AddTenantIdToPortfolioFamily do
   let(:migration) { described_class.new }
@@ -9,12 +9,12 @@ RSpec.describe AddTenantIdToPortfolioFamily do
     allow(migration).to receive(:say_with_time).and_yield
   end
 
-  describe '#up' do
-    it 'runs without error' do
+  describe "#up" do
+    it "runs without error" do
       expect { migration.up }.not_to raise_error
     end
 
-    it 'adds NOT NULL tenant_id to all portfolio family tables' do
+    it "adds NOT NULL tenant_id to all portfolio family tables" do
       migration.up
 
       %i[portfolios portfolio_skills fit_gap_reports assessor_overrides].each do |table|
@@ -22,7 +22,7 @@ RSpec.describe AddTenantIdToPortfolioFamily do
       end
     end
 
-    it 'adds indexes on tenant_id' do
+    it "adds indexes on tenant_id" do
       migration.up
 
       %i[portfolios portfolio_skills fit_gap_reports assessor_overrides].each do |table|
@@ -31,8 +31,8 @@ RSpec.describe AddTenantIdToPortfolioFamily do
     end
   end
 
-  describe '#down' do
-    it 'removes tenant_id columns from all portfolio family tables' do
+  describe "#down" do
+    it "removes tenant_id columns from all portfolio family tables" do
       migration.down
 
       %i[portfolios portfolio_skills fit_gap_reports assessor_overrides].each do |table|
@@ -41,8 +41,8 @@ RSpec.describe AddTenantIdToPortfolioFamily do
     end
   end
 
-  describe 'backfill correctness' do
-    it 'derives tenant_id from sessions.tenant_id through parent chains' do
+  describe "backfill correctness" do
+    it "derives tenant_id from sessions.tenant_id through parent chains" do
       migration.up
 
       # Create test data with tenant_id

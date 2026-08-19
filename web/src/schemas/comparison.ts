@@ -5,7 +5,7 @@ export const SkillComparisonResultSchema = z.enum([
   "gap",
   "exceed",
   "insufficient_evidence",
-  "not_assessed",
+  "not_assessed"
 ]);
 
 export const SkillComparisonSchema = z.object({
@@ -20,7 +20,7 @@ export const SkillComparisonSchema = z.object({
   is_override: z.boolean().optional(),
   override_actor: z.string().optional(),
   override_reason: z.string().optional(),
-  override_at: z.string().optional(),
+  override_at: z.string().optional()
 });
 
 export type SkillComparisonResult = z.infer<typeof SkillComparisonResultSchema>;

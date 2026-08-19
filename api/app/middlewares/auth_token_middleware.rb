@@ -22,13 +22,9 @@ class AuthTokenMiddleware < ApplicationMiddleware
       AuthorizeApiRequest.new(request.headers, @required_roles).call
     end
 
-    if @error
-      return error(*@error) unless @required_roles.empty?
-    end
+    return error(*@error) if @error && !@required_roles.empty?
 
-    if result
-      Current.user = result[:user]
-    end
+    Current.user = result[:user] if result
 
     super
   end
@@ -44,7 +40,7 @@ class AuthTokenMiddleware < ApplicationMiddleware
     @error ||= [401, e.message]
     nil
   rescue StandardError => _e
-    @error ||= [401, 'Request not authenticated']
+    @error ||= [401, "Request not authenticated"]
     nil
   end
 end

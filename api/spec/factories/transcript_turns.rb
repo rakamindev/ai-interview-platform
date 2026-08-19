@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :transcript_turn do
     association :session
     sequence(:turn_number)
-    speaker { 'candidate' }
+    speaker { "candidate" }
     text { Faker::Lorem.sentence }
   end
 end

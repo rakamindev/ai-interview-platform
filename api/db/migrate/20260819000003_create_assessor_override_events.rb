@@ -11,7 +11,7 @@ class CreateAssessorOverrideEvents < ActiveRecord::Migration[7.0]
 
   def up
     create_table :assessor_override_events do |t|
-      t.bigint   :tenant_id,         null: false
+      t.bigint   :tenant_id, null: false
       t.bigint   :portfolio_skill_id, null: false
       t.integer  :ai_level,          null: false
       t.integer  :override_level,    null: false

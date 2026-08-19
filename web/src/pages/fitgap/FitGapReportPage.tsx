@@ -38,8 +38,8 @@ export default function FitGapReportPage() {
       setReport(res.data.report);
       setGenerating(false);
       setError(null);
-    } catch (e: any) {
-      const status = e?.response?.status;
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
       if (status === 404) {
         // Only trigger generation once — stop re-POSTing on every 404
         if (!generationTriggeredRef.current) {
@@ -56,7 +56,7 @@ export default function FitGapReportPage() {
       } else if (status === 202) {
         // Report is generating — keep polling
         setGenerating(true);
-      } else if (status >= 500) {
+      } else if (status != null && status >= 500) {
         setError("Server error — please try again later");
         setGenerating(false);
       }
@@ -67,10 +67,11 @@ export default function FitGapReportPage() {
     sessionsApi
       .getPortfolio(Number(sessionId))
       .then(async (res) => {
-        const data = res.data as any;
+        const data = res.data as { portfolio?: Portfolio };
         if (data.portfolio) {
           setPortfolio(data.portfolio);
         }
+        return;
       })
       .catch(() => {
         setError("Failed to load portfolio");
@@ -114,9 +115,10 @@ export default function FitGapReportPage() {
     setExporting(format);
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
-      const blob = format === "pdf"
-        ? new Blob([res.data as BlobPart], { type: "application/pdf" })
-        : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const blob =
+        format === "pdf"
+          ? new Blob([res.data as BlobPart], { type: "application/pdf" })
+          : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -143,7 +145,10 @@ export default function FitGapReportPage() {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
         <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/sessions/${sessionId}/portfolio`} className="text-muted-foreground hover:text-foreground">
+          <Link
+            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
@@ -152,7 +157,15 @@ export default function FitGapReportPage() {
           <CardContent className="py-12 text-center space-y-3">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
             <p className="text-sm text-muted-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={() => { setError(null); generationTriggeredRef.current = false; fetchReport(); }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setError(null);
+                generationTriggeredRef.current = false;
+                fetchReport();
+              }}
+            >
               Retry
             </Button>
           </CardContent>
@@ -167,7 +180,10 @@ export default function FitGapReportPage() {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/sessions/${sessionId}/portfolio`} className="text-muted-foreground hover:text-foreground">
+            <Link
+              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
@@ -176,18 +192,45 @@ export default function FitGapReportPage() {
 
         {portfolio && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={regenerating || generating}
+            >
+              {regenerating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              )}
               Regenerate
             </Button>
             {report && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport("pdf")}
+                  disabled={!!exporting}
+                >
+                  {exporting === "pdf" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 mr-1" />
+                  )}
                   PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport("json")}
+                  disabled={!!exporting}
+                >
+                  {exporting === "json" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 mr-1" />
+                  )}
                   JSON
                 </Button>
               </>
@@ -217,7 +260,11 @@ export default function FitGapReportPage() {
               Report generation is taking longer than expected.
             </p>
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              {regenerating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              )}
               Retry
             </Button>
           </CardContent>
@@ -285,9 +332,15 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {s.ai_level} (
+                          {s.ai_confidence?.toLowerCase() === "low"
+                            ? "low confidence"
+                            : "confirmed"}
+                          )
                         </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
+                        <span className="text-xs text-muted-foreground">
+                          — Not required for this role, may be additive.
+                        </span>
                       </div>
                     ))}
                 </CardContent>

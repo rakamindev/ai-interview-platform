@@ -14,13 +14,11 @@ export default function TranscriptPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      sessionsApi.getTranscript(Number(sessionId)),
-      sessionsApi.get(Number(sessionId)),
-    ])
+    Promise.all([sessionsApi.getTranscript(Number(sessionId)), sessionsApi.get(Number(sessionId))])
       .then(([tRes, sRes]) => {
-        setTurns(tRes.data.turns);
+        setTurns(tRes.data.turns.filter((t): t is TranscriptTurn => t !== null));
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        return;
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -52,9 +50,7 @@ export default function TranscriptPage() {
           </Link>
           <div>
             <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            {candidateName && <p className="text-sm text-muted-foreground">{candidateName}</p>}
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
@@ -67,8 +63,8 @@ export default function TranscriptPage() {
 
       {loading && (
         <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <Skeleton key={`skeleton-${n}`} className="h-16 w-full" />
           ))}
         </div>
       )}
@@ -93,9 +89,7 @@ export default function TranscriptPage() {
               <div
                 key={turn.id}
                 className={`rounded-lg p-4 ${
-                  isAI
-                    ? "bg-muted border"
-                    : "bg-background border border-primary/20"
+                  isAI ? "bg-muted border" : "bg-background border border-primary/20"
                 }`}
               >
                 <p

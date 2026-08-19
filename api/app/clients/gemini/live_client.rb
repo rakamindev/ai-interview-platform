@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'faye/websocket'
-require 'json'
-require 'base64'
+require "faye/websocket"
+require "json"
+require "base64"
 
 module Gemini
   # Manages a persistent WebSocket connection to Gemini Live API.
   class LiveClient
-    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
+    GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 
     INACTIVITY_TIMEOUT = 30 # reconnect if Gemini produces no meaningful response
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
@@ -24,7 +24,7 @@ module Gemini
       system_prompt:,
       api_key: nil,
       model: nil,
-      voice: 'Puck',
+      voice: "Puck",
       on_audio: nil,
       on_input_transcription: nil,
       on_output_transcription: nil,
@@ -36,14 +36,14 @@ module Gemini
       on_resumption_token_update: nil
     )
       @system_prompt = system_prompt
-      @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @api_key = api_key || ENV.fetch("GEMINI_API_KEY")
+      @model = model || ENV.fetch("GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview")
       @voice = voice
       @resumption_token = nil
       @connected = false
       @ws = nil
-      @input_text_buffer  = +''
-      @output_text_buffer = +''
+      @input_text_buffer  = +""
+      @output_text_buffer = +""
       @last_activity_at = nil
       @inactivity_timer = nil
       @last_audio_forwarded_at = nil
@@ -66,7 +66,7 @@ module Gemini
       @ws = Faye::WebSocket::Client.new(
         GEMINI_WS_URL,
         nil,
-        headers: { 'x-goog-api-key' => @api_key }
+        headers: { "x-goog-api-key" => @api_key }
       )
 
       @ws.on(:open)    { |_event| handle_ws_open(resumption_handle) }
@@ -89,7 +89,8 @@ module Gemini
     end
 
     # Injects hidden context via realtimeInput.text — same channel as audio, no interleaving conflicts.
-    def inject_context(text, turn_complete: true) # turn_complete kept for interface compat, ignored
+    # turn_complete kept for interface compat, ignored
+    def inject_context(text, turn_complete: true)
       return false unless @connected && @ws
 
       @ws.send({ realtimeInput: { text: text } }.to_json)
@@ -100,8 +101,8 @@ module Gemini
     def trigger_opening
       return unless @connected && @ws
 
-      @ws.send({ realtimeInput: { text: '[Start the interview. Greet the candidate and ask your first question.]' } }.to_json)
-      Rails.logger.info('[Gemini::LiveClient] trigger_opening sent')
+      @ws.send({ realtimeInput: { text: "[Start the interview. Greet the candidate and ask your first question.]" } }.to_json)
+      Rails.logger.info("[Gemini::LiveClient] trigger_opening sent")
     end
 
     # True when this client is ready to accept audio frames.
@@ -134,7 +135,7 @@ module Gemini
 
     def handle_ws_open(resumption_handle)
       send_setup(resumption_handle: resumption_handle)
-      Rails.logger.info('[Gemini::LiveClient] WebSocket opened — awaiting setupComplete')
+      Rails.logger.info("[Gemini::LiveClient] WebSocket opened — awaiting setupComplete")
     end
 
     def handle_ws_close(event)
@@ -151,7 +152,7 @@ module Gemini
 
     def activate_connection!
       @connected = true
-      Rails.logger.info('[Gemini::LiveClient] Session ready — accepting audio')
+      Rails.logger.info("[Gemini::LiveClient] Session ready — accepting audio")
       @on_ready&.call
     end
 
@@ -166,16 +167,14 @@ module Gemini
 
       return unless (@audio_chunks_forwarded % 50).zero?
 
-      Rails.logger.debug(
-        "[Gemini::LiveClient] Audio forwarded: #{@audio_chunks_forwarded} chunks (#{@audio_bytes_forwarded}B total)"
-      )
+      Rails.logger.debug { "[Gemini::LiveClient] Audio forwarded: #{@audio_chunks_forwarded} chunks (#{@audio_bytes_forwarded}B total)" }
     end
 
     def audio_message(pcm_bytes)
       {
         realtimeInput: {
           audio: {
-            mimeType: 'audio/pcm;rate=16000',
+            mimeType: "audio/pcm;rate=16000",
             data: Base64.strict_encode64(pcm_bytes)
           }
         }
@@ -217,12 +216,12 @@ module Gemini
       return if @silence_pumping || !@connected || !@ws || @model_emitting_audio
 
       @silence_pumping = true
-      Rails.logger.info('[Gemini::LiveClient] Silence pump started — no real audio for 500ms')
+      Rails.logger.info("[Gemini::LiveClient] Silence pump started — no real audio for 500ms")
 
       silence_msg = {
         realtimeInput: {
           audio: {
-            mimeType: 'audio/pcm;rate=16000',
+            mimeType: "audio/pcm;rate=16000",
             data: Base64.strict_encode64(SILENCE_FRAME)
           }
         }
@@ -268,39 +267,39 @@ module Gemini
     end
 
     def log_gemini_event(data)
-      sc = data['serverContent']
+      sc = data["serverContent"]
       if sc
-        has_audio = sc.dig('modelTurn', 'parts')&.any? { |p| p['inlineData'] }
-        has_input_tx = sc.key?('inputTranscription')
-        has_output_tx = sc.key?('outputTranscription')
-        turn_complete = sc['turnComplete']
-        gen_complete = sc['generationComplete']
-        interrupted = sc['interrupted']
+        has_audio = sc.dig("modelTurn", "parts")&.any? { |p| p["inlineData"] }
+        has_input_tx = sc.key?("inputTranscription")
+        has_output_tx = sc.key?("outputTranscription")
+        turn_complete = sc["turnComplete"]
+        gen_complete = sc["generationComplete"]
+        interrupted = sc["interrupted"]
 
         # Skip audio-only frames (too noisy)
         return if has_audio && !has_input_tx && !has_output_tx && !turn_complete && !gen_complete && !interrupted
 
         parts = []
-        parts << 'interrupted' if interrupted
-        parts << 'audio' if has_audio
+        parts << "interrupted" if interrupted
+        parts << "audio" if has_audio
         if has_input_tx
-          input_tx_text = sc.dig('inputTranscription', 'parts', 0, 'text') || sc.dig('inputTranscription', 'text')
+          input_tx_text = sc.dig("inputTranscription", "parts", 0, "text") || sc.dig("inputTranscription", "text")
           parts << "inputTx=#{input_tx_text.truncate(50)}" if input_tx_text.present?
         end
         if has_output_tx
-          output_tx_text = sc.dig('outputTranscription', 'parts', 0, 'text') || sc.dig('outputTranscription', 'text')
+          output_tx_text = sc.dig("outputTranscription", "parts", 0, "text") || sc.dig("outputTranscription", "text")
           parts << "outputTx=#{output_tx_text.truncate(50)}" if output_tx_text.present?
         end
-        parts << 'turnComplete' if turn_complete
-        parts << 'generationComplete' if gen_complete
+        parts << "turnComplete" if turn_complete
+        parts << "generationComplete" if gen_complete
 
         Rails.logger.info("[Gemini::LiveClient] Event: #{parts.join(' | ')}") if parts.any?
       end
 
-      Rails.logger.info('[Gemini::LiveClient] Event: setupComplete') if data['setupComplete']
-      return unless data['sessionResumption'] || data['sessionResumptionUpdate']
+      Rails.logger.info("[Gemini::LiveClient] Event: setupComplete") if data["setupComplete"]
+      return unless data["sessionResumption"] || data["sessionResumptionUpdate"]
 
-      Rails.logger.info('[Gemini::LiveClient] Event: resumptionToken updated')
+      Rails.logger.info("[Gemini::LiveClient] Event: resumptionToken updated")
     end
 
     def send_setup(resumption_handle: nil)
@@ -308,7 +307,7 @@ module Gemini
         setup: {
           model: "models/#{@model}",
           generationConfig: {
-            responseModalities: ['AUDIO'],
+            responseModalities: ["AUDIO"],
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: { voiceName: @voice }
@@ -338,7 +337,7 @@ module Gemini
       data = JSON.parse(raw_data)
 
       # Only meaningful responses count as activity; token updates do not (they fire even when Gemini stalls).
-      record_activity! if data['serverContent'] || data['setupComplete']
+      record_activity! if data["serverContent"] || data["setupComplete"]
 
       log_gemini_event(data)
 
@@ -356,39 +355,39 @@ module Gemini
     end
 
     def handle_audio_response(data)
-      parts = data.dig('serverContent', 'modelTurn', 'parts')
+      parts = data.dig("serverContent", "modelTurn", "parts")
       return unless parts
 
       parts.each do |part|
-        next unless (inline = part['inlineData'])
+        next unless (inline = part["inlineData"])
 
         stop_silence_pump unless @model_emitting_audio
         @model_emitting_audio = true
-        audio_bytes = Base64.strict_decode64(inline['data'])
+        audio_bytes = Base64.strict_decode64(inline["data"])
         @on_audio&.call(audio_bytes)
       end
     end
 
     def handle_input_transcription(data)
-      input_tx = data.dig('serverContent', 'inputTranscription')
+      input_tx = data.dig("serverContent", "inputTranscription")
       return unless input_tx
 
-      text = input_tx.dig('parts', 0, 'text') || input_tx['text']
+      text = input_tx.dig("parts", 0, "text") || input_tx["text"]
       @input_text_buffer << text.to_s
     end
 
     def handle_output_transcription(data)
-      output_tx = data.dig('serverContent', 'outputTranscription')
+      output_tx = data.dig("serverContent", "outputTranscription")
       return unless output_tx
 
-      text = output_tx.dig('parts', 0, 'text') || output_tx['text']
+      text = output_tx.dig("parts", 0, "text") || output_tx["text"]
       @output_text_buffer << text.to_s
     end
 
     # Must run before turnComplete handling — both can arrive in the same message and order matters.
     # Flushes transcription immediately but delays gate open by GATE_OPEN_DELAY so the speaker drains and avoids echo.
     def handle_generation_complete(data)
-      return unless data.dig('serverContent', 'generationComplete')
+      return unless data.dig("serverContent", "generationComplete")
 
       emitted_audio = @model_emitting_audio
       @model_emitting_audio = false
@@ -400,35 +399,35 @@ module Gemini
         @gate_timer&.cancel
         @gate_timer = EM::Timer.new(GATE_OPEN_DELAY) do
           unless @superseded
-            Rails.logger.info('[Gemini::LiveClient] Gate open — firing on_model_turn_complete')
+            Rails.logger.info("[Gemini::LiveClient] Gate open — firing on_model_turn_complete")
             @on_model_turn_complete&.call
           end
         end
       else
-        Rails.logger.debug('[Gemini::LiveClient] Empty generationComplete (0 audio)')
+        Rails.logger.debug("[Gemini::LiveClient] Empty generationComplete (0 audio)")
         @on_model_turn_complete&.call
       end
     end
 
     # Open gate immediately on candidate barge-in — they're actively speaking so echo risk is moot.
     def handle_interrupted(data)
-      return unless data.dig('serverContent', 'interrupted') && @model_emitting_audio
+      return unless data.dig("serverContent", "interrupted") && @model_emitting_audio
 
       @model_emitting_audio = false
       @model_interrupted = true
       @gate_timer&.cancel
-      Rails.logger.info('[Gemini::LiveClient] Model interrupted — resetting audio gate immediately')
+      Rails.logger.info("[Gemini::LiveClient] Model interrupted — resetting audio gate immediately")
       flush_output_buffer
       @on_model_turn_complete&.call
     end
 
     def handle_turn_complete(data)
-      return unless data.dig('serverContent', 'turnComplete')
+      return unless data.dig("serverContent", "turnComplete")
 
       if @model_emitting_audio
         # turnComplete without generationComplete — model interrupted or generation ended abruptly.
         @model_emitting_audio = false
-        Rails.logger.info('[Gemini::LiveClient] Model interrupted — turnComplete without generationComplete')
+        Rails.logger.info("[Gemini::LiveClient] Model interrupted — turnComplete without generationComplete")
         flush_output_buffer
         @on_model_turn_complete&.call
       elsif @model_interrupted
@@ -436,19 +435,23 @@ module Gemini
         @model_interrupted = false
       else
         # User's turn complete (or harmless stale model turnComplete after generationComplete).
-        Rails.logger.info("[Gemini::LiveClient] User turnComplete — input_buffer=#{@input_text_buffer.length}chars silence_pumping=#{@silence_pumping}")
+        chars = @input_text_buffer.length
+        Rails.logger.info(
+          "[Gemini::LiveClient] User turnComplete — " \
+          "input_buffer=#{chars}chars silence_pumping=#{@silence_pumping}"
+        )
         stop_silence_pump
         flush_input_buffer
       end
     end
 
     def handle_resumption_update(data)
-      resumption = data['sessionResumption'] || data['sessionResumptionUpdate']
+      resumption = data["sessionResumption"] || data["sessionResumptionUpdate"]
       return unless resumption
 
-      Rails.logger.debug("[Gemini::LiveClient] Resumption data: #{resumption.to_json}")
-      handle = resumption['newHandle'] || resumption['handle'] || resumption['token']
-      return unless handle.present?
+      Rails.logger.debug { "[Gemini::LiveClient] Resumption data: #{resumption.to_json}" }
+      handle = resumption["newHandle"] || resumption["handle"] || resumption["token"]
+      return if handle.blank?
 
       @resumption_token = handle
       @on_resumption_token_update&.call(handle)
@@ -456,7 +459,7 @@ module Gemini
 
     # Session resumption is not a handshake — if a handle was sent, the session is already resumed at setupComplete.
     def handle_setup_complete(data)
-      return unless data['setupComplete']
+      return unless data["setupComplete"]
 
       @setup_complete = true
       @connected_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -464,25 +467,25 @@ module Gemini
     end
 
     def handle_go_away_event(data)
-      return unless data['goAway']
+      return unless data["goAway"]
 
-      time_left = data.dig('goAway', 'timeLeft')
+      time_left = data.dig("goAway", "timeLeft")
       Rails.logger.warn("[Gemini::LiveClient] GoAway received, timeLeft=#{time_left}")
       @on_go_away&.call(time_left: time_left, resumption_token: @resumption_token)
     end
 
     def flush_input_buffer
-      return unless @input_text_buffer.present?
+      return if @input_text_buffer.blank?
 
       @on_input_transcription&.call(@input_text_buffer.strip)
-      @input_text_buffer = +''
+      @input_text_buffer = +""
     end
 
     def flush_output_buffer
-      return unless @output_text_buffer.present?
+      return if @output_text_buffer.blank?
 
       @on_output_transcription&.call(@output_text_buffer.strip)
-      @output_text_buffer = +''
+      @output_text_buffer = +""
     end
   end
 end

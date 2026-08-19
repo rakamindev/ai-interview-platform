@@ -77,11 +77,15 @@ export default function SignupPage() {
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="user" id="role-user" />
-                <Label htmlFor="role-user" className="font-normal cursor-pointer">User</Label>
+                <Label htmlFor="role-user" className="font-normal cursor-pointer">
+                  User
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="admin" id="role-admin" />
-                <Label htmlFor="role-admin" className="font-normal cursor-pointer">Admin</Label>
+                <Label htmlFor="role-admin" className="font-normal cursor-pointer">
+                  Admin
+                </Label>
               </div>
             </RadioGroup>
           </div>

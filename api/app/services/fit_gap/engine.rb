@@ -13,7 +13,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model: ENV.fetch("GEMINI_FLASH_MODEL", "gemini-2.0-flash-001"),
         timeout: 30
       )
     end
@@ -26,16 +26,16 @@ module FitGap
 
       report = FitGapReport.find_or_initialize_by(
         portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
+        vacancy_id: @vacancy.id
       )
 
       report.update!(
-        skill_comparisons:     skill_comparisons,
-        additional_strengths:  additional,
-        culture_narrative:     narratives[:culture],
-        overall_narrative:     narratives[:overall],
-        generated_at:          Time.current,
-        tenant_id:             @portfolio.tenant_id
+        skill_comparisons: skill_comparisons,
+        additional_strengths: additional,
+        culture_narrative: narratives[:culture],
+        overall_narrative: narratives[:overall],
+        generated_at: Time.current,
+        tenant_id: @portfolio.tenant_id
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -68,35 +68,35 @@ module FitGap
 
     def build_missing_comparison(label, vacancy_skill)
       {
-        skill_label:      label,
-        skill_id:         vacancy_skill.skill_id,
-        candidate_level:  nil,
-        expected_level:   vacancy_skill.expected_level,
-        ai_level:         nil,
-        effective_level:  nil,
-        level_source:     'none',
-        confidence:       nil,
-        is_override:      false,
-        delta:            nil,
-        result:           'not_assessed',
-        schema_version:   SCHEMA_VERSION
+        skill_label: label,
+        skill_id: vacancy_skill.skill_id,
+        candidate_level: nil,
+        expected_level: vacancy_skill.expected_level,
+        ai_level: nil,
+        effective_level: nil,
+        level_source: "none",
+        confidence: nil,
+        is_override: false,
+        delta: nil,
+        result: "not_assessed",
+        schema_version: SCHEMA_VERSION
       }
     end
 
     def build_unrated_comparison(label, vacancy_skill, portfolio_skill)
       {
-        skill_label:      label,
-        skill_id:         vacancy_skill.skill_id,
-        candidate_level:  nil,
-        expected_level:   vacancy_skill.expected_level,
-        ai_level:         nil,
-        effective_level:  nil,
-        level_source:     portfolio_skill[:level_source],
-        confidence:       portfolio_skill[:confidence],
-        is_override:      portfolio_skill[:is_override],
-        delta:            nil,
-        result:           'not_assessed',
-        schema_version:   SCHEMA_VERSION
+        skill_label: label,
+        skill_id: vacancy_skill.skill_id,
+        candidate_level: nil,
+        expected_level: vacancy_skill.expected_level,
+        ai_level: nil,
+        effective_level: nil,
+        level_source: portfolio_skill[:level_source],
+        confidence: portfolio_skill[:confidence],
+        is_override: portfolio_skill[:is_override],
+        delta: nil,
+        result: "not_assessed",
+        schema_version: SCHEMA_VERSION
       }
     end
 
@@ -107,25 +107,27 @@ module FitGap
 
       # AC-1.5: low confidence → insufficient_evidence (delta shown, not asserted).
       confidence = portfolio_skill[:confidence]
-      if confidence.present? && !CONFIDENCE_THRESHOLD.include?(confidence)
-        result = 'insufficient_evidence'
-      else
-        result = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
-      end
+      result = if confidence.present? && CONFIDENCE_THRESHOLD.exclude?(confidence)
+                 "insufficient_evidence"
+               elsif delta.zero?
+                 "match"
+               else
+                 (delta.positive? ? "exceed" : "gap")
+               end
 
       {
-        skill_label:      label,
-        skill_id:         vacancy_skill.skill_id,
-        candidate_level:  candidate_level,
-        expected_level:   expected_level,
-        ai_level:         portfolio_skill[:ai_level],
-        effective_level:  candidate_level,
-        level_source:     portfolio_skill[:level_source],
-        confidence:       confidence,
-        is_override:      portfolio_skill[:is_override],
-        delta:            delta,
-        result:           result,
-        schema_version:   SCHEMA_VERSION
+        skill_label: label,
+        skill_id: vacancy_skill.skill_id,
+        candidate_level: candidate_level,
+        expected_level: expected_level,
+        ai_level: portfolio_skill[:ai_level],
+        effective_level: candidate_level,
+        level_source: portfolio_skill[:level_source],
+        confidence: confidence,
+        is_override: portfolio_skill[:is_override],
+        delta: delta,
+        result: result,
+        schema_version: SCHEMA_VERSION
       }
     end
 
@@ -134,20 +136,20 @@ module FitGap
       vacancy_skill_ids = @vacancy.vacancy_skills.pluck(:skill_id).compact
       vacancy_labels    = @vacancy.vacancy_skills.pluck(:skill_label).map(&:downcase)
 
-      effective_portfolio_skills.select do |ps|
+      effective_portfolio_skills.reject do |ps|
         in_vacancy = (ps[:skill_id].present? && vacancy_skill_ids.include?(ps[:skill_id])) ||
                      vacancy_labels.include?(ps[:skill_label]&.downcase)
-        !in_vacancy
+        in_vacancy
       end.map do |ps|
         {
-          skill_label:     ps[:skill_label],
-          skill_id:        ps[:skill_id],
-          ai_level:        ps[:ai_level],
+          skill_label: ps[:skill_label],
+          skill_id: ps[:skill_id],
+          ai_level: ps[:ai_level],
           effective_level: ps[:effective_level],
-          level_source:    ps[:level_source],
-          confidence:      ps[:confidence],
-          is_override:     ps[:is_override],
-          schema_version:  SCHEMA_VERSION
+          level_source: ps[:level_source],
+          confidence: ps[:confidence],
+          is_override: ps[:is_override],
+          schema_version: SCHEMA_VERSION
         }
       end
     end
@@ -159,14 +161,14 @@ module FitGap
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
         override = skill.assessor_override
         {
-          id:              skill.id,
-          skill_id:        skill.skill_id,
-          skill_label:     skill.skill_label,
-          ai_level:        skill.ai_level,
+          id: skill.id,
+          skill_id: skill.skill_id,
+          skill_label: skill.skill_label,
+          ai_level: skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
-          confidence:      skill.ai_confidence,
-          level_source:    override ? 'assessor' : 'ai',
-          is_override:     override.present?
+          confidence: skill.ai_confidence,
+          level_source: override ? "assessor" : "ai",
+          is_override: override.present?
         }
       end
     end
@@ -178,19 +180,19 @@ module FitGap
     end
 
     def generate_narratives(skill_comparisons)
-      gaps               = skill_comparisons.select { |c| c[:result] == 'gap' }
-      matches            = skill_comparisons.select { |c| c[:result] == 'match' }
-      exceeds            = skill_comparisons.select { |c| c[:result] == 'exceed' }
-      not_assessed       = skill_comparisons.select { |c| c[:result] == 'not_assessed' }
-      insufficient_evidence = skill_comparisons.select { |c| c[:result] == 'insufficient_evidence' }
+      gaps               = skill_comparisons.select { |c| c[:result] == "gap" }
+      matches            = skill_comparisons.select { |c| c[:result] == "match" }
+      exceeds            = skill_comparisons.select { |c| c[:result] == "exceed" }
+      not_assessed       = skill_comparisons.select { |c| c[:result] == "not_assessed" }
+      insufficient_evidence = skill_comparisons.select { |c| c[:result] == "insufficient_evidence" }
 
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed, insufficient_evidence)
 
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
-      rescue => e
+        { culture: data["culture_narrative"], overall: data["overall_narrative"] }
+      rescue StandardError => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
       end
@@ -199,20 +201,20 @@ module FitGap
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed, insufficient_evidence)
       vacancy = @vacancy
       portfolio_session = @portfolio.session
-      assessment = portfolio_session.assessment
+      portfolio_session.assessment
 
       <<~PROMPT
         You are writing a fit/gap analysis narrative for a candidate evaluation.
 
         ROLE: #{vacancy.role_title}
-        #{vacancy.culture_dimensions.present? ? "CULTURE EXPECTATIONS:\n#{vacancy.culture_dimensions}\n" : ""}
-        #{vacancy.competency_expectations.present? ? "COMPETENCY EXPECTATIONS:\n#{vacancy.competency_expectations}\n" : ""}
+        #{"CULTURE EXPECTATIONS:\n#{vacancy.culture_dimensions}\n" if vacancy.culture_dimensions.present?}
+        #{"COMPETENCY EXPECTATIONS:\n#{vacancy.competency_expectations}\n" if vacancy.competency_expectations.present?}
 
         SKILL COMPARISON RESULTS:
         - Matches (#{matches.count}): #{matches.map { |c| "#{c[:skill_label]} (L#{c[:candidate_level]})" }.join(', ')}
         - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (delta #{c[:delta]})" }.join(', ')}
         - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (+#{c[:delta]})" }.join(', ')}
-        - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
+        - Not assessed (#{not_assessed.count}): #{not_assessed.pluck(:skill_label).join(', ')}
         - Insufficient evidence (#{insufficient_evidence.count}): #{insufficient_evidence.map { |c| "#{c[:skill_label]} (confidence: #{c[:confidence]})" }.join(', ')}
 
         Write two short narrative paragraphs:
@@ -228,9 +230,9 @@ module FitGap
     end
 
     def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      gaps    = comparisons.count { |c| c[:result] == "gap" }
+      matches = comparisons.count { |c| c[:result] == "match" }
+      exceeds = comparisons.count { |c| c[:result] == "exceed" }
 
       "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
     end

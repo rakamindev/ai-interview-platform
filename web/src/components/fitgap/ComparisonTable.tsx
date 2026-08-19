@@ -15,7 +15,7 @@ const RESULT_ICONS: Record<SkillComparisonResult, React.ComponentType<{ classNam
   gap: AlertTriangle,
   exceed: TrendingUp,
   insufficient_evidence: HelpCircle,
-  not_assessed: Minus,
+  not_assessed: Minus
 };
 
 function ResultBadge({ comparison }: { comparison: SkillComparison }) {
@@ -25,12 +25,19 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
 
   let suffix = "";
   if (comparison.result === "exceed" && comparison.delta) suffix = ` +${comparison.delta}`;
-  else if (comparison.result === "gap" && comparison.delta) suffix = ` -${Math.abs(comparison.delta)}`;
+  else if (comparison.result === "gap" && comparison.delta)
+    suffix = ` -${Math.abs(comparison.delta)}`;
 
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded",
+        classes
+      )}
+    >
       <Icon className="h-3.5 w-3.5" />
-      {label}{suffix}
+      {label}
+      {suffix}
     </span>
   );
 }
@@ -63,16 +70,26 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead>
             <tr className="border-b bg-muted/50">
-              <th scope="col" className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th scope="col" className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th scope="col" className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th scope="col" className="text-center px-4 py-2.5 font-medium">Confidence</th>
-              <th scope="col" className="text-center px-4 py-2.5 font-medium">Result</th>
+              <th scope="col" className="text-left px-4 py-2.5 font-medium">
+                Skill
+              </th>
+              <th scope="col" className="text-center px-4 py-2.5 font-medium">
+                Required
+              </th>
+              <th scope="col" className="text-center px-4 py-2.5 font-medium">
+                Candidate
+              </th>
+              <th scope="col" className="text-center px-4 py-2.5 font-medium">
+                Confidence
+              </th>
+              <th scope="col" className="text-center px-4 py-2.5 font-medium">
+                Result
+              </th>
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
+            {comparisons.map((c) => (
+              <tr key={c.skill_label} className="border-b last:border-0">
                 <td className="px-4 py-2.5">
                   <span>{c.skill_label}</span>
                   {scope && <span className="ml-1 text-xs text-muted-foreground">({scope})</span>}

@@ -5,7 +5,17 @@ class ApplicationController < ActionController::API
   include ExceptionHandler
 
   before_action :require_tenant!
-  before_action :verify_scheme_claim!, if: -> { (Current.user.present? rescue false) && (Current.organization.present? rescue false) }
+  before_action :verify_scheme_claim!, if: lambda {
+    begin
+      Current.user.present?
+    rescue StandardError
+      false
+    end && begin
+      Current.organization.present?
+    rescue StandardError
+      false
+    end
+  }
 
   # Declarative auth helper — mirrors rakamin-api's authorize_auth_token! pattern.
   # Usage:
@@ -32,10 +42,10 @@ class ApplicationController < ActionController::API
   # This is a mitigation, not a repair — the scheme claim is unverifiable
   # inside this service because no user↔organisation membership exists (C1).
   def verify_scheme_claim!
-    return unless Current.user.scheme.present?
+    return if Current.user.scheme.blank?
     return if Current.user.scheme == Current.organization.scheme
 
-    raise ExceptionHandler::Unauthorized, 'Token scheme does not match the resolved organisation'
+    raise ExceptionHandler::Unauthorized, "Token scheme does not match the resolved organisation"
   end
 
   def tenant_resolved?
@@ -76,8 +86,8 @@ class ApplicationController < ActionController::API
 
   def path_params
     @path_params ||= request.path_parameters
-                             .except(:controller, :action)
-                             .with_indifferent_access
+      .except(:controller, :action)
+      .with_indifferent_access
   end
 
   def request_body

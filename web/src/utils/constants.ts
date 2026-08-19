@@ -12,7 +12,7 @@ export const LEVEL_LABELS: Record<number, string> = {
   2: "L2",
   3: "L3",
   4: "L4",
-  5: "L5",
+  5: "L5"
 };
 
 export const LEVEL_DESCRIPTIONS: Record<number, string> = {
@@ -20,7 +20,7 @@ export const LEVEL_DESCRIPTIONS: Record<number, string> = {
   2: "Functional",
   3: "Proficient",
   4: "Advanced",
-  5: "Expert",
+  5: "Expert"
 };
 
 // L-badge colors (Tailwind classes)
@@ -29,7 +29,7 @@ export const LEVEL_BADGE_CLASSES: Record<number, string> = {
   2: "bg-blue-100 text-blue-700",
   3: "bg-teal-100 text-teal-700",
   4: "bg-purple-100 text-purple-700",
-  5: "bg-yellow-100 text-yellow-700",
+  5: "bg-yellow-100 text-yellow-700"
 };
 
 // Coverage state display
@@ -37,21 +37,21 @@ export const COVERAGE_STATE_LABELS: Record<string, string> = {
   not_yet: "not yet",
   initiated: "initiated",
   partial: "partial",
-  covered: "covered",
+  covered: "covered"
 };
 
 export const COVERAGE_STATE_WIDTH: Record<string, number> = {
   not_yet: 0,
   initiated: 25,
   partial: 60,
-  covered: 100,
+  covered: 100
 };
 
 export const COVERAGE_STATE_COLOR: Record<string, string> = {
   not_yet: "bg-neutral-200",
   initiated: "bg-blue-300",
   partial: "bg-teal-400",
-  covered: "bg-teal-600",
+  covered: "bg-teal-600"
 };
 
 // Fit/Gap result display
@@ -59,12 +59,12 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   match: "Match",
   gap: "Gap",
   exceed: "Exceeds",
-  not_assessed: "Not assessed",
+  not_assessed: "Not assessed"
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   match: "text-verdict-match bg-verdict-match/10",
   gap: "text-verdict-gap bg-verdict-gap/10",
   exceed: "text-verdict-exceed bg-verdict-exceed/10",
-  not_assessed: "text-verdict-unknown bg-verdict-unknown/10",
+  not_assessed: "text-verdict-unknown bg-verdict-unknown/10"
 };

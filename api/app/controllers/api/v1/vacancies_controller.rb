@@ -72,13 +72,13 @@ module Api
 
       def vacancy_json(vacancy)
         {
-          id:                       vacancy.id,
-          role_title:               vacancy.role_title,
-          culture_dimensions:       vacancy.culture_dimensions,
-          competency_expectations:  vacancy.competency_expectations,
-          created_by:               vacancy.created_by,
-          created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
+          id: vacancy.id,
+          role_title: vacancy.role_title,
+          culture_dimensions: vacancy.culture_dimensions,
+          competency_expectations: vacancy.competency_expectations,
+          created_by: vacancy.created_by,
+          created_at: vacancy.created_at,
+          updated_at: vacancy.updated_at
         }
       end
 
@@ -96,24 +96,24 @@ module Api
 
       def vacancy_skill_json(skill, taxonomy)
         {
-          id:             skill.id,
-          skill_id:       skill.skill_id,
-          skill_label:    skill.skill_label,
+          id: skill.id,
+          skill_id: skill.skill_id,
+          skill_label: skill.skill_label,
           expected_level: skill.expected_level,
-          l1_anchor:      taxonomy&.l1_anchor,
-          l2_anchor:      taxonomy&.l2_anchor,
-          l3_anchor:      taxonomy&.l3_anchor,
-          l4_anchor:      taxonomy&.l4_anchor,
-          l5_anchor:      taxonomy&.l5_anchor
+          l1_anchor: taxonomy&.l1_anchor,
+          l2_anchor: taxonomy&.l2_anchor,
+          l3_anchor: taxonomy&.l3_anchor,
+          l4_anchor: taxonomy&.l4_anchor,
+          l5_anchor: taxonomy&.l5_anchor
         }
       end
 
       def pagination_meta(collection)
         {
           current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
+          total_pages: collection.total_pages,
+          total_count: collection.total_count,
+          per_page: collection.limit_value
         }
       end
     end

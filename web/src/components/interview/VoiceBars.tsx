@@ -15,19 +15,18 @@ export default function VoiceBars({ active, label, variant = "ai", className }: 
       <div className="flex items-end gap-1 h-10">
         {Array.from({ length: barCount }).map((_, i) => (
           <div
+            // oxlint-disable-next-line no-array-index-key
             key={i}
             className={cn(
               "w-1.5 rounded-full transition-all",
               variant === "ai" ? "bg-primary" : "bg-secondary",
-              active
-                ? "animate-voice-bar"
-                : "h-1 opacity-30"
+              active ? "animate-voice-bar" : "h-1 opacity-30"
             )}
             style={
               active
                 ? {
                     animationDelay: `${i * 0.1}s`,
-                    animationDuration: `${0.6 + (i % 3) * 0.2}s`,
+                    animationDuration: `${0.6 + (i % 3) * 0.2}s`
                   }
                 : undefined
             }

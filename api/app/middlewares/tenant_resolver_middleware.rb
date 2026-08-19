@@ -34,16 +34,16 @@ class TenantResolverMiddleware < ApplicationMiddleware
     # 1. Try JWT bearer token first
     scheme_from_jwt(request) ||
       # 2. Try explicit header
-      request.headers['X-Tenant-Scheme'].presence ||
+      request.headers["X-Tenant-Scheme"].presence ||
       # 3. Fall back to referer host
       scheme_from_referer(request)
   end
 
   def scheme_from_jwt(request)
-    auth_header = request.headers['Authorization'].to_s
-    return unless auth_header.start_with?('Bearer ', 'bearer ')
+    auth_header = request.headers["Authorization"].to_s
+    return unless auth_header.start_with?("Bearer ", "bearer ")
 
-    token = auth_header.split(' ').last
+    token = auth_header.split.last
     claims = JsonWebToken.decode_without_verification(token)
     claims[:scheme].presence
   rescue StandardError
