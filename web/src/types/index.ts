@@ -1,3 +1,6 @@
+/** Matches api User::ROLES (`app/models/user.rb`). */
+export type UserRole = "admin" | "user";
+
 export interface Assessment {
   id: number;
   name: string;
@@ -85,15 +88,18 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export type PortfolioSkillStatus = "rated" | "not_assessed";
+
 export interface PortfolioSkill {
   id: number;
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  status: PortfolioSkillStatus;
+  ai_level: string | null;
+  ai_confidence: string | null;
   evidence: string[];
-  competency_summary: string;
+  competency_summary: string | null;
 }
 
 export interface AssessorOverride {
