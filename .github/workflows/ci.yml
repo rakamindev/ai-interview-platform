@@ -55,6 +55,7 @@ jobs:
         with:
           ruby-version: "3.3.2"
           bundler-cache: true
+          working-directory: api
       - name: Prepare test database
         run: |
           bundle exec rails db:create db:schema:load
