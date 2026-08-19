@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ImportSkillsFromAssessmentDialog from "@/components/vacancies/ImportSkillsFromAssessmentDialog";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, Import } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -23,6 +24,7 @@ export default function VacancyNewPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
@@ -98,9 +100,14 @@ export default function VacancyNewPage() {
             </div>
           )}
 
-          <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add skill expectation
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add skill expectation
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Import className="h-3.5 w-3.5 mr-1" /> Import from Assessment
+            </Button>
+          </div>
         </div>
 
         <Separator />
@@ -140,6 +147,16 @@ export default function VacancyNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+      />
+
+      <ImportSkillsFromAssessmentDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={(skills) => {
+          skills.forEach((s) =>
+            append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: s.expected_level })
+          );
+        }}
       />
     </div>
   );

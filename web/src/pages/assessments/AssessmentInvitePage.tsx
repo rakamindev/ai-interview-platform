@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, RefreshCw } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -24,17 +25,22 @@ function SessionRow({
   assessmentId,
   onCopy,
   copiedId,
+  onExtend,
+  extendingId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
   copiedId: number | null;
+  onExtend: (id: number) => void;
+  extendingId: number | null;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  const isExpired = isPending && !!session.invite_expires_at && new Date(session.invite_expires_at) < new Date();
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
@@ -54,7 +60,13 @@ function SessionRow({
       </div>
 
       <div className="flex items-center gap-3">
-        {isPending && (
+        {isPending && isExpired && (
+          <span className="flex items-center gap-1 text-xs text-destructive">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+            Invite expired
+          </span>
+        )}
+        {isPending && !isExpired && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
@@ -80,7 +92,19 @@ function SessionRow({
         )}
 
         <div className="flex items-center gap-1.5">
-          {isPending && (
+          {isPending && isExpired && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={extendingId === session.id}
+              onClick={() => onExtend(session.id)}
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              {extendingId === session.id ? "Extending..." : "Resend / Extend"}
+            </Button>
+          )}
+          {isPending && !isExpired && (
             <Button
               variant="ghost"
               size="sm"
@@ -129,6 +153,7 @@ export default function AssessmentInvitePage() {
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [extendingId, setExtendingId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
@@ -179,6 +204,17 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(session.invite_url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleExtend = async (id: number) => {
+    setExtendingId(id);
+    try {
+      const res = await sessionsApi.extendInvite(id);
+      const updated = res.data.session;
+      setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    } finally {
+      setExtendingId(null);
+    }
   };
 
   const copyNewSessionLink = () => {
@@ -313,6 +349,8 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onExtend={handleExtend}
+                  extendingId={extendingId}
                 />
               ))}
             </CardContent>

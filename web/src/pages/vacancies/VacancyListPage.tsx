@@ -3,14 +3,25 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { vacanciesApi } from "@/services/vacancies";
-import { Plus, Briefcase, ChevronRight } from "lucide-react";
+import { Plus, Briefcase, ChevronRight, Trash2 } from "lucide-react";
 import type { Vacancy } from "@/types";
 
 export default function VacancyListPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Vacancy | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +30,13 @@ export default function VacancyListPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    await vacanciesApi.delete(pendingDelete.id);
+    setVacancies((prev) => prev.filter((v) => v.id !== pendingDelete.id));
+    setPendingDelete(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -59,12 +77,49 @@ export default function VacancyListPage() {
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium text-sm">{v.role_title}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPendingDelete(v);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this vacancy?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete && pendingDelete.fit_gap_reports_count! > 0 ? (
+                <>
+                  This vacancy has <strong>{pendingDelete.fit_gap_reports_count} fit-gap report{pendingDelete.fit_gap_reports_count === 1 ? "" : "s"}</strong> generated
+                  against it. Deleting the vacancy will permanently delete{" "}
+                  {pendingDelete.fit_gap_reports_count === 1 ? "that report" : "those reports"} too — this cannot be undone.
+                </>
+              ) : (
+                "This cannot be undone."
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

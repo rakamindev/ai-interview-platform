@@ -76,7 +76,8 @@ module Api
           competency_expectations:  vacancy.competency_expectations,
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
+          updated_at:               vacancy.updated_at,
+          fit_gap_reports_count:    vacancy.fit_gap_reports.count
         }
       end
 

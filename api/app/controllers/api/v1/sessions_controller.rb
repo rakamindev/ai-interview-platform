@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session extend_invite coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -77,6 +77,16 @@ module Api
         end
       end
 
+      # POST /api/v1/sessions/:id/extend_invite
+      def extend_invite
+        unless @session.pending?
+          return json_error("Only a pending invite can be extended", :unprocessable_entity)
+        end
+
+        @session.extend_invite!
+        json_response(session: session_json(@session))
+      end
+
       # GET /api/v1/sessions/:id/coverage
       def coverage
         maps       = @session.coverage_maps.configured.order(:id)
@@ -117,7 +127,8 @@ module Api
       # Ends the session if all coverage is complete; idempotent if already ended.
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
-        return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Invite token not found", :not_found, code: 'invite_not_found') unless session
+        return json_error("Invite has expired", :not_found, code: 'invite_expired') if session.invite_expired?
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
@@ -133,7 +144,11 @@ module Api
         session = Session.unscoped.find_by(invite_token: params[:token])
 
         unless session
-          return json_error("Invalid or expired invite token", :not_found)
+          return json_error("Invite token not found", :not_found, code: 'invite_not_found')
+        end
+
+        if session.invite_expired?
+          return json_error("Invite has expired", :not_found, code: 'invite_expired')
         end
 
         # Resolve tenant from the session's own tenant_id so we can load the assessment
@@ -149,7 +164,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          candidate_name:  session.candidate_name
         )
       end
 
@@ -163,19 +179,20 @@ module Api
 
       def session_json(session)
         {
-          id:               session.id,
-          assessment_id:    session.assessment_id,
-          tenant_id:        session.tenant_id,
-          candidate_id:     session.candidate_id,
-          candidate_name:   session.candidate_name,
-          invite_token:     session.invite_token,
-          invite_url:       session.invite_url,
-          status:           session.status,
-          end_reason:       session.end_reason,
-          started_at:       session.started_at,
-          ended_at:         session.ended_at,
-          duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          id:                session.id,
+          assessment_id:     session.assessment_id,
+          tenant_id:         session.tenant_id,
+          candidate_id:      session.candidate_id,
+          candidate_name:    session.candidate_name,
+          invite_token:      session.invite_token,
+          invite_url:        session.invite_url,
+          invite_expires_at: session.invite_expires_at,
+          status:            session.status,
+          end_reason:        session.end_reason,
+          started_at:        session.started_at,
+          ended_at:          session.ended_at,
+          duration_seconds:  session.duration_seconds,
+          created_at:        session.created_at
         }
       end
 

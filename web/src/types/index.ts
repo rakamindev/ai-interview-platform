@@ -8,6 +8,7 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
+  has_sessions?: boolean;
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
@@ -39,6 +40,7 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
+  invite_expires_at?: string;
   status: "pending" | "active" | "ended";
   end_reason?: string;
   started_at?: string;
@@ -115,6 +117,7 @@ export interface Vacancy {
   created_at?: string;
   updated_at?: string;
   skills: VacancySkill[];
+  fit_gap_reports_count?: number;
 }
 
 export interface VacancySkill {
@@ -164,6 +167,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  candidate_name: string | null;
 }
 
 export interface PaginationMeta {
@@ -182,7 +186,9 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "expired"
+  | "invalid";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
