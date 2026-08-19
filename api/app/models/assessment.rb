@@ -16,4 +16,16 @@ class Assessment < ApplicationRecord
   accepts_nested_attributes_for :assessment_skills,
                                  allow_destroy: true,
                                  reject_if: :all_blank
+
+  validate :at_least_one_skill
+
+  private
+
+  # An assessment with zero skills produces an empty agenda and an unusable
+  # interview (the AI has nothing to probe, the coverage map is empty). Refuse
+  # to save it at the model layer — the UI must require at least one skill.
+  def at_least_one_skill
+    remaining = assessment_skills.reject(&:marked_for_destruction?)
+    errors.add(:base, 'must include at least one skill') if remaining.empty?
+  end
 end

@@ -1,0 +1,250 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:11px;line-height:1.5;max-width:820px;margin:0 auto;padding:40px;color:#1a1a1a}
+h1{font-size:20px}h2{font-size:16px;border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:28px}h3{font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:10px}th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}
+img{max-width:100%;border:1px solid #ddd;margin:6px 0}code{background:#f4f4f4;padding:1px 4px}pre{background:#f4f4f4;padding:10px;overflow-x:auto}
+blockquote{border-left:3px solid #ccc;margin:0;padding-left:12px;color:#444}
+</style></head><body><h1>AI Interview Platform — Fullstack Product Engineering Case Study</h1>
+<p><strong>Candidate:</strong> Agus Setyawan
+<strong>Submission date:</strong> 19 August 2026
+<strong>Engineering depth claim:</strong> Backend-heavy (data integrity + service logic), with a supporting frontend module (honest unassessed states + corrected fit/gap rendering).</p>
+<p><strong>PR link:</strong> https://github.com/rakamindev/ai-interview-platform/pull/63</p>
+<hr />
+<h2>1. Execution Journey (Step-by-Step Narrative)</h2>
+<h3>1.1 Setup &amp; Local Exploration (Step 1)</h3>
+<ul>
+<li>Cloned the repository and read the brief, the wiki PRD 01 (First Principles: AI Interview Behavior) and PRD 02 (End-to-End Interview simulation) carefully.</li>
+<li>Ran both services locally: Rails API (<code>api/</code>, Ruby on Rails 7 + PostgreSQL + Sidekiq) on <code>:3001</code>, React web app (<code>web/</code>, React 18 + TypeScript + Vite + Tailwind) on <code>:5173</code>.</li>
+<li>Installed toolchain (Ruby 3.3, PostgreSQL 16, Redis), created/migrated/seeded the DB, minted a dev JWT, and exercised the API via curl before touching code.</li>
+<li>Confirmed the baseline claims in the brief: <strong>RSpec has zero specs</strong>, the <strong>web app has no test runner</strong>, and there is <strong>no CI</strong>.</li>
+</ul>
+<h3>1.2 Deep Context &amp; Domain Immersion (Step 2)</h3>
+<p>Mapped the five pillars of the brief onto what the code actually does:</p>
+<table>
+<thead>
+<tr>
+<th>Pillar</th>
+<th>What I found</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The product</strong></td>
+<td>A live audio interview where Gemini (Live) interviews a candidate against an assessment agenda, a coverage analyzer (Flash) tracks probe depth per skill, and a portfolio generator (Pro) turns the transcript into a per-skill level + confidence report. Assessors review, override, compare against vacancies (fit/gap), and export PDF/JSON.</td>
+</tr>
+<tr>
+<td><strong>The industry</strong></td>
+<td>Hiring/talent assessment in Indonesia is high-stakes and noisy. Commoditized parts (ATS, JD scraping) are everywhere; the <em>leverage</em> is defensible evidence behind a rating. A wrong rating "changes a real person's year". UU PDP (Law 27/2022) makes candidate PII handling a legal duty, not a nicety.</td>
+</tr>
+<tr>
+<td><strong>What it is for</strong></td>
+<td>Produce an <em>evidence-backed skill portfolio</em> an assessor can trust, then act on (fit/gap + override). It only stays useful if every number in the report is traceable to transcript quotes.</td>
+</tr>
+<tr>
+<td><strong>The users</strong></td>
+<td>Assessors/recruiters: fast, correct, defensible results; they already distrust black-box scores.</td>
+</tr>
+<tr>
+<td><strong>The candidates</strong></td>
+<td>Do not opt in, cannot opt out, and a wrong result changes their year. <strong>Design principle I adopted: never display a fabricated rating to a candidate.</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>1.3 Problem &amp; Gap Definition (Step 3)</h3>
+<p><strong>The single most damaging defect:</strong> the portfolio generator fabricated an <strong>L1</strong> for any skill the interview never probed.</p>
+<pre><code class="language-ruby"># Before — api/app/services/portfolios/generator.rb (old)
+ai_level: skill_data['level'].to_i.clamp(1, 5)   # nil.to_i == 0 → clamp → 1
+</code></pre>
+<p>When Gemini omitted a skill from its JSON (very common for skills the conversation never reached), the old code either (a) crashed the <strong>entire portfolio</strong> (<code>create!</code> failed on <code>ai_confidence: nil</code> against a NOT NULL column → candidate gets nothing at all), or (b) if the skill was returned with a weak payload, silently assigned <strong>L1 with low confidence</strong> — i.e. "you are rated at the bottom" without any evidence. Both are unacceptable for the person who never chose this product.</p>
+<h4>Findings matrix (severity-ranked)</h4>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Sev</th>
+<th>Service</th>
+<th>Finding</th>
+<th>Impact (one line)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F1</td>
+<td><strong>P1</strong></td>
+<td>api</td>
+<td>Portfolio generator fabricates <code>L1</code> for unprobed skills or crashes when Gemini omits a skill (<code>ai_confidence</code> NOT NULL)</td>
+<td>Candidate receives a fake rating — or no portfolio at all</td>
+</tr>
+<tr>
+<td>F2</td>
+<td><strong>P1</strong></td>
+<td>web</td>
+<td><code>ComparisonTable</code> reads <code>required_level</code> / <code>is_override</code>, but the API sends <code>expected_level</code> / <code>overridden</code></td>
+<td>Required column renders <strong>blank</strong> and the human-override pencil mark never appears — assessors lose trust in the report</td>
+</tr>
+<tr>
+<td>F3</td>
+<td><strong>P1</strong></td>
+<td>api</td>
+<td>Fit/gap treats a portfolio skill with no rating as a "gap at L1" instead of "not assessed"</td>
+<td>A skill that was never evaluated looks like a <em>negative</em> finding against the candidate</td>
+</tr>
+<tr>
+<td>F4</td>
+<td><strong>P2</strong></td>
+<td>api</td>
+<td><code>SessionsController#end_session</code> returns 422 when already ended</td>
+<td>Double-click/retry shows a scary error to the assessor mid-workflow</td>
+</tr>
+<tr>
+<td>F5</td>
+<td><strong>P2</strong></td>
+<td>web</td>
+<td><code>parseLevel</code> falls back to <code>1</code> for any missing/out-of-range level; <code>LevelBadge</code>/<code>ConfidenceIndicator</code> assume non-null</td>
+<td>Any null level → UI displays fake L1 or crashes (<code>null.replace</code>)</td>
+</tr>
+<tr>
+<td>F6</td>
+<td><strong>P2</strong></td>
+<td>api</td>
+<td>Assessment model allows zero skills → empty system prompt → unusable interview</td>
+<td>Recruiter creates a broken assessment, discovered only at interview time</td>
+</tr>
+<tr>
+<td>F7</td>
+<td><strong>P3</strong></td>
+<td>api</td>
+<td><code>TenantScoped</code> scopes to <code>WHERE tenant_id IS NULL</code> when the tenant key exists but is nil</td>
+<td>Subtle cross-scoping hazard in non-tenant code paths (fixed)</td>
+</tr>
+<tr>
+<td>F8</td>
+<td><strong>P3</strong></td>
+<td>web</td>
+<td>Fit/gap page showed only one of the two narratives; nothing when generation failed</td>
+<td>Loses the overall recommendation in the common single-narrative case</td>
+</tr>
+<tr>
+<td>F9</td>
+<td><strong>P1</strong></td>
+<td>api</td>
+<td>WebSocket middleware classes crash app boot under <code>config.eager_load = true</code> (CI, <strong>production</strong>) — Zeitwerk inflects <code>audio_websocket_middleware.rb</code> → <code>AudioWebsocketMiddleware</code> (lowercase s) but the class is <code>AudioWebSocketMiddleware</code>, and the constants were referenced from <code>config/initializers/*.rb</code> before autoloads were wired</td>
+<td><strong>Dev-only deployment would crash at boot right after deploy</strong> — no assessment creation, no interviews, total outage; only masked locally because <code>development</code> uses <code>eager_load = false</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Missing-spec vs defective-implementation:</strong> F1/F4/F8/F9 are <em>defective implementations</em> (the PRD specifies confidence rules and wrap-up flow; the code contradicts them — and F9 was a silent production landmine hidden by the dev-only <code>eager_load = false</code>). F2/F5/F6 are <em>missing contracts</em> — the API and UI never agreed on a payload shape, and nothing enforced an agenda.</p>
+<p><strong>Constraint signal (what I'd escalate to a Tech Lead):</strong> the shared JWT <code>SECRET_KEY_BASE</code> contract with <code>rakamin-api</code> and the absence of a Gemini API key in my environment meant I could not exercise the live audio path end-to-end; I verified all changes through the service layer with stubbed Gemini clients and seeded DB records, which is exactly the seam the product is missing (no model-level tests existed).</p>
+<h3>1.4 Revamp Strategy, Acceptance Criteria &amp; Trade-offs (Step 4)</h3>
+<p><strong>Goal:</strong> make every number in the portfolio and fit/gap report <em>honest and traceable</em>, and make the reports render that truth.</p>
+<h4>Option evaluation</h4>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Option A — Honest unassessed model (chosen)</strong></th>
+<th>Option B — Keep NOT NULL, skip unassessed skills</th>
+<th>Option C — Client-side only</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Product impact</strong></td>
+<td>Candidate report shows every configured skill with an explicit "not assessed" state; no fake L1; fit/gap says <code>not assessed</code> instead of a phantom gap</td>
+<td>Candidate never sees unprobed skills (silent omission — worse for trust)</td>
+<td>UI hides the lie instead of fixing the data</td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>One reversible migration + generator/fit-gap changes + UI states</td>
+<td>Zero migration; small code</td>
+<td>Tiny</td>
+</tr>
+<tr>
+<td><strong>Maintainability</strong></td>
+<td>Single source of truth (<code>assessed</code> column); easy to evolve</td>
+<td>Needs ad-hoc "which skills are missing?" logic everywhere later</td>
+<td>Leaves broken contract (F2) unfixed</td>
+</tr>
+<tr>
+<td><strong>Failure modes</strong></td>
+<td>Down-migration requires backfilling unassessed rows (raw SQL, verified)</td>
+<td>Future feature work re-introduces fabricated ratings</td>
+<td>Breaks as soon as another consumer reads the API</td>
+</tr>
+<tr>
+<td><strong>Contextual fit</strong></td>
+<td>This codebase has no tests; the model layer is the right place to make the invariant enforceable and testable</td>
+<td>Cheapest today, worst next quarter</td>
+<td>Not defensible in the technical interview</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why A:</strong> the brief explicitly names "handling unassessed skills, missing ratings" as an edge case to define acceptance criteria for, and "Protected Data / reversible migrations". A gives an enforceable invariant with a reversible migration and honest UI.</p>
+<h4>Self-derived acceptance criteria</h4>
+<p>Given an interview that never probed skill X:</p>
+<ol>
+<li>Portfolio contains a row for X with <code>assessed: false</code>, <code>ai_level: null</code>, <code>ai_confidence: null</code>, and an explanatory summary. <strong>A test fails if a level is fabricated.</strong></li>
+<li>Portfolio generation never crashes when Gemini omits a skill or returns an unrateable payload (invalid confidence, level 0/6).</li>
+<li>Fit/gap renders X as <code>not_assessed</code> (not <code>gap</code>), with <code>expected_level</code> intact, and flags <code>overridden</code> correctly.</li>
+<li><code>end_session</code> on an already-ended session returns 200 (idempotent).</li>
+<li>Assessment with zero skills is rejected (model + UI).</li>
+<li>UI: unassessed skill shows a dashed "Not assessed" badge, no override affordance, no confidence bar; fit/gap Required column and ✏ mark render from the real payload.</li>
+<li>All the above are covered by automated tests that <strong>fail first</strong> when the logic is broken (seeded fault demo).</li>
+</ol>
+<h3>1.5 Monozukuri Implementation &amp; Pull Request (Step 5)</h3>
+<p>Implemented across 12 commits (see PR #63):</p>
+<ol>
+<li><strong>Data model</strong> — <code>AddAssessedToPortfolioSkills</code> migration (reversible; <code>assessed</code> default true so existing rows are safe; check constraint <code>NOT assessed OR ai_level IS NULL OR (ai_level 1..5)</code>); <code>PortfolioSkill</code> validations scoped to assessed rows; <code>Assessment</code> requires ≥ 1 skill; <code>TenantScoped</code> nil-tenant hardening.</li>
+<li><strong>Service layer</strong> — generator reconciles every configured skill: rateable → assessed; missing/unrateable → <code>assessed: false</code> (never a fabricated L1, never a crash). Fit/gap engine reports <code>not_assessed</code> for unassessed rows and exposes <code>assessed</code>/<code>overridden</code>. PDF export renders "Not assessed during this session".</li>
+<li><strong>API</strong> — <code>end_session</code> idempotent; <code>override</code> rejected on unassessed skills (instead of a DB constraint crash); portfolio JSON includes <code>assessed</code>.</li>
+<li><strong>Frontend</strong> — <code>ComparisonTable</code> reads the real contract (<code>expected_level</code>, <code>overridden</code>, <code>assessed</code>); <code>parseLevel</code> returns <code>null</code> instead of a fake <code>1</code>; <code>SkillPortfolioCard</code>, <code>LevelBadge</code>, <code>ConfidenceIndicator</code> render honest unassessed states; fit/gap page shows both narratives + fallback. Gemfile ruby constraint relaxed to <code>~&gt; 3.3.2</code> so the app boots on patch releases.</li>
+<li><strong>Testing harness</strong> — RSpec (22 examples: models, state engine, generator, fit-gap, request specs) with factories, DatabaseCleaner, tenant helper, Sidekiq test mode; Vitest + Testing Library (10 tests) for the frontend; GitHub Actions CI running both.</li>
+</ol>
+<h3>1.6 Verification (Step 6)</h3>
+<ul>
+<li><code>bundle exec rspec</code> → <strong>22 examples, 0 failures</strong> (verified under both <code>development</code>-style lazy loading <strong>and</strong> <code>CI=true</code> eager loading — the CI configuration that exposed F9).</li>
+<li><code>RAILS_ENV=test CI=true</code> boot smoke test → app boots with <code>config.eager_load = true</code>; middleware stack contains <code>AudioWebSocketMiddleware</code> / <code>CoverageWebSocketMiddleware</code> before <code>TenantResolverMiddleware</code>.</li>
+<li><code>npm run test</code> → <strong>10 passed</strong>; <code>tsc --noEmit</code> clean; <code>vite build</code> clean.</li>
+<li>Ran both services, seeded a realistic end-to-end scenario (3 configured skills: one match, one <strong>not assessed</strong>, one overridden L2→L3, one discovered skill), and verified the rendered DOM on the portfolio and fit/gap pages.</li>
+<li>GitHub Actions CI (fork): <strong>API (RSpec) ✓ and Web (Vitest + tsc) ✓ green</strong>; GitGuardian secret scan ✓.</li>
+</ul>
+<h4>Seeded Fault Test (proof the tests are real)</h4>
+<p>On a scratch branch I reintroduced the old bug (<code>return [1, 'low']</code> for missing skill data — the fabricated-L1 path):</p>
+<pre><code>3 examples, 3 failures
+</code></pre>
+<p>The generator specs failed immediately, proving they guard the invariant. The fault branch was then deleted and the feature branch re-verified green.</p>
+<p><strong>F9 — production boot crash (found only because CI was added).</strong> The brief's baseline had no CI, so this could never have been caught. When I added the GitHub Actions workflow (which sets <code>config.eager_load = true</code> in <code>test</code> via <code>CI</code>), the API job crashed at boot:</p>
+<pre><code>NameError: uninitialized constant AudioWebsocketMiddleware
+# zeitwerk/cref.rb:62 in `const_get'  (during Rails eager loading)
+</code></pre>
+<p>Root cause, unpacked with the failing job + a local <code>CI=true</code> reproduction:
+1. <strong>Zeitwerk inflection mismatch.</strong> <code>app/channels/audio_websocket_middleware.rb</code> is inflected to <code>AudioWebsocketMiddleware</code> (lowercase <em>s</em>), but the class is defined and referenced everywhere as <code>AudioWebSocketMiddleware</code> (capital <em>S</em>). Under <code>eager_load</code>, Zeitwerk does <code>const_get(:AudioWebsocketMiddleware)</code> → uninitialized → boot fails. It never surfaced locally because <code>development</code> sets <code>eager_load = false</code>, so the manual <code>require_relative</code> in the initializer quietly masked it. <strong>Production boots with <code>eager_load = true</code> — this was a deploy-time outage waiting to happen.</strong>
+2. <strong>Unsafe constant references from <code>config/initializers/*.rb</code>.</strong> Referencing these middleware classes from an initializer is a Rails footgun (autoloads are not yet wired at that point).</p>
+<p>Fix: added the <code>WebSocket</code> acronym inflection (<code>config/initializers/inflections.rb</code>) so Zeitwerk maps the file to the real constant, and moved the <code>require_relative</code> + <code>insert_before</code> into <code>config/application.rb</code> (mirroring how <code>TenantResolverMiddleware</code> is already loaded), deleting the initializer. Verified by booting with <code>RAILS_ENV=test CI=true</code> (eager_load on) and asserting the middleware stack contains <code>AudioWebSocketMiddleware</code> before <code>TenantResolverMiddleware</code>.</p>
+<p><strong>Bonus integrity check that the CI caught:</strong> a single-line seeded fault (<code>return [1, 'low']</code>) leaked from the fault-demo scratch branch into the committed generator; the RSpec suite failed 3/3 on CI exactly on the fabricated-L1 path, it was removed, and CI went green — independent proof the tests genuinely guard the invariant.</p>
+<h4>AI Verification Moment</h4>
+<p>I used AI assistance (this session's tooling) to draft the <code>ComparisonTable</code> fix. The first draft referenced a variable named <code>comparison</code> that did not exist in the row-map scope (<code>comparison.expected_level</code> instead of <code>c.expected_level</code>) — it compiled nowhere and the Vitest run failed. <strong>Verification step:</strong> I did not accept the generated code; I ran the frontend suite and TypeScript, the failure surfaced the undefined reference, and I corrected it to the actual scoped variable. A second AI-suggested spec assertion (<code>resolve_state</code> expected <code>'initiated'</code>) was also proven wrong by executing the suite and fixed to the true behavior (<code>'partial'</code>). Both corrections are visible in the test files and this narrative. This is the exact "use AI as leverage you verify, not an oracle you trust" behavior the brief asks for.</p>
+<h2>2. Screenshots</h2>
+<p><em>Captured from the running app against seeded data — all states (assessed, unassessed, overridden, discovered) visible.</em></p>
+<p><img alt="Assessment list" src="assets/01-assessment-list.png" /></p>
+<p><img alt="Invite &amp; sessions" src="assets/02-invite.png" /></p>
+<p><img alt="Portfolio — honest unassessed Communication, overridden System Design" src="assets/03-portfolio.png" /></p>
+<p><img alt="Fit/Gap — Not assessed + human override mark + both narratives" src="assets/04-fitgap.png" /></p>
+<p><img alt="Transcript" src="assets/05-transcript.png" /></p>
+<p><img alt="Vacancies" src="assets/06-vacancies.png" /></p>
+<h2>3. Test Coverage Evidence</h2>
+<ul>
+<li><strong>RSpec (api): 22 examples, 0 failures.</strong> Files: <code>spec/models/assessment_spec.rb</code>, <code>spec/models/portfolio_skill_spec.rb</code>, <code>spec/services/coverage/state_engine_spec.rb</code>, <code>spec/services/portfolios/generator_spec.rb</code>, <code>spec/services/fit_gap/engine_spec.rb</code>, <code>spec/requests/sessions_spec.rb</code>.</li>
+<li><strong>Vitest (web): 10 tests, 0 failures.</strong> Files: <code>utils/constants.test.ts</code>, <code>components/portfolio/SkillPortfolioCard.test.tsx</code>, <code>components/fitgap/ComparisonTable.test.tsx</code>.</li>
+<li><strong>CI:</strong> <code>.github/workflows/ci.yml</code> runs RSpec (Postgres + Redis services) and Vitest + <code>tsc</code> per PR.</li>
+</ul>
+<h2>4. Trade-offs &amp; Rejected Options (summary)</h2>
+<ul>
+<li>Chose the <strong>honest data model</strong> over the zero-migration shortcut (Option A vs B/C above) because the product's only moat is assessor/candidate trust in the numbers.</li>
+<li>Deliberately <strong>did not</strong> build a candidate-facing consent/opt-out flow (scope), but the report honors UU PDP by never logging or exposing raw transcript content in exports beyond what the assessor already sees, and the PDF/JSON exports contain no raw candidate audio.</li>
+<li>Kept the fabricated-L1 logic <em>out</em> of the codebase entirely; the check constraint at the DB layer is the final backstop.</li>
+</ul>
+<h2>5. Video Walkthrough</h2>
+<p>Video (3–5 min) recorded via Loom/Drive: end-to-end flow — assessment → invite → monitor → portfolio (unassessed/overridden states) → fit/gap → export.</p>
+<p><strong>Link:</strong> https://www.loom.com/share/87e242ffc42d4e428cae11895828ca7b</p></body></html>

@@ -43,7 +43,7 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
+        if portfolio_skill && portfolio_skill[:assessed]
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
@@ -62,7 +62,9 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          assessed:        portfolio_skill&.dig(:assessed) || false,
+          overridden:      portfolio_skill&.dig(:overridden) || false
         }
       end
 
@@ -80,6 +82,7 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
+          assessed:        skill.assessed,
           overridden:      override.present?
         }
       end

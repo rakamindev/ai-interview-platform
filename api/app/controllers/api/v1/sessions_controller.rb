@@ -58,8 +58,10 @@ module Api
 
       # POST /api/v1/sessions/:id/end
       def end_session
+        # Idempotent: a repeated end call from a double-clicked button or a
+        # retried request should not surface as a 422 error to the assessor.
         if @session.ended?
-          return json_error("Session is already ended", :unprocessable_entity)
+          return json_response(session: session_json(@session))
         end
 
         reason = params.dig(:session, :reason) || "manual_assessor"

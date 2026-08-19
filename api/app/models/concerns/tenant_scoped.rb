@@ -14,9 +14,12 @@ module TenantScoped
   extend ActiveSupport::Concern
 
   included do
-    # Default scope: filter by current tenant
+    # Default scope: filter by current tenant. Only applies when a tenant is
+    # actually set — a mere key with a nil value must not produce
+    # WHERE tenant_id IS NULL (which would silently empty every query).
     default_scope do
-      if RequestStore.store.key?(:tenant_id)
+      tenant_id = RequestStore.store[:tenant_id]
+      if tenant_id
         where(tenant_id: Current.tenant_id)
       else
         all
