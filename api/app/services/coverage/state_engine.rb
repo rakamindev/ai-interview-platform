@@ -18,7 +18,7 @@ module Coverage
       return false unless VALID_TRANSITIONS[from]&.include?(to)
 
       # HARD RULE: cannot advance past initiated without at least 2 probes
-      if to == 'partial' || to == 'covered'
+      if %w[partial covered].include?(to)
         return false if probe_count < 2
       end
 

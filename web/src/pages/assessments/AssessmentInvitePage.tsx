@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -14,8 +14,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
+import SystemPromptPreview from "@/components/assessment/SystemPromptPreview";
+import ErrorRetryState from "@/components/layout/ErrorRetryState";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  ShieldOff,
+  FileText,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -24,17 +38,23 @@ function SessionRow({
   assessmentId,
   onCopy,
   copiedId,
+  onRevoke,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
   copiedId: number | null;
+  onRevoke: (session: Session) => void;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  const isRevoked = session.revoked ?? false;
+  const isExpired =
+    session.expired ?? (session.expires_at ? new Date(session.expires_at) < new Date() : false);
+  const inviteUnavailable = isRevoked || isExpired;
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
@@ -54,7 +74,19 @@ function SessionRow({
       </div>
 
       <div className="flex items-center gap-3">
-        {isPending && (
+        {isRevoked && (
+          <span className="flex items-center gap-1 text-xs text-destructive">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+            Revoked
+          </span>
+        )}
+        {!isRevoked && isExpired && isPending && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+            Expired
+          </span>
+        )}
+        {isPending && !inviteUnavailable && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
@@ -80,7 +112,7 @@ function SessionRow({
         )}
 
         <div className="flex items-center gap-1.5">
-          {isPending && (
+          {isPending && !inviteUnavailable && (
             <Button
               variant="ghost"
               size="sm"
@@ -88,10 +120,24 @@ function SessionRow({
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
+                <>
+                  <Check className="h-3 w-3 mr-1" /> Copied
+                </>
               ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                <>
+                  <Copy className="h-3 w-3 mr-1" /> Copy link
+                </>
               )}
+            </Button>
+          )}
+          {isPending && !inviteUnavailable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+              onClick={() => onRevoke(session)}
+            >
+              <ShieldOff className="h-3 w-3 mr-1" /> Revoke
             </Button>
           )}
           {isLive && (
@@ -99,7 +145,9 @@ function SessionRow({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
+              onClick={() =>
+                navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)
+              }
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
@@ -109,9 +157,23 @@ function SessionRow({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              onClick={() =>
+                navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)
+              }
             >
               Results
+            </Button>
+          )}
+          {isEnded && session.end_reason !== "error" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() =>
+                navigate(`/assessments/${assessmentId}/sessions/${session.id}/transcript`)
+              }
+            >
+              <FileText className="h-3 w-3 mr-1" /> Transcript
             </Button>
           )}
         </div>
@@ -123,9 +185,12 @@ function SessionRow({
 export default function AssessmentInvitePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -138,15 +203,33 @@ export default function AssessmentInvitePage() {
     setSessions(res.data.sessions);
   }, [id]);
 
-  useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [aRes, sRes] = await Promise.all([
+        assessmentsApi.get(Number(id)),
+        assessmentsApi.getSessions(Number(id)),
+      ]);
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
+
+  // Surface an invite link created together with the assessment
+  // ("Save & Create Invite Link" on the new-assessment form).
+  useEffect(() => {
+    const created = (location.state as { createdSession?: Session } | null)?.createdSession;
+    if (created?.invite_url) setNewSession(created);
+  }, [location.state]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -166,7 +249,10 @@ export default function AssessmentInvitePage() {
     setShowInviteDialog(false);
     setNewSession(null);
     try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
+      const res = await assessmentsApi.createSession(
+        Number(id),
+        candidateNameInput.trim() || undefined,
+      );
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
@@ -176,17 +262,36 @@ export default function AssessmentInvitePage() {
   };
 
   const copyLink = (session: Session, id: number) => {
-    navigator.clipboard.writeText(session.invite_url);
+    void navigator.clipboard.writeText(session.invite_url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const copyNewSessionLink = () => {
     if (!newSession?.invite_url) return;
-    navigator.clipboard.writeText(newSession.invite_url);
+    void navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
+
+  const handleRevoke = (session: Session) => {
+    if (!window.confirm("Revoke this invite? The link will stop working immediately.")) return;
+    setActionError(null);
+    sessionsApi
+      .revoke(session.id)
+      .then((res) => {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === res.data.session.id ? res.data.session : s)),
+        );
+      })
+      .catch(() => setActionError("Failed to revoke the invite. Please try again."));
+  };
+
+  if (loadError) {
+    return (
+      <ErrorRetryState message="Failed to load this assessment." onRetry={() => void loadAll()} />
+    );
+  }
 
   if (loading) {
     return (
@@ -207,7 +312,9 @@ export default function AssessmentInvitePage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
+            <h1 className="text-lg font-semibold">
+              {assessment?.role_title ?? assessment?.name ?? "—"}
+            </h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
@@ -216,6 +323,7 @@ export default function AssessmentInvitePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <SystemPromptPreview assessmentId={Number(id)} />
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
@@ -225,6 +333,12 @@ export default function AssessmentInvitePage() {
           </Button>
         </div>
       </div>
+
+      {actionError && (
+        <p role="alert" className="text-sm text-destructive">
+          {actionError}
+        </p>
+      )}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -242,10 +356,14 @@ export default function AssessmentInvitePage() {
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-xs text-muted-foreground">
+              Optional — helps you identify this session later.
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleInviteCandidate}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
@@ -256,9 +374,14 @@ export default function AssessmentInvitePage() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-4 space-y-2">
             <p className="text-sm font-medium">
-              {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
+              {newSession.candidate_name ? (
+                <>
+                  Link for <span className="font-semibold">{newSession.candidate_name}</span> ready
+                  — share with your candidate:
+                </>
+              ) : (
+                <>New invite link ready — share with your candidate:</>
+              )}
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
@@ -267,9 +390,13 @@ export default function AssessmentInvitePage() {
             </div>
             <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
               {newSessionCopied ? (
-                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+                <>
+                  <Check className="h-3.5 w-3.5 mr-1.5" /> Copied!
+                </>
               ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link
+                </>
               )}
             </Button>
           </CardContent>
@@ -313,6 +440,7 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onRevoke={handleRevoke}
                 />
               ))}
             </CardContent>
@@ -328,7 +456,10 @@ export default function AssessmentInvitePage() {
             <h2 className="text-sm font-semibold">Skills assessed</h2>
             <ul className="space-y-1">
               {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <li
+                  key={s.id ?? s.skill_label}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                   <span>•</span>
                   <span>{s.skill_label}</span>
                   <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>

@@ -6,7 +6,23 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session revoke coverage transcript]
+
+      # GET /api/v1/sessions/live — active sessions across all assessments
+      def live
+        sessions = Session.active.where(tenant_id: current_tenant_id).order(started_at: :desc)
+
+        json_response(
+          sessions: sessions.map do |s|
+            {
+              id:             s.id,
+              assessment_id:  s.assessment_id,
+              candidate_name: s.candidate_name,
+              started_at:     s.started_at
+            }
+          end
+        )
+      end
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -50,6 +66,7 @@ module Api
             assessment: {
               id:             @session.assessment.id,
               name:           @session.assessment.name,
+              role_title:     @session.assessment.role_title.presence || @session.assessment.name,
               time_limit_min: @session.assessment.time_limit_min
             }
           )
@@ -75,6 +92,16 @@ module Api
         else
           json_error("Failed to end session", :unprocessable_entity)
         end
+      end
+
+      # POST /api/v1/sessions/:id/revoke
+      def revoke
+        unless @session.pending?
+          return json_error("Only pending invites can be revoked", :unprocessable_entity)
+        end
+
+        @session.update(revoked_at: Time.current)
+        json_response(session: session_json(@session.reload))
       end
 
       # GET /api/v1/sessions/:id/coverage
@@ -103,6 +130,7 @@ module Api
               turn_number:    t.turn_number,
               speaker:        t.speaker,
               text:           t.text,
+              ts:             t.created_at.iso8601,
               audio_start_ms: t.audio_start_ms,
               audio_end_ms:   t.audio_end_ms,
               created_at:     t.created_at
@@ -132,7 +160,7 @@ module Api
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
 
-        unless session
+        unless session&.usable?
           return json_error("Invalid or expired invite token", :not_found)
         end
 
@@ -147,7 +175,7 @@ module Api
 
         json_response(
           session_id:      session.id,
-          role_title:      assessment.name,
+          role_title:      assessment.role_title.presence || assessment.name,
           time_limit_min:  assessment.time_limit_min,
           session_status:  session.status
         )
@@ -175,6 +203,10 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          expires_at:       session.expires_at,
+          revoked_at:       session.revoked_at,
+          revoked:          session.revoked?,
+          expired:          session.expired?,
           created_at:       session.created_at
         }
       end

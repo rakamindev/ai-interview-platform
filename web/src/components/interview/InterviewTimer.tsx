@@ -22,7 +22,10 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
 
   useEffect(() => {
     if (!running) return;
-    if (remaining <= 0) { onExpired?.(); return; }
+    if (remaining <= 0) {
+      onExpired?.();
+      return;
+    }
     const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
     return () => clearTimeout(id);
   }, [running, remaining, onExpired]);
@@ -34,7 +37,7 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
     <span
       className={cn(
         "font-mono text-sm font-medium tabular-nums",
-        isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground"
+        isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground",
       )}
     >
       ⏱ {formatTime(remaining)}

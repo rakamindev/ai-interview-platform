@@ -5,7 +5,7 @@ module Api
     class AssessmentsController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_assessment, only: %i[show update destroy]
+      before_action :set_assessment, only: %i[show update destroy system_prompt]
 
       # GET /api/v1/assessments
       def index
@@ -14,7 +14,7 @@ module Api
         )
 
         json_response(
-          assessments: assessments.map(&method(:assessment_json)),
+          assessments: assessments.map(&method(:assessment_list_json)),
           meta: pagination_meta(assessments)
         )
       end
@@ -25,13 +25,32 @@ module Api
       end
 
       # POST /api/v1/assessments
+      # Accepts create_session: true to also create the first pending session
+      # and return its invite URL in one action (PRD-02 Phase 1).
       def create
         assessment = Assessment.new(assessment_params)
         assessment.created_by = current_user.id
 
         if assessment.save
           SystemPromptGeneratorWorker.perform_async(assessment.id)
-          json_response({ assessment:, system_prompt_generated: true }, :created)
+          payload = { assessment:, system_prompt_generated: true }
+
+          if create_session_requested?
+            session = assessment.sessions.build(tenant_id: current_tenant_id)
+            if session.save
+              payload[:session] = {
+                id: session.id,
+                status: session.status,
+                invite_url: session.invite_url,
+                expires_at: session.expires_at
+              }
+              payload[:invite_url] = session.invite_url
+            else
+              payload[:session_error] = session.errors.full_messages.first
+            end
+          end
+
+          json_response(payload, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
         end
@@ -53,6 +72,16 @@ module Api
         json_response({ message: "Assessment deleted" })
       end
 
+      # GET /api/v1/assessments/:id/system_prompt
+      # Returns the compiled system prompt (PRD-01 §2) — stored if the generator
+      # worker has run, otherwise compiled fresh from the saved config.
+      def system_prompt
+        prompt = @assessment.system_prompt.presence ||
+                 Assessments::SystemPromptCompiler.new(@assessment).call
+
+        json_response(system_prompt: prompt)
+      end
+
       private
 
       def set_assessment
@@ -64,6 +93,7 @@ module Api
       def assessment_params
         params.require(:assessment).permit(
           :name,
+          :role_title,
           :time_limit_min,
           :language,
           assessment_skills_attributes: %i[
@@ -75,15 +105,32 @@ module Api
         )
       end
 
+      def create_session_requested?
+        %w[true 1].include?(params[:create_session].to_s)
+      end
+
       def assessment_json(assessment)
+        assessment_base_json(assessment).merge(
+          system_prompt: assessment.system_prompt
+        )
+      end
+
+      # Lightweight list projection: the list UI only needs base fields and the
+      # latest session summary — no skills, and not the heavy system_prompt text
+      # (clients use GET /assessments/:id/system_prompt for that).
+      def assessment_list_json(assessment)
+        assessment_base_json(assessment)
+      end
+
+      def assessment_base_json(assessment)
         latest = assessment.sessions.max_by(&:created_at)
 
         {
           id:             assessment.id,
           name:           assessment.name,
+          role_title:     assessment.role_title.presence || assessment.name,
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,

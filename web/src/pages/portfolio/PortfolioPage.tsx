@@ -1,16 +1,24 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import ErrorRetryState from "@/components/layout/ErrorRetryState";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import { LEVEL_LABELS } from "@/utils/constants";
+import type { Portfolio, AssessorOverride, Vacancy, TranscriptTurn } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -18,16 +26,25 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [turns, setTurns] = useState<TranscriptTurn[]>([]);
+  const [skillAnchor, setSkillAnchor] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [searchParams] = useSearchParams();
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
+    if (
+      data.status === "generating" ||
+      data.portfolio?.generation_status === "generating" ||
+      data.portfolio?.generation_status === "pending"
+    ) {
       setGenerating(true);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
@@ -41,15 +58,44 @@ export default function PortfolioPage() {
     }
   }, [sessionId]);
 
-  useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [, vRes, sRes, tRes] = await Promise.all([
+        fetchPortfolio(),
+        vacanciesApi.list(),
+        sessionsApi.get(Number(sessionId)),
+        sessionsApi.getTranscript(Number(sessionId)),
+      ]);
+      setVacancies(vRes.data.vacancies);
+      setCandidateName(sRes.data.session.candidate_name ?? null);
+      setTurns(tRes.data.turns);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [fetchPortfolio, sessionId]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
+
+  // Scroll to and highlight the skill card referenced by ?skill= (fit/gap evidence link).
+  useEffect(() => {
+    const anchor = searchParams.get("skill");
+    setSkillAnchor(anchor);
+    if (!anchor || !portfolio) return;
+    const target = document.getElementById(`skill-card-${anchor}`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setSkillAnchor(null), 3000);
+    return () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    };
+  }, [searchParams, portfolio]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -60,7 +106,7 @@ export default function PortfolioPage() {
 
   const handleRunFitGap = () => {
     if (!selectedVacancy || !portfolio) return;
-    navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`);
+    void navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`);
   };
 
   const handleExport = async (format: "pdf" | "json") => {
@@ -70,7 +116,7 @@ export default function PortfolioPage() {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
         format,
-        selectedVacancy ? Number(selectedVacancy) : undefined
+        selectedVacancy ? Number(selectedVacancy) : undefined,
       );
       if (format === "json") {
         const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
@@ -94,6 +140,12 @@ export default function PortfolioPage() {
     }
   };
 
+  if (loadError) {
+    return (
+      <ErrorRetryState message="Failed to load the portfolio." onRetry={() => void loadAll()} />
+    );
+  }
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
@@ -109,14 +161,15 @@ export default function PortfolioPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+          <Link
+            to={`/assessments/${id}/invite`}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
             <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            {candidateName && <p className="text-sm text-muted-foreground">{candidateName}</p>}
           </div>
         </div>
 
@@ -136,7 +189,11 @@ export default function PortfolioPage() {
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
               >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "pdf" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                )}
                 PDF
               </Button>
               <Button
@@ -145,7 +202,11 @@ export default function PortfolioPage() {
                 onClick={() => handleExport("json")}
                 disabled={!!exporting}
               >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "json" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                )}
                 JSON
               </Button>
             </>
@@ -192,12 +253,24 @@ export default function PortfolioPage() {
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
-                <SkillPortfolioCard
+                <div
                   key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
+                  id={`skill-card-${skill.skill_label}`}
+                  className={
+                    skillAnchor === skill.skill_label
+                      ? "ring-2 ring-primary rounded-lg shadow-lg"
+                      : undefined
+                  }
+                >
+                  <SkillPortfolioCard
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                    assessmentId={id!}
+                    sessionId={sessionId!}
+                    turns={turns}
+                  />
+                </div>
               ))}
           </div>
 
@@ -218,12 +291,24 @@ export default function PortfolioPage() {
                 {portfolio.skills
                   .filter((s) => s.is_discovered)
                   .map((skill) => (
-                    <SkillPortfolioCard
+                    <div
                       key={skill.id}
-                      skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                    />
+                      id={`skill-card-${skill.skill_label}`}
+                      className={
+                        skillAnchor === skill.skill_label
+                          ? "ring-2 ring-primary rounded-lg shadow-lg"
+                          : undefined
+                      }
+                    >
+                      <SkillPortfolioCard
+                        skill={skill}
+                        override={overrides[skill.id]}
+                        onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                        assessmentId={id!}
+                        sessionId={sessionId!}
+                        turns={turns}
+                      />
+                    </div>
                   ))}
               </div>
             </>
@@ -241,6 +326,11 @@ export default function PortfolioPage() {
                 {vacancies.map((v) => (
                   <SelectItem key={v.id} value={String(v.id)}>
                     {v.role_title}
+                    {(v.skills ?? []).length > 0
+                      ? ` — ${(v.skills ?? [])
+                          .map((s) => `${s.skill_label} ${LEVEL_LABELS[s.expected_level]}`)
+                          .join(", ")}`
+                      : " — No skills configured"}
                   </SelectItem>
                 ))}
               </SelectContent>

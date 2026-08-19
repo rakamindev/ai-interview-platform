@@ -1,0 +1,54 @@
+# Redis provisioning for ai-interview (Sidekiq, production cache, Rack::Attack).
+# In-cluster template: ClusterIP-only (not reachable outside the cluster), no auth.
+# For production durability, prefer a managed instance (Memorystore/ElastiCache)
+# and point REDIS_URL at it (see README.md — move REDIS_URL to the Secret if auth'd).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-interview-redis
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-interview-redis
+  template:
+    metadata:
+      labels:
+        app: ai-interview-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["--appendonly", "no"]
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-interview-redis
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: ai-interview-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP

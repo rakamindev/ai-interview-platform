@@ -14,12 +14,14 @@ module TenantScoped
   extend ActiveSupport::Concern
 
   included do
-    # Default scope: filter by current tenant
+    # Default scope: filter by current tenant. Fail CLOSED — with no resolved
+    # tenant, expose no rows (SEC-2). Paths that must run without tenant context
+    # (Sidekiq workers, candidate invite-token lookups) use `.unscoped`.
     default_scope do
-      if RequestStore.store.key?(:tenant_id)
+      if RequestStore.store.key?(:tenant_id) && Current.tenant_id
         where(tenant_id: Current.tenant_id)
       else
-        all
+        none
       end
     end
 

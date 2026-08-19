@@ -11,23 +11,23 @@
 #   > token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' })
 #   > puts token
 
+# Never seed production. This file creates a dev admin and a dev organization,
+# and the database may be shared with rakamin-api — running it against prod
+# would plant a known-credential admin and pollute another service's data.
+if Rails.env.production?
+  puts "Refusing to run seeds in production."
+  return
+end
+
 puts "== Seeding AI Interview development data =="
 
-# ── Organization ─────────────────────────────────────────────────────────────
+# ── Organization (dev tenant) ────────────────────────────────────────────────
 #
-# We write directly to public.organizations (shared with rakamin-api).
-# We use raw SQL so we don't have to mirror all of rakamin-api's validations
-# and callbacks in our read-only Organization model.
-#
-# Columns required by the rakamin-api schema:
-#   name        — display name
-#   scheme      — used as the Apartment schema name AND as the JWT `scheme` claim
-#   identifier  — URL-safe slug (lowercase, min 3 chars)
-#   host        — primary host for HostService resolution
-#   alias_hosts — additional hosts (postgres array)
-#   config      — JSONB config blob (Configurable concern)
-#
-# id = 0 is reserved in rakamin-api as the "default" org — do not use it here.
+# Tenant resolution needs an Organization whose `scheme` matches the JWT `scheme`
+# claim. In production this table is owned by rakamin-api, so seeds never run
+# there (guarded above). Locally we create a dev organization idempotently via
+# the Organization model — no raw DDL, and no string-interpolated SQL against a
+# shared schema.
 
 TEST_ORG = {
   name:       "Test Corp",
@@ -36,45 +36,39 @@ TEST_ORG = {
   host:       "localhost"
 }.freeze
 
-ActiveRecord::Base.connection.execute(<<~SQL)
-  CREATE TABLE IF NOT EXISTS public.organizations (
-    id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
-    scheme      VARCHAR(255) NOT NULL,
-    identifier  VARCHAR(255) NOT NULL,
-    host        VARCHAR(255) NOT NULL,
-    alias_hosts VARCHAR[] NOT NULL DEFAULT '{}',
-    config      JSONB NOT NULL DEFAULT '{}',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  );
-SQL
+organization = Organization.find_or_create_by!(scheme: TEST_ORG[:scheme]) do |o|
+  o.name       = TEST_ORG[:name]
+  o.identifier = TEST_ORG[:identifier]
+  o.host       = TEST_ORG[:host]
+end
+puts "  Organization ready: id=#{organization.id} scheme=#{organization.scheme}"
 
-existing = ActiveRecord::Base.connection.select_one(
-  "SELECT id, name, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
+# ── Test user ────────────────────────────────────────────────────────────────
+#
+# Admin is required — the auth controller only signs in user.role == 'admin'.
+# Re-running seeds updates the password without duplicating the row.
+
+TEST_USER = {
+  email:    ENV.fetch('SEED_ADMIN_EMAIL', 'admin@test.com'),
+  password: ENV.fetch('SEED_ADMIN_PASSWORD') { SecureRandom.hex(16) },
+  role:     'admin'
+}.freeze
+
+puts ""
+puts "== Seeding test user =="
+
+test_user = User.find_or_initialize_by(email: TEST_USER[:email])
+test_user.assign_attributes(
+  password: TEST_USER[:password],
+  role: TEST_USER[:role],
+  organization_id: organization.id,
 )
 
-if existing
-  puts "  Organization already exists: id=#{existing['id']} scheme=#{existing['scheme']} (skipped)"
+if test_user.save
+  action = test_user.previously_new_record? ? "Created" : "Updated"
+  puts "  #{action} test user: #{test_user.email} (role=#{test_user.role})"
 else
-  result = ActiveRecord::Base.connection.select_one(<<~SQL)
-    INSERT INTO public.organizations
-      (name, scheme, identifier, host, alias_hosts, config, created_at, updated_at)
-    VALUES
-      (
-        '#{TEST_ORG[:name]}',
-        '#{TEST_ORG[:scheme]}',
-        '#{TEST_ORG[:identifier]}',
-        '#{TEST_ORG[:host]}',
-        '{}',
-        '{}',
-        NOW(),
-        NOW()
-      )
-    RETURNING id, name, scheme;
-  SQL
-
-  puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+  puts "  ERROR test user: #{test_user.errors.full_messages.join(', ')}"
 end
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
@@ -371,16 +365,14 @@ puts ""
 
 # ── Print usage instructions ──────────────────────────────────────────────────
 
-org = ActiveRecord::Base.connection.select_one(
-  "SELECT id, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
+org = Organization.find_by(scheme: TEST_ORG[:scheme])
 
 puts ""
 puts "== Done! =="
 puts ""
 puts "Your test organization:"
-puts "  id     : #{org['id']}"
-puts "  scheme : #{org['scheme']}"
+puts "  id     : #{org&.id}"
+puts "  scheme : #{org&.scheme}"
 puts ""
 puts "To mint a JWT for testing, open the Rails console:"
 puts ""

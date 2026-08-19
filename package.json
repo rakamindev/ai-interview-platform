@@ -1,0 +1,19 @@
+{
+  "name": "rakamin-ai-interview",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start:frontend": "cd web && pnpm run dev",
+    "start:backend:sidekiq": "cd api && sidekiq -r ./config/environment.rb -C config/sidekiq.yml",
+    "start:backend:rails": "cd api && rails server",
+    "start": "concurrently \"pnpm start:frontend\" \"pnpm start:backend:rails\" \"pnpm start:backend:sidekiq\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@11.21.0",
+  "dependencies": {
+    "concurrently": "^10.0.4"
+  }
+}

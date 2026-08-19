@@ -1,6 +1,8 @@
 # GKE deployment for ai-interview-api (Rails + Puma + EventMachine WebSocket).
 #
-# Node strategy — 1 API pod + 1 Sidekiq pod per dedicated node (paragon-t2d-tau-pool):
+# Node strategy — 2 API pods (HA) + 1 Sidekiq pod, one per dedicated node
+# (paragon-t2d-tau-pool):
+#   - replicas: 2  ⇒  requires at least 2 nodes in the pool (1 pod/node enforced)
 #   - nodeSelector: pods only land on paragon-t2d-tau-pool nodes
 #   - podAntiAffinity (required): at most 1 API pod per node
 #   - Sidekiq uses podAffinity to follow API pods — see k8s/deploy-sidekiq.yaml
@@ -17,7 +19,7 @@ metadata:
   annotations:
     kubernetes.io/change-cause: "initial-deploy"
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 5
   selector:
     matchLabels:
@@ -60,7 +62,7 @@ spec:
       containers:
         - name: ai-interview-api
           image: asia-southeast2-docker.pkg.dev/rakamin-poc/rakamin-images/ai-interview-api:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           command: ["bundle"]
           args: ["exec", "puma", "-C", "config/puma.rb"]
 
@@ -71,6 +73,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: ai-interview-config
+            - secretRef:
+                name: ai-interview-secrets
 
           env:
             - name: POD_ID
@@ -85,6 +89,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: OTEL_SERVICE_NAME
+              value: ai-interview-api-production
             # Ruby performance
             - name: RUBYOPT
               value: "--yjit-exec-mem-size=64 --yjit-code-gc"
@@ -105,7 +111,7 @@ spec:
 
           readinessProbe:
             httpGet:
-              path: /health
+              path: /health/ready
               port: 3001
             initialDelaySeconds: 10
             periodSeconds: 30

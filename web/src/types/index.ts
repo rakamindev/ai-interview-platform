@@ -1,6 +1,7 @@
 export interface Assessment {
   id: number;
   name: string;
+  role_title?: string;
   time_limit_min: number;
   language?: "en" | "id";
   system_prompt?: string;
@@ -44,6 +45,10 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  expires_at?: string;
+  revoked_at?: string;
+  revoked?: boolean;
+  expired?: boolean;
   created_at?: string;
 }
 
@@ -69,6 +74,7 @@ export interface TranscriptTurn {
   turn_number: number;
   speaker: "candidate" | "ai" | "assessor" | "system";
   text: string;
+  ts?: string;
   audio_start_ms?: number;
   audio_end_ms?: number;
   created_at: string;
@@ -90,8 +96,8 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: string; // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_confidence: string; // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
 }
@@ -114,7 +120,7 @@ export interface Vacancy {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
-  skills: VacancySkill[];
+  skills?: VacancySkill[];
 }
 
 export interface VacancySkill {
@@ -144,6 +150,8 @@ export interface FitGapReport {
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
+  generation_status: "generating" | "complete" | "failed";
+  generation_error?: string | null;
 }
 
 export interface SkillTaxonomy {

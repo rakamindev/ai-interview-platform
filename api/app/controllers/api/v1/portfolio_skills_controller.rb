@@ -48,7 +48,10 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        # Scope through the portfolio's (tenant-scoped) session so an assessor can
+        # only override skills in their own tenant.
+        @portfolio_skill = PortfolioSkill.joins(portfolio: :session)
+                                         .merge(Session.all)
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

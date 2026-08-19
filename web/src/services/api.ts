@@ -18,7 +18,11 @@ api.interceptors.request.use((config) => {
 });
 
 // Unwrap backend envelope: { data: { ... } } → { ... }
-// On 401/403, clear stored credentials and redirect to login.
+// On 401/403 for non-auth requests, clear stored credentials and redirect to login.
+// Auth requests (login/signup) are exempt so failed attempts surface inline errors
+// instead of a hard page reload that wipes the form state.
+const AUTH_PATHS = ["/auth/login", "/signup"];
+
 api.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === "object" && "data" in response.data) {
@@ -27,12 +31,14 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const isAuthRequest = AUTH_PATHS.some((path) => error.config?.url?.includes(path));
+    if (!isAuthRequest && (error.response?.status === 401 || error.response?.status === 403)) {
       clearToken();
-      window.location.href = "/login";
+      // App-level handler navigates to /login with a "session expired" state.
+      window.dispatchEvent(new CustomEvent("auth:session-expired"));
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

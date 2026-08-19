@@ -95,3 +95,23 @@ Runs on **port 5173** by default.
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
 | Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+
+---
+
+## Running the tests
+
+The backend uses **RSpec** (unit + request specs) with **FactoryBot**. Ruby `3.3.2` is provided via system RVM.
+
+```bash
+# Make Ruby 3.3.2 available (non-login shells don't inherit it automatically)
+source /usr/share/rvm/scripts/rvm && rvm use ruby-3.3.2
+
+# One-time: prepare the test database schema
+RAILS_ENV=test bundle exec rails db:test:prepare
+
+# Run the suite
+bundle exec rspec
+```
+
+Specs live in `spec/`: config in `spec/rails_helper.rb`, factories in `spec/factories.rb`, and a request auth-token helper in `spec/support/auth_helpers.rb` (mints a real JWT so the true auth/tenant middleware is exercised).
+

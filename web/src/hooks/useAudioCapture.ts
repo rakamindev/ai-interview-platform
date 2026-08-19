@@ -19,7 +19,12 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
       });
       streamRef.current = stream;
 
@@ -58,7 +63,7 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   const stop = useCallback(() => {
     workletNodeRef.current?.disconnect();
     workletNodeRef.current = null;
-    audioCtxRef.current?.close();
+    void audioCtxRef.current?.close();
     audioCtxRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
