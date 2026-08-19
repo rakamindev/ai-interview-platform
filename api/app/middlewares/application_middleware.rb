@@ -6,9 +6,7 @@ class ApplicationMiddleware
     @app = app
   end
 
-  def call(env)
-    @app.call(env)
-  end
+  delegate :call, to: :@app
 
   private
 
@@ -17,8 +15,8 @@ class ApplicationMiddleware
 
     charset = ActionDispatch::Response.default_charset
     headers = {
-      'Content-Type' => "application/json; charset=#{charset}",
-      'Content-Length' => json.bytesize.to_s
+      "Content-Type" => "application/json; charset=#{charset}",
+      "Content-Length" => json.bytesize.to_s
     }
 
     [status, headers, [json]]

@@ -8,39 +8,40 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        model: ENV.fetch("GEMINI_PRO_MODEL", "gemini-2.0-pro-001"),
+        timeout: 180 # up to 3 minutes for large transcripts
       )
     end
 
     # Returns the Portfolio record with skills populated.
     def call
       portfolio = @session.portfolio || @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending',
-        tenant_id:         @session.tenant_id
+        candidate_id: @session.candidate_id,
+        generation_status: "pending",
+        tenant_id: @session.tenant_id
       )
 
-      portfolio.update!(generation_status: 'generating')
+      portfolio.update!(generation_status: "generating")
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(generation_status: "complete", generated_at: Time.current)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
-    rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+    rescue StandardError => e
+      portfolio&.update!(generation_status: "failed", generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
 
     private
 
+    # rubocop:disable Metrics/MethodLength
     def build_prompt
-      assessment       = @session.assessment
+      assessment = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
       turns             = @session.transcript_turns.ordered
@@ -48,7 +49,7 @@ module Portfolios
       skills_text = configured_skills.map { |s| skill_definition_block(s) }.join("\n\n")
 
       coverage_json = {
-        skills:     coverage_maps.reject(&:is_discovered).map { |m| coverage_json(m) },
+        skills: coverage_maps.reject(&:is_discovered).map { |m| coverage_json(m) },
         discovered: coverage_maps.select(&:is_discovered).map { |m| coverage_json(m) }
       }.to_json
 
@@ -126,6 +127,7 @@ module Portfolios
         }
       PROMPT
     end
+    # rubocop:enable Metrics/MethodLength
 
     def skill_definition_block(skill)
       lines = ["━━━━━━━━━━━━━━━"]
@@ -142,9 +144,9 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
+        id: map.skill_id || map.skill_label.downcase.gsub(/\s+/, "-"),
+        label: map.skill_label,
+        state: map.state,
         probe_count: map.probe_count,
         is_discovered: map.is_discovered
       }
@@ -154,8 +156,8 @@ module Portfolios
       data = response.is_a?(Hash) ? response : JSON.parse(response)
       validator = ResponseValidator.new
 
-      configured = validator.call(data['configured_skills'], is_discovered: false)
-      discovered = validator.call(data['discovered_skills'], is_discovered: true)
+      configured = validator.call(data["configured_skills"], is_discovered: false)
+      discovered = validator.call(data["discovered_skills"], is_discovered: true)
       all_skills = configured + discovered
 
       ActiveRecord::Base.transaction do
@@ -166,14 +168,14 @@ module Portfolios
     def upsert_skill(portfolio, skill)
       row = portfolio.portfolio_skills.find_or_initialize_by(skill_label: skill.skill_label)
       row.assign_attributes(
-        skill_id:           skill.skill_id,
-        is_discovered:      skill.is_discovered,
-        ai_level:           skill.ai_level,
-        rating_state:       skill.rating_state,
-        ai_confidence:      skill.ai_confidence,
-        evidence:           skill.evidence,
+        skill_id: skill.skill_id,
+        is_discovered: skill.is_discovered,
+        ai_level: skill.ai_level,
+        rating_state: skill.rating_state,
+        ai_confidence: skill.ai_confidence,
+        evidence: skill.evidence,
         competency_summary: skill.competency_summary,
-        tenant_id:          portfolio.tenant_id
+        tenant_id: portfolio.tenant_id
       )
       row.save!
     end

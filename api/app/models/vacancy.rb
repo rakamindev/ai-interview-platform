@@ -9,6 +9,6 @@ class Vacancy < ApplicationRecord
   validates :role_title, presence: true
 
   accepts_nested_attributes_for :vacancy_skills,
-                                 allow_destroy: true,
-                                 reject_if: :all_blank
+                                allow_destroy: true,
+                                reject_if: :all_blank
 end

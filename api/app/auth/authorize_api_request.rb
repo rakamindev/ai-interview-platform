@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'ostruct'
+require "ostruct"
 
 # Extracted and simplified from rakamin-api.
 # Bearer token only (no basic auth — AI interview has no whitelist-key consumers).
@@ -32,8 +32,8 @@ class AuthorizeApiRequest
 
   def build_user_struct(claims)
     OpenStruct.new(
-      id:     claims[:user_id],
-      role:   claims[:role].to_s,
+      id: claims[:user_id],
+      role: claims[:role].to_s,
       scheme: claims[:scheme].to_s
     )
   end
@@ -42,13 +42,13 @@ class AuthorizeApiRequest
     allowed = @required_roles.map(&:to_s)
 
     # :any means no role restriction
-    return if allowed.include?('any')
+    return if allowed.include?("any")
 
     # Support logical grouping: :assessor_or_admin
     effective_role = user.role
-    if allowed.include?('assessor')
+    if allowed.include?("assessor") && ASSESSOR_ROLES.include?(effective_role)
       # Allow anyone whose role is in ASSESSOR_ROLES
-      return if ASSESSOR_ROLES.include?(effective_role)
+      return
     end
 
     return if allowed.include?(effective_role)
@@ -63,7 +63,7 @@ class AuthorizeApiRequest
   end
 
   def http_auth_header
-    return headers['Authorization'].split(' ').last if headers['Authorization'].present?
+    return headers["Authorization"].split.last if headers["Authorization"].present?
 
     raise(ExceptionHandler::MissingToken, Message.missing_token)
   end

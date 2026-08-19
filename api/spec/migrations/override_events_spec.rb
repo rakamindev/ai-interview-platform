@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreateAssessorOverrideEvents do
   let(:migration) { described_class.new }
@@ -9,18 +9,18 @@ RSpec.describe CreateAssessorOverrideEvents do
     allow(migration).to receive(:say_with_time).and_yield
   end
 
-  describe '#up' do
-    it 'runs without error' do
+  describe "#up" do
+    it "runs without error" do
       expect { migration.up }.not_to raise_error
     end
 
-    it 'creates the assessor_override_events table' do
+    it "creates the assessor_override_events table" do
       migration.up
 
       expect(connection.table_exists?(:assessor_override_events)).to be true
     end
 
-    it 'backfills one event per existing override' do
+    it "backfills one event per existing override" do
       migration.up
 
       # Create test data with tenant_id
@@ -40,24 +40,24 @@ RSpec.describe CreateAssessorOverrideEvents do
       expect(event.tenant_id).to eq(org.id)
     end
 
-    it 'creates append-only triggers' do
+    it "creates append-only triggers" do
       migration.up
 
       # Verify triggers exist
-      triggers = connection.execute(<<~SQL.squish).map { |r| r['trigger_name'] }
+      triggers = connection.execute(<<~SQL.squish).pluck("trigger_name")
         SELECT trigger_name
         FROM information_schema.triggers
         WHERE event_object_table = 'assessor_override_events'
           AND trigger_schema = 'ai_interview'
       SQL
 
-      expect(triggers).to include('trg_no_override_event_update')
-      expect(triggers).to include('trg_no_override_event_delete')
+      expect(triggers).to include("trg_no_override_event_update")
+      expect(triggers).to include("trg_no_override_event_delete")
     end
   end
 
-  describe '#down' do
-    it 'drops the assessor_override_events table' do
+  describe "#down" do
+    it "drops the assessor_override_events table" do
       migration.up
       migration.down
 

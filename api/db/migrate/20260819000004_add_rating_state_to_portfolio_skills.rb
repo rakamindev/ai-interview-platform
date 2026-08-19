@@ -20,7 +20,7 @@ class AddRatingStateToPortfolioSkills < ActiveRecord::Migration[7.0]
 
     # Step 2: Add the column with default 'rated'
     add_column :portfolio_skills, :rating_state,
-               'ai_interview.rating_state', default: 'rated', null: false
+               "ai_interview.rating_state", default: "rated", null: false
 
     # Step 3: Relax ai_level NOT NULL
     change_column_null :portfolio_skills, :ai_level, true
@@ -47,7 +47,7 @@ class AddRatingStateToPortfolioSkills < ActiveRecord::Migration[7.0]
       WHERE rating_state = 'unrated'
     SQL
 
-    if unrated_count > 0
+    if unrated_count.positive?
       say_with_time "DELETING #{unrated_count} unrated portfolio_skills rows (lossy rollback)" do
         execute <<~SQL.squish
           DELETE FROM ai_interview.portfolio_skills

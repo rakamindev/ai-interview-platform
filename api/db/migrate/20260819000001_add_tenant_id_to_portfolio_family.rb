@@ -45,9 +45,9 @@ class AddTenantIdToPortfolioFamily < ActiveRecord::Migration[7.0]
     remove_column :portfolios, :tenant_id
   end
 
-  private
-
   BATCH_SIZE = 1000
+
+  private
 
   def backfill_portfolios
     say_with_time "backfill portfolios.tenant_id from sessions.tenant_id" do
@@ -106,7 +106,7 @@ class AddTenantIdToPortfolioFamily < ActiveRecord::Migration[7.0]
         (SELECT COUNT(*) FROM ai_interview.assessor_overrides WHERE tenant_id IS NULL) AS assessor_overrides
     SQL
 
-    total = result.values_at('portfolios', 'portfolio_skills', 'fit_gap_reports', 'assessor_overrides').compact.sum
+    total = result.values_at("portfolios", "portfolio_skills", "fit_gap_reports", "assessor_overrides").compact.sum
     return if total.zero?
 
     raise ActiveRecord::IrreversibleMigration,

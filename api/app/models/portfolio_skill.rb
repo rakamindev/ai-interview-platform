@@ -14,11 +14,11 @@ class PortfolioSkill < ApplicationRecord
   validates :competency_summary, presence: true, allow_nil: true
   validates :rating_state, inclusion: { in: %w[rated unrated] }
 
-  scope :rated,   -> { where(rating_state: 'rated') }
-  scope :unrated, -> { where(rating_state: 'unrated') }
+  scope :rated,   -> { where(rating_state: "rated") }
+  scope :unrated, -> { where(rating_state: "unrated") }
 
-  def rated?   = rating_state == 'rated'
-  def unrated? = rating_state == 'unrated'
+  def rated?   = rating_state == "rated"
+  def unrated? = rating_state == "unrated"
 
   # evidence is stored as JSONB array of quote strings
   def evidence_quotes

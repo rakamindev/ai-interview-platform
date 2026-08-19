@@ -3,7 +3,7 @@
 class Session < ApplicationRecord
   include TenantScoped
 
-  STATUSES   = %w[pending active ended failed].freeze
+  STATUSES = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
   belongs_to :assessment
@@ -18,13 +18,13 @@ class Session < ApplicationRecord
   before_validation :generate_invite_token, on: :create
   before_validation :set_invite_expiry, on: :create
 
-  scope :active,  -> { where(status: 'active') }
-  scope :pending, -> { where(status: 'pending') }
-  scope :ended,   -> { where(status: 'ended') }
+  scope :active,  -> { where(status: "active") }
+  scope :pending, -> { where(status: "pending") }
+  scope :ended,   -> { where(status: "ended") }
 
-  def active?  = status == 'active'
-  def ended?   = status == 'ended'
-  def pending? = status == 'pending'
+  def active?  = status == "active"
+  def ended?   = status == "ended"
+  def pending? = status == "pending"
 
   # 14-day expiry is a default and a product parameter.
   def invite_valid?
@@ -32,7 +32,7 @@ class Session < ApplicationRecord
   end
 
   def invite_url
-    base = ENV.fetch('WEB_BASE_URL', 'http://localhost:5173')
+    base = ENV.fetch("WEB_BASE_URL", "http://localhost:5173")
     "#{base}/interview/#{invite_token}"
   end
 

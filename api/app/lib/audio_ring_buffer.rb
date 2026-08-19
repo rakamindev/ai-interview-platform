@@ -13,7 +13,7 @@ class AudioRingBuffer
   DEFAULT_CAPACITY_SECONDS = 60
   BYTES_PER_SECOND = 32_000
 
-  Chunk = Struct.new(:timestamp, :data, keyword_init: true)
+  Chunk = Struct.new(:timestamp, :data)
 
   def initialize(capacity_seconds: DEFAULT_CAPACITY_SECONDS)
     @capacity_bytes = capacity_seconds * BYTES_PER_SECOND

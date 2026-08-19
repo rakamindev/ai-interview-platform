@@ -10,10 +10,10 @@ FactoryBot.define do
     config { {} }
 
     trait :rival do
-      name { 'Rival Corp' }
-      scheme { 'rival-corp' }
-      identifier { 'rival-corp' }
-      host { 'rival-corp.localhost' }
+      name { "Rival Corp" }
+      scheme { "rival-corp" }
+      identifier { "rival-corp" }
+      host { "rival-corp.localhost" }
     end
   end
 end

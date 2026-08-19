@@ -4,6 +4,6 @@ FactoryBot.define do
   factory :portfolio do
     association :session
     sequence(:candidate_id)
-    generation_status { 'complete' }
+    generation_status { "complete" }
   end
 end

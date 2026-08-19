@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'spec_helper'
-ENV['RAILS_ENV'] ||= 'test'
-require_relative '../config/environment'
+require "spec_helper"
+ENV["RAILS_ENV"] ||= "test"
+require_relative "../config/environment"
 
 # Compat shim: Ruby 3.3+ removed ERB::ENCODING_FLAG which ActionView 7.0.x
 # references in ActionView::Template::Handlers::ERB. Define it after Rails
@@ -12,10 +12,10 @@ unless ActionView::Template::Handlers::ERB.const_defined?(:ENCODING_FLAG)
   ActionView::Template::Handlers::ERB.const_set(:ENCODING_FLAG, false)
 end
 
-require 'rspec/rails'
-require 'database_cleaner/active_record'
+require "rspec/rails"
+require "database_cleaner/active_record"
 
-Dir[Rails.root.join('spec/support/**/*.rb')].each { |f| require f }
+Rails.root.glob("spec/support/**/*.rb").each { |f| require f }
 
 RSpec.configure do |config|
   config.use_transactional_fixtures = false # DatabaseCleaner handles it

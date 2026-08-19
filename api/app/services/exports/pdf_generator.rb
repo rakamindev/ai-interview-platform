@@ -1,27 +1,27 @@
 # frozen_string_literal: true
 
-require 'prawn'
-require 'prawn/table'
+require "prawn"
+require "prawn/table"
 
 module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
   class PdfGenerator
-    LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
-    CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
+    LEVEL_LABELS = { 1 => "L1", 2 => "L2", 3 => "L3", 4 => "L4", 5 => "L5" }.freeze
+    CONFIDENCE_LABELS = { "high" => "High", "medium" => "Medium", "low" => "Low" }.freeze
     RESULT_LABELS = {
-      'match'        => 'Match',
-      'gap'          => 'Gap',
-      'exceed'       => 'Exceeds',
-      'not_assessed' => 'Not Assessed'
+      "match" => "Match",
+      "gap" => "Gap",
+      "exceed" => "Exceeds",
+      "not_assessed" => "Not Assessed"
     }.freeze
 
-    FONT_DIR = Rails.root.join('app', 'assets', 'fonts')
+    FONT_DIR = Rails.root.join("app/assets/fonts")
     NOTO_SANS = {
-      normal:      FONT_DIR.join('NotoSans-Regular.ttf'),
-      bold:        FONT_DIR.join('NotoSans-Bold.ttf'),
-      italic:      FONT_DIR.join('NotoSans-Italic.ttf'),
-      bold_italic: FONT_DIR.join('NotoSans-BoldItalic.ttf')
+      normal: FONT_DIR.join("NotoSans-Regular.ttf"),
+      bold: FONT_DIR.join("NotoSans-Bold.ttf"),
+      italic: FONT_DIR.join("NotoSans-Italic.ttf"),
+      bold_italic: FONT_DIR.join("NotoSans-BoldItalic.ttf")
     }.freeze
 
     def initialize(portfolio:, vacancy: nil)
@@ -34,7 +34,7 @@ module Exports
 
     # Returns PDF binary string.
     def call
-      Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+      Prawn::Document.new(page_size: "A4", margin: [40, 50, 40, 50]) do |pdf|
         pdf.font_families.update("NotoSans" => NOTO_SANS)
         pdf.font "NotoSans"
         render_header(pdf)
@@ -67,8 +67,7 @@ module Exports
       pdf.move_down 8
 
       skills = @portfolio.portfolio_skills.includes(:assessor_override)
-      configured = skills.reject(&:is_discovered)
-      discovered = skills.select(&:is_discovered)
+      discovered, configured = skills.partition(&:is_discovered)
 
       if configured.any?
         pdf.font_size(13) { pdf.text "Assessed Skills", style: :bold }
@@ -76,12 +75,12 @@ module Exports
         configured.each { |skill| render_skill_card(pdf, skill) }
       end
 
-      if discovered.any?
-        pdf.move_down 6
-        pdf.font_size(13) { pdf.text "Discovered Skills", style: :bold }
-        pdf.move_down 6
-        discovered.each { |skill| render_skill_card(pdf, skill) }
-      end
+      return unless discovered.any?
+
+      pdf.move_down 6
+      pdf.font_size(13) { pdf.text "Discovered Skills", style: :bold }
+      pdf.move_down 6
+      discovered.each { |skill| render_skill_card(pdf, skill) }
     end
 
     def render_skill_card(pdf, skill)
@@ -89,7 +88,7 @@ module Exports
       effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text skill.skill_label.to_s, style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
         level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
@@ -99,9 +98,7 @@ module Exports
 
       pdf.move_down 4
 
-      if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
-      end
+      pdf.font_size(10) { pdf.text skill.competency_summary } if skill.competency_summary.present?
 
       if skill.evidence.any?
         pdf.move_down 4
@@ -119,7 +116,10 @@ module Exports
         end
       end
 
-      pdf.stroke { pdf.stroke_color 'CCCCCC'; pdf.horizontal_rule }
+      pdf.stroke do
+        pdf.stroke_color "CCCCCC"
+        pdf.horizontal_rule
+      end
       pdf.move_down 8
     end
 
@@ -131,20 +131,24 @@ module Exports
 
       comparisons = @fit_gap.skill_comparisons
 
-      table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
+      table_data = [%w[Skill Required Candidate Result Delta]]
       comparisons.each do |c|
         table_data << [
-          c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
-          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
+          c["skill_label"],
+          c["expected_level"] ? "L#{c['expected_level']}" : "—",
+          c["candidate_level"] ? "L#{c['candidate_level']}" : "—",
+          RESULT_LABELS[c["result"]] || c["result"],
+          if c["delta"]
+            c["delta"].positive? ? "+#{c['delta']}" : c["delta"].to_s
+          else
+            "—"
+          end
         ]
       end
 
       pdf.table(table_data, header: true, width: pdf.bounds.width) do |t|
         t.row(0).font_style = :bold
-        t.row(0).background_color = 'E5E7EB'
+        t.row(0).background_color = "E5E7EB"
         t.cells.padding = [6, 8]
         t.cells.size = 10
       end
@@ -156,25 +160,26 @@ module Exports
         pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
       end
 
-      if @fit_gap.overall_narrative.present?
-        pdf.move_down 8
-        pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
-        pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
-      end
+      return if @fit_gap.overall_narrative.blank?
+
+      pdf.move_down 8
+      pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
+      pdf.move_down 4
+      pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
     end
 
     def render_footer(pdf)
       pdf.number_pages "Page <page> of <total>",
-                        at:     [pdf.bounds.left, 0],
-                        width:  pdf.bounds.right,
-                        align:  :center,
-                        size:   9,
-                        color:  '999999'
+                       at: [pdf.bounds.left, 0],
+                       width: pdf.bounds.right,
+                       align: :center,
+                       size: 9,
+                       color: "999999"
     end
 
     def format_duration(seconds)
-      return 'N/A' unless seconds
+      return "N/A" unless seconds
+
       mins = seconds / 60
       secs = seconds % 60
       "#{mins}m #{secs}s"

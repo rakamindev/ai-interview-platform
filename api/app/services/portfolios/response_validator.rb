@@ -7,7 +7,7 @@ module Portfolios
   # with nil (the Postgres enum allows nil). Summaries and evidence are
   # truncated to safe lengths.
   class ResponseValidator
-    VALID_LEVELS    = (1..5).freeze
+    VALID_LEVELS = (1..5)
     VALID_CONFIDENCE = %w[high medium low].freeze
     MAX_SUMMARY_LEN = 2000
     MAX_EVIDENCE    = 3
@@ -31,7 +31,7 @@ module Portfolios
       int_level = case raw_level
                   when Integer then raw_level
                   when Float  then raw_level.round
-                  when String then raw_level.sub(/\A[Ll]/, '').to_i
+                  when String then raw_level.sub(/\A[Ll]/, "").to_i
                   else return nil
                   end
 
@@ -39,34 +39,34 @@ module Portfolios
     end
 
     def normalize(raw, is_discovered:)
-      level = coerce_level(raw['level'])
+      level = coerce_level(raw["level"])
 
       if level
-        rating_state = 'rated'
+        rating_state = "rated"
         ai_level     = level
       else
-        rating_state = 'unrated'
+        rating_state = "unrated"
         ai_level     = nil
       end
 
-      confidence = raw['confidence']
+      confidence = raw["confidence"]
       confidence = nil unless VALID_CONFIDENCE.include?(confidence)
 
       # AC-2.7: missing summary → placeholder (column is NOT NULL)
-      summary = raw['competency_summary'].to_s.strip
+      summary = raw["competency_summary"].to_s.strip
       summary = summary[0, MAX_SUMMARY_LEN] if summary.length > MAX_SUMMARY_LEN
-      summary = summary.empty? ? 'Not assessed' : summary
+      summary = "Not assessed" if summary.empty?
 
-      evidence = Array(raw['evidence']).first(MAX_EVIDENCE)
+      evidence = Array(raw["evidence"]).first(MAX_EVIDENCE)
 
       SkillResult.new(
-        skill_id:           raw['skill_id'],
-        skill_label:        raw['skill_label'],
-        is_discovered:      is_discovered,
-        ai_level:           ai_level,
-        rating_state:       rating_state,
-        ai_confidence:      confidence,
-        evidence:           evidence,
+        skill_id: raw["skill_id"],
+        skill_label: raw["skill_label"],
+        is_discovered: is_discovered,
+        ai_level: ai_level,
+        rating_state: rating_state,
+        ai_confidence: confidence,
+        evidence: evidence,
         competency_summary: summary
       )
     end

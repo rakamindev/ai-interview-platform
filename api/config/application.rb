@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require_relative 'boot'
+require_relative "boot"
 
-require 'rails'
-require 'active_model/railtie'
-require 'active_record/railtie'
-require 'action_controller/railtie'
+require "rails"
+require "active_model/railtie"
+require "active_record/railtie"
+require "action_controller/railtie"
 
-require_relative '../app/middlewares/application_middleware'
-require_relative '../app/middlewares/tenant_resolver_middleware'
+require_relative "../app/middlewares/application_middleware"
+require_relative "../app/middlewares/tenant_resolver_middleware"
 
 Bundler.require(*Rails.groups)
 

@@ -10,7 +10,7 @@ module Sessions
 
     def call
       ActiveRecord::Base.transaction do
-        @session.update!(status: 'active', started_at: Time.current)
+        @session.update!(status: "active", started_at: Time.current)
         initialize_coverage_maps
       end
 
@@ -22,9 +22,10 @@ module Sessions
     private
 
     def publish_status_update
-      redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
-      redis.publish("coverage:#{@session.id}", { type: 'session_status', status: @session.status, end_reason: nil }.to_json)
-    rescue => e
+      redis = ::Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/1"))
+      redis.publish("coverage:#{@session.id}",
+                    { type: "session_status", status: @session.status, end_reason: nil }.to_json)
+    rescue StandardError => e
       Rails.logger.error("[StartHandler] Failed to publish status update: #{e.message}")
     ensure
       redis&.close
@@ -38,11 +39,11 @@ module Sessions
 
       skills.each do |skill|
         @session.coverage_maps.create!(
-          skill_id:      skill.skill_id,
-          skill_label:   skill.skill_label,
+          skill_id: skill.skill_id,
+          skill_label: skill.skill_label,
           is_discovered: false,
-          state:         'not_yet',
-          probe_count:   0
+          state: "not_yet",
+          probe_count: 0
         )
       end
 
