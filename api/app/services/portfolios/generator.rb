@@ -9,7 +9,7 @@ module Portfolios
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
         model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        timeout: 180 # up to 3 minutes for large transcripts
       )
     end
 
@@ -20,18 +20,34 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      # 1. Clear error state lama & set status ke generating secara atomis sebelum eksekusi AI
+      portfolio.update!(
+        generation_status: 'generating',
+        generation_error:  nil
+      )
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      # 2. Pembaharuan data DB dan pengubahan status akhir dibungkus dalam 1 transaksi
+      Portfolio.transaction do
+        save_skills(portfolio, response)
+        portfolio.update!(
+          generation_status: 'complete',
+          generated_at:      Time.current,
+          generation_error:  nil
+        )
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # Jika terjadi error saat panggil Gemini atau saat save_skills (yang mana pun),
+      # transaksi akan di-rollback total dan status error dicatat dengan bersih.
+      portfolio&.update!(
+        generation_status: 'failed',
+        generation_error:  e.message
+      )
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -39,7 +55,7 @@ module Portfolios
     private
 
     def build_prompt
-      assessment       = @session.assessment
+      assessment        = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
       turns             = @session.transcript_turns.ordered
@@ -139,10 +155,10 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
-        probe_count: map.probe_count,
+        id:            map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
+        label:         map.skill_label,
+        state:         map.state,
+        probe_count:   map.probe_count,
         is_discovered: map.is_discovered
       }
     end
@@ -150,7 +166,8 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
+      # Hapus skill lama. Jika baris selanjutnya throw error,
+      # 'destroy_all' ini otomatis di-rollback oleh Portfolio.transaction di method call.
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|

@@ -1,16 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import { usePolling } from "@/hooks/usePolling";
+import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
-import { portfoliosApi } from "@/services/portfolios";
-import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import type { AssessorOverride, Portfolio, Vacancy } from "@/types";
+import { ArrowLeft, Download, FileText, Loader2, RefreshCw, Zap } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -47,7 +48,9 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => {
+        toast.error("Failed to fetch portfolio data. Please try again.");
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -66,29 +69,34 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+
     try {
-      const res = await portfoliosApi.exportPortfolio(
-        portfolio.id,
-        format,
-        selectedVacancy ? Number(selectedVacancy) : undefined
-      );
+      const res = await portfoliosApi.exportPortfolio(portfolio.id, format, selectedVacancy ? Number(selectedVacancy) : undefined);
+
+      let blob: Blob;
+
       if (format === "json") {
-        const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const content = typeof res.data === "string" ? res.data : JSON.stringify(res.data, null, 2);
+        blob = new Blob([content], { type: "application/json;charset=utf-8" });
       } else {
-        const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
+        blob = res.data instanceof Blob ? res.data : new Blob([res.data as BlobPart], { type: "application/pdf" });
       }
+      if (format === "pdf" && blob.type.includes("application/json")) {
+        throw new Error("Invalid PDF response format received from server.");
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `portfolio-${sessionId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Portofolio (${format.toUpperCase()}) berhasil diunduh.`);
+    } catch (error) {
+      toast.error(`Gagal mengunduh portofolio ${format.toUpperCase()}. Silakan coba lagi.`);
     } finally {
       setExporting(null);
     }
@@ -97,9 +105,9 @@ export default function PortfolioPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="w-64 h-8" />
+        <Skeleton className="w-full h-48" />
+        <Skeleton className="w-full h-48" />
       </div>
     );
   }
@@ -110,41 +118,26 @@ export default function PortfolioPage() {
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            {candidateName && <p className="text-sm text-muted-foreground">{candidateName}</p>}
           </div>
         </div>
 
         <div className="flex gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
-          >
+          <Link to={`/assessments/${id}/sessions/${sessionId}/transcript`} className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors">
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
           {!generating && portfolio && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("pdf")}
-                disabled={!!exporting}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
                 {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 PDF
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("json")}
-                disabled={!!exporting}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
                 {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 JSON
               </Button>
@@ -155,20 +148,18 @@ export default function PortfolioPage() {
 
       {/* Generating state */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <div className="p-12 space-y-3 text-center border rounded-lg">
+          <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">The AI is analyzing the interview transcript. This takes about 2 minutes.</p>
           </div>
         </div>
       )}
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+        <div className="p-6 space-y-3 text-center border rounded-lg border-destructive/40">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
           <Button
             variant="outline"
@@ -192,12 +183,7 @@ export default function PortfolioPage() {
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
+                <SkillPortfolioCard key={skill.id} skill={skill} override={overrides[skill.id]} onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)} />
               ))}
           </div>
 
@@ -208,22 +194,15 @@ export default function PortfolioPage() {
               <div className="space-y-3">
                 <div>
                   <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
+                    <Zap className="w-4 h-4 text-amber-500" />
                     Discovered Skills
                   </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
-                  </p>
+                  <p className="text-xs text-muted-foreground">Skills the AI probed that were not in the original assessment</p>
                 </div>
                 {portfolio.skills
                   .filter((s) => s.is_discovered)
                   .map((skill) => (
-                    <SkillPortfolioCard
-                      key={skill.id}
-                      skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                    />
+                    <SkillPortfolioCard key={skill.id} skill={skill} override={overrides[skill.id]} onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)} />
                   ))}
               </div>
             </>
@@ -251,6 +230,7 @@ export default function PortfolioPage() {
           </div>
         </>
       )}
+      <ToastContainer position="bottom-center" />
     </div>
   );
 }

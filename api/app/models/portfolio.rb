@@ -1,19 +1,31 @@
-# frozen_string_literal: true
-
 class Portfolio < ApplicationRecord
-  GENERATION_STATUSES = %w[pending generating complete failed].freeze
+  include TenantScoped
 
-  belongs_to :session
-  has_many :portfolio_skills, dependent: :destroy
-  has_many :assessor_overrides, through: :portfolio_skills
+   GENERATION_STATUSES = %w[pending generating complete failed].freeze
 
-  validates :generation_status, inclusion: { in: GENERATION_STATUSES }
+   belongs_to :session
+   has_many :portfolio_skills, dependent: :destroy
+   has_many :assessor_overrides, through: :portfolio_skills
 
-  scope :complete,    -> { where(generation_status: 'complete') }
-  scope :failed,      -> { where(generation_status: 'failed') }
-  scope :generating,  -> { where(generation_status: 'generating') }
+   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
-  def complete?    = generation_status == 'complete'
-  def generating?  = generation_status == 'generating'
-  def failed?      = generation_status == 'failed'
-end
+   scope :complete,    -> { where(generation_status: 'complete') }
+   scope :failed,      -> { where(generation_status: 'failed') }
+   scope :generating,  -> { where(generation_status: 'generating') }
+
+   def complete?    = generation_status == 'complete'
+   def generating?  = generation_status == 'generating'
+   def failed?      = generation_status == 'failed'
+
+  private
+
+  # Portfolios are created from Sidekiq workers (Portfolios::Generator) and
+  # from Sessions::EndHandler, which may run outside a normal HTTP request —
+  # there is no reliable Current.tenant_id in those contexts. A portfolio's
+  # tenant is unambiguous anyway: it's whatever tenant its session belongs
+  # to. Override TenantScoped's default (which reads Current.tenant_id) to
+  # derive it from the parent session instead.
+  def assign_tenant_id
+    self.tenant_id ||= session&.tenant_id
+  end
+ end
