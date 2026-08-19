@@ -16,10 +16,8 @@ Sidekiq.configure_server do |config|
     nil
   end
 
-  schedule_file = Rails.root.join("config", "sidekiq_schedule.yml")
-  if schedule_file.exist?
-    Sidekiq::Cron::Job.load_from_yaml(schedule_file)
-  end
+  schedule_file = Rails.root.join("config/sidekiq_schedule.yml")
+  Sidekiq::Cron::Job.load_from_yaml(schedule_file) if schedule_file.exist?
 end
 
 Sidekiq.configure_client do |config|

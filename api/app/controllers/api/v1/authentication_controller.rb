@@ -32,14 +32,10 @@ module Api
       def refresh
         verify_csrf!
         refresh_token_value = extract_refresh_token
-        unless refresh_token_value
-          return json_error("Missing refresh token", :unauthorized, details: "missing_refresh_token")
-        end
+        return json_error("Missing refresh token", :unauthorized, details: "missing_refresh_token") unless refresh_token_value
 
         token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
-        unless token_record&.valid_token?
-          return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token")
-        end
+        return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token") unless token_record&.valid_token?
 
         if token_record.grace_period_expired?
           token_record.revoke!
@@ -106,7 +102,9 @@ module Api
       def verify_csrf!
         expected = cookies[:csrf_secret]
         actual = request.headers["X-CSRF-Token"]
-        raise(ExceptionHandler::InvalidToken, "CSRF token mismatch") unless expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, actual)
+        return if expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, actual)
+
+        raise(ExceptionHandler::InvalidToken, "CSRF token mismatch")
       end
 
       def token_hash(token)
