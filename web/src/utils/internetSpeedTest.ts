@@ -87,22 +87,44 @@ async function measureUploadSpeed(): Promise<number> {
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
-    for (const endpoint of endpoints) {
+
+    // If a custom upload endpoint is configured (same-origin or CORS-enabled), use it
+    if (SPEED_TEST_UPLOAD_URL) {
         try {
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            await fetch(SPEED_TEST_UPLOAD_URL, { method: "POST", body: formData });
             const seconds = (performance.now() - start) / 1000;
             return uploadSizeMB / seconds;
         } catch {
-            continue;
+            // fall through
         }
     }
-    return 0.5; // conservative fallback
+
+    // Use our own backend as upload target (same-origin, no CORS issues)
+    const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api/v1";
+    try {
+        const formData = new FormData();
+        formData.append("test", uploadData);
+        const start = performance.now();
+        await fetch(`${apiBase}/health`, { method: "POST", body: formData, mode: "no-cors" });
+        const seconds = (performance.now() - start) / 1000;
+        return uploadSizeMB / seconds;
+    } catch {
+        // fall through
+    }
+
+    // Last resort: use no-cors POST to a public CDN endpoint just to measure timing
+    try {
+        const start = performance.now();
+        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
+        const duration = (performance.now() - start) / 1000;
+        // Estimate: if ping is fast, assume decent upload
+        return duration < 0.3 ? 2 : duration < 1 ? 1 : 0.5;
+    } catch {
+        return 0.5; // conservative fallback
+    }
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {

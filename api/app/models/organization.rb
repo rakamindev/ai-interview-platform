@@ -14,12 +14,14 @@ class Organization < ApplicationRecord
     return default_organization if identifier.blank?
 
     sql_string = <<~SQL.squish
-      (? IN (identifier, name, scheme, host)) OR
-      (alias_hosts && ARRAY[?]::varchar[])
+      identifier = :id OR
+      name = :id OR
+      scheme = :id OR
+      host = :id OR
+      :id = ANY(alias_hosts)
     SQL
 
-    where(sql_string, identifier, Array(identifier)).first ||
-      default_organization
+    where(sql_string, id: identifier).first || default_organization
   end
 
   def self.default_organization

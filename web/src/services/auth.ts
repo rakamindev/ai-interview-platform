@@ -10,9 +10,16 @@ export interface LoginResponse {
 }
 
 export const authApi = {
-  login: (data: LoginPayload) =>
-    api.post<LoginResponse>("/auth/login", data),
+  login: (data: LoginPayload) => api.post<LoginResponse>("/auth/login", data),
+  
+  register: (data: { email: string; password: string }) => 
+    api.post<LoginResponse>("/auth/register", data),
+    
+  forgotPassword: (email: string) => 
+    api.post("/auth/forgot_password", { email }),
+    
+  resetPassword: (token: string, password: string) => 
+    api.post("/auth/reset_password", { token, password }),
 
-  signup: (data: { email: string; password: string; role: "admin" | "user" }) =>
-    api.post<LoginResponse>("/signup", data),
+  me: () => api.get("/auth/me"),
 };

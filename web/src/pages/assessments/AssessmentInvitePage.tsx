@@ -9,13 +9,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Trash2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -23,12 +25,14 @@ function SessionRow({
   index,
   assessmentId,
   onCopy,
+  onDelete,
   copiedId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onDelete: (id: number) => void;
   copiedId: number | null;
 }) {
   const navigate = useNavigate();
@@ -38,9 +42,9 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-4 gap-3">
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+        <div className="flex items-center justify-center w-7 h-7 min-w-[1.75rem] rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
         <div className="space-y-0.5">
@@ -53,7 +57,7 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 pl-10 sm:pl-0">
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -79,7 +83,7 @@ function SessionRow({
           </span>
         )}
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {isPending && (
             <Button
               variant="ghost"
@@ -114,6 +118,15 @@ function SessionRow({
               Results
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => onDelete(session.id)}
+            title="Delete Session"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
       </div>
     </div>
@@ -132,6 +145,8 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -186,6 +201,26 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
+  };
+
+  const handleDeleteSession = (sessionId: number) => {
+    setSessionToDelete(sessionId);
+  };
+
+  const confirmDeleteSession = async () => {
+    if (!sessionToDelete) return;
+    setIsDeleting(true);
+    try {
+      await sessionsApi.deleteSession(sessionToDelete);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionToDelete));
+      if (newSession?.id === sessionToDelete) setNewSession(null);
+      setSessionToDelete(null);
+    } catch (e: any) {
+      console.error(e);
+      alert("Gagal menghapus undangan: " + (e?.response?.data?.errors?.[0]?.message ?? e.message));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (loading) {
@@ -251,6 +286,26 @@ export default function AssessmentInvitePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete confirmation dialog */}
+      <Dialog open={sessionToDelete !== null} onOpenChange={(open) => !open && setSessionToDelete(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hapus Undangan</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus undangan kandidat ini? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setSessionToDelete(null)} disabled={isDeleting}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteSession} disabled={isDeleting}>
+              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Newly created session invite link */}
       {newSession && (
         <Card className="border-primary/30 bg-primary/5">
@@ -312,6 +367,7 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onDelete={handleDeleteSession}
                   copiedId={copiedId}
                 />
               ))}

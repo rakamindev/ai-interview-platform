@@ -66,7 +66,7 @@ else
         '#{TEST_ORG[:scheme]}',
         '#{TEST_ORG[:identifier]}',
         '#{TEST_ORG[:host]}',
-        '{}',
+        '{test-corp.localhost}',
         '{}',
         NOW(),
         NOW()

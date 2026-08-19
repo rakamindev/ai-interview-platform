@@ -10,18 +10,33 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_17_042610) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_stat_statements"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
+  enable_extension "supabase_vault"
+  enable_extension "uuid-ossp"
 
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
+  create_enum "aal_level", ["aal1", "aal2", "aal3"]
+  create_enum "action", ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "ERROR"]
+  create_enum "buckettype", ["STANDARD", "ANALYTICS", "VECTOR"]
+  create_enum "code_challenge_method", ["s256", "plain"]
   create_enum "confidence_level", ["high", "medium", "low"]
   create_enum "coverage_state", ["not_yet", "initiated", "partial", "covered"]
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
+  create_enum "equality_op", ["eq", "neq", "lt", "lte", "gt", "gte", "in", "like", "ilike", "is", "match", "imatch", "isdistinct"]
+  create_enum "factor_status", ["unverified", "verified"]
+  create_enum "factor_type", ["totp", "webauthn", "phone"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "oauth_authorization_status", ["pending", "approved", "denied", "expired"]
+  create_enum "oauth_client_type", ["public", "confidential"]
+  create_enum "oauth_registration_type", ["dynamic", "manual"]
+  create_enum "oauth_response_type", ["code"]
+  create_enum "one_time_token_type", ["confirmation_token", "reauthentication_token", "recovery_token", "email_change_token_new", "email_change_token_current", "phone_change_token"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
 
@@ -182,6 +197,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "role", limit: 20, default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
   end
 

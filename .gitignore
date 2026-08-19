@@ -17,3 +17,7 @@ web/.vite/
 
 # OS
 .DS_Store
+api/vendor/
+redis/
+dump.rdb
+Redis-x64.zip

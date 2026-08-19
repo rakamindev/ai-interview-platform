@@ -7,6 +7,8 @@ export const sessionsApi = {
       `/sessions/${id}`
     ),
 
+  deleteSession: (id: number) => api.delete(`/sessions/${id}`),
+
   endSession: (id: number, reason = "manual_assessor") =>
     api.post<{ session: Session }>(`/sessions/${id}/end_session`, {
       session: { reason },

@@ -6,6 +6,9 @@ class Portfolio < ApplicationRecord
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
+  # fit_gap_reports has an FK to portfolios; without this, deleting a session
+  # (which cascades to its portfolio) trips a ForeignKeyViolation.
+  has_many :fit_gap_reports, dependent: :destroy
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 

@@ -29,7 +29,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
       clearToken();
-      window.location.href = "/login";
+      // ProtectedRoute will handle the redirect gracefully.
+      // We also trigger a custom event so other parts of the app can react if needed.
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);
   }

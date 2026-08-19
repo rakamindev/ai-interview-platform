@@ -103,7 +103,13 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              // Unrecoverable errors are a failure, not a finished interview —
+              // reconnecting would just hit the same wall.
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+                onStateChange("failed");
+              }
               break;
           }
         } catch {

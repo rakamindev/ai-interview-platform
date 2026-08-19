@@ -68,8 +68,36 @@ module Sessions
       portfolio = @session.reload.portfolio
       return unless portfolio
 
-      PortfolioGeneratorWorker.perform_async(@session.id)
-      Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+      if sidekiq_available?
+        PortfolioGeneratorWorker.perform_async(@session.id)
+        Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+      else
+        Rails.logger.info("[N9/EndHandler] Sidekiq unavailable — running portfolio generation inline for session #{@session.id}")
+        generate_portfolio_inline
+      end
+    end
+
+    def sidekiq_available?
+      return false if Rails.env.test?
+
+      # Check if Sidekiq has active processes (workers listening)
+      Sidekiq::ProcessSet.new.size > 0
+    rescue => e
+      Rails.logger.warn("[N9/EndHandler] Cannot reach Sidekiq/Redis: #{e.message}")
+      false
+    end
+
+    def generate_portfolio_inline
+      session_id = @session.id
+      Thread.new do
+        begin
+          session = Session.find(session_id)
+          Portfolios::Generator.new(session: session).call
+          Rails.logger.info("[N9/EndHandler] Inline portfolio generation completed for session #{session_id}")
+        rescue => e
+          Rails.logger.error("[N9/EndHandler] Inline portfolio generation failed for session #{session_id}: #{e.message}")
+        end
+      end
     end
   end
 end

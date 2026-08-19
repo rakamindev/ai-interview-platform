@@ -10,6 +10,7 @@ class AudioWebSocketMiddleware
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
   BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
+  GEMINI_SETUP_TIMEOUT = 30 # seconds to wait for Gemini setupComplete before giving up
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
@@ -30,7 +31,15 @@ class AudioWebSocketMiddleware
 
     return @app.call(env) unless match && Faye::WebSocket.websocket?(env)
 
-    handle_audio_websocket(env, match[1])
+    begin
+      handle_audio_websocket(env, match[1])
+    rescue ActiveRecord::StatementInvalid, PG::Error => e
+      Rails.logger.error("[AudioWS] Database error in middleware: #{e.message}")
+      [500, { 'Content-Type' => 'application/json' }, [{ error: 'Internal Server Error' }.to_json]]
+    rescue StandardError => e
+      Rails.logger.error("[AudioWS] Unhandled error in middleware: #{e.message}")
+      [500, { 'Content-Type' => 'application/json' }, [{ error: 'Internal Server Error' }.to_json]]
+    end
   end
 
   private
@@ -50,13 +59,23 @@ class AudioWebSocketMiddleware
     session, error = authenticate_and_load(env, session_id)
 
     if error
+      Rails.logger.error("[AudioWS] Auth failed for session #{session_id}: #{error}")
       browser_ws.send({ type: 'error', code: 'auth_failed', message: error, recoverable: false }.to_json)
       browser_ws.close
       return
     end
 
     state.session = session
-    connect_to_gemini(browser_ws, state)
+
+    # Run connect_to_gemini in a background thread so it doesn't block the EventMachine reactor
+    Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        connect_to_gemini(browser_ws, state)
+      end
+    rescue StandardError => e
+      Rails.logger.error("[AudioWS] Exception in connect_to_gemini thread: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+      EM.schedule { browser_ws.close }
+    end
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
     browser_ws.close
@@ -122,6 +141,35 @@ class AudioWebSocketMiddleware
 
     build_gemini_client(browser_ws, state)
     state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
+    arm_setup_timeout(browser_ws, state)
+  end
+
+  # Gemini can accept the socket and then never answer setup. Fail loudly instead of
+  # leaving the candidate staring at "Connecting...".
+  def arm_setup_timeout(browser_ws, state)
+    state.setup_timeout_timer&.cancel
+    state.setup_timeout_timer = Concurrent::ScheduledTask.execute(GEMINI_SETUP_TIMEOUT) do
+      next if state.gemini_ready || state.setup_failed
+
+      handle_setup_failure(browser_ws, state, "no setupComplete within #{GEMINI_SETUP_TIMEOUT}s")
+    end
+  end
+
+  # Unrecoverable: the AI side never came up, so no retry will help this connection.
+  def handle_setup_failure(browser_ws, state, message)
+    return if state.setup_failed
+
+    state.setup_failed = true
+    state.setup_timeout_timer&.cancel
+    Rails.logger.error("[AudioWS] Gemini setup failed (session=#{state.session&.id}): #{message}")
+
+    send_json(browser_ws, type: 'error', code: 'gemini_setup_failed',
+                          message: 'Could not reach the AI interviewer. Please try again or contact the interviewer.',
+                          recoverable: false)
+
+    state.gemini_client&.supersede!
+    state.gemini_client&.close
+    EM.schedule { browser_ws.close }
   end
 
   def ensure_system_prompt(session)
@@ -146,7 +194,8 @@ class AudioWebSocketMiddleware
       on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
       on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
       on_resumption_token_update: build_on_resumption_token_update(state, session),
-      on_ready: build_on_ready(browser_ws, state, session)
+      on_ready: build_on_ready(browser_ws, state, session),
+      on_setup_error: ->(message) { handle_setup_failure(browser_ws, state, message) }
     )
   end
 
@@ -324,6 +373,8 @@ class AudioWebSocketMiddleware
   def build_on_ready(browser_ws, state, session)
     lambda {
       state.logged_not_ready = false
+      state.gemini_ready = true
+      state.setup_timeout_timer&.cancel
       if state.reconnecting
         Rails.logger.info("[AudioWS] Gemini reconnected for session #{session.id}")
         state.reconnecting = false
@@ -734,10 +785,19 @@ class AudioWebSocketMiddleware
     request = Rack::Request.new(env)
 
     session = begin
-      invite_token = request.params['token']
+      token = request.params['token']
 
-      if invite_token.present?
-        Session.unscoped.find_by(invite_token: invite_token)
+      if token.present?
+        if token.split('.').length == 3
+          # JWT assessor token
+          payload = JsonWebToken.decode(token)
+          tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
+          return [nil, 'Invalid tenant'] unless tenant_id
+          Session.unscoped.where(tenant_id: tenant_id).find_by(id: session_id)
+        else
+          # Candidate invite token
+          Session.unscoped.find_by(invite_token: token)
+        end
       else
         auth_header = env['HTTP_AUTHORIZATION']
         return [nil, 'Missing authorization'] unless auth_header.present?
@@ -783,7 +843,8 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response,
+                  :setup_timeout_timer, :setup_failed, :gemini_ready
 
     def initialize
       @turn_counter = 0
@@ -793,6 +854,8 @@ class AudioWebSocketMiddleware
       @wrap_up_injected = false
       @last_ai_turn_ends_with_question = false
       @waiting_for_candidate_response = false
+      @setup_failed = false
+      @gemini_ready = false
       @sent_time_warnings = Set.new
     end
 

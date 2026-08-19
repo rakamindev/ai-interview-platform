@@ -41,6 +41,9 @@ module ExceptionHandler
     status = exception_status(e)
     message = Rails.env.production? ? human_message(e) : e.message
 
+    Rails.logger.error "[ExceptionHandler] Caught error: #{e.class} - #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
     render json: {
       errors: [{
         status:,
@@ -59,6 +62,7 @@ module ExceptionHandler
     when ExceptionHandler::MissingToken,
          ExceptionHandler::InvalidToken       then 401
     when ActiveRecord::RecordNotFound         then 404
+    when ActiveRecord::InvalidForeignKey       then 409
     else                                           500
     end
   end
@@ -66,6 +70,8 @@ module ExceptionHandler
   def human_message(e)
     case e
     when ActiveRecord::RecordInvalid then e.record.errors.full_messages.first
+    when ActiveRecord::InvalidForeignKey
+      "This record is still referenced by other data and cannot be deleted."
     else "An unexpected error occurred."
     end
   end

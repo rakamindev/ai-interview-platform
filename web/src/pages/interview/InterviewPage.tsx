@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -19,13 +19,14 @@ import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useAudioCapture } from "@/hooks/useAudioCapture";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
+import { getStoredToken } from "@/stores/authAtom";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
-  const { token } = useParams<{ token: string }>();
+  const { token: paramToken } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
@@ -38,6 +39,26 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [searchParams] = useSearchParams();
+  const searchToken = searchParams.get("token");
+  const authJwt = getStoredToken();
+  const token = paramToken || searchToken || authJwt || undefined;
+  const transcriptContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll transcript
+  useEffect(() => {
+    if (transcriptContainerRef.current) {
+      transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight;
+    }
+  }, [transcript]);
+
+  // Never sit on "Connecting..." forever — if the backend never sends session_started
+  // (Gemini setup rejected, reactor stalled), surface a failure the candidate can act on.
+  useEffect(() => {
+    if (interviewState !== "connecting") return;
+    const timer = setTimeout(() => setInterviewState("failed"), 45_000);
+    return () => clearTimeout(timer);
+  }, [interviewState]);
 
   // Fetch candidate info
   useEffect(() => {
@@ -241,14 +262,30 @@ export default function InterviewPage() {
     );
   }
 
+  // ── Failure: connection to the AI interviewer never came up ─────────────
+  if (interviewState === "failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Couldn't start the interview</h2>
+        <p className="text-sm text-muted-foreground">
+          We couldn't reach the AI interviewer. Please check your connection and try again.
+          <br />
+          If this keeps happening, contact the hiring team.
+        </p>
+        <Button onClick={() => window.location.reload()}>Try again</Button>
+      </div>
+    );
+  }
+
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <div className="max-w-6xl mx-auto px-4 flex flex-col h-screen max-h-screen">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="flex items-center justify-between py-4 border-b shrink-0 bg-background z-10">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -262,12 +299,12 @@ export default function InterviewPage() {
       {/* Reconnecting banner */}
       {interviewState === "reconnecting" && (
         connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
+          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2 shrink-0">
             <span className="animate-pulse">●</span>
             <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
+          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2 shrink-0">
             <span className="animate-pulse">●</span>
             <span>Briefly reconnecting — please wait a moment.</span>
           </div>
@@ -276,51 +313,71 @@ export default function InterviewPage() {
 
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
+        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2 shrink-0">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
           <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
         </div>
       )}
 
-      {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-        {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
-        ) : interviewState === "draining_audio" ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
-            <p className="text-xs text-muted-foreground">Wrapping up...</p>
+      {/* Main Two-Pane Area */}
+      <div className="flex-1 flex flex-col md:flex-row gap-6 py-6 min-h-0 overflow-hidden">
+        
+        {/* LEFT PANE: AI Interviewer */}
+        <div className="w-full md:w-[35%] lg:w-[30%] flex flex-col items-center justify-center bg-muted/30 rounded-2xl p-8 border shrink-0">
+          <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center mb-8 relative">
+            <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping opacity-20"></div>
+            <span className="text-5xl">🤖</span>
           </div>
-        ) : (
-          <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
-
-            {candidateSpeaking && (
+          
+          <div className="h-24 flex flex-col items-center justify-center w-full text-center">
+            {interviewState === "connecting" ? (
+              <VoiceBars active={false} label="Connecting..." variant="ai" />
+            ) : interviewState === "draining_audio" ? (
+              <div className="flex flex-col items-center gap-2 text-center">
+                <VoiceBars active={true} label="Wrapping up..." variant="ai" />
+              </div>
+            ) : (
               <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
+                active={aiSpeaking}
+                label={aiSpeaking ? "AI is speaking..." : "AI is listening..."}
+                variant="ai"
               />
             )}
-
-            {/* Transcript */}
-            {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
-                {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
-                ))}
+            {candidateSpeaking && !aiSpeaking && (
+              <div className="mt-4 text-xs font-medium text-primary animate-pulse">
+                You are speaking...
               </div>
             )}
-          </>
-        )}
+          </div>
+        </div>
+
+        {/* RIGHT PANE: Chat Transcript */}
+        <div className="flex-1 flex flex-col bg-muted/10 border rounded-2xl overflow-hidden min-h-0 relative">
+          <div className="bg-muted/30 border-b px-4 py-3 shrink-0 flex justify-between items-center z-10 backdrop-blur-sm">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              Live Transcript
+            </h3>
+          </div>
+          
+          <div 
+            ref={transcriptContainerRef}
+            className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2 scroll-smooth relative"
+          >
+            {transcript.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground italic">
+                The conversation will appear here...
+              </div>
+            ) : (
+              transcript.map((turn, i) => (
+                <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-4 flex items-center justify-between gap-4 shrink-0 bg-background">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
