@@ -140,8 +140,27 @@ export default function InterviewPage() {
     onReconnected: handleReconnected,
   });
 
+  const uploadRecording = useCallback(async (recording: Blob, durationMs: number) => {
+    if (!token) return;
+
+    const digest = await crypto.subtle.digest("SHA-256", await recording.arrayBuffer());
+    const checksum = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const response = await sessionsApi.createCandidateRecording(token, {
+      content_type: recording.type || "audio/webm",
+      byte_size: recording.size,
+      duration_ms: durationMs,
+      checksum,
+    });
+    await fetch(response.data.upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": recording.type || "audio/webm" },
+      body: recording,
+    });
+  }, [token]);
+
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
     onFrame: send,
+    onRecording: (recording, durationMs) => { void uploadRecording(recording, durationMs); },
   });
 
   muteRef.current = mute;

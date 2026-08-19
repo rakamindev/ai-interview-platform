@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Pencil, Volume2 } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -12,6 +12,26 @@ export default function TranscriptPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const segmentEndRef = useRef<number | null>(null);
+
+  const saveRevision = async (event: FormEvent, turn: TranscriptTurn) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await sessionsApi.reviseTranscriptTurn(turn.id, draft, reason);
+      setTurns((current) => current.map((item) => item.id === turn.id ? { ...item, text: draft } : item));
+      setEditingId(null);
+      setReason("");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -25,6 +45,35 @@ export default function TranscriptPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  const loadRecording = async () => {
+    try {
+      const response = await sessionsApi.getRecordingPlayback(Number(sessionId));
+      setPlaybackUrl(response.data.playback_url);
+      return response.data.playback_url;
+    } catch {
+      setPlaybackUrl(null);
+      return null;
+    }
+  };
+
+  const playTurn = async (turn: TranscriptTurn) => {
+    if (turn.audio_start_ms === undefined) return;
+    const source = playbackUrl || await loadRecording();
+    if (!source || !audioRef.current) return;
+    if (audioRef.current.src !== source) audioRef.current.src = source;
+    segmentEndRef.current = turn.audio_end_ms === undefined ? null : turn.audio_end_ms / 1000;
+    audioRef.current.currentTime = turn.audio_start_ms / 1000;
+    void audioRef.current.play();
+  };
+
+  const stopAtSegmentEnd = () => {
+    if (!audioRef.current || segmentEndRef.current === null) return;
+    if (audioRef.current.currentTime >= segmentEndRef.current) {
+      audioRef.current.pause();
+      segmentEndRef.current = null;
+    }
+  };
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -64,6 +113,17 @@ export default function TranscriptPage() {
           </Button>
         )}
       </div>
+
+      {!loading && !error && !playbackUrl && (
+        <Button variant="outline" size="sm" onClick={loadRecording}>
+          <Volume2 className="h-3.5 w-3.5 mr-1.5" />
+          Load recording
+        </Button>
+      )}
+
+      <audio className={playbackUrl ? "w-full" : "hidden"} controls ref={audioRef} onTimeUpdate={stopAtSegmentEnd} src={playbackUrl ?? undefined}>
+          Your browser cannot play this recording.
+      </audio>
 
       {loading && (
         <div className="space-y-3">
@@ -106,6 +166,31 @@ export default function TranscriptPage() {
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
+                {!isAI && editingId !== turn.id && (
+                  <div className="mt-3 flex gap-2">
+                    {turn.audio_start_ms !== undefined && (
+                      <Button variant="outline" size="icon" title="Play candidate response" onClick={() => { void playTurn(turn); }}>
+                        <Volume2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    <Button variant="outline" size="icon" title="Correct transcript" onClick={() => {
+                      setEditingId(turn.id);
+                      setDraft(turn.text);
+                    }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+                {!isAI && editingId === turn.id && (
+                  <form className="mt-3 space-y-2" onSubmit={(event) => saveRevision(event, turn)}>
+                    <textarea className="min-h-24 w-full rounded border bg-background p-2 text-sm" value={draft} onChange={(event) => setDraft(event.target.value)} required />
+                    <input className="w-full rounded border bg-background p-2 text-sm" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason for correction" required />
+                    <div className="flex gap-2">
+                      <Button size="sm" disabled={saving}>{saving ? "Saving…" : "Save correction"}</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
+                    </div>
+                  </form>
+                )}
               </div>
             );
           })}

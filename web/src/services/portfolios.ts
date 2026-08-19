@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Portfolio, AssessorOverride, FitGapReport } from "@/types";
+import type { AssessorOverride, FitGapReport, PortfolioNote } from "@/types";
 
 export const portfoliosApi = {
   getOverride: (portfolioSkillId: number, data: { override_level: number; assessor_notes: string }) =>
@@ -25,4 +25,10 @@ export const portfoliosApi = {
       params: { format, ...(vacancyId ? { vacancy_id: vacancyId } : {}) },
       responseType: format === "pdf" ? "blob" : "json",
     }),
+
+  getNotes: (portfolioId: number) =>
+    api.get<{ notes: PortfolioNote[] }>(`/portfolios/${portfolioId}/notes`),
+
+  createNote: (portfolioId: number, body: string, category: PortfolioNote["category"]) =>
+    api.post<{ note: PortfolioNote }>(`/portfolios/${portfolioId}/notes`, { note: { body, category } }),
 };

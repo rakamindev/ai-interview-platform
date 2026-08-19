@@ -74,6 +74,35 @@ export interface TranscriptTurn {
   created_at: string;
 }
 
+export interface TranscriptRevision {
+  id: number;
+  transcript_turn_id: number;
+  revised_text: string;
+  reason: string;
+  revised_by: number;
+  created_at: string;
+}
+
+export interface InterviewRecording {
+  id: number;
+  session_id: number;
+  content_type: string;
+  byte_size: number;
+  duration_ms: number;
+  checksum: string;
+  captured_at: string;
+  expires_at: string;
+}
+
+export interface PortfolioNote {
+  id: number;
+  portfolio_id: number;
+  body: string;
+  category: "review" | "evidence" | "follow_up";
+  created_by: number;
+  created_at: string;
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;
@@ -87,12 +116,14 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  assessment_state: "assessed" | "not_assessed";
+  ai_level: number | null;
+  ai_confidence: "high" | "medium" | "low" | null;
   evidence: string[];
+  evidence_turn_ids: number[];
   competency_summary: string;
 }
 

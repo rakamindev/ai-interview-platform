@@ -6,7 +6,6 @@ import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, Pencil } from "lucide-react";
-import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface OverridePanelProps {
@@ -17,7 +16,7 @@ interface OverridePanelProps {
 
 export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
-  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? skill.ai_level ?? 1);
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -44,13 +43,13 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   if (!open) {
     return (
       <div className="flex items-center gap-2">
-        {hasOverride ? (
+        {hasOverride && existingOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
+              <LevelBadge level={skill.ai_level ?? 1} size="sm" />
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
-              <LevelBadge level={existingOverride!.override_level} size="sm" />
+              <LevelBadge level={existingOverride.override_level} size="sm" />
               <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>

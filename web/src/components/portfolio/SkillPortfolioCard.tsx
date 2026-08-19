@@ -3,7 +3,6 @@ import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
 import { Zap } from "lucide-react";
-import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface SkillPortfolioCardProps {
@@ -17,7 +16,8 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const isAssessed = skill.assessment_state === "assessed" && skill.ai_level !== null;
+  const effectiveLevel = override?.override_level ?? skill.ai_level;
 
   return (
     <Card>
@@ -25,7 +25,13 @@ export default function SkillPortfolioCard({
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
+            {isAssessed && effectiveLevel !== null ? (
+              <LevelBadge level={effectiveLevel} />
+            ) : (
+              <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+                Not assessed
+              </div>
+            )}
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>
@@ -35,11 +41,17 @@ export default function SkillPortfolioCard({
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              {skill.ai_confidence && <ConfidenceIndicator confidence={skill.ai_confidence} />}
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          {isAssessed && <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />}
         </div>
+
+        {!isAssessed && (
+          <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            AI output lacked verified candidate evidence. Arrange a follow-up before relying on this skill.
+          </div>
+        )}
 
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
@@ -49,7 +61,7 @@ export default function SkillPortfolioCard({
         )}
 
         {/* Evidence */}
-        {skill.evidence.length > 0 && (
+        {isAssessed && skill.evidence.length > 0 && (
           <div className="space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Evidence from interview
@@ -57,7 +69,7 @@ export default function SkillPortfolioCard({
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
                 <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
+                  • "{quote}" <span className="text-xs text-muted-foreground">(candidate turn {skill.evidence_turn_ids[i]})</span>
                 </li>
               ))}
             </ul>

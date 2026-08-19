@@ -29,9 +29,22 @@ module Exports
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
         render_header(pdf)
         render_portfolio_section(pdf)
+        render_reviewer_notes(pdf)
         render_fit_gap_section(pdf) if @fit_gap
         render_footer(pdf)
       end.render
+    end
+
+    def render_reviewer_notes(pdf)
+      notes = @portfolio.portfolio_notes.order(created_at: :asc)
+      return if notes.empty?
+
+      pdf.move_down 8
+      pdf.font_size(13) { pdf.text 'Reviewer Notes', style: :bold }
+      notes.each do |note|
+        pdf.move_down 4
+        pdf.font_size(10) { pdf.text "#{note.category.humanize}: #{note.body}" }
+      end
     end
 
     private

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_19_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -22,6 +22,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "portfolio_assessment_state", ["assessed", "not_assessed"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
 
@@ -94,6 +95,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
   end
 
+  create_table "interview_recordings", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.string "object_key", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size", null: false
+    t.integer "duration_ms"
+    t.string "checksum", null: false
+    t.datetime "captured_at", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "purged_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["object_key"], name: "index_interview_recordings_on_object_key", unique: true
+    t.index ["session_id"], name: "index_interview_recordings_on_session_id", unique: true
+  end
+
   create_table "organizations", force: :cascade do |t|
     t.string "name", limit: 255, null: false
     t.string "scheme", limit: 255, null: false
@@ -107,17 +124,30 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
+  create_table "portfolio_notes", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.text "body", null: false
+    t.string "category", default: "review", null: false
+    t.bigint "created_by", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["portfolio_id"], name: "index_portfolio_notes_on_portfolio_id"
+  end
+
   create_table "portfolio_skills", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.enum "assessment_state", default: "assessed", null: false, enum_type: "portfolio_assessment_state"
+    t.jsonb "evidence_turn_ids", default: [], null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "assessment_state = 'assessed'::portfolio_assessment_state AND ai_level IS NOT NULL AND ai_confidence IS NOT NULL OR assessment_state = 'not_assessed'::portfolio_assessment_state AND ai_level IS NULL AND ai_confidence IS NULL AND evidence = '[]'::jsonb AND evidence_turn_ids = '[]'::jsonb", name: "chk_portfolio_skills_assessment_state"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -162,6 +192,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "l5_anchor", null: false
     t.index ["category"], name: "idx_skill_taxonomies_category"
     t.index ["skill_id"], name: "idx_skill_taxonomies_skill_id", unique: true
+  end
+
+  create_table "transcript_revisions", force: :cascade do |t|
+    t.bigint "transcript_turn_id", null: false
+    t.text "revised_text", null: false
+    t.text "reason", null: false
+    t.bigint "revised_by", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["transcript_turn_id", "created_at"], name: "index_transcript_revisions_on_transcript_turn_id_and_created_at"
+    t.index ["transcript_turn_id"], name: "index_transcript_revisions_on_transcript_turn_id"
   end
 
   create_table "transcript_turns", force: :cascade do |t|
@@ -210,9 +251,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "interview_recordings", "sessions"
+  add_foreign_key "portfolio_notes", "portfolios"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
+  add_foreign_key "transcript_revisions", "transcript_turns"
   add_foreign_key "transcript_turns", "sessions"
   add_foreign_key "vacancy_skills", "vacancies"
 end

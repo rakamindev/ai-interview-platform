@@ -4,6 +4,7 @@ class TranscriptTurn < ApplicationRecord
   SPEAKERS = %w[ai candidate].freeze
 
   belongs_to :session
+  has_many :transcript_revisions, dependent: :destroy
 
   validates :turn_number, presence: true,
                            numericality: { only_integer: true, greater_than: 0 }

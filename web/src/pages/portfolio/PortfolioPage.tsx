@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { FormEvent, useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +10,7 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import type { AssessorOverride, Portfolio, PortfolioNote, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -23,10 +23,13 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [notes, setNotes] = useState<PortfolioNote[]>([]);
+  const [noteBody, setNoteBody] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
+    const data: { status?: string; portfolio?: Portfolio } = res.data;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
     } else if (data.portfolio) {
@@ -51,6 +54,13 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
+  useEffect(() => {
+    if (!portfolio) return;
+    portfoliosApi.getNotes(portfolio.id)
+      .then((response) => setNotes(response.data.notes))
+      .catch(() => setNotes([]));
+  }, [portfolio?.id]);
+
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
 
@@ -61,6 +71,19 @@ export default function PortfolioPage() {
   const handleRunFitGap = () => {
     if (!selectedVacancy || !portfolio) return;
     navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`);
+  };
+
+  const saveNote = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!portfolio || !noteBody.trim()) return;
+    setSavingNote(true);
+    try {
+      const response = await portfoliosApi.createNote(portfolio.id, noteBody.trim(), "review");
+      setNotes((current) => [response.data.note, ...current]);
+      setNoteBody("");
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   const handleExport = async (format: "pdf" | "json") => {
@@ -105,7 +128,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -185,10 +208,14 @@ export default function PortfolioPage() {
 
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
-        <>
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-6">
+          <div className="space-y-6">
           {/* Configured skills */}
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
+            <div>
+              <h2 className="text-sm font-semibold">Configured Skills</h2>
+              <p className="text-xs text-muted-foreground mt-1">AI-generated draft. Evidence is verified against candidate transcript turns before it is shown here.</p>
+            </div>
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
@@ -249,7 +276,25 @@ export default function PortfolioPage() {
               Run Fit/Gap Analysis →
             </Button>
           </div>
-        </>
+          </div>
+          <aside className="mt-6 lg:mt-0 lg:sticky lg:top-20 lg:self-start">
+            <section className="rounded-lg border p-4 space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold">Reviewer notes</h2>
+                <p className="text-xs text-muted-foreground">Included in the PDF export.</p>
+              </div>
+              <form className="space-y-2" onSubmit={saveNote}>
+                <textarea className="min-h-20 w-full rounded border bg-background p-2 text-sm" value={noteBody} onChange={(event) => setNoteBody(event.target.value)} placeholder="Add an interview review note" required />
+                <Button size="sm" disabled={savingNote}>{savingNote ? "Saving…" : "Add note"}</Button>
+              </form>
+              {notes.length > 0 && (
+                <div className="space-y-2">
+                  {notes.map((note) => <p className="rounded bg-muted p-2 text-sm" key={note.id}>{note.body}</p>)}
+                </div>
+              )}
+            </section>
+          </aside>
+        </div>
       )}
     </div>
   );
