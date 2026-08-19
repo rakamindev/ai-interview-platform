@@ -3,16 +3,16 @@
 module Api
   module V1
     class VacanciesController < ApiController
-      authorize_auth_token! :assessor
-
+      authorize_auth_token! :portal
+      before_action :require_assessor!, only: %i[create update destroy]
       before_action :set_vacancy, only: %i[show update destroy]
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.includes(:vacancy_skills).order(created_at: :desc))
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
+          vacancies: vacancies.map(&method(:vacancy_with_skills_json)),
           meta: pagination_meta(vacancies)
         )
       end
@@ -50,6 +50,12 @@ module Api
       end
 
       private
+
+      def require_assessor!
+        return if current_user && %w[admin assessor].include?(current_user.role)
+
+        raise ExceptionHandler::Unauthorized, "Assessor or Admin permissions required"
+      end
 
       def set_vacancy
         @vacancy = Vacancy.find(params[:id])

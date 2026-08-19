@@ -93,9 +93,14 @@ export default function VacancyEditPage() {
           <Label>Competency expectations</Label>
           <Textarea rows={3} {...register("competency_expectations")} />
         </div>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-2">
+          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save Changes
+          </Button>
         </div>
       </form>
 

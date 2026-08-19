@@ -16,12 +16,12 @@ export default function LevelRadio({ value, onChange, disabled, className }: Lev
       value={String(value)}
       onValueChange={(v) => onChange(Number(v))}
       disabled={disabled}
-      className={cn("flex items-center gap-3", className)}
+      className={cn("flex flex-wrap items-center gap-2 sm:gap-3.5", className)}
     >
       {[1, 2, 3, 4, 5].map((level) => (
-        <div key={level} className="flex items-center gap-1">
+        <div key={level} className="flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-transparent hover:border-border transition-colors">
           <RadioGroupItem value={String(level)} id={`level-${level}`} />
-          <Label htmlFor={`level-${level}`} className="cursor-pointer font-normal">
+          <Label htmlFor={`level-${level}`} className="cursor-pointer font-normal text-xs sm:text-xs select-none">
             {LEVEL_LABELS[level]}
           </Label>
         </div>

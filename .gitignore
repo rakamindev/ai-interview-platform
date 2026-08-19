@@ -4,7 +4,8 @@
 # Env / secrets
 **/.env
 **/.env.local
-api/config/application.yml
+api/config/application.yml*
+*.bak
 
 # Logs and temp
 **/log/*.log

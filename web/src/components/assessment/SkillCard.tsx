@@ -35,7 +35,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       ref={setNodeRef}
       style={style}
       className={cn(
-        "border rounded-lg bg-white",
+        "border rounded-xl bg-card shadow-xs",
         isDragging && "opacity-50 shadow-lg"
       )}
     >
