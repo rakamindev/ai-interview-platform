@@ -24,7 +24,7 @@ module Api
         )
         store_refresh_cookie(refresh_token)
 
-        json_response({ access_token: token, user: { id: user.id, email: user.email, role: user.role } })
+        json_response({ token: token, user: { id: user.id, email: user.email, role: user.role }, refresh: true })
       end
 
       # POST /api/v1/auth/refresh
@@ -50,7 +50,7 @@ module Api
         scheme = resolve_scheme
         access_token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
 
-        json_response({ access_token:, user: { id: user.id, email: user.email, role: user.role } })
+        json_response({ token: access_token, user: { id: user.id, email: user.email, role: user.role }, refresh: true })
       end
 
       # DELETE /api/v1/auth/logout
