@@ -33,13 +33,17 @@ export default function AssessmentListPage() {
   const [error, setError] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const loadAssessments = () => {
+    setError(false);
+    setLoading(true);
     assessmentsApi
       .list()
       .then((res) => setAssessments(res.data.assessments))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadAssessments(); }, []);
 
   return (
     <div className="space-y-4">
@@ -51,8 +55,9 @@ export default function AssessmentListPage() {
       </div>
 
       {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load assessments. Please refresh the page.
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive flex items-center justify-between gap-3">
+          <span>Failed to load assessments.</span>
+          <Button variant="outline" size="sm" onClick={loadAssessments}>Retry</Button>
         </div>
       )}
 
