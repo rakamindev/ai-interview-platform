@@ -24,9 +24,12 @@ module Exports
       @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
     end
 
+    FONTS_DIR = Rails.root.join('app', 'assets', 'fonts')
+
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        register_unicode_font(pdf)
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -35,6 +38,19 @@ module Exports
     end
 
     private
+
+    # Prawn's built-in PDF fonts (Helvetica etc.) only support Windows-1252 and raise on
+    # anything outside it — transcript quotes and AI-generated narrative text routinely
+    # include smart quotes, em dashes, and other characters outside that set.
+    def register_unicode_font(pdf)
+      pdf.font_families.update(
+        'DejaVuSans' => {
+          normal: FONTS_DIR.join('DejaVuSans.ttf').to_s,
+          bold:   FONTS_DIR.join('DejaVuSans-Bold.ttf').to_s
+        }
+      )
+      pdf.font 'DejaVuSans'
+    end
 
     def render_header(pdf)
       pdf.font_size(22) { pdf.text @assessment.name, style: :bold }

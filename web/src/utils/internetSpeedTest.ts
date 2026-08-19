@@ -82,8 +82,35 @@ async function measureDownloadSpeed(): Promise<number> {
     }
 }
 
+// Times only the request-body transfer (xhr.upload loadstart -> load), so DNS/TLS
+// setup and the server's echo/processing time don't get counted as "upload time".
+function measureUploadOnce(endpoint: string, blob: Blob): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const sizeMB = blob.size / (1024 * 1024);
+        let start = 0;
+
+        xhr.upload.addEventListener("loadstart", () => {
+            start = performance.now();
+        });
+        xhr.upload.addEventListener("load", () => {
+            const seconds = (performance.now() - start) / 1000;
+            resolve(seconds > 0 ? sizeMB / seconds : 0);
+        });
+        xhr.upload.addEventListener("error", () => reject(new Error("upload failed")));
+        xhr.addEventListener("error", () => reject(new Error("request failed")));
+        xhr.addEventListener("timeout", () => reject(new Error("upload timed out")));
+        xhr.timeout = 10000;
+
+        xhr.open("POST", endpoint);
+        const formData = new FormData();
+        formData.append("test", blob);
+        xhr.send(formData);
+    });
+}
+
 async function measureUploadSpeed(): Promise<number> {
-    const uploadSizeMB = 0.5;
+    const uploadSizeMB = 2;
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
@@ -92,12 +119,7 @@ async function measureUploadSpeed(): Promise<number> {
         : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
     for (const endpoint of endpoints) {
         try {
-            const formData = new FormData();
-            formData.append("test", uploadData);
-            const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
-            const seconds = (performance.now() - start) / 1000;
-            return uploadSizeMB / seconds;
+            return await measureUploadOnce(endpoint, uploadData);
         } catch {
             continue;
         }

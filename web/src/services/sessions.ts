@@ -3,7 +3,7 @@ import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } f
 
 export const sessionsApi = {
   get: (id: number) =>
-    api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
+    api.get<{ session: Session & { assessment: { id: number; name: string; time_limit_min: number } } }>(
       `/sessions/${id}`
     ),
 

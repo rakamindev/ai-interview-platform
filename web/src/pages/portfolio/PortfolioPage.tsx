@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,20 +9,50 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import { exportFilename } from "@/utils/exportFilename";
+import { formatDuration, formatTime } from "@/utils/formatDuration";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Briefcase, Plus } from "lucide-react";
+import type { Portfolio, AssessorOverride, Vacancy, Session } from "@/types";
+
+// PDF requests use responseType "blob", so an error body also arrives as a Blob
+// instead of parsed JSON — read it back out to surface the real backend message.
+async function extractErrorMessage(e: any, format: "pdf" | "json"): Promise<string> {
+  const fallback = `Failed to export ${format.toUpperCase()}. Please try again.`;
+  const data = e?.response?.data;
+  try {
+    const parsed = data instanceof Blob ? JSON.parse(await data.text()) : data;
+    return parsed?.errors?.[0]?.message ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
-  const [selectedVacancy, setSelectedVacancy] = useState<string>("");
+  // Selected vacancy lives in the URL (?vacancy=<id>), not component state — it must
+  // survive unmount/remount when navigating to/from Fit/Gap. See EXPLORATION_LOG.md
+  // "Vacancy-context persistence" for the full trace/design.
+  const selectedVacancy = searchParams.get("vacancy") ?? "";
+  const setSelectedVacancy = (vacancyId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("vacancy", vacancyId);
+    setSearchParams(next, { replace: true });
+  };
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [roleTitle, setRoleTitle] = useState<string | null>(null);
+  const [sessionTiming, setSessionTiming] = useState<Pick<
+    Session,
+    "status" | "started_at" | "ended_at" | "duration_seconds"
+  > | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -45,11 +75,32 @@ export default function PortfolioPage() {
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
+        setCandidateName(sRes.data?.session?.candidate_name ?? null);
+        setRoleTitle(sRes.data?.session?.assessment?.name ?? null);
+        setSessionTiming(sRes.data?.session ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
+
+  // The URL only carries intent ("I meant to look at vacancy 7") — the fetched
+  // vacancies list is what actually validates it. Runs once vacancies have loaded;
+  // if the id in the URL doesn't match a real vacancy (deleted, typo'd, stale
+  // bookmark), fall back to unselected and scrub the dead param.
+  useEffect(() => {
+    if (loading || !selectedVacancy) return;
+    const exists = vacancies.some((v) => String(v.id) === selectedVacancy);
+    if (!exists) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("vacancy");
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [loading, vacancies, selectedVacancy, setSearchParams]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -66,6 +117,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -77,7 +129,7 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
+        a.download = exportFilename(candidateName, roleTitle, "Portfolio", "json");
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -85,10 +137,12 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
+        a.download = exportFilename(candidateName, roleTitle, "Portfolio", "pdf");
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch (e: any) {
+      setExportError(await extractErrorMessage(e, format));
     } finally {
       setExporting(null);
     }
@@ -116,6 +170,14 @@ export default function PortfolioPage() {
             <h1 className="text-lg font-semibold">Portfolio Results</h1>
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
+            )}
+            {sessionTiming?.status === "ended" && sessionTiming.ended_at && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Completed {formatTime(sessionTiming.ended_at)}
+                {typeof sessionTiming.duration_seconds === "number" && (
+                  <> · {formatDuration(sessionTiming.duration_seconds)}</>
+                )}
+              </p>
             )}
           </div>
         </div>
@@ -153,6 +215,10 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {exportError && (
+        <p className="text-sm text-destructive -mt-2">{exportError}</p>
+      )}
+
       {/* Generating state */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
@@ -170,6 +236,9 @@ export default function PortfolioPage() {
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          {portfolio.generation_error && (
+            <p className="text-xs text-muted-foreground">{portfolio.generation_error}</p>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -232,22 +301,48 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold">Fit/Gap Analysis</h2>
+            {vacancies.length === 0 ? (
+              <div className="border rounded-lg p-6 text-center space-y-3">
+                <Briefcase className="h-6 w-6 text-muted-foreground mx-auto" />
+                <div>
+                  <p className="text-sm font-medium">No vacancies to compare against</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Create a vacancy with expected skills to run a Fit/Gap analysis for this candidate.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    navigate("/vacancies/new", {
+                      state: { returnTo: `/assessments/${id}/sessions/${sessionId}/portfolio` },
+                    })
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Create your first vacancy
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Choose vacancy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vacancies.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.role_title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                  Run Fit/Gap Analysis →
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}

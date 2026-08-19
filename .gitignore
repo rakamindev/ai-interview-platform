@@ -10,6 +10,7 @@ api/config/application.yml
 **/log/*.log
 **/tmp/
 api/storage/
+api/dump.rdb
 
 # Build output
 web/dist/

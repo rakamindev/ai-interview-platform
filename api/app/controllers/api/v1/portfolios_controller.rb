@@ -62,7 +62,7 @@ module Api
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
-                           filename:    "portfolio-#{@portfolio.id}.pdf",
+                           filename:    export_filename(@portfolio, "pdf"),
                            type:        "application/pdf",
                            disposition: "attachment"
         end
@@ -72,14 +72,14 @@ module Api
         export_data = build_export_json(@portfolio, vacancy_id)
 
         send_data export_data.to_json,
-                  filename:    "portfolio-#{@portfolio.id}.json",
+                  filename:    export_filename(@portfolio, "json"),
                   type:        "application/json",
                   disposition: "attachment"
       end
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = tenant_scoped_portfolios.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +101,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_scoped_portfolios.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +127,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_scoped_portfolios.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -153,10 +153,16 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = tenant_scoped_portfolios.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
+      end
+
+      # Portfolio has no tenant_id column of its own — scope through its session,
+      # which is tenant-scoped (see api/app/models/concerns/tenant_scoped.rb).
+      def tenant_scoped_portfolios
+        Portfolio.joins(:session).where(sessions: { tenant_id: Current.tenant_id })
       end
 
       def portfolio_json(portfolio)
@@ -207,6 +213,21 @@ module Api
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at
         }
+      end
+
+      # e.g. "Budi-Flutter-Engineer-Portfolio-2026-08-18.pdf" — who was interviewed and
+      # for what role, instead of the meaningless "portfolio-1.pdf".
+      def export_filename(portfolio, ext)
+        session = portfolio.session
+        candidate = filename_slug(session.candidate_name.presence || "Candidate")
+        role      = filename_slug(session.assessment.name.presence || "Assessment")
+        date      = Time.current.strftime("%Y-%m-%d")
+
+        "#{candidate}-#{role}-Portfolio-#{date}.#{ext}"
+      end
+
+      def filename_slug(text)
+        text.to_s.strip.gsub(/[^\w\s-]/, "").gsub(/\s+/, "-").gsub(/-+/, "-")
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
