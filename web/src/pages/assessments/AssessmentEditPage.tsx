@@ -99,7 +99,7 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-2 mb-6">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -121,7 +121,7 @@ export default function AssessmentEditPage() {
             value={String(form.watch("time_limit_min"))}
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
@@ -135,8 +135,9 @@ export default function AssessmentEditPage() {
         <div className="space-y-3">
           <Label>Skills to assess</Label>
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              No skills added yet.
+            <div className="border border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1 text-base">No skills added yet</p>
+              <p>Add at least one skill to evaluate candidates effectively.</p>
             </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -149,12 +150,12 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="w-full sm:w-auto">
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Add from B7 taxonomy
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })} className="w-full sm:w-auto">
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Add custom skill
             </Button>
           </div>
         </div>
@@ -162,9 +163,9 @@ export default function AssessmentEditPage() {
         <Separator />
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Changes
           </Button>

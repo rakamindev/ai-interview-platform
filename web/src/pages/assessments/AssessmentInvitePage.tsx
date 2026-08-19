@@ -38,8 +38,8 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 px-5 gap-4">
+      <div className="flex items-start sm:items-center gap-3">
         <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
@@ -53,44 +53,44 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span className="flex items-center gap-1.5 text-xs bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full font-medium w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Awaiting candidate
           </span>
         )}
         {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
+          <span className="flex items-center gap-1.5 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium w-fit">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Live
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
+          <span className="flex items-center gap-1.5 text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full font-medium w-fit">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
             Failed
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="flex items-center gap-1.5 text-xs bg-green-500/10 text-green-700 px-2 py-0.5 rounded-full font-medium w-fit">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
           </span>
         )}
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
           {isPending && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-8 text-xs w-full sm:w-auto"
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
+                <><Check className="h-3.5 w-3.5 mr-1.5 text-green-600" /> Copied</>
               ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
               )}
             </Button>
           )}
@@ -98,17 +98,17 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-8 text-xs w-full sm:w-auto"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
             >
-              <Eye className="h-3 w-3 mr-1" /> Monitor
+              <Eye className="h-3.5 w-3.5 mr-1.5" /> Monitor
             </Button>
           )}
           {isEnded && session.end_reason !== "error" && (
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-8 text-xs w-full sm:w-auto"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
             >
               Results
@@ -190,7 +190,7 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4 px-4 sm:px-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -199,9 +199,9 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -215,11 +215,11 @@ export default function AssessmentInvitePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)} className="w-full sm:w-auto">
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession} className="w-full sm:w-auto">
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>

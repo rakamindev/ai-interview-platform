@@ -320,10 +320,10 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-white">
         <ConnectionStatus state={wsConnectionStatus} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             variant={micMuted ? "destructive" : "outline"}
             size="sm"
@@ -338,7 +338,7 @@ export default function InterviewPage() {
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
+            <Button variant="outline" size="sm">End</Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>

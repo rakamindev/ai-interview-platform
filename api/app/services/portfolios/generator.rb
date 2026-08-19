@@ -8,7 +8,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-pro-001'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -89,15 +89,19 @@ module Portfolios
            Compare the candidate's actual behavior to the L1-L5 anchors.
            Assign the highest level where you see CONSISTENT evidence, not just one strong moment.
            If evidence is mixed (mostly L2 with one L3 moment), assign L2.
+           If the skill was NEVER DISCUSSED or there is NO evidence at all, set level to null.
+           Do NOT guess — null is the correct value when there is no data.
 
         3. WRITE THE COMPETENCY SUMMARY
            2-3 sentences. Focus on patterns, not individual answers.
            What does this person reliably do at this skill? What's the ceiling? What's missing?
+           If the skill was never discussed, write "This skill was not explored during the interview."
 
         4. ASSIGN CONFIDENCE
            high — probe_count >= 3 AND state = covered
            medium — probe_count = 2 OR state = partial
            low — probe_count <= 1 OR state = initiated
+           If level is null, set confidence to "low".
 
         OUTPUT (JSON only, no prose):
         {
@@ -154,26 +158,32 @@ module Portfolios
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        raw_level = skill_data['level']
+        ai_level  = raw_level.nil? ? nil : raw_level.to_i.clamp(1, 5)
+
         portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           ai_level,
+          ai_confidence:      skill_data['confidence'] || 'low',
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'] || 'This skill was not explored during the interview.'
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        raw_level = skill_data['level']
+        ai_level  = raw_level.nil? ? nil : raw_level.to_i.clamp(1, 5)
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           ai_level,
+          ai_confidence:      skill_data['confidence'] || 'low',
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'] || 'This skill was not explored during the interview.'
         )
       end
     end

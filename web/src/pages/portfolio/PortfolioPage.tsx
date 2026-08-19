@@ -18,6 +18,7 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
@@ -29,9 +30,11 @@ export default function PortfolioPage() {
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
+      setFetchError(false);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
+      setFetchError(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -42,12 +45,17 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
+    setLoading(true);
+    setFetchError(false);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error(err);
+        setFetchError(true);
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -94,9 +102,18 @@ export default function PortfolioPage() {
     }
   };
 
+  if (fetchError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4 text-center mt-12">
+        <p className="text-destructive font-medium">Failed to load portfolio.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">Retry</Button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4 px-4 sm:px-6 mt-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -105,9 +122,9 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 px-4 sm:px-6 pb-12 mt-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -120,12 +137,12 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors w-full sm:w-auto"
           >
-            <FileText className="h-3.5 w-3.5" />
+            <FileText className="h-4 w-4" />
             Transcript
           </Link>
           {!generating && portfolio && (
@@ -133,19 +150,21 @@ export default function PortfolioPage() {
               <Button
                 variant="outline"
                 size="sm"
+                className="flex-1 sm:flex-none"
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
               >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "pdf" ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Download className="h-4 w-4 mr-1.5" />}
                 PDF
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                className="flex-1 sm:flex-none"
                 onClick={() => handleExport("json")}
                 disabled={!!exporting}
               >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "json" ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Download className="h-4 w-4 mr-1.5" />}
                 JSON
               </Button>
             </>
@@ -232,22 +251,28 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-muted/30 p-4 rounded-lg border border-border/50">
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold mb-1">Fit/Gap Analysis</h3>
+              <p className="text-xs text-muted-foreground">Compare candidate's portfolio against another vacancy.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                <SelectTrigger className="w-full sm:w-56 bg-background">
+                  <SelectValue placeholder="Choose vacancy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancies.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.role_title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="w-full sm:w-auto">
+                Run Analysis →
+              </Button>
+            </div>
           </div>
         </>
       )}
