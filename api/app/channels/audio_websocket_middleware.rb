@@ -120,8 +120,38 @@ class AudioWebSocketMiddleware
     state.cached_coverage_text = injector.injection_text
     state.last_coverage_digest = injector.coverage_fingerprint
 
-    build_gemini_client(browser_ws, state)
-    state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
+    if valid_gemini_key?
+      build_gemini_client(browser_ws, state)
+      state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
+    else
+      start_mock_interview(browser_ws, state)
+    end
+  end
+
+  def valid_gemini_key?
+    key = ENV['GEMINI_API_KEY'].to_s.strip
+    key.present? && key != 'your_gemini_api_key' && !key.start_with?('your_')
+  end
+
+  def start_mock_interview(browser_ws, state)
+    session = state.session
+    send_json(browser_ws, type: 'session_started')
+    send_json(browser_ws, type: 'speaker_changed', speaker: 'ai')
+
+    greeting = "Halo! Selamat datang di sesi wawancara AI untuk posisi #{session.assessment.name}. Silakan jelaskan ringkasan pengalaman dan keahlian Anda."
+    send_json(browser_ws, type: 'transcript', speaker: 'ai', text: greeting)
+
+    turn_num = state.turn_counter + 1
+    session.transcript_turns.create!(
+      turn_number: turn_num,
+      speaker: 'ai',
+      text: greeting
+    )
+    state.turn_counter = turn_num
+
+    EM.add_timer(2) do
+      send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
+    end
   end
 
   def ensure_system_prompt(session)

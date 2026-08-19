@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -19,19 +19,27 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Sparkles } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { vacanciesApi } from "@/services/vacancies";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
-import type { AssessmentSkill } from "@/types";
+import type { AssessmentSkill, Vacancy } from "@/types";
 
 export interface AssessmentFormValues {
   name: string;
   time_limit_min: number;
   language: "en" | "id";
+  vacancy_id?: number;
   skills: Partial<AssessmentSkill>[];
 }
 
@@ -40,6 +48,15 @@ export default function AssessmentNewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [selectedVacancyId, setSelectedVacancyId] = useState<string>("");
+
+  useEffect(() => {
+    vacanciesApi
+      .list()
+      .then((res) => setVacancies(res.data.vacancies))
+      .catch(() => {});
+  }, []);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
@@ -50,13 +67,37 @@ export default function AssessmentNewPage() {
     },
   });
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors },
+  } = form;
+  const { fields, append, remove, move, replace } = useFieldArray({
+    control,
+    name: "skills",
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
+
+  const handleSelectVacancy = async (vId: string) => {
+    setSelectedVacancyId(vId);
+    if (!vId) return;
+    try {
+      const res = await vacanciesApi.get(Number(vId));
+      const vacancy = res.data.vacancy;
+      if (!watch("name")) {
+        setValue("name", `${vacancy.role_title} Assessment`);
+      }
+    } catch {}
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -92,6 +133,7 @@ export default function AssessmentNewPage() {
         name: data.name,
         time_limit_min: data.time_limit_min,
         language: data.language,
+        vacancy_id: selectedVacancyId ? Number(selectedVacancyId) : undefined,
         assessment_skills_attributes: data.skills.map((s, i) => ({
           ...s,
           display_order: i,
@@ -100,7 +142,9 @@ export default function AssessmentNewPage() {
       const res = await assessmentsApi.create(payload);
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+      setError(
+        e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +154,10 @@ export default function AssessmentNewPage() {
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link
+          to="/assessments"
+          className="text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -119,6 +166,35 @@ export default function AssessmentNewPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Vacancy selector (Optional) */}
+        {vacancies.length > 0 && (
+          <div className="space-y-1.5 border border-primary/20 bg-primary/5 rounded-lg p-3.5">
+            <Label className="text-xs font-semibold flex items-center gap-1.5 text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Link to Target Vacancy (Optional)
+            </Label>
+            <Select
+              value={selectedVacancyId}
+              onValueChange={handleSelectVacancy}
+            >
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Choose a vacancy to auto-fill skills..." />
+              </SelectTrigger>
+              <SelectContent>
+                {vacancies.map((v) => (
+                  <SelectItem key={v.id} value={String(v.id)}>
+                    {v.role_title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Selecting a vacancy will automatically fill the assessment name
+              and skill requirements.
+            </p>
+          </div>
+        )}
+
         {/* Role title */}
         <div className="space-y-1.5">
           <Label htmlFor="name">
@@ -233,9 +309,7 @@ export default function AssessmentNewPage() {
 
         <Separator />
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         {/* Actions */}
         <div className="flex justify-end gap-2">

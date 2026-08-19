@@ -6,10 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import { sessionsApi } from "@/services/sessions";
+import { assessmentsApi } from "@/services/assessments";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Sparkles } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -42,14 +43,22 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
+    Promise.all([
+      fetchPortfolio(),
+      vacanciesApi.list(),
+      sessionsApi.get(Number(sessionId)),
+      assessmentsApi.get(Number(id)),
+    ])
+      .then(([, vRes, sRes, aRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        if (aRes.data.assessment.vacancy_id) {
+          setSelectedVacancy(String(aRes.data.assessment.vacancy_id));
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [fetchPortfolio, sessionId]);
+  }, [fetchPortfolio, id, sessionId]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -107,23 +116,23 @@ export default function PortfolioPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+        <div className="flex items-start gap-2.5">
+          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground mt-0.5 p-1 rounded-md hover:bg-muted transition-colors">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">Portfolio Results</h1>
             {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium">{candidateName}</p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 text-xs font-medium border rounded-md px-3 py-2 sm:py-1.5 hover:bg-accent transition-colors bg-white"
           >
             <FileText className="h-3.5 w-3.5" />
             Transcript
@@ -133,6 +142,7 @@ export default function PortfolioPage() {
               <Button
                 variant="outline"
                 size="sm"
+                className="flex-1 sm:flex-none text-xs"
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
               >
@@ -142,6 +152,7 @@ export default function PortfolioPage() {
               <Button
                 variant="outline"
                 size="sm"
+                className="flex-1 sm:flex-none text-xs"
                 onClick={() => handleExport("json")}
                 disabled={!!exporting}
               >
@@ -186,6 +197,36 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          {/* Fit/Gap Evaluation prominent CTA card */}
+          <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Evaluate Fit/Gap Against Job Vacancy
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Compare this candidate's interview results against job vacancy requirements.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+              <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                <SelectTrigger className="w-full sm:w-64 bg-white">
+                  <SelectValue placeholder="Select target vacancy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancies.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.role_title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="w-full sm:w-auto text-xs font-semibold">
+                Run Fit/Gap Analysis →
+              </Button>
+            </div>
+          </div>
+
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>

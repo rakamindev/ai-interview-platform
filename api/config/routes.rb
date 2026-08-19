@@ -7,6 +7,8 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      # Signup
+      post 'signup', to: 'authentication#register'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
@@ -48,7 +50,11 @@ Rails.application.routes.draw do
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
       # Vacancies
-      resources :vacancies
+      resources :vacancies do
+        member do
+          get :candidates
+        end
+      end
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do

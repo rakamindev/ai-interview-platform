@@ -22,9 +22,18 @@ module Api
       def create
         assessment = Assessment.find(params[:assessment_id])
 
+        candidate_email = params.dig(:session, :candidate_email).to_s.strip.downcase
+        candidate_email = params.dig(:session, :candidate_name).to_s.strip.downcase if candidate_email.blank? && params.dig(:session, :candidate_name).to_s.include?('@')
+
+        return json_error("Candidate email is required", :unprocessable_entity) if candidate_email.blank?
+
+        candidate_user = User.find_by(email: candidate_email)
+        candidate_id   = candidate_user&.id || params.dig(:session, :candidate_id)
+        candidate_name = params.dig(:session, :candidate_name).presence || candidate_email
+
         session = assessment.sessions.new(
-          candidate_id:   params.dig(:session, :candidate_id),
-          candidate_name: params.dig(:session, :candidate_name).presence,
+          candidate_id:,
+          candidate_name:,
           tenant_id:      current_tenant_id
         )
 
@@ -128,12 +137,29 @@ module Api
         json_response(ended: true, message: "Session ended")
       end
 
-      # GET /sessions/:token/candidate  — no JWT, invite token in URL
+      # GET /sessions/:token/candidate  — invite token in URL
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
 
         unless session
           return json_error("Invalid or expired invite token", :not_found)
+        end
+
+        token_str = request.headers['Authorization'].to_s.split(' ').last
+        if token_str.present?
+          begin
+            claims = JsonWebToken.decode(token_str)
+            user = User.find_by(id: claims[:user_id])
+            if user && user.role != 'admin'
+              matches_id = session.candidate_id == user.id
+              matches_email = session.candidate_name.to_s.strip.downcase == user.email.downcase
+              unless matches_id || matches_email
+                return json_error("Access Denied: This interview session is intended for another candidate email.", :forbidden)
+              end
+            end
+          rescue StandardError
+            # Invalid token format ignored for unauthenticated candidate preview
+          end
         end
 
         # Resolve tenant from the session's own tenant_id so we can load the assessment

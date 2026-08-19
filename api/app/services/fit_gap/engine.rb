@@ -99,12 +99,29 @@ module FitGap
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
 
       begin
-        response = @gemini_client.generate_content(prompt, temperature: 0.4)
-        data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        if valid_gemini_key?
+          response = @gemini_client.generate_content(prompt, temperature: 0.4)
+          data = response.is_a?(Hash) ? response : JSON.parse(response)
+          { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        else
+          { culture: generate_fallback_culture_narrative(gaps, matches, exceeds), overall: generate_fallback_narrative(skill_comparisons) }
+        end
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        Rails.logger.warn("[N13] Narrative generation API failed: #{e.message}")
+        { culture: generate_fallback_culture_narrative(gaps, matches, exceeds), overall: generate_fallback_narrative(skill_comparisons) }
+      end
+    end
+
+    def valid_gemini_key?
+      key = ENV['GEMINI_API_KEY'].to_s.strip
+      key.present? && key != 'your_gemini_api_key' && !key.start_with?('your_')
+    end
+
+    def generate_fallback_culture_narrative(gaps, matches, exceeds)
+      if gaps.any?
+        "Candidate displays foundational culture alignment, with potential growth areas identified in #{gaps.map { |g| g[:skill_label] }.join(', ')}."
+      else
+        "Candidate demonstrates strong alignment with role competency expectations and organizational culture."
       end
     end
 

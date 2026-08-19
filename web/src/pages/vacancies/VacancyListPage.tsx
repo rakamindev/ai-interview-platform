@@ -59,7 +59,9 @@ export default function VacancyListPage() {
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium text-sm">{v.role_title}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs">
+                  View Matches &amp; Edit →
+                </Button>
               </CardContent>
             </Card>
           ))}
