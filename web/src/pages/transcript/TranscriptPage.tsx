@@ -50,13 +50,18 @@ export default function TranscriptPage() {
     try {
       const response = await sessionsApi.getRecordingPlayback(Number(sessionId));
       setPlaybackUrl(response.data.playback_url);
+      return response.data.playback_url;
     } catch {
       setPlaybackUrl(null);
+      return null;
     }
   };
 
-  const playTurn = (turn: TranscriptTurn) => {
-    if (!audioRef.current || turn.audio_start_ms === undefined) return;
+  const playTurn = async (turn: TranscriptTurn) => {
+    if (turn.audio_start_ms === undefined) return;
+    const source = playbackUrl || await loadRecording();
+    if (!source || !audioRef.current) return;
+    if (audioRef.current.src !== source) audioRef.current.src = source;
     segmentEndRef.current = turn.audio_end_ms === undefined ? null : turn.audio_end_ms / 1000;
     audioRef.current.currentTime = turn.audio_start_ms / 1000;
     void audioRef.current.play();
@@ -116,11 +121,9 @@ export default function TranscriptPage() {
         </Button>
       )}
 
-      {playbackUrl && (
-        <audio className="w-full" controls ref={audioRef} onTimeUpdate={stopAtSegmentEnd} src={playbackUrl}>
+      <audio className={playbackUrl ? "w-full" : "hidden"} controls ref={audioRef} onTimeUpdate={stopAtSegmentEnd} src={playbackUrl ?? undefined}>
           Your browser cannot play this recording.
-        </audio>
-      )}
+      </audio>
 
       {loading && (
         <div className="space-y-3">
@@ -165,8 +168,8 @@ export default function TranscriptPage() {
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
                 {!isAI && editingId !== turn.id && (
                   <div className="mt-3 flex gap-2">
-                    {playbackUrl && turn.audio_start_ms !== undefined && (
-                      <Button variant="outline" size="icon" title="Play candidate response" onClick={() => playTurn(turn)}>
+                    {turn.audio_start_ms !== undefined && (
+                      <Button variant="outline" size="icon" title="Play candidate response" onClick={() => { void playTurn(turn); }}>
                         <Volume2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
