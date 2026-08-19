@@ -1,5 +1,3 @@
-// Hardware utilities for system detection and camera access
-
 export enum ProctoringState {
     WAITING = "waiting",
     LOADING = "loading",
@@ -33,6 +31,31 @@ export function getBrowserInfo() {
         version = userAgent.match(/edg\/([\d.]+)/i)?.[1] || "";
     }
     return { browser, version };
+}
+
+export interface BrowserSupportResult {
+    supported: boolean;
+    browser: string;
+    os: string;
+    missing: string[];
+}
+
+const SUPPORTED_BROWSERS = ["Chrome", "Firefox", "Safari", "Edge"];
+
+// Actually verifies the APIs this app depends on exist, rather than just
+// naming the browser — a detected-but-unsupported browser previously always
+// passed this check regardless.
+export function checkBrowserSupport(): BrowserSupportResult {
+    const { browser } = getBrowserInfo();
+    const os = getOSInfo();
+    const missing: string[] = [];
+
+    if (!navigator.mediaDevices?.getUserMedia) missing.push("microphone access (getUserMedia)");
+    if (!("WebSocket" in window)) missing.push("WebSocket");
+    if (!(window.AudioContext || (window as any).webkitAudioContext)) missing.push("Web Audio API");
+    if (!SUPPORTED_BROWSERS.includes(browser)) missing.push(`browser "${browser}" is not officially supported`);
+
+    return { supported: missing.length === 0, browser, os, missing };
 }
 
 export function getOSInfo() {

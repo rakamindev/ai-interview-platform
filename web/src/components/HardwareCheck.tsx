@@ -3,10 +3,8 @@ import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from 
 import {
     ProctoringState,
     type HardwareCheckingProgress,
-    getBrowserInfo,
-    getOSInfo,
+    checkBrowserSupport,
     checkCamera,
-    getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
@@ -46,6 +44,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
+    const [browserIssues, setBrowserIssues] = useState<string[]>([]);
+    const [awaitingToneConfirm, setAwaitingToneConfirm] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
@@ -67,7 +67,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         return () => { videoStream?.getTracks().forEach((t) => t.stop()); };
     }, [videoStream]);
 
-    const checkAudioPlayback = async (): Promise<boolean> => {
+    // A browser can't detect whether sound actually reached the user's ears
+    // (muted system volume, wrong output device, broken speakers) — the only
+    // honest check is to play an audible tone and ask them to confirm.
+    const playTestTone = async (): Promise<boolean> => {
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const ctx = new AudioCtx();
@@ -76,10 +79,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             const gain = ctx.createGain();
             osc.connect(gain);
             gain.connect(ctx.destination);
-            gain.gain.setValueAtTime(0.01, ctx.currentTime);
+            gain.gain.setValueAtTime(0.25, ctx.currentTime);
             osc.frequency.setValueAtTime(440, ctx.currentTime);
             osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.1);
+            osc.stop(ctx.currentTime + 0.6);
             return true;
         } catch { return false; }
     };
@@ -102,19 +105,18 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         } catch { /* silent */ }
     };
 
-    // Step 1: OS & browser
+    // Step 1: OS & browser — actually checks required APIs exist, not just names them.
     useEffect(() => {
         setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
         setTimeout(() => {
-            getBrowserInfo();
-            getOSInfo();
-            getCurrentTime();
+            const result = checkBrowserSupport();
+            setBrowserIssues(result.missing);
             setProgress((p) => ({
                 ...p,
-                osAndBrowser: ProctoringState.PASSED,
-                internet: ProctoringState.LOADING,
+                osAndBrowser: result.supported ? ProctoringState.PASSED : ProctoringState.ERROR,
+                ...(result.supported ? { internet: ProctoringState.LOADING } : {}),
             }));
-        }, 800);
+        }, 500);
     }, []);
 
     // Step 2: Internet
@@ -164,21 +166,35 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         });
     }, [progress.camera, progress.microphone]);
 
-    // Step 4: Audio output
+    // Step 4: Audio output — most browsers suspend AudioContext until a real
+    // user gesture unlocks it, so a tone fired from this effect (not a click)
+    // may never actually play. Just show the "Play test tone" button instead
+    // of auto-playing — the candidate triggers it themselves, and can replay
+    // it as many times as needed before answering Yes/No.
     useEffect(() => {
         if (progress.audio !== ProctoringState.LOADING) return;
-        checkAudioPlayback().then((ok) => {
-            setProgress((p) => ({
-                ...p,
-                audio: ok ? ProctoringState.PASSED : ProctoringState.ERROR,
-            }));
-        });
+        setAwaitingToneConfirm(true);
     }, [progress.audio]);
+
+    const handlePlayTone = async () => {
+        const canPlay = await playTestTone();
+        if (!canPlay) {
+            setAwaitingToneConfirm(false);
+            setProgress((p) => ({ ...p, audio: ProctoringState.ERROR }));
+        }
+    };
+
+    const confirmToneHeard = (heard: boolean) => {
+        setAwaitingToneConfirm(false);
+        setProgress((p) => ({ ...p, audio: heard ? ProctoringState.PASSED : ProctoringState.ERROR }));
+    };
 
     const retryAll = () => {
         videoStream?.getTracks().forEach((t) => t.stop());
         setVideoStream(null);
         setInternetResult(null);
+        setBrowserIssues([]);
+        setAwaitingToneConfirm(false);
         setProgress({
             osAndBrowser: ProctoringState.LOADING,
             internet: ProctoringState.WAITING,
@@ -239,6 +255,31 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             </div>
                         </div>
 
+                        {/* Browser support issues */}
+                        {key === "osAndBrowser" && progress.osAndBrowser === ProctoringState.ERROR && browserIssues.length > 0 && (
+                            <ul className="mt-1 text-xs text-destructive list-disc list-inside">
+                                {browserIssues.map((issue) => <li key={issue}>{issue}</li>)}
+                            </ul>
+                        )}
+
+                        {/* Audio output tone confirmation */}
+                        {key === "audio" && awaitingToneConfirm && (
+                            <div className="mt-2 flex flex-col gap-2">
+                                <Button size="sm" variant="outline" className="h-7 px-2 text-xs w-fit" onClick={handlePlayTone}>
+                                    ▶ Play test tone
+                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">Did you hear it?</span>
+                                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => confirmToneHeard(true)}>
+                                        Yes, I heard it
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => confirmToneHeard(false)}>
+                                        No
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
                             <div className="mt-2 flex gap-3 text-xs">
@@ -251,7 +292,13 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                                 <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
                                     {internetResult.ping} ms
                                 </span>
+                                <span className={internetResult.jitter <= thresholds.maxJitterMs ? "text-green-600" : "text-destructive"}>
+                                    ±{internetResult.jitter} ms jitter
+                                </span>
                             </div>
+                        )}
+                        {key === "internet" && internetResult?.error && (
+                            <p className="mt-1 text-xs text-destructive">{internetResult.error}</p>
                         )}
 
                         {/* Mic level bar */}

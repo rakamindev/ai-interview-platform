@@ -8,6 +8,7 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
+  has_sessions?: boolean;
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
@@ -16,7 +17,7 @@ export interface Assessment {
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -37,6 +38,8 @@ export interface Session {
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
+  candidate_email?: string;
+  candidate_phone?: string;
   invite_token: string;
   invite_url: string;
   status: "pending" | "active" | "ended";
@@ -44,12 +47,14 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  expires_at?: string;
+  expired?: boolean;
   created_at?: string;
 }
 
 export interface CoverageSkill {
   id: number;
-  skill_id: number;
+  skill_id: string;
   skill_label: string;
   is_discovered: boolean;
   state: "not_yet" | "initiated" | "partial" | "covered";
@@ -87,7 +92,7 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
   ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
@@ -106,20 +111,71 @@ export interface AssessorOverride {
   overridden_at?: string;
 }
 
+export type WorkArrangement = "onsite" | "hybrid" | "remote";
+export type EmploymentType = "full_time" | "part_time" | "contract" | "internship";
+
 export interface Vacancy {
   id: number;
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  address?: string;
+  city?: string;
+  work_arrangement?: WorkArrangement;
+  employment_type?: EmploymentType;
+  department?: string;
+  salary_min?: number;
+  salary_max?: number;
+  salary_visible?: boolean;
+  description?: string;
+  application_deadline?: string;
+  closed?: boolean;
   created_by?: number;
   created_at?: string;
   updated_at?: string;
   skills: VacancySkill[];
 }
 
+export interface AdminInvite {
+  id: number;
+  email: string;
+  role: "admin" | "assessor";
+  invite_url: string;
+  expires_at: string;
+  accepted_at?: string;
+  usable: boolean;
+  created_at: string;
+}
+
+export interface Candidate {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  cv_url?: string;
+  sessions_count: number;
+  created_at: string;
+  sessions?: CandidateSession[];
+}
+
+export interface CandidateSession {
+  id: number;
+  assessment_id: number;
+  assessment_name: string;
+  time_limit_min?: number;
+  duration_seconds?: number;
+  status: "pending" | "active" | "ended";
+  end_reason?: string;
+  invite_url: string;
+  expires_at?: string;
+  expired?: boolean;
+  created_at: string;
+}
+
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -129,7 +185,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -164,6 +220,11 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  candidate_name?: string;
+  candidate_email?: string;
+  candidate_phone?: string;
+  candidate_address?: string;
+  cv_attached?: boolean;
 }
 
 export interface PaginationMeta {
@@ -182,7 +243,9 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "expired"
+  | "invalid";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

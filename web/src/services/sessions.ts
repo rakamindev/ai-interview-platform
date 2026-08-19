@@ -29,6 +29,17 @@ export const sessionsApi = {
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
 
+  submitBiodata: (token: string, data: { name: string; phone?: string; address?: string; cv?: File }) => {
+    const form = new FormData();
+    form.append("name", data.name);
+    if (data.phone) form.append("phone", data.phone);
+    if (data.address) form.append("address", data.address);
+    if (data.cv) form.append("cv", data.cv);
+    return api.post<{ message: string }>(`/sessions/${token}/biodata`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
 };
