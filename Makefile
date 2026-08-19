@@ -1,4 +1,4 @@
-.PHONY: help check check-api-env check-web-env api-up api-down api-nuke api-build api-logs api-ps api-test api-console api-seed web-up web-down web-nuke web-build web-logs web-ps web-test web-lint web-lint-fix web-fmt web-fmt-check up down nuke build logs ps test lint fmt
+.PHONY: help check check-api-env check-web-env api-up api-down api-nuke api-build api-logs api-ps api-test api-console api-seed web-up web-down web-nuke web-build web-logs web-ps web-test web-lint web-lint-fix web-fmt web-fmt-check web-prod web-prod-up web-prod-down up down nuke build logs ps test lint fmt
 
 API := docker compose -f api/docker-compose.yml
 WEB := docker compose -f web/docker-compose.yml
@@ -98,6 +98,15 @@ web-fmt:
 
 web-fmt-check:
 	cd web && npm run fmt:check
+
+web-prod:
+	$(WEB) build web-prod
+
+web-prod-up: check-web-env
+	$(WEB) up -d web-prod
+
+web-prod-down: check-web-env
+	$(WEB) down web-prod
 
 # ─── Both ────────────────────────────────────────────────────────────
 
