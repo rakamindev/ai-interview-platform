@@ -6,8 +6,20 @@ export interface AuthState {
 
 const STORAGE_KEY = "auth_token";
 
+/**
+ * Dev-only auth token fallback. Guarded by `import.meta.env.DEV` so Vite
+ * dead-code-eliminates the `VITE_DEV_TOKEN` reference from production builds —
+ * the token is never inlined into the shipped bundle.
+ */
+function devFallbackToken(): string | null {
+  if (import.meta.env.DEV) {
+    return import.meta.env.VITE_DEV_TOKEN ?? null;
+  }
+  return null;
+}
+
 export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null;
+  return localStorage.getItem(STORAGE_KEY) ?? devFallbackToken();
 }
 
 export function saveToken(token: string) {

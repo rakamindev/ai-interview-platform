@@ -39,6 +39,17 @@ describe("authAtom token persistence", () => {
     expect(getStoredToken()).toBeNull();
   });
 
+  it("uses VITE_DEV_TOKEN as a fallback in development", () => {
+    vi.stubEnv("VITE_DEV_TOKEN", "dev.tok.en");
+    expect(getStoredToken()).toBe("dev.tok.en");
+  });
+
+  it("ignores VITE_DEV_TOKEN outside development (production build safety)", () => {
+    vi.stubEnv("DEV", false);
+    vi.stubEnv("VITE_DEV_TOKEN", "should.be.ignored");
+    expect(getStoredToken()).toBeNull();
+  });
+
   it("round-trips a token through localStorage", () => {
     saveToken("abc.def.ghi");
     expect(getStoredToken()).toBe("abc.def.ghi");

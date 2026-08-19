@@ -49,21 +49,8 @@ describe("SignupPage", () => {
     expect(authApiMock.signup).toHaveBeenCalledWith({
       email: "user@rakamin.id",
       password: "password123",
-      role: "user",
     });
     expect(localStorage.getItem("auth_token")).toBe("jwt");
-  });
-
-  it("submits the admin role when selected", async () => {
-    authApiMock.signup.mockResolvedValue({ data: { token: "jwt" } });
-    renderSignup();
-
-    fillForm();
-    fireEvent.click(screen.getByLabelText("Admin"));
-    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
-
-    expect(await screen.findByText("ASSESSMENTS", {}, { timeout: 5000 })).toBeInTheDocument();
-    expect(authApiMock.signup).toHaveBeenCalledWith(expect.objectContaining({ role: "admin" }));
   });
 
   it("shows field errors returned by the server on 422", async () => {

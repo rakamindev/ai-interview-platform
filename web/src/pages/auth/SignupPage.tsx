@@ -7,12 +7,11 @@ import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
 import AuthShell from "@/components/layout/AuthShell";
 import { useCapsLock } from "@/hooks/useCapsLock";
 
-type FieldErrors = Partial<Record<"email" | "password" | "role", string>>;
+type FieldErrors = Partial<Record<"email" | "password", string>>;
 
 function extractFieldErrors(err: unknown): FieldErrors {
   if (axios.isAxiosError(err) && err.response?.data?.errors?.[0]?.detail) {
@@ -45,7 +44,6 @@ export default function SignupPage() {
   const setAuth = useSetAtom(authAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -57,7 +55,7 @@ export default function SignupPage() {
     setFieldErrors({});
     setLoading(true);
     try {
-      const res = await authApi.signup({ email: email.trim(), password, role });
+      const res = await authApi.signup({ email: email.trim(), password });
       const token = res.data.token;
       saveToken(token);
       setAuth({ token });
@@ -128,29 +126,6 @@ export default function SignupPage() {
               {fieldErrors.password}
             </p>
           )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label id="role-label">Role</Label>
-          <RadioGroup
-            value={role}
-            onValueChange={(v) => setRole(v as "admin" | "user")}
-            aria-labelledby="role-label"
-            className="flex gap-4"
-          >
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="user" id="role-user" />
-              <Label htmlFor="role-user" className="font-normal cursor-pointer">
-                User
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="admin" id="role-admin" />
-              <Label htmlFor="role-admin" className="font-normal cursor-pointer">
-                Admin
-              </Label>
-            </div>
-          </RadioGroup>
         </div>
 
         {error && (
