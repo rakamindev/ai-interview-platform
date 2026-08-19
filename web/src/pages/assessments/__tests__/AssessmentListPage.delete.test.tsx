@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import AssessmentListPage from "@/pages/assessments/AssessmentListPage";
 import { assessmentsApi } from "@/services/assessments";
 import type { Assessment } from "@/types";
@@ -66,5 +66,29 @@ describe("AssessmentListPage — delete (F-009)", () => {
     await waitFor(() => {
       expect(assessmentsApi.delete).toHaveBeenCalledWith(1);
     });
+  });
+
+  it("clicking a disabled delete button does not navigate to the assessment's detail page (regression: disabled buttons never fire onClick, so a click falls through to the card underneath)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(assessmentsApi.list).mockResolvedValue({
+      data: { assessments: [assessment({ has_sessions: true })] },
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={["/assessments"]}>
+        <Routes>
+          <Route path="/assessments" element={<AssessmentListPage />} />
+          <Route path="/assessments/:id/invite" element={<div>assessment-detail-stub</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const deleteButton = await screen.findByRole("button", { name: /delete/i });
+    expect(deleteButton).toBeDisabled();
+
+    await user.click(deleteButton);
+
+    expect(screen.queryByText("assessment-detail-stub")).not.toBeInTheDocument();
+    expect(screen.getByText("Senior Frontend Engineer")).toBeInTheDocument();
   });
 });

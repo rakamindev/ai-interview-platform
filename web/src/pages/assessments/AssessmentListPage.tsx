@@ -110,20 +110,28 @@ export default function AssessmentListPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    disabled={a.has_sessions}
+                  {/* Disabled buttons never fire onClick, so a click on one falls
+                      through to the Card's onClick underneath — this span
+                      intercepts the click itself so a disabled delete button
+                      can't accidentally navigate to the detail page. */}
+                  <span
+                    onClick={(e) => a.has_sessions && e.stopPropagation()}
                     title={a.has_sessions ? "Cannot delete — this assessment has candidate sessions" : undefined}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPendingDeleteId(a.id);
-                    }}
                   >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete</span>
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      disabled={a.has_sessions}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPendingDeleteId(a.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete</span>
+                    </Button>
+                  </span>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardContent>
