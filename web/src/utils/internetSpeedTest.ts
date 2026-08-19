@@ -16,9 +16,11 @@ export interface SpeedThresholds {
     maxPingMs: number;
 }
 
+// Voice-only interview needs ~0.024-0.064 Mbps upload (Opus-class codec).
+// minUploadMbps carries generous headroom above that floor, not a video-call bar.
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minUploadMbps: 0.5,
     maxPingMs: 300,
 };
 
