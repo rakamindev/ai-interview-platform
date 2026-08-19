@@ -22,7 +22,7 @@ module Api
           token_hash: token_hash(refresh_token),
           expires_at: 7.days.from_now
         )
-        set_refresh_cookie(refresh_token)
+        store_refresh_cookie(refresh_token)
 
         json_response({ access_token: token, user: { id: user.id, email: user.email, role: user.role } })
       end
@@ -33,16 +33,16 @@ module Api
         refresh_token_value = extract_refresh_token
         return json_error("Missing refresh token", :unauthorized) unless refresh_token_value
 
-        token_record = RefreshToken.find_by_token_hash(token_hash(refresh_token_value))
+        token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
         return json_error("Invalid refresh token", :unauthorized) unless token_record&.valid_token?
 
         if token_record.grace_period_expired?
           token_record.revoke!
           new_token = issue_refresh_token(token_record.user_id)
-          set_refresh_cookie(new_token)
+          store_refresh_cookie(new_token)
         else
           new_token = issue_refresh_token(token_record.user_id)
-          set_refresh_cookie(new_token)
+          store_refresh_cookie(new_token)
           token_record.mark_used! if token_record.used_at.nil?
         end
 
@@ -57,7 +57,7 @@ module Api
       def logout
         refresh_token_value = extract_refresh_token
         if refresh_token_value
-          token_record = RefreshToken.find_by_token_hash(token_hash(refresh_token_value))
+          token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
           token_record&.revoke!
         end
         clear_refresh_cookie
@@ -66,14 +66,14 @@ module Api
 
       private
 
-      def set_refresh_cookie(token)
+      def store_refresh_cookie(token)
         cookies[:refresh_token] = {
           value: token,
           http_only: true,
           secure: Rails.env.production?,
           same_site: :lax,
           path: "/api/v1/auth",
-          max_age: 604800
+          max_age: 604_800
         }
       end
 
@@ -86,9 +86,9 @@ module Api
       end
 
       def verify_csrf!
-        unless request.headers["X-Requested-With"].present?
-          render json: { errors: [{ status: 403, message: "Missing CSRF token" }] }, status: :forbidden
-        end
+        return if request.headers["X-Requested-With"].present?
+
+        render json: { errors: [{ status: 403, message: "Missing CSRF token" }] }, status: :forbidden
       end
 
       def token_hash(token)

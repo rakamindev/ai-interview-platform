@@ -77,7 +77,7 @@ class AuthorizeApiRequest
     return nil if refresh_token_value.blank?
 
     token_hash = Digest::SHA256.hexdigest(refresh_token_value)
-    refresh_token = RefreshToken.find_by_token_hash(token_hash)
+    refresh_token = RefreshToken.find_by(token_hash: token_hash)
 
     return nil unless refresh_token&.valid_token?
 

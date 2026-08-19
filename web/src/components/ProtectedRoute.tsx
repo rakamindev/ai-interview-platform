@@ -1,9 +1,14 @@
-import { useAtomValue } from "jotai";
+import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { authAtom } from "@/stores/authAtom";
+import { getAuthState, onAuthChange } from "@/stores/authAtom";
 
 export default function ProtectedRoute() {
-  const { accessToken } = useAtomValue(authAtom);
-  if (!accessToken) return <Navigate to="/login" replace />;
+  const [auth, setAuth] = useState(getAuthState);
+
+  useEffect(() => {
+    return onAuthChange(() => setAuth(getAuthState()));
+  }, []);
+
+  if (!auth.accessToken) return <Navigate to="/login" replace />;
   return <Outlet />;
 }

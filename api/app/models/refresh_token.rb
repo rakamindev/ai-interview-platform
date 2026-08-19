@@ -5,12 +5,11 @@ class RefreshToken < ApplicationRecord
 
   belongs_to :user
 
-  validates :user_id, presence: true
   validates :token_hash, presence: true
   validates :expires_at, presence: true
 
   scope :active, -> { where(revoked_at: nil).where("expires_at > ?", Time.current) }
-  scope :expired, -> { where("expires_at <= ?", Time.current) }
+  scope :expired, -> { where(expires_at: ..Time.current) }
   scope :revoked, -> { where.not(revoked_at: nil) }
 
   def revoke!
@@ -30,7 +29,7 @@ class RefreshToken < ApplicationRecord
   end
 
   def self.revoke_all_for_user(user_id)
-    active.where(user_id: user_id).update_all(revoked_at: Time.current)
+    active.where(user_id: user_id).find_each(&:revoke!)
   end
 
   def self.find_by_token_hash(hash)
@@ -39,6 +38,6 @@ class RefreshToken < ApplicationRecord
 
   def self.cleanup
     expired.delete_all
-    revoked.where("revoked_at < ?", 7.days.ago).delete_all
+    revoked.where(revoked_at: ...7.days.ago).delete_all
   end
 end
