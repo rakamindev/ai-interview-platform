@@ -19,24 +19,6 @@ module Api
         json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
       end
 
-      # POST /api/v1/signup
-      # Self-signup only ever creates a 'user' account — 'admin' accounts are
-      # provisioned separately, never through this public endpoint.
-      def signup
-        user = User.new(
-          email:    params[:email].to_s.downcase,
-          password: params[:password],
-          role:     'user'
-        )
-
-        return json_error(user.errors.full_messages.join(', '), :unprocessable_entity) unless user.save
-
-        scheme = resolve_scheme
-        token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
-
-        json_response({ token:, user: { id: user.id, email: user.email, role: user.role } }, :created)
-      end
-
       private
 
       def resolve_scheme
