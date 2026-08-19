@@ -5,7 +5,7 @@ module Api
     class CvScreeningsController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_cv_screening, only: %i[show update]
+      before_action :set_cv_screening, only: %i[show update destroy]
 
       # GET /api/v1/cv_screenings
       def index
@@ -40,6 +40,18 @@ module Api
           json_response(cv_screening: cv_screening_with_summary_json(@cv_screening))
         else
           json_error(@cv_screening.errors.full_messages.first, :unprocessable_entity)
+        end
+      end
+
+      # DELETE /api/v1/cv_screenings/:id
+      def destroy
+        # Nothing else references a CvScreening — cv_screening_batches (and
+        # its cv_screening_entries) are dependent: :destroy, so there's no
+        # blocking case to check here, unlike Vacancy/Assessment.
+        if @cv_screening.destroy
+          json_response(message: 'CV screening deleted')
+        else
+          json_error(@cv_screening.errors.full_messages.to_sentence, :unprocessable_entity)
         end
       end
 

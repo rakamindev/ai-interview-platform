@@ -240,6 +240,16 @@ export interface CvScreeningEntry {
   created_at?: string;
 }
 
+// Response shape for GET /vacancies/:id/deletion_check and
+// /assessments/:id/deletion_check — checked eagerly when a recruiter clicks
+// Delete, so the confirm dialog can show the right variant immediately
+// instead of only discovering a block after they've typed a confirmation.
+export interface DeletionCheckResult {
+  deletable: boolean;
+  reason?: "cv_screenings" | "sessions";
+  blocking_cv_screenings?: { id: number; name: string }[];
+}
+
 export interface WsControlMessage {
   type:
     | "session_started"

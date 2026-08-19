@@ -5,7 +5,10 @@ class Assessment < ApplicationRecord
 
   has_many :assessment_skills, dependent: :destroy, inverse_of: :assessment
   has_many :sessions, dependent: :restrict_with_error
-  has_many :assessment_versions
+  has_many :assessment_versions, dependent: :destroy
+  # No dependent: — this is a blocking check for #destroy (see
+  # AssessmentsController), not something to cascade-delete.
+  has_many :cv_screenings
 
   SUPPORTED_LANGUAGES = { 'en' => 'English', 'id' => 'Bahasa Indonesia' }.freeze
 

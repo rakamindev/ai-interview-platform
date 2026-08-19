@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Vacancy, VacancySkill, PaginationMeta } from "@/types";
+import type { Vacancy, VacancySkill, PaginationMeta, DeletionCheckResult } from "@/types";
 
 export interface VacancyPayload {
   role_title: string;
@@ -25,4 +25,7 @@ export const vacanciesApi = {
     api.put<{ vacancy: Vacancy }>(`/vacancies/${id}`, { vacancy: data }),
 
   delete: (id: number) => api.delete(`/vacancies/${id}`),
+
+  deletionCheck: (id: number) =>
+    api.get<DeletionCheckResult>(`/vacancies/${id}/deletion_check`),
 };

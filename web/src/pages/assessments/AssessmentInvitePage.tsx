@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import DeleteResourceDialog from "@/components/DeleteResourceDialog";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, ListChecks, UserPlus } from "lucide-react";
@@ -234,6 +235,15 @@ export default function AssessmentInvitePage() {
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
+          {assessment && (
+            <DeleteResourceDialog
+              resourceLabel="assessment"
+              resourceName={assessment.name}
+              checkEligibility={() => assessmentsApi.deletionCheck(Number(id)).then((res) => res.data)}
+              onConfirmDelete={() => assessmentsApi.delete(Number(id)).then(() => {})}
+              onDeleted={() => navigate("/assessments")}
+            />
+          )}
         </div>
       </div>
 

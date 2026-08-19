@@ -5,7 +5,7 @@ module Api
     class VacanciesController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_vacancy, only: %i[show update destroy]
+      before_action :set_vacancy, only: %i[show update destroy deletion_check]
 
       # GET /api/v1/vacancies
       def index
@@ -43,13 +43,38 @@ module Api
         end
       end
 
+      # GET /api/v1/vacancies/:id/deletion_check
+      def deletion_check
+        blockers = deletion_blockers(@vacancy)
+        json_response(blockers || { deletable: true })
+      end
+
       # DELETE /api/v1/vacancies/:id
       def destroy
-        @vacancy.destroy
-        json_response(message: "Vacancy deleted")
+        blockers = deletion_blockers(@vacancy)
+        return json_error("This vacancy can't be deleted yet.", :unprocessable_entity, details: blockers) if blockers
+
+        if @vacancy.destroy
+          json_response(message: "Vacancy deleted")
+        else
+          json_error(@vacancy.errors.full_messages.to_sentence, :unprocessable_entity)
+        end
       end
 
       private
+
+      # Re-run on both #deletion_check and #destroy — never trust a prior
+      # client-side check as the actual safety boundary.
+      def deletion_blockers(vacancy)
+        screenings = vacancy.cv_screenings.select(:id, :name)
+        return nil if screenings.empty?
+
+        {
+          deletable: false,
+          reason: "cv_screenings",
+          blocking_cv_screenings: screenings.map { |cs| { id: cs.id, name: cs.name } }
+        }
+      end
 
       def set_vacancy
         @vacancy = Vacancy.find(params[:id])

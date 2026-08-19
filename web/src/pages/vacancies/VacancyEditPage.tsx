@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import DeleteResourceDialog from "@/components/DeleteResourceDialog";
 import { vacanciesApi } from "@/services/vacancies";
 import { extractErrorMessage } from "@/lib/utils";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
@@ -37,6 +38,7 @@ export default function VacancyEditPage() {
   });
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
   const publicRequirementText = useWatch({ control, name: "public_requirement_text" }) ?? "";
+  const roleTitle = useWatch({ control, name: "role_title" }) ?? "";
   const watchedSkills = useWatch({ control, name: "skills" }) ?? [];
 
   useEffect(() => {
@@ -128,9 +130,20 @@ export default function VacancyEditPage() {
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
+        <div className="flex justify-between gap-2">
+          {roleTitle && (
+            <DeleteResourceDialog
+              resourceLabel="vacancy"
+              resourceName={roleTitle}
+              checkEligibility={() => vacanciesApi.deletionCheck(Number(id)).then((res) => res.data)}
+              onConfirmDelete={() => vacanciesApi.delete(Number(id)).then(() => {})}
+              onDeleted={() => navigate("/vacancies")}
+            />
+          )}
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
+          </div>
         </div>
       </form>
 

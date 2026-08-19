@@ -28,6 +28,10 @@ export const cvScreeningsApi = {
   update: (id: number, data: Partial<CvScreeningPayload>) =>
     api.patch<{ cv_screening: CvScreening }>(`/cv_screenings/${id}`, { cv_screening: data }),
 
+  // No deletion-eligibility check needed here, unlike vacancies/assessments —
+  // nothing else references a CvScreening, so it's always deletable.
+  delete: (id: number) => api.delete(`/cv_screenings/${id}`),
+
   batches: (id: number) =>
     api.get<{ batches: CvScreeningBatch[] }>(`/cv_screenings/${id}/batches`),
 

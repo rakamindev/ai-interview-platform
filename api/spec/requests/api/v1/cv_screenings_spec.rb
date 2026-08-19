@@ -45,6 +45,28 @@ RSpec.describe 'CV Screenings API', type: :request do
     end
   end
 
+  describe 'DELETE /api/v1/cv_screenings/:id' do
+    it 'deletes the screening and cascades its batches, entries, and attached files' do
+      screening = create(:cv_screening, tenant_id: organization.id, vacancy: vacancy, assessment: assessment)
+      batch = create(:cv_screening_batch, cv_screening: screening)
+      entry = create(:cv_screening_entry, cv_screening_batch: batch)
+      entry.cv_file.attach(
+        io: File.open(Rails.root.join('spec/fixtures/files/sample_cv.pdf')),
+        filename: 'sample_cv.pdf',
+        content_type: 'application/pdf'
+      )
+      blob_key = entry.cv_file.blob.key
+
+      delete "/api/v1/cv_screenings/#{screening.id}", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(CvScreening.find_by(id: screening.id)).to be_nil
+      expect(CvScreeningBatch.find_by(id: batch.id)).to be_nil
+      expect(CvScreeningEntry.find_by(id: entry.id)).to be_nil
+      expect(ActiveStorage::Blob.find_by(key: blob_key)).to be_nil
+    end
+  end
+
   describe 'tenant isolation' do
     it "a recruiter in org A cannot view org B's screening" do
       other_org = create(:organization)

@@ -5,7 +5,10 @@ class Vacancy < ApplicationRecord
 
   has_many :vacancy_skills, dependent: :destroy
   has_many :fit_gap_reports, dependent: :destroy
-  has_many :vacancy_versions
+  has_many :vacancy_versions, dependent: :destroy
+  # No dependent: — this is a blocking check for #destroy (see
+  # VacanciesController), not something to cascade-delete.
+  has_many :cv_screenings
 
   validates :role_title, presence: true
 
