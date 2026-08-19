@@ -10,7 +10,7 @@ Repository branch:
 
 - Fork branch: `https://github.com/samudrazulqifli/ai-interview-platform/tree/frontend-depth-fitgap-report`
 - Pull Request creation URL: `https://github.com/rakamindev/ai-interview-platform/compare/main...samudrazulqifli:ai-interview-platform:frontend-depth-fitgap-report?expand=1`
-- Pull Request link: pending final GitHub submission URL after creating the PR from the fork branch.
+- Pull Request link: `https://github.com/rakamindev/ai-interview-platform/pull/89`
 
 ## 2. Core Problem
 
