@@ -6,6 +6,10 @@ AI Interview helps assessors, recruiters, and hiring managers evaluate candidate
 
 Claimed depth: frontend-depth fullstack slice. Backend changes are intentionally additive to stabilize the API contract; the main craft focus is the assessor-facing report experience.
 
+Video demonstration:
+
+- Demo video link: `https://drive.google.com/drive/folders/1Rzi0raER_p7KEL4gKsapEKIWc9UK8AF6?usp=sharing`
+
 Repository branch:
 
 - Fork branch: `https://github.com/samudrazulqifli/ai-interview-platform/tree/frontend-depth-fitgap-report`
@@ -126,7 +130,11 @@ Recommended follow-up screenshots before final portal submission:
 - `seeded-fault-fail.png` - seeded fault test failure.
 - `seeded-fault-fixed.png` - seeded fault restored to passing.
 
-## 9. Video Demo Outline
+## 9. Video Demonstration Link
+
+Video demo link: `https://drive.google.com/drive/folders/1Rzi0raER_p7KEL4gKsapEKIWc9UK8AF6?usp=sharing`
+
+The demo covers:
 
 1. Show the candidate portfolio and vacancy context.
 2. Open Fit/Gap Report.
