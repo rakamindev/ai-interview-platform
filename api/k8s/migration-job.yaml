@@ -1,0 +1,52 @@
+# Pre-deploy migration Job — applies schema changes before the new API image rolls out.
+#
+# Runs `rails db:migrate` with the SAME configuration sources as the API deployment
+# (ConfigMap `ai-interview-config` + Secret `ai-interview-secrets`) so migrations see
+# the identical environment. Applied by the deploy pipeline BEFORE `kubectl set image`;
+# the rollout waits for this Job to succeed (OPS-5: migrations on deploy).
+#
+# Manual run:  kubectl apply -f migration-job.yaml   (then: kubectl wait --for=condition=complete job/ai-interview-migrate)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ai-interview-migrate
+  namespace: default
+  annotations:
+    kubernetes.io/change-cause: "pre-deploy-migration"
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: ai-interview-migrate
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        cloud.google.com/gke-nodepool: paragon-t2d-tau-pool
+      tolerations:
+        - key: cloud.google.com/compute-class
+          operator: Equal
+          value: paragon-compute-class-tau-nodepool
+          effect: NoSchedule
+      containers:
+        - name: migrate
+          image: asia-southeast2-docker.pkg.dev/rakamin-poc/rakamin-images/ai-interview-api:latest
+          imagePullPolicy: IfNotPresent
+          command: ["bundle"]
+          args: ["exec", "rails", "db:migrate"]
+          envFrom:
+            - configMapRef:
+                name: ai-interview-config
+            - secretRef:
+                name: ai-interview-secrets
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: ai-interview-migrate-production
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"

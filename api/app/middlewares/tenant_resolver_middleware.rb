@@ -6,13 +6,13 @@
 #   Current.organization  → the Organization AR record
 #   Current.tenant_id     → organization.id (used to scope all AI interview queries)
 #
-# Resolution order:
-#   1. JWT Bearer token → decode → use `scheme` claim
-#   2. X-Tenant-Scheme request header (for non-JWT requests / candidate flows)
-#   3. Referer host (fallback, same as rakamin-api HostService approach)
+# Resolution:
+#   Tenant is resolved ONLY from a cryptographically verified JWT `scheme` claim
+#   (SEC-2). The spoofable X-Tenant-Scheme header and referer fallbacks were removed;
+#   candidate and WebSocket flows resolve tenant from the session (invite token).
 #
 # If no tenant can be resolved, the request continues with no tenant set.
-# Individual controllers can enforce tenant presence via before_action.
+# Controllers enforce tenant presence via require_tenant!.
 class TenantResolverMiddleware < ApplicationMiddleware
   def call(env)
     request = ActionDispatch::Request.new(env)
@@ -30,33 +30,14 @@ class TenantResolverMiddleware < ApplicationMiddleware
 
   private
 
+  # Tenant comes ONLY from a verified JWT scheme claim.
   def resolve_scheme(request)
-    # 1. Try JWT bearer token first
-    scheme_from_jwt(request) ||
-      # 2. Try explicit header
-      request.headers['X-Tenant-Scheme'].presence ||
-      # 3. Fall back to referer host
-      scheme_from_referer(request)
-  end
-
-  def scheme_from_jwt(request)
     auth_header = request.headers['Authorization'].to_s
     return unless auth_header.start_with?('Bearer ', 'bearer ')
 
     token = auth_header.split(' ').last
-    claims = JsonWebToken.decode_without_verification(token)
-    claims[:scheme].presence
+    JsonWebToken.decode(token)[:scheme].presence
   rescue StandardError
-    nil
-  end
-
-  def scheme_from_referer(request)
-    referer = request.referer.to_s
-    return if referer.blank?
-
-    host = URI.parse(referer).host.to_s
-    host.presence
-  rescue URI::InvalidURIError
     nil
   end
 

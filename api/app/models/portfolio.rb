@@ -16,4 +16,5 @@ class Portfolio < ApplicationRecord
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
+  def pending?     = generation_status == 'pending'
 end

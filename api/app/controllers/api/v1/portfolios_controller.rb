@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = tenant_portfolios.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -91,17 +91,21 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
+        report = FitGapReport.find_or_initialize_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+        report.skill_comparisons ||= []
+        report.assign_attributes(generation_status: "generating", generation_error: nil)
+        report.save!
+
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
-        render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+        render json: { status: "generating", report: fit_gap_json(report) }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_portfolios.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -113,21 +117,25 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
-        existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
-          return json_response(report: fit_gap_json(existing))
-        end
+        # Return the cached report when it's already complete.
+        report = FitGapReport.find_or_initialize_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+        return json_response(report: fit_gap_json(report)) if report.persisted? && report.complete?
+
+        # Otherwise (re)start generation, tracked by a 'generating' row so the
+        # client can observe completion or failure instead of polling forever.
+        report.skill_comparisons ||= []
+        report.assign_attributes(generation_status: "generating", generation_error: nil)
+        report.save!
 
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        render json: { status: "generating", report: fit_gap_json(report) }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_portfolios.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -141,6 +149,12 @@ module Api
 
       private
 
+      # Portfolio-family records are scoped through their (tenant-scoped) session,
+      # so an assessor can only reach portfolios in their own tenant.
+      def tenant_portfolios
+        Portfolio.joins(:session).merge(Session.all)
+      end
+
       def set_session
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -153,7 +167,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = tenant_portfolios.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -205,7 +219,9 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          generated_at:      report.generated_at,
+          generation_status: report.generation_status,
+          generation_error:  report.generation_error
         }
       end
 

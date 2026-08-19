@@ -29,6 +29,11 @@ gem 'sidekiq', '~> 7.0'
 # WebSocket
 gem 'faye-websocket'
 
+# Error tracking (no-op without SENTRY_DSN — see config/initializers/sentry.rb)
+gem 'sentry-rails'
+gem 'sentry-ruby'
+gem 'sentry-sidekiq'
+
 # HTTP client (Gemini REST API)
 gem 'faraday', '~> 2.0'
 gem 'faraday-retry'

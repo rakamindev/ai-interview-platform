@@ -2,6 +2,7 @@
 
 Rails.application.routes.draw do
   get '/health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+  get '/health/ready', to: 'api/v1/health#ready'
 
   namespace :api do
     namespace :v1 do

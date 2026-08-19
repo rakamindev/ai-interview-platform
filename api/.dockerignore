@@ -1,0 +1,31 @@
+# OPS-1: keep secrets and dev cruft out of every image build.
+# Secrets are injected at runtime via k8s env (ConfigMap/Secret), never baked in.
+
+# Secret-bearing / local config
+config/application.yml
+config/application.yml.sample
+config/master.key
+**/*.key
+.env
+.env.*
+*.env
+
+# VCS / CI
+.git
+.gitignore
+.github
+
+# Runtime-generated / logs
+log/
+tmp/
+storage/
+coverage/
+
+# Dev/test only (not needed at runtime)
+spec/
+test/
+k8s/
+Dockerfile
+.dockerignore
+.ruby-version
+.rspec

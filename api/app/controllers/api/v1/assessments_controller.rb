@@ -14,7 +14,7 @@ module Api
         )
 
         json_response(
-          assessments: assessments.map(&method(:assessment_json)),
+          assessments: assessments.map(&method(:assessment_list_json)),
           meta: pagination_meta(assessments)
         )
       end
@@ -110,6 +110,19 @@ module Api
       end
 
       def assessment_json(assessment)
+        assessment_base_json(assessment).merge(
+          system_prompt: assessment.system_prompt
+        )
+      end
+
+      # Lightweight list projection: the list UI only needs base fields and the
+      # latest session summary — no skills, and not the heavy system_prompt text
+      # (clients use GET /assessments/:id/system_prompt for that).
+      def assessment_list_json(assessment)
+        assessment_base_json(assessment)
+      end
+
+      def assessment_base_json(assessment)
         latest = assessment.sessions.max_by(&:created_at)
 
         {
@@ -118,7 +131,6 @@ module Api
           role_title:     assessment.role_title.presence || assessment.name,
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,

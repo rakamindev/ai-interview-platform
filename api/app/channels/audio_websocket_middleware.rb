@@ -4,7 +4,7 @@ require 'faye/websocket'
 
 # Rack middleware that proxies a WebSocket at /ws/sessions/:id/audio between the browser (16kHz PCM)
 # and Gemini Live (24kHz PCM). Audio is buffered in a ring buffer for reconnection replay.
-class AudioWebSocketMiddleware
+class AudioWebsocketMiddleware
   AUDIO_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/audio\z}
 
   MAX_RECONNECT_ATTEMPTS = 3
@@ -755,11 +755,11 @@ class AudioWebSocketMiddleware
 
   def authenticate_and_load(env, session_id)
     request = Rack::Request.new(env)
+    invite_token = request.params['token']
+    via_invite = invite_token.present?
 
     session = begin
-      invite_token = request.params['token']
-
-      if invite_token.present?
+      if via_invite
         Session.unscoped.find_by(invite_token: invite_token)
       else
         auth_header = env['HTTP_AUTHORIZATION']
@@ -767,6 +767,8 @@ class AudioWebSocketMiddleware
 
         token = auth_header.split(' ').last
         payload = JsonWebToken.decode(token)
+        return [nil, 'Forbidden'] unless AuthorizeApiRequest::ASSESSOR_ROLES.include?(payload[:role].to_s)
+
         tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
         return [nil, 'Invalid tenant'] unless tenant_id
 
@@ -779,6 +781,8 @@ class AudioWebSocketMiddleware
     return [nil, 'Session not found'] unless session
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+    # Invite links must still be usable (not revoked or expired).
+    return [nil, 'Invite link is no longer valid'] if via_invite && !session.usable?
 
     [session, nil]
   end

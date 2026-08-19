@@ -3,6 +3,10 @@
 class User < ApplicationRecord
   has_secure_password
 
+  # AI-interview users belong to a shared public.organizations tenant. Optional so
+  # inert signup accounts (and legacy rows) remain valid; login requires one.
+  belongs_to :organization, optional: true
+
   ROLES = %w[admin user].freeze
 
   validates :email, presence: true,

@@ -6,9 +6,11 @@ class SystemPromptGeneratorWorker
   sidekiq_options queue: :default, retry: 3
 
   def perform(assessment_id)
-    assessment = Assessment.find(assessment_id)
-    prompt = Assessments::SystemPromptCompiler.new(assessment).call
-    assessment.update!(system_prompt: prompt)
+    assessment = Assessment.unscoped.find(assessment_id)
+    Current.using(tenant_id: assessment.tenant_id) do
+      prompt = Assessments::SystemPromptCompiler.new(assessment).call
+      assessment.update!(system_prompt: prompt)
+    end
     Rails.logger.info("[N2] System prompt generated for assessment #{assessment_id}")
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N2] Assessment #{assessment_id} not found — skipping")

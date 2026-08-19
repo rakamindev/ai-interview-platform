@@ -20,7 +20,13 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      # Guard against duplicate/concurrent generation (REL-2): only one job
+      # advances a pending/failed portfolio to 'generating'; others no-op.
+      portfolio.with_lock do
+        return portfolio unless portfolio.pending? || portfolio.failed?
+
+        portfolio.update!(generation_status: 'generating', generation_error: nil)
+      end
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)

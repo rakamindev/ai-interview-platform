@@ -79,7 +79,7 @@ module Exports
       effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text skill.skill_label, style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
         level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
@@ -109,7 +109,10 @@ module Exports
         end
       end
 
-      pdf.stroke { pdf.stroke_color 'CCCCCC'; pdf.horizontal_rule }
+      pdf.stroke do
+        pdf.stroke_color 'CCCCCC'
+        pdf.horizontal_rule
+      end
       pdf.move_down 8
     end
 

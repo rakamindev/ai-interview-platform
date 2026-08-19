@@ -14,19 +14,23 @@ module Api
 
         return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
 
-        scheme = resolve_scheme
-        token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
+        # Tenant is derived from the user's own organization — never a client header.
+        organization = user.organization
+        return json_error('Your account is not linked to an organization.', :forbidden) unless organization
+
+        token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: organization.scheme })
 
         json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
       end
 
       # POST /api/v1/signup
       def signup
-        user = User.new(email: params[:email].to_s, password: params[:password], role: params[:role])
+        # Never trust a client-supplied role — public signup creates least-privilege
+        # accounts only. Admins are provisioned out-of-band (seed/console).
+        user = User.new(email: params[:email].to_s, password: params[:password], role: 'user')
 
         if user.save
-          scheme = resolve_scheme
-          token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
+          token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: user.organization&.scheme })
 
           json_response({ token:, user: { id: user.id, email: user.email, role: user.role } }, :created)
         else
@@ -43,15 +47,6 @@ module Api
         else
           json_response(user: { id: Current.user&.id, role: Current.user&.role })
         end
-      end
-
-      private
-
-      def resolve_scheme
-        request.headers['X-Tenant-Scheme'].presence ||
-          ActiveRecord::Base.connection.select_value(
-            'SELECT scheme FROM organizations LIMIT 1'
-          ) || 'test-corp'
       end
     end
   end
