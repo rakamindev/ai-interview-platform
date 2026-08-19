@@ -237,6 +237,13 @@ export default function InterviewPage() {
           <br />
           The hiring team will review your results and follow up with you.
         </p>
+        <div className="pt-4">
+          <p className="text-sm text-muted-foreground">
+            You can now safely close this browser tab — your responses have been saved.
+            <br />
+            The hiring team will follow up with you after reviewing.
+          </p>
+        </div>
       </div>
     );
   }
