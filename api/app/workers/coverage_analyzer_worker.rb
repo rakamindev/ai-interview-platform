@@ -12,6 +12,15 @@ class CoverageAnalyzerWorker
 
     result = Coverage::Analyzer.new(session: session).call
 
+    # If analyzer returned an error indicator, publish an error payload so
+    # the assessor UI can surface an explanation instead of silently showing stale data.
+    if result[:error]
+      payload = { type: 'coverage_error', message: "Analyzer parse error: #{result[:error_message]}" }.to_json
+      Sidekiq.redis { |conn| conn.publish("coverage:#{session.id}", payload) }
+      Rails.logger.warn("[N7] Analyzer returned error for session #{session_id}: #{result[:error_message]}")
+      return
+    end
+
     apply_updates(session, result[:skill_updates])
     create_discovered_skills(session, result[:discovered_skills])
 
@@ -51,7 +60,8 @@ class CoverageAnalyzerWorker
   def create_discovered_skills(session, discovered_skills)
     discovered_skills.each do |discovered|
       next if session.coverage_maps.exists?(skill_label: discovered[:label])
-      next if session.coverage_maps.discovered.count >= 10
+      cap = ENV.fetch('DISCOVERED_SKILL_CAP', '10').to_i
+      next if session.coverage_maps.discovered.count >= cap
 
       session.coverage_maps.create!(
         skill_id:      nil,

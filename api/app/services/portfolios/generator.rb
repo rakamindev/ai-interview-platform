@@ -149,6 +149,7 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      validate_portfolio_response!(data)
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
@@ -175,6 +176,39 @@ module Portfolios
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
+      end
+    end
+
+    def validate_portfolio_response!(data)
+      unless data.is_a?(Hash)
+        raise "Invalid portfolio response: expected Hash"
+      end
+
+      %w[configured_skills discovered_skills].each do |key|
+        next unless data.key?(key)
+        unless data[key].is_a?(Array)
+          raise "Invalid portfolio response: #{key} must be an Array"
+        end
+
+        data[key].each do |skill|
+          unless skill.is_a?(Hash)
+            raise "Invalid portfolio response: each skill must be a Hash"
+          end
+
+          unless skill['skill_label'] && !skill['skill_label'].to_s.strip.empty?
+            raise "Invalid portfolio response: skill_label missing"
+          end
+
+          level = skill['level']
+          if level.nil? || !(level.to_i >= 1 && level.to_i <= 5)
+            raise "Invalid portfolio response: level missing or out of range for #{skill['skill_label']}"
+          end
+
+          evidence = skill['evidence'] || []
+          unless evidence.is_a?(Array)
+            raise "Invalid portfolio response: evidence must be an Array for #{skill['skill_label']}"
+          end
+        end
       end
     end
   end
