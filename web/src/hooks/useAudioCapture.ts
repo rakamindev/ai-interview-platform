@@ -2,13 +2,15 @@ import { useRef, useState, useCallback } from "react";
 
 interface UseAudioCaptureOptions {
   onFrame: (buffer: ArrayBuffer) => void;
+  onLevel?: (level: number) => void;
   onError?: (error: Error) => void;
 }
 
-export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
+export function useAudioCapture({ onFrame, onLevel, onError }: UseAudioCaptureOptions) {
   const [isCapturing, setIsCapturing] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+  const sinkGainRef = useRef<GainNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   // Mute gate — mic stays hot, we just skip sending frames.
   // Avoids AudioContext.suspend/resume async state issues entirely.
@@ -29,15 +31,25 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       await ctx.audioWorklet.addModule("/audio-worklet-processor.js");
 
       const workletNode = new AudioWorkletNode(ctx, "pcm-processor");
-      workletNode.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-        if (!mutedRef.current) {
-          onFrame(e.data);
+      workletNode.port.onmessage = (e: MessageEvent<ArrayBuffer | { type: "level"; rms: number }>) => {
+        if (e.data instanceof ArrayBuffer) {
+          if (!mutedRef.current) onFrame(e.data);
+          return;
+        }
+
+        if (e.data?.type === "level") {
+          onLevel?.(e.data.rms);
         }
       };
       workletNodeRef.current = workletNode;
 
       const source = ctx.createMediaStreamSource(stream);
+      const sinkGain = ctx.createGain();
+      sinkGain.gain.value = 0;
+      sinkGainRef.current = sinkGain;
       source.connect(workletNode);
+      workletNode.connect(sinkGain);
+      sinkGain.connect(ctx.destination);
 
       setIsCapturing(true);
     } catch (err) {
@@ -45,7 +57,7 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       console.error("[AudioCapture] Failed to start:", error.message);
       onError?.(error);
     }
-  }, [isCapturing, onFrame, onError]);
+  }, [isCapturing, onFrame, onLevel, onError]);
 
   const mute = useCallback(() => {
     mutedRef.current = true;
@@ -58,6 +70,8 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   const stop = useCallback(() => {
     workletNodeRef.current?.disconnect();
     workletNodeRef.current = null;
+    sinkGainRef.current?.disconnect();
+    sinkGainRef.current = null;
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
