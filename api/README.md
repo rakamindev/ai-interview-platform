@@ -23,7 +23,7 @@ Fill in the required values in `config/application.yml`:
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | Shared PostgreSQL instance |
 | `GEMINI_API_KEY` | Google AI Studio API key |
 | `GEMINI_LIVE_MODEL` | e.g. `gemini-3.1-flash-live-preview` |
-| `GEMINI_ANALYSIS_MODEL` | e.g. `gemini-2.0-flash-001` |
+| `GEMINI_FLASH_MODEL` | e.g. `gemini-3.5-flash-lite` |
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
@@ -49,11 +49,16 @@ rails db:seed
 
 ---
 
-## 4. Start Redis via Docker
+## 4. Start PostgreSQL and Redis via Docker
 
 ```bash
-docker run -d -p 6379:6379 --name redis redis:alpine
+cd ..
+docker compose up -d
+cd api
 ```
+
+Compose persists local data in named Docker volumes. Stop the services with
+`docker compose down`.
 
 ---
 
@@ -91,7 +96,7 @@ Runs on **port 5173** by default.
 
 | Service | Command | Port |
 |---|---|---|
-| Redis | `docker run -d -p 6379:6379 --name redis redis:alpine` | 6379 |
+| PostgreSQL + Redis | `docker compose up -d` (from repo root) | 5432 / 6379 |
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
 | Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |

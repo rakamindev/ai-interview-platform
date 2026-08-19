@@ -10,7 +10,7 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import type { AssessorOverride, Portfolio, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -26,7 +26,7 @@ export default function PortfolioPage() {
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
+    const data: { status?: string; portfolio?: Portfolio } = res.data;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
     } else if (data.portfolio) {
@@ -188,7 +188,10 @@ export default function PortfolioPage() {
         <>
           {/* Configured skills */}
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
+            <div>
+              <h2 className="text-sm font-semibold">Configured Skills</h2>
+              <p className="text-xs text-muted-foreground mt-1">AI-generated draft. Evidence is verified against candidate transcript turns before it is shown here.</p>
+            </div>
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (

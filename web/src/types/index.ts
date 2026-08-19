@@ -87,12 +87,14 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  assessment_state: "assessed" | "not_assessed";
+  ai_level: number | null;
+  ai_confidence: "high" | "medium" | "low" | null;
   evidence: string[];
+  evidence_turn_ids: number[];
   competency_summary: string;
 }
 
