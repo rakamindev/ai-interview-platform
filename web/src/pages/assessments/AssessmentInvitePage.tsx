@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, ScanSearch } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, ListChecks, UserPlus } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -54,11 +54,15 @@ function SessionRow({
       </div>
 
       <div className="flex items-center gap-3">
-        {session.cv_screening_entry_id != null && (
+        {session.cv_screening_entry_id != null ? (
           <span className="flex items-center gap-1 text-xs text-primary bg-primary/10 rounded-full px-2 py-0.5">
-            <ScanSearch className="h-3 w-3" />
+            <ListChecks className="h-3 w-3" />
             CV screening
-            {typeof session.cv_screening_score === "number" && ` · ${session.cv_screening_score}`}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+            <UserPlus className="h-3 w-3" />
+            Manual invite
           </span>
         )}
         {isPending && (
