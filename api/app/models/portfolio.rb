@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Portfolio < ApplicationRecord
+  include TenantScoped
+
   GENERATION_STATUSES = %w[pending generating complete failed].freeze
 
   belongs_to :session
@@ -16,4 +18,13 @@ class Portfolio < ApplicationRecord
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
+
+  private
+
+  # Portfolios are always created from Sidekiq worker context (no HTTP
+  # request, no Current.tenant_id set), so inherit from the session instead
+  # of TenantScoped's default Current.tenant_id fallback.
+  def assign_tenant_id
+    self.tenant_id ||= session&.tenant_id
+  end
 end
