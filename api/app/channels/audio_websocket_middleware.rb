@@ -13,7 +13,7 @@ class AudioWebSocketMiddleware
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
-  SYSTEM_SIGNAL_TOKEN = 'SYS-TC-7x9k'
+  SYSTEM_SIGNAL_TOKEN = ENV.fetch('SYSTEM_SIGNAL_TOKEN', 'SYS-TC-7x9k')
 
   WRAP_UP_SIGNAL = "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"wrap_up\": true, \"all_skills_covered\": true }" \
                    ' — Close the interview NOW. Do NOT ask any more questions.' \

@@ -114,7 +114,7 @@ module Coverage
       { skill_updates: skill_updates, discovered_skills: discovered }
     rescue JSON::ParserError => e
       Rails.logger.error("[N7/Analyzer] Failed to parse Gemini response: #{e.message}")
-      { skill_updates: [], discovered_skills: [] }
+      { skill_updates: [], discovered_skills: [], error: true, error_message: e.message }
     end
 
     def parse_skill_updates(updates, coverage_maps)
