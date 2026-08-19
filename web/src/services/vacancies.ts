@@ -1,17 +1,27 @@
 import api from "./api";
-import type { Vacancy, VacancySkill, PaginationMeta } from "@/types";
+import type { Vacancy, VacancySkill, PaginationMeta, WorkArrangement, EmploymentType } from "@/types";
 
 export interface VacancyPayload {
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  address?: string;
+  city?: string;
+  work_arrangement?: WorkArrangement | "";
+  employment_type?: EmploymentType | "";
+  department?: string;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_visible?: boolean;
+  description?: string;
+  application_deadline?: string;
   vacancy_skills_attributes: Partial<VacancySkill>[];
 }
 
 export const vacanciesApi = {
-  list: (page = 1) =>
+  list: (page = 1, q?: string) =>
     api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
+      params: { page, ...(q ? { q } : {}) },
     }),
 
   get: (id: number) =>
