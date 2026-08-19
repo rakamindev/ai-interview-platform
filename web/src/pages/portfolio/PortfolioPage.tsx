@@ -94,6 +94,9 @@ export default function PortfolioPage() {
     }
   };
 
+  const selectedVacancyObj = vacancies.find(v => String(v.id) === selectedVacancy);
+  const hasExistingReport = portfolio?.fit_gap_report_vacancy_ids?.includes(Number(selectedVacancy));
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
@@ -107,20 +110,20 @@ export default function PortfolioPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold leading-snug">Portfolio Results</h1>
             {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
+              <p className="text-sm text-muted-foreground truncate">{candidateName}</p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -232,22 +235,36 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
+          <div className="flex flex-col gap-4">
+            <h2 className="text-sm font-semibold">Fit/Gap Analysis</h2>
+            
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                <SelectTrigger className="w-full sm:w-64">
+                  <SelectValue placeholder="Choose a vacancy to compare..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancies.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.role_title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="w-full sm:w-auto">
+                {hasExistingReport ? "View existing report →" : "Run Analysis →"}
+              </Button>
+            </div>
+            
+            {/* Vacancy Preview */}
+            {selectedVacancyObj && (
+              <div className="bg-muted/30 border rounded-md p-4 mt-2">
+                <h3 className="text-sm font-medium mb-1">Competency Expectations</h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {selectedVacancyObj.competency_expectations || "No expectations provided."}
+                </p>
+              </div>
+            )}
           </div>
         </>
       )}
