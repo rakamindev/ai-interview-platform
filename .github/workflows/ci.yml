@@ -36,6 +36,8 @@ jobs:
           ruby-version: "3.3.2"
           bundler-cache: true
           working-directory: api
+      - name: Generate test secret key base
+        run: echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> "$GITHUB_ENV"
 
       # Figaro loads config/application.yml into ENV, which database.yml reads.
       # We generate a test-only file here (the real one is git-ignored).
