@@ -134,50 +134,53 @@ export default function AssessmentNewPage() {
           )}
         </div>
 
-        {/* Time limit */}
-        <div className="space-y-1.5">
-          <Label>
-            Session time limit <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            defaultValue="45"
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_LIMIT_OPTIONS.map((min) => (
-                <SelectItem key={min} value={String(min)}>
-                  {min} min
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Time limit + Language */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="space-y-1.5 flex-1">
+            <Label>
+              Session time limit <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              defaultValue="45"
+              onValueChange={(v) => setValue("time_limit_min", Number(v))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_LIMIT_OPTIONS.map((min) => (
+                  <SelectItem key={min} value={String(min)}>
+                    {min} min
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Language */}
-        <div className="space-y-1.5">
-          <Label>Interview language</Label>
-          <Select
-            defaultValue="en"
-            onValueChange={(v) => setValue("language", v as "en" | "id")}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="id">Indonesian</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5 flex-1">
+            <Label>Interview language</Label>
+            <Select
+              defaultValue="en"
+              onValueChange={(v) => setValue("language", v as "en" | "id")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="id">Indonesian</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Separator />
 
         {/* Skills section */}
         <div className="space-y-3">
-          <Label>Skills to assess</Label>
+          <Label>
+            Skills to assess <span className="text-destructive">*</span>
+          </Label>
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">

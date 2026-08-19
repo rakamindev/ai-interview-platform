@@ -115,13 +115,13 @@ export default function AssessmentEditPage() {
           <Input id="name" {...register("name", { required: true })} />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:w-1/2">
           <Label>Session time limit <span className="text-destructive">*</span></Label>
           <Select
             value={String(form.watch("time_limit_min"))}
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
@@ -133,7 +133,9 @@ export default function AssessmentEditPage() {
         <Separator />
 
         <div className="space-y-3">
-          <Label>Skills to assess</Label>
+          <Label>
+            Skills to assess <span className="text-destructive">*</span>
+          </Label>
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
               No skills added yet.
