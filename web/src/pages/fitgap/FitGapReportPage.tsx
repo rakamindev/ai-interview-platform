@@ -38,8 +38,8 @@ export default function FitGapReportPage() {
       setReport(res.data.report);
       setGenerating(false);
       setError(null);
-    } catch (e: any) {
-      const status = e?.response?.status;
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
       if (status === 404) {
         // Only trigger generation once — stop re-POSTing on every 404
         if (!generationTriggeredRef.current) {
@@ -67,10 +67,11 @@ export default function FitGapReportPage() {
     sessionsApi
       .getPortfolio(Number(sessionId))
       .then(async (res) => {
-        const data = res.data as any;
+        const data = res.data as { portfolio?: Portfolio };
         if (data.portfolio) {
           setPortfolio(data.portfolio);
         }
+        return;
       })
       .catch(() => {
         setError("Failed to load portfolio");

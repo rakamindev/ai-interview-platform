@@ -25,14 +25,7 @@ export default function VacancyNewPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    setValue,
-    watch,
-    formState: { errors }
-  } = useForm<VacancyFormValues>({
+  const { register, handleSubmit, control, setValue, watch } = useForm<VacancyFormValues>({
     defaultValues: {
       role_title: "",
       culture_dimensions: "",
@@ -54,8 +47,9 @@ export default function VacancyNewPage() {
         vacancy_skills_attributes: data.skills
       });
       navigate("/vacancies");
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { errors?: { message?: string }[] } } };
+      setError(err?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
     } finally {
       setSubmitting(false);
     }

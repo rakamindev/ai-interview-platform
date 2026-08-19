@@ -18,6 +18,7 @@ export default function TranscriptPage() {
       .then(([tRes, sRes]) => {
         setTurns(tRes.data.turns);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        return;
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -62,8 +63,8 @@ export default function TranscriptPage() {
 
       {loading && (
         <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <Skeleton key={`skeleton-${n}`} className="h-16 w-full" />
           ))}
         </div>
       )}

@@ -21,6 +21,11 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(true);
+  const onOpenRef = useRef<(() => void) | null>(null);
+  const onMessageRef = useRef<((event: MessageEvent) => void) | null>(null);
+  const onCloseRef = useRef<(() => void) | null>(null);
+  const onErrorRef = useRef<(() => void) | null>(null);
+  const connectRef = useRef<() => void>(() => {});
 
   const connect = useCallback(() => {
     if (!activeRef.current) return;
@@ -30,13 +35,15 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     const ws = new WebSocket(`${WS_URL}/ws/sessions/${sessionId}/coverage`);
     wsRef.current = ws;
 
-    ws.onopen = () => {
+    const handleOpen = () => {
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
     };
+    onOpenRef.current = handleOpen;
+    ws.addEventListener("open", handleOpen);
 
-    ws.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "coverage_update") {
@@ -53,23 +60,32 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
         // ignore malformed frames
       }
     };
+    onMessageRef.current = handleMessage;
+    ws.addEventListener("message", handleMessage);
 
-    ws.onclose = () => {
+    const handleClose = () => {
       setIsConnected(false);
       if (!activeRef.current) return;
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
         reconnectTimerRef.current = setTimeout(() => {
           reconnectAttemptsRef.current += 1;
-          connect();
+          connectRef.current();
         }, RECONNECT_DELAYS[attempt]);
       }
     };
+    onCloseRef.current = handleClose;
+    ws.addEventListener("close", handleClose);
 
-    ws.onerror = () => {
+    const handleError = () => {
       setIsConnected(false);
     };
+    onErrorRef.current = handleError;
+    ws.addEventListener("error", handleError);
   }, [sessionId]);
+
+  // Keep connectRef in sync outside the callback to avoid self-reference in deps
+  connectRef.current = connect;
 
   useEffect(() => {
     activeRef.current = true;
@@ -77,6 +93,13 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     return () => {
       activeRef.current = false;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      const ws = wsRef.current;
+      if (ws) {
+        if (onOpenRef.current) ws.removeEventListener("open", onOpenRef.current);
+        if (onMessageRef.current) ws.removeEventListener("message", onMessageRef.current);
+        if (onCloseRef.current) ws.removeEventListener("close", onCloseRef.current);
+        if (onErrorRef.current) ws.removeEventListener("error", onErrorRef.current);
+      }
       wsRef.current?.close();
     };
   }, [connect]);

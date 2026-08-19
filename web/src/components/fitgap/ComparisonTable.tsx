@@ -88,8 +88,8 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
+            {comparisons.map((c) => (
+              <tr key={c.skill_label} className="border-b last:border-0">
                 <td className="px-4 py-2.5">
                   <span>{c.skill_label}</span>
                   {scope && <span className="ml-1 text-xs text-muted-foreground">({scope})</span>}

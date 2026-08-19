@@ -70,6 +70,7 @@ export default function AnchorRail({
   return (
     <div
       className={cn("flex flex-col gap-1.5", className)}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="img"
       aria-label={ariaDescription(skillLabel, requiredLevel, candidateLevel, confidence)}
     >

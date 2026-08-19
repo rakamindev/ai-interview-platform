@@ -21,8 +21,8 @@
   },
   "rules": {
     "typescript/no-explicit-any": "warn",
-    "typescript/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
-    "react/jsx-key": "warn",
+    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "react/jsx-key": "error",
     "react/react-in-jsx-scope": "off",
     "react/incompatible-library": "off",
     "react/refs": "off",
@@ -38,7 +38,6 @@
     "promise/no-return-wrap": "error",
     "promise/param-names": "warn",
     "jsx-a11y/no-autofocus": "warn",
-    "jsx-a11y/prefer-tag-over-role": "warn",
     "no-console": "warn"
   },
   "ignorePatterns": [

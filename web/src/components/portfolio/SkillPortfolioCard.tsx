@@ -30,8 +30,8 @@ export default function SkillPortfolioCard({
               Evidence from interview
             </span>
             <ul className="space-y-1">
-              {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground line-clamp-3">
+              {skill.evidence.map((quote) => (
+                <li key={quote} className="text-sm text-foreground line-clamp-3">
                   • "{quote}"
                 </li>
               ))}

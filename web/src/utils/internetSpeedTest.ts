@@ -43,6 +43,7 @@ async function measurePing(): Promise<number> {
   for (const url of testUrls) {
     try {
       const start = performance.now();
+      // oxlint-disable-next-line eslint/no-await-in-loop
       await fetch(url, { mode: "no-cors", cache: "no-cache" });
       return performance.now() - start;
     } catch {
@@ -61,8 +62,10 @@ async function measureDownloadSpeed(): Promise<number> {
   for (const testFile of testFiles) {
     try {
       const start = performance.now();
+      // oxlint-disable-next-line eslint/no-await-in-loop
       const response = await fetch(testFile.url, { cache: "no-cache" });
       if (response.ok) {
+        // oxlint-disable-next-line eslint/no-await-in-loop
         await response.blob();
         const seconds = (performance.now() - start) / 1000;
         return testFile.size / seconds;
@@ -95,6 +98,7 @@ async function measureUploadSpeed(): Promise<number> {
       const formData = new FormData();
       formData.append("test", uploadData);
       const start = performance.now();
+      // oxlint-disable-next-line eslint/no-await-in-loop
       await fetch(endpoint, { method: "POST", body: formData });
       const seconds = (performance.now() - start) / 1000;
       return uploadSizeMB / seconds;
@@ -109,8 +113,10 @@ async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise
   const results: T[] = [];
   for (let i = 0; i < count; i++) {
     try {
+      // oxlint-disable-next-line eslint/no-await-in-loop
       results.push(await testFn());
-      await new Promise((r) => setTimeout(r, 100));
+      // oxlint-disable-next-line eslint/no-await-in-loop promise/param-names
+      await new Promise((resolve) => setTimeout(resolve, 100));
     } catch {
       // skip failed test
     }
@@ -121,7 +127,7 @@ async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise
 function average(values: number[]): number {
   if (values.length === 0) return 0;
   if (values.length <= 2) return values.reduce((a, b) => a + b, 0) / values.length;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = values.toSorted((a, b) => a - b);
   const trimmed = sorted.slice(1, -1);
   return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
 }

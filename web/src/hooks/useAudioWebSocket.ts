@@ -30,6 +30,11 @@ export function useAudioWebSocket({
   const [connectionState, setConnectionState] = useState<
     "disconnected" | "connecting" | "connected"
   >("disconnected");
+  const onOpenRef = useRef<(() => void) | null>(null);
+  const onMessageRef = useRef<((event: MessageEvent) => void) | null>(null);
+  const onErrorRef = useRef<(() => void) | null>(null);
+  const onCloseRef = useRef<(() => void) | null>(null);
+  const connectRef = useRef<() => void>(() => {});
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -43,17 +48,19 @@ export function useAudioWebSocket({
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
 
-    ws.onopen = () => {
+    const handleOpen = () => {
       setConnectionState("connected");
       reconnectAttemptsRef.current = 0;
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
     };
+    onOpenRef.current = handleOpen;
+    ws.addEventListener("open", handleOpen);
 
     // Only signal AI speaking once per turn (first binary chunk).
     // Reset when speaker_changed:candidate arrives.
     let aiSpeakingSignalled = false;
 
-    ws.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       if (event.data instanceof ArrayBuffer) {
         onAudioChunk(event.data);
         if (!aiSpeakingSignalled) {
@@ -114,12 +121,16 @@ export function useAudioWebSocket({
         }
       }
     };
+    onMessageRef.current = handleMessage;
+    ws.addEventListener("message", handleMessage);
 
-    ws.onerror = () => {
+    const handleError = () => {
       setConnectionState("disconnected");
     };
+    onErrorRef.current = handleError;
+    ws.addEventListener("error", handleError);
 
-    ws.onclose = () => {
+    const handleClose = () => {
       setConnectionState("disconnected");
       if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
       const attempt = reconnectAttemptsRef.current;
@@ -127,13 +138,18 @@ export function useAudioWebSocket({
         onStateChange("reconnecting");
         reconnectTimerRef.current = setTimeout(() => {
           reconnectAttemptsRef.current += 1;
-          connect();
+          connectRef.current();
         }, RECONNECT_DELAYS[attempt]);
       } else {
         onStateChange("complete");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+    onCloseRef.current = handleClose;
+    ws.addEventListener("close", handleClose);
+  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onReconnected]);
+
+  // Keep connectRef in sync outside the callback to avoid self-reference in deps
+  connectRef.current = connect;
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -156,6 +172,13 @@ export function useAudioWebSocket({
   useEffect(() => {
     return () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      const ws = wsRef.current;
+      if (ws) {
+        if (onOpenRef.current) ws.removeEventListener("open", onOpenRef.current);
+        if (onMessageRef.current) ws.removeEventListener("message", onMessageRef.current);
+        if (onErrorRef.current) ws.removeEventListener("error", onErrorRef.current);
+        if (onCloseRef.current) ws.removeEventListener("close", onCloseRef.current);
+      }
       wsRef.current?.close();
     };
   }, []);

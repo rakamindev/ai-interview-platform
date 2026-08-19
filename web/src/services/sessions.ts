@@ -1,4 +1,4 @@
-import api, { parseResponse } from "./api";
+import { api, parseResponse } from "./api";
 import {
   SessionSchema,
   CoverageMapSchema,
@@ -6,7 +6,7 @@ import {
   CandidateInfoSchema
 } from "@/schemas/session";
 import { PortfolioSchema } from "@/schemas/portfolio";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type { Session } from "@/types";
 
 const EMPTY_SESSION: Session = {
   id: 0,
@@ -19,12 +19,20 @@ const EMPTY_SESSION: Session = {
 export const sessionsApi = {
   get: (id: number) =>
     api.get(`/sessions/${id}`).then((res) => {
-      const raw = res.data as any;
+      const raw = res.data as unknown;
       return {
         ...res,
         data: {
-          session: parseResponse(raw?.session, SessionSchema, EMPTY_SESSION),
-          assessment: raw?.assessment ?? { id: 0, name: "", time_limit_min: 0 }
+          session: parseResponse(
+            (raw as Record<string, unknown>)?.session,
+            SessionSchema,
+            EMPTY_SESSION
+          ),
+          assessment: (raw as Record<string, unknown>)?.assessment ?? {
+            id: 0,
+            name: "",
+            time_limit_min: 0
+          }
         }
       };
     }),
@@ -46,39 +54,40 @@ export const sessionsApi = {
         params: fromTurn ? { from_turn: fromTurn } : undefined
       })
       .then((res) => {
-        const raw = res.data as any;
+        const raw = res.data as unknown;
+        const rawObj = raw as Record<string, unknown>;
         return {
           ...res,
           data: {
-            turns: Array.isArray(raw?.turns)
-              ? raw.turns
+            turns: Array.isArray(rawObj?.turns)
+              ? (rawObj.turns as unknown[])
                   .map((t: unknown) => parseResponse(t, TranscriptTurnSchema, null))
                   .filter(Boolean)
               : [],
-            total: raw?.total ?? 0
+            total: (rawObj?.total as number) ?? 0
           }
         };
       }),
 
   getPortfolio: (id: number) =>
     api.get(`/sessions/${id}/portfolio`).then((res) => {
-      const raw = res.data as any;
+      const raw = res.data as Record<string, unknown>;
       if (raw?.portfolio) {
         return {
           ...res,
           data: { portfolio: parseResponse(raw.portfolio, PortfolioSchema, null) }
         };
       }
-      return { ...res, data: { status: raw?.status ?? "pending" } };
+      return { ...res, data: { status: (raw?.status as string) ?? "pending" } };
     }),
 
   regeneratePortfolio: (id: number) =>
     api.post(`/sessions/${id}/portfolio/regenerate`).then((res) => {
-      const raw = res.data as any;
+      const raw = res.data as Record<string, unknown>;
       return {
         ...res,
         data: {
-          message: raw?.message ?? "",
+          message: (raw?.message as string) ?? "",
           portfolio: parseResponse(raw?.portfolio, PortfolioSchema, null)
         }
       };

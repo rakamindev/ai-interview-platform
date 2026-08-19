@@ -17,6 +17,7 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
   const [remaining, setRemaining] = useState(totalSeconds);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/no-deriving-state-in-effects
     setRemaining(totalSeconds);
   }, [totalSeconds]);
 

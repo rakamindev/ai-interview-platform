@@ -151,6 +151,7 @@ export default function AssessmentInvitePage() {
       .then(([aRes, sRes]) => {
         setAssessment(aRes.data.assessment);
         setSessions(sRes.data.sessions);
+        return;
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -186,9 +187,9 @@ export default function AssessmentInvitePage() {
     }
   };
 
-  const copyLink = (session: Session, id: number) => {
+  const copyLink = (session: Session, copyId: number) => {
     navigator.clipboard.writeText(session.invite_url);
-    setCopiedId(id);
+    setCopiedId(copyId);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -251,7 +252,6 @@ export default function AssessmentInvitePage() {
               value={candidateNameInput}
               onChange={(e) => setCandidateNameInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
-              autoFocus
             />
             <p className="text-xs text-muted-foreground">
               Optional — helps you identify this session later.

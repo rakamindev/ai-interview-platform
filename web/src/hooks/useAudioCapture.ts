@@ -13,6 +13,7 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   // Mute gate — mic stays hot, we just skip sending frames.
   // Avoids AudioContext.suspend/resume async state issues entirely.
   const mutedRef = useRef(false);
+  const messageHandlerRef = useRef<((e: MessageEvent<ArrayBuffer>) => void) | null>(null);
 
   const start = useCallback(async () => {
     if (isCapturing) return;
@@ -34,11 +35,12 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       await ctx.audioWorklet.addModule("/audio-worklet-processor.js");
 
       const workletNode = new AudioWorkletNode(ctx, "pcm-processor");
-      workletNode.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+      messageHandlerRef.current = (e: MessageEvent<ArrayBuffer>) => {
         if (!mutedRef.current) {
           onFrame(e.data);
         }
       };
+      workletNode.port.addEventListener("message", messageHandlerRef.current);
       workletNodeRef.current = workletNode;
 
       const source = ctx.createMediaStreamSource(stream);
@@ -47,6 +49,7 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       setIsCapturing(true);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
+      // oxlint-disable-next-line eslint/no-console
       console.error("[AudioCapture] Failed to start:", error.message);
       onError?.(error);
     }
@@ -61,6 +64,10 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   }, []);
 
   const stop = useCallback(() => {
+    if (workletNodeRef.current && messageHandlerRef.current) {
+      workletNodeRef.current.port.removeEventListener("message", messageHandlerRef.current);
+      messageHandlerRef.current = null;
+    }
     workletNodeRef.current?.disconnect();
     workletNodeRef.current = null;
     audioCtxRef.current?.close();

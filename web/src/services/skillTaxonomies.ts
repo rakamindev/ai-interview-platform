@@ -1,4 +1,4 @@
-import api from "./api";
+import { api } from "./api";
 import type { SkillTaxonomy } from "@/types";
 
 export const skillTaxonomiesApi = {

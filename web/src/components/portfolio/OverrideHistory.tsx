@@ -22,6 +22,7 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
       .getOverrideHistory(portfolioSkillId)
       .then((res) => {
         if (!cancelled) setEvents(res.data.override_events);
+        return;
       })
       .catch(() => {
         if (!cancelled) setError(true);

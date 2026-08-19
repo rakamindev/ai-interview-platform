@@ -21,13 +21,13 @@ vi.hoisted(() => {
 
 // Mock the api module so we can control the response
 vi.mock("./api", () => ({
-  default: {
+  api: {
     get: vi.fn()
   },
   parseResponse: vi.fn((_data: unknown, _schema: unknown, fallback: unknown) => fallback)
 }));
 
-import api from "./api";
+import { api } from "./api";
 import { portfoliosApi } from "./portfolios";
 
 describe("portfoliosApi.exportPortfolio", () => {

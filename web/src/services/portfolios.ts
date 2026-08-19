@@ -1,15 +1,6 @@
-import api, { parseResponse } from "./api";
-import { PortfolioSchema, AssessorOverrideSchema } from "@/schemas/portfolio";
+import { api, parseResponse } from "./api";
 import { FitGapReportSchema } from "@/schemas/fitgap";
-import type { Portfolio, AssessorOverride, FitGapReport } from "@/types";
-
-const EMPTY_PORTFOLIO: Portfolio = {
-  id: 0,
-  session_id: 0,
-  generation_status: "pending",
-  skills: [],
-  overrides: []
-};
+import type { AssessorOverride, FitGapReport } from "@/types";
 
 const EMPTY_FITGAP: FitGapReport = {
   id: 0,
@@ -46,7 +37,13 @@ export const portfoliosApi = {
   getFitGap: (portfolioId: number, vacancyId: number) =>
     api.get(`/portfolios/${portfolioId}/fitgap/${vacancyId}`).then((res) => ({
       ...res,
-      data: { report: parseResponse((res.data as any)?.report, FitGapReportSchema, EMPTY_FITGAP) }
+      data: {
+        report: parseResponse(
+          (res.data as Record<string, unknown>)?.report,
+          FitGapReportSchema,
+          EMPTY_FITGAP
+        )
+      }
     })),
 
   regenerateFitGap: (portfolioId: number, vacancyId: number) =>

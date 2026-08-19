@@ -1,4 +1,4 @@
-import api from "./api";
+import { api } from "./api";
 import type { Assessment, AssessmentSkill, PaginationMeta, Session } from "@/types";
 
 export interface AssessmentPayload {

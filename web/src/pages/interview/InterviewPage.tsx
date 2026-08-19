@@ -48,6 +48,7 @@ export default function InterviewPage() {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
+        return;
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
@@ -55,35 +56,38 @@ export default function InterviewPage() {
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
 
-  const handleStateChange = useCallback((state: InterviewState) => {
-    setInterviewState(state);
+  const handleStateChange = useCallback(
+    (state: InterviewState) => {
+      setInterviewState(state);
 
-    if (state === "draining_audio") {
-      // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
-      muteRef.current?.();
-      audioCompleteCalledRef.current = false;
-      // Safety timeout: call audio_complete after 10s even if drain never fires
-      audioCompleteSafetyTimerRef.current = setTimeout(() => {
-        callAudioComplete();
-      }, 10_000);
-      waitForDrain(() => callAudioComplete());
-      return;
-    }
-
-    if (state === "reconnecting") {
-      muteRef.current?.();
-      connectionLostTimerRef.current = setTimeout(() => {
-        setConnectionLostLong(true);
-      }, 60_000);
-    } else {
-      if (connectionLostTimerRef.current) {
-        clearTimeout(connectionLostTimerRef.current);
-        connectionLostTimerRef.current = null;
+      if (state === "draining_audio") {
+        // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
+        muteRef.current?.();
+        audioCompleteCalledRef.current = false;
+        // Safety timeout: call audio_complete after 10s even if drain never fires
+        audioCompleteSafetyTimerRef.current = setTimeout(() => {
+          callAudioComplete();
+        }, 10_000);
+        waitForDrain(() => callAudioComplete());
+        return;
       }
-      setConnectionLostLong(false);
-      if (state === "active" && !micMutedRef.current) unmuteRef.current?.();
-    }
-  }, []);
+
+      if (state === "reconnecting") {
+        muteRef.current?.();
+        connectionLostTimerRef.current = setTimeout(() => {
+          setConnectionLostLong(true);
+        }, 60_000);
+      } else {
+        if (connectionLostTimerRef.current) {
+          clearTimeout(connectionLostTimerRef.current);
+          connectionLostTimerRef.current = null;
+        }
+        setConnectionLostLong(false);
+        if (state === "active" && !micMutedRef.current) unmuteRef.current?.();
+      }
+    },
+    [waitForDrain, callAudioComplete]
+  );
 
   const handleReconnected = useCallback(() => {
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
@@ -335,8 +339,12 @@ export default function InterviewPage() {
             {/* Transcript */}
             {transcript.length > 0 && (
               <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
-                {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
+                {transcript.map((turn) => (
+                  <TranscriptBubble
+                    key={`${turn.speaker}-${turn.text.slice(0, 20)}`}
+                    speaker={turn.speaker}
+                    text={turn.text}
+                  />
                 ))}
               </div>
             )}

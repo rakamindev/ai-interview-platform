@@ -8,16 +8,12 @@ export function useAudioPlayback() {
   const onDrainedRef = useRef<(() => void) | null>(null);
   const drainCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const getCtx = () => {
+  const playChunk = useCallback(async (raw: ArrayBuffer) => {
     if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
       audioCtxRef.current = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
       nextPlayTimeRef.current = 0;
     }
-    return audioCtxRef.current;
-  };
-
-  const playChunk = useCallback(async (raw: ArrayBuffer) => {
-    const ctx = getCtx();
+    const ctx = audioCtxRef.current;
     if (ctx.state === "suspended") await ctx.resume();
 
     // Raw PCM is Int16 from Gemini

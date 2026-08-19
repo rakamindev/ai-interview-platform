@@ -42,7 +42,7 @@ export default function PortfolioPage() {
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
+    const data = res.data as unknown as { status?: string; portfolio?: Portfolio };
     if (
       data.status === "generating" ||
       data.portfolio?.generation_status === "generating" ||
@@ -67,6 +67,7 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        return;
       })
       .catch(() => {
         setError("Failed to load portfolio data. Please try again.");
@@ -106,7 +107,6 @@ export default function PortfolioPage() {
         URL.revokeObjectURL(url);
       } else {
         // PDF: verify the response is actually a PDF (not a JSON error blob)
-        const contentType = res.headers?.["content-type"] ?? "";
         const data = res.data;
         if (data instanceof Blob && data.type.includes("application/pdf")) {
           const url = URL.createObjectURL(data);

@@ -15,6 +15,7 @@ export default function VoiceBars({ active, label, variant = "ai", className }: 
       <div className="flex items-end gap-1 h-10">
         {Array.from({ length: barCount }).map((_, i) => (
           <div
+            // oxlint-disable-next-line no-array-index-key
             key={i}
             className={cn(
               "w-1.5 rounded-full transition-all",

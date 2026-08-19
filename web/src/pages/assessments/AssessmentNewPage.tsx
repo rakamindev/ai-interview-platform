@@ -13,8 +13,7 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  arrayMove
+  verticalListSortingStrategy
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +60,6 @@ export default function AssessmentNewPage() {
     handleSubmit,
     control,
     setValue,
-    watch,
     formState: { errors }
   } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
@@ -112,8 +110,9 @@ export default function AssessmentNewPage() {
       };
       const res = await assessmentsApi.create(payload);
       navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { errors?: { message?: string }[] } } };
+      setError(err?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
     } finally {
       setSubmitting(false);
     }

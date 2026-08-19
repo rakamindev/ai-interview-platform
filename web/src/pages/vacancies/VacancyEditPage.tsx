@@ -48,6 +48,7 @@ export default function VacancyEditPage() {
           competency_expectations: v.competency_expectations,
           skills: v.skills
         });
+        return;
       })
       .catch(() => {})
       .finally(() => setLoading(false));

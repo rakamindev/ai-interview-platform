@@ -36,6 +36,27 @@ function stateLabel(state: ProctoringState) {
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
+async function checkAudioPlayback(): Promise<boolean> {
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+    if (ctx.state === "suspended") await ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.01, ctx.currentTime);
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.1);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   const [progress, setProgress] = useState<HardwareCheckingProgress>({
     osAndBrowser: ProctoringState.WAITING,
@@ -71,28 +92,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     };
   }, [videoStream]);
 
-  const checkAudioPlayback = async (): Promise<boolean> => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioCtx();
-      if (ctx.state === "suspended") await ctx.resume();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      gain.gain.setValueAtTime(0.01, ctx.currentTime);
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.1);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const startAudioLevelMonitoring = (stream: MediaStream) => {
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       const ctx = new AudioCtx();
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
@@ -139,6 +143,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
           : {})
       }));
+      return;
     });
   }, [progress.internet]);
 
@@ -169,7 +174,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
           microphone: ProctoringState.ERROR
         }));
       }
+      return;
     });
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [progress.camera, progress.microphone]);
 
   // Step 4: Audio output
@@ -180,6 +187,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         ...p,
         audio: ok ? ProctoringState.PASSED : ProctoringState.ERROR
       }));
+      return;
     });
   }, [progress.audio]);
 

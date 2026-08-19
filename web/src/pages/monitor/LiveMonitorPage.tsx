@@ -25,7 +25,7 @@ import {
   COVERAGE_STATE_COLOR
 } from "@/utils/constants";
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
-import type { TranscriptTurn } from "@/types";
+import type { TranscriptTurn, Session } from "@/types";
 import { cn } from "@/lib/utils";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
@@ -78,7 +78,7 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     Promise.all([sessionsApi.get(Number(sessionId)), sessionsApi.getTranscript(Number(sessionId))])
       .then(([sRes, tRes]) => {
-        const s = sRes.data.session as any;
+        const s = sRes.data.session as Session & { assessment?: { name?: string } };
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
         if (s.status !== "active") setSessionActive(false);
@@ -88,6 +88,7 @@ export default function LiveMonitorPage() {
         if (turns.length > 0) {
           lastTurnRef.current = turns[turns.length - 1].turn_number;
         }
+        return;
       })
       .finally(() => setLoading(false));
   }, [sessionId]);

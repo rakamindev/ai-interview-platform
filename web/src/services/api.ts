@@ -14,10 +14,12 @@ export const WS_URL = WS_BASE_URL;
 export function parseResponse<T>(data: unknown, schema: ZodType<T>, fallback: T): T {
   const result = schema.safeParse(data);
   if (result.success) return result.data;
+  // oxlint-disable-next-line eslint/no-console
   console.warn("[api] parseResponse failed:", result.error.format());
   return fallback;
 }
 
+// oxlint-disable-next-line import/no-named-as-default-member
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" }
