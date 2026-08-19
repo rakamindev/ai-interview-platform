@@ -25,17 +25,21 @@ module Api
         store_refresh_cookie(refresh_token)
         store_csrf_cookie
 
-        json_response({ token: token, user: { id: user.id, email: user.email, role: user.role }, refresh: true })
+        json_response({ access_token: token, user: { id: user.id, email: user.email, role: user.role }, refresh: true })
       end
 
       # POST /api/v1/auth/refresh
       def refresh
         verify_csrf!
         refresh_token_value = extract_refresh_token
-        return json_error("Missing refresh token", :unauthorized) unless refresh_token_value
+        unless refresh_token_value
+          return json_error("Missing refresh token", :unauthorized, details: "missing_refresh_token")
+        end
 
         token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
-        return json_error("Invalid refresh token", :unauthorized) unless token_record&.valid_token?
+        unless token_record&.valid_token?
+          return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token")
+        end
 
         if token_record.grace_period_expired?
           token_record.revoke!
@@ -49,9 +53,9 @@ module Api
 
         user = User.find(token_record.user_id)
         scheme = resolve_scheme
-        access_token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
+        new_access_token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
 
-        json_response({ token: access_token, user: { id: user.id, email: user.email, role: user.role }, refresh: true })
+        json_response({ access_token: new_access_token, user: { id: user.id, email: user.email, role: user.role }, refresh: true })
       end
 
       # DELETE /api/v1/auth/logout
