@@ -19,6 +19,30 @@ module Api
         json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
       end
 
+      # POST /api/v1/signup
+      def register
+        return json_error('Email and password are required', :unprocessable_entity) if params[:email].blank? || params[:password].blank?
+
+        email = params[:email].to_s.downcase
+
+        return json_error('Email already taken', :unprocessable_entity) if User.exists?(email: email)
+
+        user = User.new(
+          email: email,
+          password: params[:password],
+          role: params[:role].presence || 'user'
+        )
+
+        if user.save
+          scheme = resolve_scheme
+          token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
+
+          json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
+        else
+          json_error(user.errors.full_messages.join(', '), :unprocessable_entity)
+        end
+      end
+
       private
 
       def resolve_scheme
