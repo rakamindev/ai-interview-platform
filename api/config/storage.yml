@@ -1,0 +1,13 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# Production should point at S3/GCS instead (see improvement backlog in
+# assessment/plan.md — CV uploads should not live on local disk in prod).
+production:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
