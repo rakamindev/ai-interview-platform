@@ -11,6 +11,7 @@ import type { AssessorOverride, Portfolio, Vacancy } from "@/types";
 import { ArrowLeft, Download, FileText, Loader2, RefreshCw, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -86,7 +87,8 @@ export default function PortfolioPage() {
         URL.revokeObjectURL(url);
       }
     } catch (error) {
-      console.error("Error exporting portfolio:", error);
+      // console.error("Error exporting portfolio:", error);
+      toast.error("Failed to export portfolio. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -220,6 +222,7 @@ export default function PortfolioPage() {
           </div>
         </>
       )}
+      <ToastContainer position="bottom-center" />
     </div>
   );
 }
