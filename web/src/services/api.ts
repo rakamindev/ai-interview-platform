@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { ZodType } from "zod";
-import { getStoredToken, clearToken } from "@/stores/authAtom";
+import { setAuth, clearAuth } from "@/stores/authAtom";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1";
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
@@ -26,8 +26,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = getStoredToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers["X-Requested-With"] = "XMLHttpRequest";
   return config;
 });
 
@@ -40,10 +39,18 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      clearToken();
-      window.location.href = "/login";
+  async (error) => {
+    if (error.response?.status === 401 && !error.config._retry) {
+      error.config._retry = true;
+      try {
+        const res = await api.post("/auth/refresh");
+        setAuth(res.data.token, res.data.user);
+        error.config.headers.Authorization = `Bearer ${res.data.token}`;
+        return api(error.config);
+      } catch {
+        clearAuth();
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

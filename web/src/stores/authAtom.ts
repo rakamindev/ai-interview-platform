@@ -1,23 +1,23 @@
 import { atom } from "jotai";
 
 export interface AuthState {
-  token: string | null;
-}
-
-const STORAGE_KEY = "auth_token";
-
-export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY) ?? null;
-}
-
-export function saveToken(token: string) {
-  localStorage.setItem(STORAGE_KEY, token);
-}
-
-export function clearToken() {
-  localStorage.removeItem(STORAGE_KEY);
+  accessToken: string | null;
+  user: { id: string; email: string; role: string } | null;
 }
 
 export const authAtom = atom<AuthState>({
-  token: getStoredToken()
+  accessToken: null,
+  user: null
 });
+
+export function setAuth(accessToken: string, user: { id: string; email: string; role: string }) {
+  authAtom.set({ accessToken, user });
+}
+
+export function clearAuth() {
+  authAtom.set({ accessToken: null, user: null });
+}
+
+export function getAccessToken(): string | null {
+  return authAtom.get().accessToken;
+}
