@@ -3,13 +3,14 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, LayoutDashboard, Search } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -96,57 +97,49 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="max-w-4xl mx-auto space-y-4 animate-pulse">
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card p-6 rounded-xl border shadow-sm">
+        <div className="flex items-center gap-4">
+          <Link to={`/assessments/${id}/invite`} className="flex items-center justify-center w-10 h-10 rounded-full bg-muted hover:bg-muted/80 transition-colors">
+            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            <h1 className="text-2xl font-bold tracking-tight">Hasil Portfolio</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Kandidat: <span className="font-semibold text-foreground">{candidateName || 'Anonim'}</span>
+            </p>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button
+            variant="secondary"
+            className="flex-1 sm:flex-none shadow-sm"
+            onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/transcript`)}
           >
-            <FileText className="h-3.5 w-3.5" />
-            Transcript
-          </Link>
+            <FileText className="h-4 w-4 mr-2" />
+            Transkrip
+          </Button>
           {!generating && portfolio && (
             <>
               <Button
                 variant="outline"
-                size="sm"
+                className="flex-1 sm:flex-none"
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
               >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("json")}
-                disabled={!!exporting}
-              >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                JSON
+                {exporting === "pdf" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                Ekspor PDF
               </Button>
             </>
           )}
@@ -155,66 +148,118 @@ export default function PortfolioPage() {
 
       {/* Generating state */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <div>
-            <p className="font-medium">Generating portfolio...</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
-            </p>
-          </div>
-        </div>
+        <Card className="border-primary/20 shadow-md">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Membuat Portfolio AI...</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Sistem sedang menganalisis transkrip wawancara untuk mengekstrak keahlian dan wawasan. Proses ini membutuhkan waktu beberapa menit.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-          </Button>
-        </div>
+        <Card className="border-destructive/40 bg-destructive/5 shadow-sm">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+            <div className="bg-destructive/10 p-3 rounded-full">
+              <RefreshCw className="h-8 w-8 text-destructive" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-destructive mb-1">Gagal Membuat Portfolio</h3>
+              <p className="text-sm text-muted-foreground mb-4">Terjadi kesalahan saat menganalisis wawancara.</p>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  await sessionsApi.regeneratePortfolio(Number(sessionId));
+                  setGenerating(true);
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" /> Coba Ulang
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
-        <>
+        <div className="space-y-8">
+          
+          {/* Fit/Gap Analysis Box - Moved to top for visibility */}
+          <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20 shadow-md overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <Search className="w-24 h-24 text-primary" />
+            </div>
+            <CardContent className="p-6 relative z-10">
+              <h3 className="text-lg font-bold mb-2">Analisis Fit/Gap</h3>
+              <p className="text-sm text-muted-foreground mb-5 max-w-xl">
+                Bandingkan profil kandidat ini dengan persyaratan lowongan kerja tertentu untuk melihat kecocokan mereka.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                  <SelectTrigger className="w-full sm:w-72 bg-background">
+                    <SelectValue placeholder="Pilih lowongan..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vacancies.length === 0 ? (
+                      <SelectItem value="empty" disabled>Tidak ada lowongan tersedia</SelectItem>
+                    ) : (
+                      vacancies.map((v) => (
+                        <SelectItem key={v.id} value={String(v.id)}>
+                          {v.role_title}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleRunFitGap} 
+                  disabled={!selectedVacancy || selectedVacancy === "empty"}
+                  className="w-full sm:w-auto shadow-sm"
+                >
+                  Jalankan Analisis <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
-              ))}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <LayoutDashboard className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-bold tracking-tight">Keahlian Utama</h2>
+            </div>
+            <div className="grid gap-4">
+              {portfolio.skills
+                .filter((s) => !s.is_discovered)
+                .map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))}
+            </div>
           </div>
 
           {/* Discovered skills */}
           {portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
-                  </p>
-                </div>
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="h-5 w-5 text-amber-500" />
+                <h2 className="text-xl font-bold tracking-tight">Keahlian Tambahan Ditemukan</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Keahlian ini tidak ada di kriteria awal, namun AI menemukannya saat wawancara berlangsung.
+              </p>
+              <div className="grid gap-4">
                 {portfolio.skills
                   .filter((s) => s.is_discovered)
                   .map((skill) => (
@@ -226,30 +271,9 @@ export default function PortfolioPage() {
                     />
                   ))}
               </div>
-            </>
+            </div>
           )}
-
-          <Separator />
-
-          {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );

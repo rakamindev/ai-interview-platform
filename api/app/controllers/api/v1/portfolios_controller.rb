@@ -10,6 +10,13 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
+        # Self-healing: if portfolio is stuck in pending/generating with no skills,
+        # trigger inline generation (Sidekiq probably never ran)
+        if @portfolio && stuck_pending?(@portfolio)
+          trigger_inline_generation(@session)
+          return render json: { status: "generating" }, status: :accepted
+        end
+
         if @portfolio.nil? || @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
@@ -37,7 +44,11 @@ module Api
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
-        PortfolioGeneratorWorker.perform_async(@session.id)
+        if sidekiq_available?
+          PortfolioGeneratorWorker.perform_async(@session.id)
+        else
+          trigger_inline_generation(@session)
+        end
 
         json_response(
           message:   "Portfolio generation queued",
@@ -119,7 +130,11 @@ module Api
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        if sidekiq_available?
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        else
+          trigger_inline_fitgap_generation(portfolio, vacancy)
+        end
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -157,6 +172,50 @@ module Api
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
+      end
+
+      # Returns true if a portfolio has been stuck in pending/generating for >30s
+      # with no skills generated (Sidekiq probably never processed the job)
+      def stuck_pending?(portfolio)
+        return false unless %w[pending generating].include?(portfolio.generation_status)
+        return false if portfolio.portfolio_skills.any?
+
+        # Consider stuck if session ended more than 30 seconds ago
+        portfolio.session.ended_at && portfolio.session.ended_at < 30.seconds.ago
+      end
+
+      def sidekiq_available?
+        Sidekiq::ProcessSet.new.size > 0
+      rescue
+        false
+      end
+
+      def trigger_inline_generation(session)
+        session_id = session.id
+        Thread.new do
+          begin
+            s = Session.find(session_id)
+            Portfolios::Generator.new(session: s).call
+            Rails.logger.info("[PortfoliosController] Inline portfolio generation completed for session #{session_id}")
+          rescue => e
+            Rails.logger.error("[PortfoliosController] Inline portfolio generation failed: #{e.message}")
+          end
+        end
+      end
+
+      def trigger_inline_fitgap_generation(portfolio, vacancy)
+        portfolio_id = portfolio.id
+        vacancy_id = vacancy.id
+        Thread.new do
+          begin
+            p = Portfolio.find(portfolio_id)
+            v = Vacancy.find(vacancy_id)
+            FitGap::Engine.new(portfolio: p, vacancy: v).call
+            Rails.logger.info("[PortfoliosController] Inline fit/gap generation completed for portfolio #{portfolio_id}")
+          rescue => e
+            Rails.logger.error("[PortfoliosController] Inline fit/gap generation failed: #{e.message}")
+          end
+        end
       end
 
       def portfolio_json(portfolio)

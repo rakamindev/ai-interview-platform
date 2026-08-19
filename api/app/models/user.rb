@@ -17,4 +17,17 @@ class User < ApplicationRecord
   def downcase_email
     self.email = email.downcase
   end
+
+  public
+
+  def generate_password_reset_token!
+    self.reset_password_token = SecureRandom.urlsafe_base64
+    self.reset_password_sent_at = Time.current
+    save!(validate: false)
+    UserMailer.reset_password_instructions(self).deliver_later
+  end
+
+  def password_reset_valid?
+    reset_password_sent_at.present? && reset_password_sent_at > 2.hours.ago
+  end
 end

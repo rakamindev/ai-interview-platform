@@ -2,6 +2,7 @@ node_modules
 dist
 tech-docs
 
+
 # env
 .env
 .env.local

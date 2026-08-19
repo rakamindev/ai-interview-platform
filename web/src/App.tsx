@@ -16,46 +16,56 @@ import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+import RegisterPage from "@/pages/auth/RegisterPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
+
 export default function App() {
   return (
-    <Routes>
-      {/* Auth routes */}
-      <Route path="/login" element={<LoginPage />} />
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <Routes>
+        {/* Auth routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Assessor routes (protected) */}
-      <Route element={<ProtectedRoute />}>
-      <Route element={<AssessorLayout />}>
-        <Route path="/" element={<Navigate to="/assessments" replace />} />
-        <Route path="/assessments" element={<AssessmentListPage />} />
-        <Route path="/assessments/new" element={<AssessmentNewPage />} />
-        <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
-        <Route path="/assessments/:id/invite" element={<AssessmentInvitePage />} />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/monitor"
-          element={<LiveMonitorPage />}
-        />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/portfolio"
-          element={<PortfolioPage />}
-        />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/transcript"
-          element={<TranscriptPage />}
-        />
-        <Route
-          path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
-          element={<FitGapReportPage />}
-        />
-        <Route path="/vacancies" element={<VacancyListPage />} />
-        <Route path="/vacancies/new" element={<VacancyNewPage />} />
-        <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
-      </Route>
-      </Route>
+        {/* Assessor routes (protected) */}
+        <Route element={<ProtectedRoute />}>
+        <Route element={<AssessorLayout />}>
+          <Route path="/" element={<Navigate to="/assessments" replace />} />
+          <Route path="/assessments" element={<AssessmentListPage />} />
+          <Route path="/assessments/new" element={<AssessmentNewPage />} />
+          <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
+          <Route path="/assessments/:id/invite" element={<AssessmentInvitePage />} />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/monitor"
+            element={<LiveMonitorPage />}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/portfolio"
+            element={<PortfolioPage />}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/transcript"
+            element={<TranscriptPage />}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
+            element={<FitGapReportPage />}
+          />
+          <Route path="/vacancies" element={<VacancyListPage />} />
+          <Route path="/vacancies/new" element={<VacancyNewPage />} />
+          <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        </Route>
+        </Route>
 
-      {/* Candidate route (public) */}
-      <Route element={<CandidateLayout />}>
-        <Route path="/interview/:token" element={<InterviewPage />} />
-      </Route>
-    </Routes>
+        {/* Candidate route (public) */}
+        <Route element={<CandidateLayout />}>
+          <Route path="/interview/:token" element={<InterviewPage />} />
+        </Route>
+      </Routes>
+    </ThemeProvider>
   );
 }

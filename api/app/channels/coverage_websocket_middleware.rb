@@ -17,8 +17,16 @@ class CoverageWebSocketMiddleware
 
     return @app.call(env) unless match && Faye::WebSocket.websocket?(env)
 
-    session_id = match[1]
-    handle_coverage_websocket(env, session_id)
+    begin
+      session_id = match[1]
+      handle_coverage_websocket(env, session_id)
+    rescue ActiveRecord::StatementInvalid, PG::Error => e
+      Rails.logger.error("[CoverageWS] Database error in middleware: #{e.message}")
+      [500, { 'Content-Type' => 'application/json' }, [{ error: 'Internal Server Error' }.to_json]]
+    rescue StandardError => e
+      Rails.logger.error("[CoverageWS] Unhandled error in middleware: #{e.message}")
+      [500, { 'Content-Type' => 'application/json' }, [{ error: 'Internal Server Error' }.to_json]]
+    end
   end
 
   private

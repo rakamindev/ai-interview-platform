@@ -7,8 +7,14 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      post 'auth/register', to: 'authentication#register'
+      post 'auth/forgot_password', to: 'authentication#forgot_password'
+      post 'auth/reset_password', to: 'authentication#reset_password'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+
+      get 'auth/me', to: 'authentication#me'
+
 
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
@@ -22,7 +28,7 @@ Rails.application.routes.draw do
       end
 
       # Sessions
-      resources :sessions, only: %i[show] do
+      resources :sessions, only: %i[show destroy] do
         member do
           post :end_session
           get  :coverage
