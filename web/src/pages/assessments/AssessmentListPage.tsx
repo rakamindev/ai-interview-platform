@@ -3,8 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ChevronRight, Trash2 } from "lucide-react";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -31,6 +41,7 @@ export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,6 +51,13 @@ export default function AssessmentListPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async () => {
+    if (pendingDeleteId == null) return;
+    await assessmentsApi.delete(pendingDeleteId);
+    setAssessments((prev) => prev.filter((a) => a.id !== pendingDeleteId));
+    setPendingDeleteId(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -91,12 +109,43 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    disabled={a.has_sessions}
+                    title={a.has_sessions ? "Cannot delete — this assessment has candidate sessions" : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPendingDeleteId(a.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <AlertDialog open={pendingDeleteId !== null} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this assessment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This cannot be undone. The assessment and its skill list will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

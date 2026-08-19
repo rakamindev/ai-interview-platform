@@ -49,8 +49,11 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          json_error(@assessment.errors.full_messages.first || "Cannot delete assessment", :unprocessable_entity)
+        end
       end
 
       private
@@ -76,7 +79,8 @@ module Api
       end
 
       def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+        sessions = assessment.sessions.to_a
+        latest   = sessions.max_by(&:created_at)
 
         {
           id:             assessment.id,
@@ -86,6 +90,7 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          has_sessions:   sessions.any?,
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,
