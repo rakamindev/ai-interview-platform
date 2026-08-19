@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'faye/websocket'
+require_relative '../lib/interview_signal_token'
 
 # Rack middleware that proxies a WebSocket at /ws/sessions/:id/audio between the browser (16kHz PCM)
 # and Gemini Live (24kHz PCM). Audio is buffered in a ring buffer for reconnection replay.
@@ -13,7 +14,7 @@ class AudioWebSocketMiddleware
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
-  SYSTEM_SIGNAL_TOKEN = 'SYS-TC-7x9k'
+  SYSTEM_SIGNAL_TOKEN = InterviewSignalToken.value
 
   WRAP_UP_SIGNAL = "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"wrap_up\": true, \"all_skills_covered\": true }" \
                    ' — Close the interview NOW. Do NOT ask any more questions.' \

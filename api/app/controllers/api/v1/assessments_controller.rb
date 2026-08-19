@@ -83,7 +83,6 @@ module Api
           name:           assessment.name,
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
