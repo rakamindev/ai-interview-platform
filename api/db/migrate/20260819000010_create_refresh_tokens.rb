@@ -9,8 +9,10 @@ class CreateRefreshTokens < ActiveRecord::Migration[7.0]
       t.datetime :revoked_at
       t.datetime :used_at
       t.datetime :created_at, null: false
+      t.datetime :updated_at, null: false
 
       t.index :token_hash, unique: true
+      t.index :user_id
       t.index :expires_at
     end
   end
