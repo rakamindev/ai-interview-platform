@@ -21,6 +21,13 @@ Rails.application.routes.draw do
         end
       }
 
+      # Download speed test — serves a bounded byte payload (default 1 MB, capped at 5 MB)
+      get 'speed_test', to: proc { |env|
+        requested = Rack::Request.new(env).params['bytes'].to_i
+        size = requested.positive? ? [requested, 5 * 1024 * 1024].min : 1024 * 1024
+        [200, { 'Content-Type' => 'application/octet-stream', 'Cache-Control' => 'no-store' }, ['0' * size]]
+      }
+
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
