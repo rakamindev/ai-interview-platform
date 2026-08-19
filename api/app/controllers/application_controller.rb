@@ -5,7 +5,7 @@ class ApplicationController < ActionController::API
   include ExceptionHandler
 
   before_action :require_tenant!
-  before_action :verify_scheme_claim!, if: -> { Current.user.present? && Current.organization.present? }
+  before_action :verify_scheme_claim!, if: -> { (Current.user.present? rescue false) && (Current.organization.present? rescue false) }
 
   # Declarative auth helper — mirrors rakamin-api's authorize_auth_token! pattern.
   # Usage:
