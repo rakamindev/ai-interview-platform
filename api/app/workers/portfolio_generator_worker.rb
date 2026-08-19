@@ -20,5 +20,7 @@ class PortfolioGeneratorWorker
     Portfolios::Generator.new(session: session).call
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N10] Session #{session_id} not found — skipping")
+  rescue Portfolios::Generator::ConcurrentGenerationError => e
+    Rails.logger.info("[N10] Skipping duplicate generation for session #{session_id}: #{e.message}")
   end
 end
