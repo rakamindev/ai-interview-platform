@@ -69,28 +69,34 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, selectedVacancy ? Number(selectedVacancy) : undefined);
+
+      let blob: Blob;
+
       if (format === "json") {
-        const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const content = typeof res.data === "string" ? res.data : JSON.stringify(res.data, null, 2);
+        blob = new Blob([content], { type: "application/json;charset=utf-8" });
       } else {
-        const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
+        blob = res.data instanceof Blob ? res.data : new Blob([res.data as BlobPart], { type: "application/pdf" });
       }
+      if (format === "pdf" && blob.type.includes("application/json")) {
+        throw new Error("Invalid PDF response format received from server.");
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `portfolio-${sessionId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Portofolio (${format.toUpperCase()}) berhasil diunduh.`);
     } catch (error) {
-      // console.error("Error exporting portfolio:", error);
-      toast.error("Failed to export portfolio. Please try again.");
+      toast.error(`Gagal mengunduh portofolio ${format.toUpperCase()}. Silakan coba lagi.`);
     } finally {
       setExporting(null);
     }
