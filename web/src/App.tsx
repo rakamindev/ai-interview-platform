@@ -16,6 +16,18 @@ import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 
+function NotFoundPage() {
+  return (
+    <main className="min-h-screen grid place-items-center p-6">
+      <section className="text-center">
+        <h1 className="text-2xl font-semibold">Page not found</h1>
+        <p className="mt-2 text-muted-foreground">The requested page does not exist.</p>
+        <a className="mt-4 inline-block underline" href="/">Return to assessments</a>
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
@@ -56,6 +68,7 @@ export default function App() {
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

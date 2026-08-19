@@ -1,19 +1,23 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  get '/health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+  get '/health', to: 'health#show'
 
   namespace :api do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
       # Health check
-      get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+      get  'health', to: 'health#show'
 
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+      }
+      get 'speed_test', to: proc { |_env|
+        payload = '0' * 1.megabyte
+        [200, { 'Content-Type' => 'application/octet-stream', 'Content-Length' => payload.bytesize.to_s }, [payload]]
       }
 
       # Assessments

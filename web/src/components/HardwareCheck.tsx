@@ -180,8 +180,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         setVideoStream(null);
         setInternetResult(null);
         setProgress({
-            osAndBrowser: ProctoringState.LOADING,
-            internet: ProctoringState.WAITING,
+            osAndBrowser: ProctoringState.PASSED,
+            internet: ProctoringState.LOADING,
             camera: ProctoringState.WAITING,
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,

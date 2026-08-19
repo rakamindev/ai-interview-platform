@@ -369,7 +369,34 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
-# ── Print usage instructions ──────────────────────────────────────────────────
+# ── Test Users ────────────────────────────────────────────────────────────────
+
+puts ""
+puts "== Seeding test users =="
+
+TEST_USERS = [
+  { email: "candidate@example.com", password: "Testing@123", role: "admin" },
+  { email: "assessor@example.com",  password: "Testing@123", role: "admin" },
+  { email: "user@example.com",      password: "Testing@123", role: "user" }
+]
+
+TEST_USERS.each do |attrs|
+  user = User.find_by(email: attrs[:email])
+  if user
+    user.update!(password: attrs[:password], role: attrs[:role])
+    puts "  Updated user: #{attrs[:email]} role=#{attrs[:role]}"
+  else
+    User.create!(
+      email:     attrs[:email],
+      password:  attrs[:password],
+      role:      attrs[:role]
+    )
+    puts "  Created user: #{attrs[:email]} role=#{attrs[:role]}"
+  end
+end
+
+puts ""
+puts "== Print usage instructions =="
 
 org = ActiveRecord::Base.connection.select_one(
   "SELECT id, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"

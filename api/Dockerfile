@@ -1,4 +1,4 @@
-FROM ruby:3.3.2 AS builder
+FROM ruby:3.3.10 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   build-essential \
@@ -18,7 +18,7 @@ COPY . .
 
 # ============================================================================
 
-FROM ruby:3.3.2
+FROM ruby:3.3.10
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   libpq-dev \

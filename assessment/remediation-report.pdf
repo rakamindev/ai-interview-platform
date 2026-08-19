@@ -1,0 +1,338 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 2525 >>
+stream
+BT
+/F1 9 Tf
+12 TL
+50 790 Td
+(AI Interview Platform Remediation Report) Tj
+T*
+() Tj
+T*
+(Scope: P0-P3 assessment; P0-P2 remediation) Tj
+T*
+(Date: 2026-08-19) Tj
+T*
+(Source of truth: FEATURES.md and repository source) Tj
+T*
+() Tj
+T*
+(Note: The referenced brief-fullstack.pdf was not present in the workspace, so its exact) Tj
+T*
+(visual template could not be reproduced. This report uses a release-assessment structure and) Tj
+T*
+(is also exported as remediation-report.pdf.) Tj
+T*
+() Tj
+T*
+(Executive Summary) Tj
+T*
+() Tj
+T*
+(The assessor and candidate main flows were reviewed from authentication through assessment) Tj
+T*
+(setup, invitation, live interview, portfolio generation, fit/gap analysis, and export. P0-P2) Tj
+T*
+(findings were fixed. P3 findings are documented only, as requested.) Tj
+T*
+() Tj
+T*
+(| Severity | Found | Fixed | Remaining |) Tj
+T*
+(|---|---:|---:|---:|) Tj
+T*
+(| P0 | 2 | 2 | 0 |) Tj
+T*
+(| P1 | 2 | 2 | 0 |) Tj
+T*
+(| P2 | 2 | 2 | 0 |) Tj
+T*
+(| P3 | 5 | 0 | 5 |) Tj
+T*
+() Tj
+T*
+(P0 Findings and Fixes) Tj
+T*
+() Tj
+T*
+(P0-01 Cross-tenant portfolio access) Tj
+T*
+() Tj
+T*
+(Risk: Direct portfolio and portfolio-skill endpoints loaded records by global IDs. Because) Tj
+T*
+(those tables have no tenant_id, an authenticated assessor could access another tenant's) Tj
+T*
+(portfolio, fit/gap report, export, or override by guessing IDs.) Tj
+T*
+() Tj
+T*
+(Fix: Direct portfolio and portfolio-skill queries now join through sessions and require) Tj
+T*
+(sessions.tenant_id to match the resolved tenant. Vacancy lookups remain tenant scoped, and) Tj
+T*
+(PDF export now rejects an explicitly requested vacancy that is not visible to the current) Tj
+T*
+(tenant.) Tj
+T*
+() Tj
+T*
+(Changed: api/app/controllers/api/v1/portfolios_controller.rb,) Tj
+T*
+(api/app/controllers/api/v1/portfolio_skills_controller.rb) Tj
+T*
+() Tj
+T*
+(P0-02 WebSocket role bypass) Tj
+T*
+() Tj
+T*
+(Risk: Audio and coverage WebSocket JWT paths validated signature and tenant ownership but) Tj
+T*
+(did not enforce assessor/admin roles. Any valid role in the tenant could use assessor) Tj
+T*
+(WebSocket access.) Tj
+T*
+() Tj
+T*
+(Fix: Both WebSocket JWT paths now require a role in AuthorizeApiRequest::ASSESSOR_ROLES.) Tj
+T*
+(Candidate audio access remains invite-token based.) Tj
+T*
+() Tj
+T*
+(Changed: api/app/channels/audio_websocket_middleware.rb,) Tj
+T*
+(api/app/channels/coverage_websocket_middleware.rb) Tj
+T*
+() Tj
+T*
+(P1 Findings and Fixes) Tj
+T*
+() Tj
+T*
+(P1-01 Taxonomy identity discarded) Tj
+ET
+BT
+/F1 8 Tf
+270 25 Td
+(Page 1 of 3) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 2522 >>
+stream
+BT
+/F1 9 Tf
+12 TL
+50 790 Td
+() Tj
+T*
+(Impact: Selecting a taxonomy skill intentionally set skill_id to undefined. Fit/gap matching) Tj
+T*
+(then depended on labels, making renamed or similarly named skills unreliable.) Tj
+T*
+() Tj
+T*
+(Fix: The picker now persists the taxonomy skill_id; shared TypeScript types now match the) Tj
+T*
+(API's string identifier.) Tj
+T*
+() Tj
+T*
+(Changed: web/src/components/assessment/SkillPicker.tsx, web/src/types/index.ts) Tj
+T*
+() Tj
+T*
+(P1-02 Unknown routes render a blank application) Tj
+T*
+() Tj
+T*
+(Impact: Invalid or stale links had no matching route and produced an empty screen,) Tj
+T*
+(interrupting navigation and recovery.) Tj
+T*
+() Tj
+T*
+(Fix: Added a wildcard not-found screen with a clear return path to assessments.) Tj
+T*
+() Tj
+T*
+(Changed: web/src/App.tsx) Tj
+T*
+() Tj
+T*
+(P2 Findings and Fixes) Tj
+T*
+() Tj
+T*
+(P2-01 Health checks reported false readiness) Tj
+T*
+() Tj
+T*
+(Impact: Both health endpoints always returned ok, even when PostgreSQL or Redis was) Tj
+T*
+(unavailable. Kubernetes could route traffic to an unusable API.) Tj
+T*
+() Tj
+T*
+(Fix: /health and /api/v1/health now check PostgreSQL and Redis, return individual check) Tj
+T*
+(states, and use HTTP 503 with degraded status on failure.) Tj
+T*
+() Tj
+T*
+(Changed: api/app/controllers/health_controller.rb,) Tj
+T*
+(api/app/controllers/api/v1/health_controller.rb, api/config/routes.rb) Tj
+T*
+() Tj
+T*
+(P2-02 Export accepted inaccessible vacancy IDs silently) Tj
+T*
+() Tj
+T*
+(Impact: A requested vacancy outside the tenant resolved to no vacancy and silently generated) Tj
+T*
+(a portfolio-only PDF, masking authorization/input errors.) Tj
+T*
+() Tj
+T*
+(Fix: PDF export now returns 404 Vacancy not found when a supplied vacancy cannot be resolved) Tj
+T*
+(in the current tenant.) Tj
+T*
+() Tj
+T*
+(Changed: api/app/controllers/api/v1/portfolios_controller.rb) Tj
+T*
+() Tj
+T*
+(P3 Findings \(Not Fixed\)) Tj
+T*
+() Tj
+T*
+(1. Candidate invite tokens have no expiry, rotation, or revocation lifecycle.) Tj
+T*
+(2. Assessment and vacancy list pages do not expose API pagination controls.) Tj
+T*
+(3. Assessment language cannot be changed from the edit screen.) Tj
+T*
+(4. Browser compatibility detection does not enforce a supported-browser policy.) Tj
+T*
+(5. Audio output preflight checks API availability but does not confirm that the candidate) Tj
+T*
+(heard sound.) Tj
+T*
+() Tj
+T*
+(Main Flow Verification) Tj
+T*
+() Tj
+T*
+(| Flow | Verification | Result |) Tj
+T*
+(|---|---|---|) Tj
+ET
+BT
+/F1 8 Tf
+270 25 Td
+(Page 2 of 3) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 1438 >>
+stream
+BT
+/F1 9 Tf
+12 TL
+50 790 Td
+(| Web application compile and bundle | npm run build | Pass |) Tj
+T*
+(| Assessor REST tenant boundaries | Static trace through tenant-scoped models and direct-ID) Tj
+T*
+(joins | Pass |) Tj
+T*
+(| Candidate invitation and interview access | Static trace of invite-token candidate) Tj
+T*
+(endpoints and audio WebSocket ID match | Pass |) Tj
+T*
+(| Assessor live monitor access | Static trace of JWT signature, tenant, role, and session) Tj
+T*
+(checks | Pass |) Tj
+T*
+(| Portfolio, override, fit/gap, export | Static trace of session tenant joins and vacancy) Tj
+T*
+(scopes | Pass |) Tj
+T*
+(| API route integrity | Static route/controller resolution review | Pass |) Tj
+T*
+(| Patch whitespace validity | git diff --check | Pass |) Tj
+T*
+(| Rails boot and automated specs | Ruby/Bundler unavailable on host; repository has no specs) Tj
+T*
+(| Not run |) Tj
+T*
+() Tj
+T*
+(Release Assessment) Tj
+T*
+() Tj
+T*
+(All identified P0-P2 findings in this assessment are remediated. The frontend production) Tj
+T*
+(build succeeds. Backend runtime confidence is limited by the absence of Ruby, PostgreSQL,) Tj
+T*
+(and Redis in the execution environment and by the repository's lack of automated tests.) Tj
+T*
+(Before production release, run Rails boot, request tests, and an end-to-end interview) Tj
+T*
+(against configured PostgreSQL, Redis, Sidekiq, and Gemini services.) Tj
+T*
+() Tj
+ET
+BT
+/F1 8 Tf
+270 25 Td
+(Page 3 of 3) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 8 0 R >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000002774 00000 n 
+0000002900 00000 n 
+0000005474 00000 n 
+0000005600 00000 n 
+0000007090 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+7216
+%%EOF

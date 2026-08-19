@@ -744,6 +744,10 @@ class AudioWebSocketMiddleware
 
         token = auth_header.split(' ').last
         payload = JsonWebToken.decode(token)
+        unless AuthorizeApiRequest::ASSESSOR_ROLES.include?(payload[:role].to_s)
+          return [nil, 'Assessor authorization required']
+        end
+
         tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
         return [nil, 'Invalid tenant'] unless tenant_id
 
