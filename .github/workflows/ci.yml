@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: api (RSpec)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rakamin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: api
+
+    env:
+      RAILS_ENV: test
+      # Set explicitly (not just inferred from `services:` existing) — config/environments/test.rb
+      # keys eager loading off this, and eager loading has never run in this repo before (only
+      # development and production did). This is what makes the Zeitwerk-vs-eager-load class of
+      # bug show up as an explicit, legible CI failure instead of a confusing spec error.
+      CI: "true"
+      # Not a real secret — CI only ever talks to itself, never to rakamin-api. Must merely be
+      # present, or JsonWebToken.hmac_secret raises KeyError at boot (config/application.yml is
+      # gitignored and doesn't exist in CI).
+      SECRET_KEY_BASE: ci-test-secret-key-base-not-for-production
+      # Gemini::HttpClient#initialize does ENV.fetch for these at construction time, so they must
+      # exist even though the test suite never makes a real call — every spec that reaches Gemini
+      # injects a stubbed gemini_client: double (see spec/support), and WebMock's
+      # disable_net_connect! blocks any real request that slips through.
+      GEMINI_API_KEY: ci-test-key
+      GEMINI_LIVE_MODEL: gemini-2.0-flash-live-001
+      GEMINI_FLASH_MODEL: gemini-2.0-flash-001
+      GEMINI_PRO_MODEL: gemini-2.0-pro-001
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: rakamin_test
+      REDIS_URL: redis://localhost:6379/1
+      APP_BASE_URL: http://localhost:3001
+      WEB_BASE_URL: http://localhost:5173
+      # config/initializers/cors.rb has no default for this one — ENV.fetch('ALLOWED_ORIGINS')
+      # with no fallback, so it's a hard boot-time KeyError if unset. Not in the plan doc's own
+      # "required env" list; found by grepping every no-default ENV.fetch in the app and
+      # confirming against a real CI-like run (application.yml temporarily removed locally).
+      ALLOWED_ORIGINS: "*"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.2"
+          bundler-cache: true
+          working-directory: api
+
+      # Deliberately NOT `db:test:prepare` / `db:schema:load`. `db/schema.rb` never captures the
+      # `CREATE SCHEMA ai_interview` statement (it only lives in the first migration), so either
+      # of those would silently rebuild every table in the `public` schema and report success.
+      # See spec/rails_helper.rb's own guard for the same reasoning.
+      - name: Create and migrate the test database
+        run: bin/rails db:create db:migrate
+
+      # Expected to catch a real class of bug: eager loading has never run in this repo outside
+      # this CI job, so this is the first time Zeitwerk actually checks every autoloaded path.
+      - name: Zeitwerk eager-load check
+        run: bin/rails zeitwerk:check
+
+      - name: RSpec
+        run: bundle exec rspec
+
+  web:
+    name: web (typecheck, test, build)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
