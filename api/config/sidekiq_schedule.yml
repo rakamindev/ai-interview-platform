@@ -1,19 +1,4 @@
-# Sidekiq Cron Schedule
-# Add to config/initializers/sidekiq.rb or use sidekiq-cron gem
-
-# RefreshTokenCleanupWorker — runs every hour
-# Required: gem 'sidekiq-cron' in Gemfile
-#
-# Option 1: In config/initializers/sidekiq.rb
-#   require 'sidekiq-cron'
-#   Sidekiq::Cron::Job.create(
-#     name:  'refresh-token-cleanup',
-#     cron:  '0 * * * *',
-#     class: 'RefreshTokenCleanupWorker'
-#   )
-#
-# Option 2: In config/sidekiq.yml (with sidekiq-cron)
-#   :cron:
-#     - name: refresh-token-cleanup
-#       cron: '0 * * * *'
-#       class: RefreshTokenCleanupWorker
+refresh_token_cleanup:
+  cron: "0 3 * * *"
+  class: RefreshTokenCleanupWorker
+  queue: default
