@@ -207,7 +207,7 @@ export default function AssessmentInvitePage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
+            <h1 className="font-display text-lg font-semibold">{assessment?.name ?? "—"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills

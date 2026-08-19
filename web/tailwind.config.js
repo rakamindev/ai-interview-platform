@@ -39,6 +39,13 @@ export default {
                     foreground: "hsl(var(--popover-foreground))",
                 },
             },
+            fontFamily: {
+                // Opt-in only (font-display / font-body / font-data) — does not
+                // touch the default font-sans/font-mono used by the rest of the app.
+                display: ["'Space Grotesk'", "system-ui", "sans-serif"],
+                body: ["'IBM Plex Sans'", "system-ui", "sans-serif"],
+                data: ["'IBM Plex Mono'", "ui-monospace", "monospace"],
+            },
             borderRadius: {
                 lg: "var(--radius)",
                 md: "calc(var(--radius) - 2px)",

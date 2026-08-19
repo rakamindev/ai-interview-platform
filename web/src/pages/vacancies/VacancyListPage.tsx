@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import PageHeader from "@/shared/components/PageHeader";
+import EmptyState from "@/shared/components/EmptyState";
+import InlineBanner from "@/shared/components/InlineBanner";
 import { vacanciesApi } from "@/services/vacancies";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
 import type { Vacancy } from "@/types";
@@ -22,30 +25,27 @@ export default function VacancyListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Vacancies</h1>
-        <Button onClick={() => navigate("/vacancies/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
-        </Button>
-      </div>
+      <PageHeader
+        title="Vacancies"
+        actions={
+          <Button onClick={() => navigate("/vacancies/new")}>
+            <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load vacancies. Please refresh the page.
-        </div>
-      )}
+      {error && <InlineBanner variant="error">Failed to load vacancies. Please refresh the page.</InlineBanner>}
 
       {loading ? (
         <div className="space-y-2">
           {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
       ) : vacancies.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No vacancies yet.</p>
-          <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy
-          </Button>
-        </div>
+        <EmptyState
+          message="No vacancies yet."
+          actionLabel="Create your first vacancy"
+          onAction={() => navigate("/vacancies/new")}
+        />
       ) : (
         <div className="space-y-2">
           {vacancies.map((v) => (

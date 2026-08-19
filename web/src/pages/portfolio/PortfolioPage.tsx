@@ -113,7 +113,7 @@ export default function PortfolioPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+            <h1 className="font-display text-lg font-semibold">Portfolio Results</h1>
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}

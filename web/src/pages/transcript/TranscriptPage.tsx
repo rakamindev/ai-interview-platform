@@ -51,7 +51,7 @@ export default function TranscriptPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
+            <h1 className="font-display text-lg font-semibold">Interview Transcript</h1>
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}

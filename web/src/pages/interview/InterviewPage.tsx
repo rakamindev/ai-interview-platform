@@ -192,7 +192,7 @@ export default function InterviewPage() {
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
+          <h1 className="font-display text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
             <p className="text-sm text-muted-foreground">
               {candidateInfo.time_limit_min} minutes
@@ -231,7 +231,7 @@ export default function InterviewPage() {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <h2 className="font-display text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
           <br />

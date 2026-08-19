@@ -32,7 +32,7 @@ export default function AssessorLayout() {
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <span className="font-display text-sm font-semibold">Rakamin AI Interview</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (

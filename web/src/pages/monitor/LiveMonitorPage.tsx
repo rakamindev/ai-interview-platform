@@ -149,7 +149,7 @@ export default function LiveMonitorPage() {
             <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h1 className="font-display text-lg font-semibold">Live Monitor</h1>
           </div>
           {assessmentName && (
             <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>

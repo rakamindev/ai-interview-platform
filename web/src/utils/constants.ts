@@ -1,5 +1,28 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
+// Auth pages copy — centralized so Login/Signup wording changes in one place.
+export const AUTH_COPY = {
+  brandTagline: "Every candidate heard, every signal measured.",
+  login: {
+    title: "Sign in to AI Interview",
+    description: "Manage assessments and review candidate interviews.",
+    submit: "Sign in",
+    submitting: "Signing in…",
+    error: "Email or password is incorrect.",
+    footerPrompt: "New here?",
+    footerCta: "Create account",
+  },
+  signup: {
+    title: "Create your account",
+    description: "Set up access to manage assessments.",
+    submit: "Create account",
+    submitting: "Creating account…",
+    error: "We couldn't create your account. Check your details and try again.",
+    footerPrompt: "Already have an account?",
+    footerCta: "Sign in",
+  },
+} as const;
+
 /** Parse "L3" → 3, passthrough number, fallback to 1 */
 export function parseLevel(level: string | number): number {
   if (typeof level === "number") return level;
