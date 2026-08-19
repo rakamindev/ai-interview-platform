@@ -8,8 +8,9 @@
 #
 # Resolution order:
 #   1. JWT Bearer token → decode → use `scheme` claim
-#   2. X-Tenant-Scheme request header (for non-JWT requests / candidate flows)
-#   3. Referer host (fallback, same as rakamin-api HostService approach)
+#   2. request.env["jwt.claims"] (set by authentication middleware after cookie refresh)
+#   3. X-Tenant-Scheme request header (for non-JWT requests / candidate flows)
+#   4. Referer host (fallback, same as rakamin-api HostService approach)
 #
 # If no tenant can be resolved, the request continues with no tenant set.
 # Individual controllers can enforce tenant presence via before_action.
@@ -40,12 +41,20 @@ class TenantResolverMiddleware < ApplicationMiddleware
   end
 
   def scheme_from_jwt(request)
+    # 1. Try Authorization header
     auth_header = request.headers["Authorization"].to_s
-    return unless auth_header.start_with?("Bearer ", "bearer ")
+    if auth_header.start_with?("Bearer ", "bearer ")
+      token = auth_header.split.last
+      claims = JsonWebToken.decode_without_verification(token)
+      scheme = claims[:scheme].presence
+      return scheme if scheme
+    end
 
-    token = auth_header.split.last
-    claims = JsonWebToken.decode_without_verification(token)
-    claims[:scheme].presence
+    # 2. Try jwt.claims (set by authentication middleware after cookie refresh)
+    jwt_claims = request.env["jwt.claims"]
+    return unless jwt_claims.is_a?(Hash)
+
+    jwt_claims[:scheme].presence
   rescue StandardError
     nil
   end
