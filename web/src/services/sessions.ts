@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, TranscriptRevision } from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
@@ -31,4 +31,9 @@ export const sessionsApi = {
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+
+  reviseTranscriptTurn: (id: number, revisedText: string, reason: string) =>
+    api.post<{ revision: TranscriptRevision }>(`/transcript_turns/${id}/revise`, {
+      revision: { revised_text: revisedText, reason },
+    }),
 };

@@ -74,6 +74,15 @@ export interface TranscriptTurn {
   created_at: string;
 }
 
+export interface TranscriptRevision {
+  id: number;
+  transcript_turn_id: number;
+  revised_text: string;
+  reason: string;
+  revised_by: number;
+  created_at: string;
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;

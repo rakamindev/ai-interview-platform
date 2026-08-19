@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +12,23 @@ export default function TranscriptPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const saveRevision = async (event: FormEvent, turn: TranscriptTurn) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await sessionsApi.reviseTranscriptTurn(turn.id, draft, reason);
+      setTurns((current) => current.map((item) => item.id === turn.id ? { ...item, text: draft } : item));
+      setEditingId(null);
+      setReason("");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -106,6 +123,24 @@ export default function TranscriptPage() {
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
+                {!isAI && editingId !== turn.id && (
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => {
+                    setEditingId(turn.id);
+                    setDraft(turn.text);
+                  }}>
+                    Correct transcript
+                  </Button>
+                )}
+                {!isAI && editingId === turn.id && (
+                  <form className="mt-3 space-y-2" onSubmit={(event) => saveRevision(event, turn)}>
+                    <textarea className="min-h-24 w-full rounded border bg-background p-2 text-sm" value={draft} onChange={(event) => setDraft(event.target.value)} required />
+                    <input className="w-full rounded border bg-background p-2 text-sm" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason for correction" required />
+                    <div className="flex gap-2">
+                      <Button size="sm" disabled={saving}>{saving ? "Saving…" : "Save correction"}</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
+                    </div>
+                  </form>
+                )}
               </div>
             );
           })}

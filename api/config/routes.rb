@@ -47,6 +47,16 @@ Rails.application.routes.draw do
         member { post :revise }
       end
 
+      resources :sessions, only: [] do
+        resource :recording, only: :create, controller: 'interview_recordings' do
+          get :playback
+        end
+      end
+
+      resources :portfolios, only: [] do
+        resources :notes, only: :create, controller: 'portfolio_notes'
+      end
+
       # B7 Skill Taxonomy (read-only reference data)
       get  'skill_taxonomies',          to: 'skill_taxonomies#index'
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
