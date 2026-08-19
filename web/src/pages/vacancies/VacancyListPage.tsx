@@ -14,7 +14,8 @@ export default function VacancyListPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    vacanciesApi.list()
+    vacanciesApi
+      .list()
       .then((res) => setVacancies(res.data.vacancies))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -37,7 +38,9 @@ export default function VacancyListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
         </div>
       ) : vacancies.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">

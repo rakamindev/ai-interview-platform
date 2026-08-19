@@ -21,15 +21,15 @@ export function useAudioWebSocket({
   onTranscript,
   onStateChange,
   onSpeakerChange,
-  onReconnected,
+  onReconnected
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
-  const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
-    "disconnected"
-  );
+  const [connectionState, setConnectionState] = useState<
+    "disconnected" | "connecting" | "connected"
+  >("disconnected");
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -70,7 +70,10 @@ export function useAudioWebSocket({
             case "transcription":
             case "transcript":
               if (msg.speaker && msg.text) {
-                onTranscript({ speaker: msg.speaker === "candidate" ? "candidate" : "assessor", text: msg.text });
+                onTranscript({
+                  speaker: msg.speaker === "candidate" ? "candidate" : "assessor",
+                  text: msg.text
+                });
               }
               break;
             case "speaker_changed":

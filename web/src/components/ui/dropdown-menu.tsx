@@ -80,5 +80,5 @@ export {
   DropdownMenuGroup,
   DropdownMenuPortal,
   DropdownMenuSub,
-  DropdownMenuRadioGroup,
+  DropdownMenuRadioGroup
 };

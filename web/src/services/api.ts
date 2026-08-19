@@ -20,7 +20,7 @@ export function parseResponse<T>(data: unknown, schema: ZodType<T>, fallback: T)
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json" }
 });
 
 api.interceptors.request.use((config) => {

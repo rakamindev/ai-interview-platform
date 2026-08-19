@@ -14,10 +14,7 @@ export default function TranscriptPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      sessionsApi.getTranscript(Number(sessionId)),
-      sessionsApi.get(Number(sessionId)),
-    ])
+    Promise.all([sessionsApi.getTranscript(Number(sessionId)), sessionsApi.get(Number(sessionId))])
       .then(([tRes, sRes]) => {
         setTurns(tRes.data.turns);
         setCandidateName(sRes.data.session.candidate_name ?? null);
@@ -52,9 +49,7 @@ export default function TranscriptPage() {
           </Link>
           <div>
             <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            {candidateName && <p className="text-sm text-muted-foreground">{candidateName}</p>}
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
@@ -93,9 +88,7 @@ export default function TranscriptPage() {
               <div
                 key={turn.id}
                 className={`rounded-lg p-4 ${
-                  isAI
-                    ? "bg-muted border"
-                    : "bg-background border border-primary/20"
+                  isAI ? "bg-muted border" : "bg-background border border-primary/20"
                 }`}
               >
                 <p

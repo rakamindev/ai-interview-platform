@@ -15,13 +15,13 @@ const LEVELS = [1, 2, 3, 4, 5] as const;
 const CONFIDENCE_SIZE: Record<Confidence, string> = {
   high: "w-3 h-3",
   medium: "w-4 h-4",
-  low: "w-6 h-6",
+  low: "w-6 h-6"
 };
 
 const CONFIDENCE_OPACITY: Record<Confidence, string> = {
   high: "opacity-100",
   medium: "opacity-75",
-  low: "opacity-50",
+  low: "opacity-50"
 };
 
 function verdictColor(level: number, required: number): string {
@@ -38,7 +38,7 @@ function ariaDescription(
   skillLabel: string,
   requiredLevel: number,
   candidateLevel: number | undefined,
-  confidence: Confidence,
+  confidence: Confidence
 ): string {
   if (candidateLevel == null) {
     return `${skillLabel}: not assessed. Requirement at L${requiredLevel}.`;
@@ -62,7 +62,7 @@ export default function AnchorRail({
   requiredLevel,
   candidateLevel,
   confidence = "high",
-  className,
+  className
 }: AnchorRailProps) {
   const hasCandidate = candidateLevel != null;
   const reqPct = positionPercent(requiredLevel);
@@ -111,11 +111,11 @@ export default function AnchorRail({
                 className={cn(
                   "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-2 rounded-full",
                   verdictColor(candidateLevel, requiredLevel),
-                  CONFIDENCE_OPACITY[confidence],
+                  CONFIDENCE_OPACITY[confidence]
                 )}
                 style={{
                   left: `${positionPercent(candidateLevel)}%`,
-                  width: confidence === "medium" ? "2rem" : "3.5rem",
+                  width: confidence === "medium" ? "2rem" : "3.5rem"
                 }}
               />
             )}
@@ -126,7 +126,7 @@ export default function AnchorRail({
                 "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full",
                 CONFIDENCE_SIZE[confidence],
                 verdictColor(candidateLevel, requiredLevel),
-                confidence === "high" ? "opacity-100" : "opacity-75",
+                confidence === "high" ? "opacity-100" : "opacity-75"
               )}
               style={{ left: `${positionPercent(candidateLevel)}%` }}
             />

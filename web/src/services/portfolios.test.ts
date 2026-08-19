@@ -8,18 +8,23 @@ vi.hoisted(() => {
     setItem: (k: string, v: string) => store.set(k, v),
     removeItem: (k: string) => store.delete(k),
     clear: () => store.clear(),
-    get length() { return store.size; },
-    key: (i: number) => [...store.keys()][i] ?? null,
+    get length() {
+      return store.size;
+    },
+    key: (i: number) => [...store.keys()][i] ?? null
   };
-  Object.defineProperty(globalThis, "localStorage", { value: localStorageMock, configurable: true });
+  Object.defineProperty(globalThis, "localStorage", {
+    value: localStorageMock,
+    configurable: true
+  });
 });
 
 // Mock the api module so we can control the response
 vi.mock("./api", () => ({
   default: {
-    get: vi.fn(),
+    get: vi.fn()
   },
-  parseResponse: vi.fn((_data: unknown, _schema: unknown, fallback: unknown) => fallback),
+  parseResponse: vi.fn((_data: unknown, _schema: unknown, fallback: unknown) => fallback)
 }));
 
 import api from "./api";
@@ -36,7 +41,7 @@ describe("portfoliosApi.exportPortfolio", () => {
 
     vi.mocked(api.get).mockResolvedValue({
       data: blob,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json" }
     });
 
     await expect(portfoliosApi.exportPortfolio(1, "pdf")).rejects.toThrow("Portfolio not found");
@@ -47,11 +52,11 @@ describe("portfoliosApi.exportPortfolio", () => {
 
     vi.mocked(api.get).mockResolvedValue({
       data: blob,
-      headers: { "content-type": "text/html" },
+      headers: { "content-type": "text/html" }
     });
 
     await expect(portfoliosApi.exportPortfolio(1, "pdf")).rejects.toThrow(
-      "Export failed with an unexpected response",
+      "Export failed with an unexpected response"
     );
   });
 
@@ -60,7 +65,7 @@ describe("portfoliosApi.exportPortfolio", () => {
 
     vi.mocked(api.get).mockResolvedValue({
       data: blob,
-      headers: { "content-type": "application/pdf" },
+      headers: { "content-type": "application/pdf" }
     });
 
     const result = await portfoliosApi.exportPortfolio(1, "pdf");
@@ -70,7 +75,7 @@ describe("portfoliosApi.exportPortfolio", () => {
   it("returns JSON responses without blob checking", async () => {
     vi.mocked(api.get).mockResolvedValue({
       data: { some: "json" },
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json" }
     });
 
     const result = await portfoliosApi.exportPortfolio(1, "json");

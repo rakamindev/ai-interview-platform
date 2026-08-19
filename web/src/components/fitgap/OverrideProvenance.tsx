@@ -15,12 +15,15 @@ export default function OverrideProvenance({ actor, reason, at }: OverrideProven
         month: "short",
         day: "numeric",
         hour: "2-digit",
-        minute: "2-digit",
+        minute: "2-digit"
       })
     : null;
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" title={reason ?? undefined}>
+    <span
+      className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+      title={reason ?? undefined}
+    >
       <Pencil className="h-3 w-3" />
       {actor && <span>{actor}</span>}
       {formattedTime && <span>({formattedTime})</span>}

@@ -19,5 +19,5 @@ export function clearToken() {
 }
 
 export const authAtom = atom<AuthState>({
-  token: getStoredToken(),
+  token: getStoredToken()
 });

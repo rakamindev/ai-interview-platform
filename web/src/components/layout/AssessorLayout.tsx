@@ -1,16 +1,15 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const navItems = [
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
-  { href: "/vacancies", label: "Vacancies", icon: Briefcase },
+  { href: "/vacancies", label: "Vacancies", icon: Briefcase }
 ];
 
 export default function AssessorLayout() {

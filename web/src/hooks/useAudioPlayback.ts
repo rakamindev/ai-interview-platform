@@ -71,9 +71,15 @@ export function useAudioPlayback() {
 
   const scheduleAfterPlayback = useCallback((fn: () => void) => {
     const ctx = audioCtxRef.current;
-    if (!ctx) { fn(); return; }
+    if (!ctx) {
+      fn();
+      return;
+    }
     const remaining = (nextPlayTimeRef.current - ctx.currentTime) * 1000;
-    if (remaining <= 0) { fn(); return; }
+    if (remaining <= 0) {
+      fn();
+      return;
+    }
     setTimeout(fn, remaining);
   }, []);
 

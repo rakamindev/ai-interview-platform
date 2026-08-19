@@ -8,10 +8,15 @@ vi.hoisted(() => {
     setItem: (k: string, v: string) => store.set(k, v),
     removeItem: (k: string) => store.delete(k),
     clear: () => store.clear(),
-    get length() { return store.size; },
-    key: (i: number) => [...store.keys()][i] ?? null,
+    get length() {
+      return store.size;
+    },
+    key: (i: number) => [...store.keys()][i] ?? null
   };
-  Object.defineProperty(globalThis, "localStorage", { value: localStorageMock, configurable: true });
+  Object.defineProperty(globalThis, "localStorage", {
+    value: localStorageMock,
+    configurable: true
+  });
 });
 
 import { parseResponse } from "../services/api";
@@ -32,7 +37,7 @@ describe("parseResponse", () => {
       skill_label: "React",
       expected_level: 3,
       result: "match",
-      extra_field: "should be ignored",
+      extra_field: "should be ignored"
     };
     const result = parseResponse(data, SkillComparisonSchema, null as any);
     expect(result.skill_label).toBe("React");
@@ -49,7 +54,7 @@ describe("parseResponse", () => {
     const data = {
       skill_label: "React",
       required_level: 3,
-      result: "match",
+      result: "match"
     };
     const fallback = { skill_label: "", expected_level: 0, result: "not_assessed" as const };
     const result = parseResponse(data, SkillComparisonSchema, fallback);
@@ -70,10 +75,10 @@ describe("parseResponse", () => {
           ai_level: 3,
           ai_confidence: "high",
           evidence: ["coded component"],
-          competency_summary: "Strong",
-        },
+          competency_summary: "Strong"
+        }
       ],
-      overrides: [],
+      overrides: []
     };
     const result = parseResponse(data, PortfolioSchema, null as any);
     expect(result.skills[0].ai_level).toBe(3);
@@ -92,17 +97,17 @@ describe("parseResponse", () => {
           ai_level: "L3", // wrong: string instead of number
           ai_confidence: "high",
           evidence: [],
-          competency_summary: "",
-        },
+          competency_summary: ""
+        }
       ],
-      overrides: [],
+      overrides: []
     };
     const fallback = {
       id: 0,
       session_id: 0,
       generation_status: "pending" as const,
       skills: [],
-      overrides: [],
+      overrides: []
     };
     const result = parseResponse(data, PortfolioSchema, fallback);
     expect(result).toEqual(fallback);
@@ -113,7 +118,7 @@ describe("parseResponse", () => {
       id: 1,
       role_title: "Frontend Dev",
       culture_dimensions: "collaborative",
-      competency_expectations: "React, TypeScript",
+      competency_expectations: "React, TypeScript"
     };
     const result = parseResponse(data, VacancySchema, null as any);
     expect(result.role_title).toBe("Frontend Dev");

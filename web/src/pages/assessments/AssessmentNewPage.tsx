@@ -8,18 +8,24 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
+  DragEndEvent
 } from "@dnd-kit/core";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  arrayMove,
+  arrayMove
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
@@ -46,11 +52,18 @@ export default function AssessmentNewPage() {
       name: "",
       time_limit_min: 45,
       language: "en",
-      skills: [],
-    },
+      skills: []
+    }
   });
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors }
+  } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   const sensors = useSensors(
@@ -72,7 +85,7 @@ export default function AssessmentNewPage() {
       skill_label: "",
       is_custom: true,
       expected_level: 3,
-      display_order: fields.length,
+      display_order: fields.length
     });
   };
 
@@ -94,8 +107,8 @@ export default function AssessmentNewPage() {
         language: data.language,
         assessment_skills_attributes: data.skills.map((s, i) => ({
           ...s,
-          display_order: i,
-        })),
+          display_order: i
+        }))
       };
       const res = await assessmentsApi.create(payload);
       navigate(`/assessments/${res.data.assessment.id}/invite`);
@@ -129,9 +142,7 @@ export default function AssessmentNewPage() {
             placeholder="Senior Frontend Engineer"
             {...register("name", { required: "Role title is required" })}
           />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
-          )}
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
         {/* Time limit */}
@@ -139,10 +150,7 @@ export default function AssessmentNewPage() {
           <Label>
             Session time limit <span className="text-destructive">*</span>
           </Label>
-          <Select
-            defaultValue="45"
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
+          <Select defaultValue="45" onValueChange={(v) => setValue("time_limit_min", Number(v))}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -159,10 +167,7 @@ export default function AssessmentNewPage() {
         {/* Language */}
         <div className="space-y-1.5">
           <Label>Interview language</Label>
-          <Select
-            defaultValue="en"
-            onValueChange={(v) => setValue("language", v as "en" | "id")}
-          >
+          <Select defaultValue="en" onValueChange={(v) => setValue("language", v as "en" | "id")}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -210,21 +215,11 @@ export default function AssessmentNewPage() {
           )}
 
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPickerOpen(true)}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add from Skill Taxonomy
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addCustomSkill}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={addCustomSkill}>
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add custom skill
             </Button>
@@ -233,17 +228,11 @@ export default function AssessmentNewPage() {
 
         <Separator />
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/assessments")}
-          >
+          <Button type="button" variant="outline" onClick={() => navigate("/assessments")}>
             Cancel
           </Button>
           <Button type="submit" disabled={submitting}>
@@ -253,11 +242,7 @@ export default function AssessmentNewPage() {
         </div>
       </form>
 
-      <SkillPicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        onSelect={addB7Skill}
-      />
+      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={addB7Skill} />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import {
   SessionSchema,
   CoverageMapSchema,
   TranscriptTurnSchema,
-  CandidateInfoSchema,
+  CandidateInfoSchema
 } from "@/schemas/session";
 import { PortfolioSchema } from "@/schemas/portfolio";
 import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
@@ -13,7 +13,7 @@ const EMPTY_SESSION: Session = {
   assessment_id: 0,
   invite_token: "",
   invite_url: "",
-  status: "pending",
+  status: "pending"
 };
 
 export const sessionsApi = {
@@ -24,37 +24,41 @@ export const sessionsApi = {
         ...res,
         data: {
           session: parseResponse(raw?.session, SessionSchema, EMPTY_SESSION),
-          assessment: raw?.assessment ?? { id: 0, name: "", time_limit_min: 0 },
-        },
+          assessment: raw?.assessment ?? { id: 0, name: "", time_limit_min: 0 }
+        }
       };
     }),
 
   endSession: (id: number, reason = "manual_assessor") =>
     api.post<{ session: Session }>(`/sessions/${id}/end_session`, {
-      session: { reason },
+      session: { reason }
     }),
 
   getCoverage: (id: number) =>
     api.get(`/sessions/${id}/coverage`).then((res) => ({
       ...res,
-      data: parseResponse(res.data, CoverageMapSchema, { skills: [], discovered: [] }),
+      data: parseResponse(res.data, CoverageMapSchema, { skills: [], discovered: [] })
     })),
 
   getTranscript: (id: number, fromTurn?: number) =>
-    api.get(`/sessions/${id}/transcript`, {
-      params: fromTurn ? { from_turn: fromTurn } : undefined,
-    }).then((res) => {
-      const raw = res.data as any;
-      return {
-        ...res,
-        data: {
-          turns: Array.isArray(raw?.turns)
-            ? raw.turns.map((t: unknown) => parseResponse(t, TranscriptTurnSchema, null)).filter(Boolean)
-            : [],
-          total: raw?.total ?? 0,
-        },
-      };
-    }),
+    api
+      .get(`/sessions/${id}/transcript`, {
+        params: fromTurn ? { from_turn: fromTurn } : undefined
+      })
+      .then((res) => {
+        const raw = res.data as any;
+        return {
+          ...res,
+          data: {
+            turns: Array.isArray(raw?.turns)
+              ? raw.turns
+                  .map((t: unknown) => parseResponse(t, TranscriptTurnSchema, null))
+                  .filter(Boolean)
+              : [],
+            total: raw?.total ?? 0
+          }
+        };
+      }),
 
   getPortfolio: (id: number) =>
     api.get(`/sessions/${id}/portfolio`).then((res) => {
@@ -62,7 +66,7 @@ export const sessionsApi = {
       if (raw?.portfolio) {
         return {
           ...res,
-          data: { portfolio: parseResponse(raw.portfolio, PortfolioSchema, null) },
+          data: { portfolio: parseResponse(raw.portfolio, PortfolioSchema, null) }
         };
       }
       return { ...res, data: { status: raw?.status ?? "pending" } };
@@ -75,21 +79,22 @@ export const sessionsApi = {
         ...res,
         data: {
           message: raw?.message ?? "",
-          portfolio: parseResponse(raw?.portfolio, PortfolioSchema, null),
-        },
+          portfolio: parseResponse(raw?.portfolio, PortfolioSchema, null)
+        }
       };
     }),
 
   getCandidateInfo: (token: string) =>
     api.get(`/sessions/${token}/candidate`).then((res) => ({
       ...res,
-      data: parseResponse(
-        res.data,
-        CandidateInfoSchema,
-        { session_id: 0, role_title: "", time_limit_min: 0, session_status: "" }
-      ),
+      data: parseResponse(res.data, CandidateInfoSchema, {
+        session_id: 0,
+        role_title: "",
+        time_limit_min: 0,
+        session_status: ""
+      })
     })),
 
   audioComplete: (token: string) =>
-    api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+    api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`)
 };

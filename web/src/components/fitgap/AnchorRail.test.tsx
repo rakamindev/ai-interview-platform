@@ -19,12 +19,7 @@ describe("AnchorRail", () => {
 
   it("has an aria-label sentence for screen readers", () => {
     render(
-      <AnchorRail
-        skillLabel="React"
-        requiredLevel={3}
-        candidateLevel={4}
-        confidence="high"
-      />,
+      <AnchorRail skillLabel="React" requiredLevel={3} candidateLevel={4} confidence="high" />
     );
     const rail = screen.getByRole("img");
     expect(rail.getAttribute("aria-label")).toContain("React");
@@ -40,12 +35,7 @@ describe("AnchorRail", () => {
 
   it("describes low confidence", () => {
     render(
-      <AnchorRail
-        skillLabel="Testing"
-        requiredLevel={3}
-        candidateLevel={2}
-        confidence="low"
-      />,
+      <AnchorRail skillLabel="Testing" requiredLevel={3} candidateLevel={2} confidence="low" />
     );
     const rail = screen.getByRole("img");
     expect(rail.getAttribute("aria-label")).toContain("low confidence");

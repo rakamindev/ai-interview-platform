@@ -11,23 +11,20 @@ export interface AssessmentPayload {
 export const assessmentsApi = {
   list: (page = 1) =>
     api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
+      params: { page }
     }),
 
-  get: (id: number) =>
-    api.get<{ assessment: Assessment }>(`/assessments/${id}`),
+  get: (id: number) => api.get<{ assessment: Assessment }>(`/assessments/${id}`),
 
   create: (data: AssessmentPayload) =>
-    api.post<{ assessment: Assessment; system_prompt_generated: boolean }>(
-      "/assessments",
-      { assessment: data }
-    ),
+    api.post<{ assessment: Assessment; system_prompt_generated: boolean }>("/assessments", {
+      assessment: data
+    }),
 
   update: (id: number, data: AssessmentPayload) =>
-    api.put<{ assessment: Assessment; system_prompt_generated: boolean }>(
-      `/assessments/${id}`,
-      { assessment: data }
-    ),
+    api.put<{ assessment: Assessment; system_prompt_generated: boolean }>(`/assessments/${id}`, {
+      assessment: data
+    }),
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
 
@@ -35,8 +32,7 @@ export const assessmentsApi = {
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
   createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
-    api.post<{ session: Session; invite_url: string }>(
-      `/assessments/${assessmentId}/sessions`,
-      { session: { candidate_name: candidateName, candidate_id: candidateId } }
-    ),
+    api.post<{ session: Session; invite_url: string }>(`/assessments/${assessmentId}/sessions`, {
+      session: { candidate_name: candidateName, candidate_id: candidateId }
+    })
 };

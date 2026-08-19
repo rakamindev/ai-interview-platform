@@ -6,7 +6,7 @@ const EMPTY_VACANCY: Vacancy = {
   id: 0,
   role_title: "",
   culture_dimensions: "",
-  competency_expectations: "",
+  competency_expectations: ""
 };
 
 export interface VacancyPayload {
@@ -24,10 +24,12 @@ export const vacanciesApi = {
         ...res,
         data: {
           vacancies: Array.isArray(raw?.vacancies)
-            ? raw.vacancies.map((v: unknown) => parseResponse(v, VacancySchema, EMPTY_VACANCY)).filter((v: Vacancy) => v.id !== 0)
+            ? raw.vacancies
+                .map((v: unknown) => parseResponse(v, VacancySchema, EMPTY_VACANCY))
+                .filter((v: Vacancy) => v.id !== 0)
             : [],
-          meta: raw?.meta ?? { current_page: 1, total_pages: 1, total_count: 0, per_page: 10 },
-        },
+          meta: raw?.meta ?? { current_page: 1, total_pages: 1, total_count: 0, per_page: 10 }
+        }
       };
     }),
 
@@ -36,7 +38,7 @@ export const vacanciesApi = {
       const raw = res.data as any;
       return {
         ...res,
-        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) },
+        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) }
       };
     }),
 
@@ -45,7 +47,7 @@ export const vacanciesApi = {
       const raw = res.data as any;
       return {
         ...res,
-        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) },
+        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) }
       };
     }),
 
@@ -54,9 +56,9 @@ export const vacanciesApi = {
       const raw = res.data as any;
       return {
         ...res,
-        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) },
+        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) }
       };
     }),
 
-  delete: (id: number) => api.delete(`/vacancies/${id}`),
+  delete: (id: number) => api.delete(`/vacancies/${id}`)
 };

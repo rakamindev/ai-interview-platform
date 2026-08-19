@@ -11,7 +11,7 @@ function makeComparison(overrides: Partial<SkillComparison> = {}): SkillComparis
     result: "match",
     delta: null,
     confidence: "high",
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -40,8 +40,8 @@ describe("ComparisonTable", () => {
         is_override: true,
         override_actor: "assessor@example.com",
         override_reason: "Candidate demonstrated advanced skills in interview",
-        override_at: "2025-01-15T10:30:00Z",
-      }),
+        override_at: "2025-01-15T10:30:00Z"
+      })
     ];
     render(<ComparisonTable comparisons={comparisons} />);
     expect(screen.getByText("assessor@example.com")).toBeInTheDocument();
@@ -53,8 +53,8 @@ describe("ComparisonTable", () => {
       makeComparison({
         is_override: false,
         override_actor: "assessor@example.com",
-        override_reason: "Some reason",
-      }),
+        override_reason: "Some reason"
+      })
     ];
     render(<ComparisonTable comparisons={comparisons} />);
     expect(screen.queryByText("assessor@example.com")).not.toBeInTheDocument();
@@ -64,7 +64,7 @@ describe("ComparisonTable", () => {
   it("renders confidence dot on every row", () => {
     const comparisons = [
       makeComparison({ confidence: "high" }),
-      makeComparison({ skill_label: "TypeScript", confidence: "medium" }),
+      makeComparison({ skill_label: "TypeScript", confidence: "medium" })
     ];
     render(<ComparisonTable comparisons={comparisons} />);
     expect(screen.getByText("high")).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe("ComparisonTable", () => {
   it("renders exceed and match with different labels", () => {
     const comparisons = [
       makeComparison({ skill_label: "React", result: "match" }),
-      makeComparison({ skill_label: "TypeScript", result: "exceed", delta: 1 }),
+      makeComparison({ skill_label: "TypeScript", result: "exceed", delta: 1 })
     ];
     render(<ComparisonTable comparisons={comparisons} />);
     expect(screen.getByText("Match")).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe("ComparisonTable", () => {
   it("never labels non-low confidence as confirmed", () => {
     const comparisons = [
       makeComparison({ confidence: "high" }),
-      makeComparison({ skill_label: "TypeScript", confidence: "medium" }),
+      makeComparison({ skill_label: "TypeScript", confidence: "medium" })
     ];
     render(<ComparisonTable comparisons={comparisons} />);
     expect(screen.queryByText(/confirmed/i)).not.toBeInTheDocument();
@@ -134,7 +134,7 @@ describe("ComparisonTable", () => {
       makeComparison({ skill_label: "React", result: "match" }),
       makeComparison({ skill_label: "TypeScript", result: "gap", delta: -1 }),
       makeComparison({ skill_label: "Testing", result: "exceed", delta: 1 }),
-      makeComparison({ skill_label: "DevOps", result: "insufficient_evidence" }),
+      makeComparison({ skill_label: "DevOps", result: "insufficient_evidence" })
     ];
     render(<ComparisonTable comparisons={comparisons} />);
     expect(screen.getByText("Match: 1")).toBeInTheDocument();
