@@ -9,6 +9,7 @@ import FitGapReportPage from "@/pages/fitgap/FitGapReportPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
+import PrivacyPolicyPage from "@/pages/privacypolicy/PrivacyPolicyPage";
 import TranscriptPage from "@/pages/transcript/TranscriptPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/vacancies" element={<VacancyListPage />} />
           <Route path="/vacancies/new" element={<VacancyNewPage />} />
           <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         </Route>
       </Route>
 
