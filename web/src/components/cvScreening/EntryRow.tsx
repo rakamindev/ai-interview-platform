@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cvScreeningsApi } from "@/services/cvScreenings";
-import { Check, X, Download, Loader2, RefreshCw, Ban } from "lucide-react";
+import { Check, X, Download, Loader2, RefreshCw, Ban, Eye } from "lucide-react";
 import type { CvScreeningEntry } from "@/types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,6 +51,28 @@ export default function EntryRow({
   // Which of Invite/Reject was actually clicked — `reviewing` alone can't tell,
   // since both buttons share one in-flight flag from the parent.
   const [inFlightAction, setInFlightAction] = useState<"invite" | "reject" | null>(null);
+
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Opens the tab immediately, synchronously in the click handler, so it's
+  // still tied to the user gesture and doesn't get popup-blocked — the fetch
+  // is async, so window.open(url) with the final blob URL can't happen until
+  // after an await, by which point the click that triggered it has ended.
+  // Not try/finally — this app's React Compiler setup bails out around that
+  // pattern (see Phase 8/13's frontend docs), so the reset is duplicated in
+  // both branches instead, matching handleReview/handleReanalyze/handleCancel.
+  const openPreview = async () => {
+    const newTab = window.open("", "_blank");
+    setPreviewLoading(true);
+    try {
+      const blob = await cvScreeningsApi.fetchFileBlob(entry.id);
+      if (newTab) newTab.location.href = URL.createObjectURL(blob);
+      setPreviewLoading(false);
+    } catch {
+      newTab?.close();
+      setPreviewLoading(false);
+    }
+  };
 
   const requestReview = (action: "invite" | "reject") => {
     if (!entry.detected_email) {
@@ -116,6 +138,21 @@ export default function EntryRow({
         )}
 
         <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            title="Preview CV"
+            disabled={previewLoading}
+            onClick={openPreview}
+          >
+            {previewLoading ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Eye className="h-3 w-3" />
+            )}
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"

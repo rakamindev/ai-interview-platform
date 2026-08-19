@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import EntryRow from "./EntryRow";
+import { cvScreeningsApi } from "@/services/cvScreenings";
 import type { CvScreeningEntry } from "@/types";
 
 function buildEntry(overrides: Partial<CvScreeningEntry> = {}): CvScreeningEntry {
@@ -216,6 +217,38 @@ describe("EntryRow", () => {
         fireEvent.click(screen.getByText("Invite"));
         expect(onReview).toHaveBeenCalledWith(1, "invite");
         expect(screen.queryByText("Email required")).not.toBeInTheDocument();
+    });
+
+    it("opens the CV directly in a new tab when Preview is clicked", async () => {
+        const blob = new Blob(["%PDF-1.4"], { type: "application/pdf" });
+        const fetchSpy = vi.spyOn(cvScreeningsApi, "fetchFileBlob").mockResolvedValue(blob);
+        vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:mock-url") });
+        const fakeTab = { location: { href: "" }, close: vi.fn() } as unknown as Window;
+        const openSpy = vi.spyOn(window, "open").mockReturnValue(fakeTab);
+
+        render(
+            <EntryRow
+                entry={buildEntry()}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        fireEvent.click(screen.getByTitle("Preview CV"));
+
+        // The tab opens synchronously, in the same gesture as the click, so it
+        // isn't popup-blocked — before the async fetch below has resolved.
+        expect(openSpy).toHaveBeenCalledWith("", "_blank");
+
+        await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith(1));
+        await waitFor(() => expect(fakeTab.location.href).toBe("blob:mock-url"));
+
+        vi.unstubAllGlobals();
     });
 
     it("falls back to a placeholder when no email was detected", () => {

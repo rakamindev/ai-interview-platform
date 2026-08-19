@@ -90,13 +90,22 @@ export const cvScreeningsApi = {
 
   // The file endpoint requires the same Bearer auth as everything else, so it
   // can't be a plain <a href> / window.open — those don't carry the header.
-  // Fetch it through the authenticated axios instance and hand the browser a
-  // local blob URL instead.
-  downloadFile: async (entryId: number, filename?: string) => {
+  // Fetch it through the authenticated axios instance instead. Explicitly typed
+  // application/pdf so a blob: URL built from this renders inline in an <iframe>
+  // rather than triggering a download or rendering blank — axios's
+  // responseType: "blob" already returns a correctly-typed Blob, but re-wrapping
+  // it (as the old downloadFile inline logic did with `new Blob([res.data])`)
+  // does not reliably preserve that type.
+  fetchFileBlob: async (entryId: number) => {
     const res = await api.get(`/cv_screening_entries/${entryId}/file`, {
       responseType: "blob",
     });
-    const url = window.URL.createObjectURL(new Blob([res.data as BlobPart]));
+    return new Blob([res.data as BlobPart], { type: "application/pdf" });
+  },
+
+  downloadFile: async (entryId: number, filename?: string) => {
+    const blob = await cvScreeningsApi.fetchFileBlob(entryId);
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = filename ?? "cv";
