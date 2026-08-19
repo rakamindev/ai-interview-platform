@@ -43,6 +43,10 @@ Rails.application.routes.draw do
         end
       end
 
+      resources :transcript_turns, only: [] do
+        member { post :revise }
+      end
+
       # B7 Skill Taxonomy (read-only reference data)
       get  'skill_taxonomies',          to: 'skill_taxonomies#index'
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
