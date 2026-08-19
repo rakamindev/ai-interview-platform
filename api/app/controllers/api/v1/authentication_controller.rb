@@ -23,6 +23,7 @@ module Api
           expires_at: 7.days.from_now
         )
         store_refresh_cookie(refresh_token)
+        store_csrf_cookie
 
         json_response({ access_token: token, user: { id: user.id, email: user.email, role: user.role } })
       end
@@ -86,10 +87,22 @@ module Api
         nil
       end
 
-      def verify_csrf!
-        return if request.headers["X-Requested-With"].present?
+      def store_csrf_cookie
+        secret = SecureRandom.hex(32)
+        cookies[:csrf_secret] = {
+          value: secret,
+          expires: 7.days.from_now,
+          secure: Rails.env.production?,
+          same_site: :lax,
+          httponly: false
+        }
+        @csrf_secret = secret
+      end
 
-        raise ExceptionHandler::Unauthorized, "Missing CSRF token"
+      def verify_csrf!
+        expected = cookies[:csrf_secret]
+        actual = request.headers["X-CSRF-Token"]
+        raise(ExceptionHandler::InvalidToken, "CSRF token mismatch") unless expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, actual)
       end
 
       def token_hash(token)
