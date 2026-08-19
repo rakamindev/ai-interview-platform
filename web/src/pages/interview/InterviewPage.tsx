@@ -208,6 +208,9 @@ export default function InterviewPage() {
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-900">
+              <strong>Data use notice:</strong> your voice responses, transcript, and interview metadata are processed by the hiring team to evaluate this assessment. Please do not share sensitive information that is unrelated to the role.
+            </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
         ) : (
