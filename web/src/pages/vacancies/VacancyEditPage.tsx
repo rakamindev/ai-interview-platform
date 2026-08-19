@@ -9,8 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ImportSkillsFromAssessmentDialog from "@/components/vacancies/ImportSkillsFromAssessmentDialog";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, Import } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -26,6 +27,7 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -80,9 +82,14 @@ export default function VacancyEditPage() {
               <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
             </div>
           ))}
-          <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add skill
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add skill
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Import className="h-3.5 w-3.5 mr-1" /> Import from Assessment
+            </Button>
+          </div>
         </div>
         <Separator />
         <div className="space-y-1.5">
@@ -100,6 +107,16 @@ export default function VacancyEditPage() {
       </form>
 
       <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
+
+      <ImportSkillsFromAssessmentDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={(skills) => {
+          skills.forEach((s) =>
+            append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: s.expected_level })
+          );
+        }}
+      />
     </div>
   );
 }
