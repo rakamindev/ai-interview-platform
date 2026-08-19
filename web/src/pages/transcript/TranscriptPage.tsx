@@ -18,6 +18,7 @@ export default function TranscriptPage() {
   const [saving, setSaving] = useState(false);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const segmentEndRef = useRef<number | null>(null);
 
   const saveRevision = async (event: FormEvent, turn: TranscriptTurn) => {
     event.preventDefault();
@@ -56,8 +57,17 @@ export default function TranscriptPage() {
 
   const playTurn = (turn: TranscriptTurn) => {
     if (!audioRef.current || turn.audio_start_ms === undefined) return;
+    segmentEndRef.current = turn.audio_end_ms === undefined ? null : turn.audio_end_ms / 1000;
     audioRef.current.currentTime = turn.audio_start_ms / 1000;
     void audioRef.current.play();
+  };
+
+  const stopAtSegmentEnd = () => {
+    if (!audioRef.current || segmentEndRef.current === null) return;
+    if (audioRef.current.currentTime >= segmentEndRef.current) {
+      audioRef.current.pause();
+      segmentEndRef.current = null;
+    }
   };
 
   const handleDownload = () => {
@@ -107,7 +117,7 @@ export default function TranscriptPage() {
       )}
 
       {playbackUrl && (
-        <audio className="w-full" controls ref={audioRef} src={playbackUrl}>
+        <audio className="w-full" controls ref={audioRef} onTimeUpdate={stopAtSegmentEnd} src={playbackUrl}>
           Your browser cannot play this recording.
         </audio>
       )}
