@@ -1,22 +1,23 @@
-import { Input, type InputProps } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { forwardRef } from "react";
+import { Input, type InputProps } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 
 interface FormFieldProps extends InputProps {
   label: string;
   error?: string;
 }
 
-/**
- * Label + Input + error message, composed once. Any form that needs a plain
- * text/email/number field should reach for this instead of hand-wiring
- * Label + Input + error markup again.
- */
-export default function FormField({ id, label, error, ...props }: FormFieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input id={id} aria-invalid={!!error} {...props} />
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
-  );
-}
+const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
+  ({ id, label, error, ...props }, ref) => {
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <Input id={id} aria-invalid={!!error} ref={ref} {...props} />
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+    );
+  }
+);
+FormField.displayName = "FormField";
+
+export default FormField;

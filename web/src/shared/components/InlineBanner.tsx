@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { AlertCircle, CheckCircle, Info } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 type BannerVariant = "success" | "warning" | "error" | "info";
 
