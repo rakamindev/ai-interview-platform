@@ -29,6 +29,21 @@ RSpec.describe 'CV Screening Entries API', type: :request do
       expect(json_body['entries'].size).to eq(1)
       expect(json_body['entries'].first['decision']).to eq('needs_review')
     end
+
+    it 'paginates with page/per_page and returns pagination meta' do
+      create_list(:cv_screening_entry, 5, cv_screening_batch: batch)
+
+      get "/api/v1/cv_screenings/#{screening.id}/entries", params: { per_page: 2, page: 2 }, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body['entries'].size).to eq(2)
+      expect(json_body['meta']).to include(
+        'current_page' => 2,
+        'total_pages'  => 3,
+        'total_count'  => 5,
+        'per_page'     => 2
+      )
+    end
   end
 
   describe 'POST /api/v1/cv_screening_entries/:id/review' do

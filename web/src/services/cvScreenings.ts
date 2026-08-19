@@ -36,10 +36,10 @@ export const cvScreeningsApi = {
       `/cv_screenings/${cvScreeningId}/batches/${batchId}/confirm`
     ),
 
-  entries: (id: number, decision?: string) =>
+  entries: (id: number, decision?: string, page?: number, perPage?: number) =>
     api.get<{ entries: CvScreeningEntry[]; meta: PaginationMeta }>(
       `/cv_screenings/${id}/entries`,
-      { params: decision ? { decision } : undefined }
+      { params: { decision, page, per_page: perPage } }
     ),
 
   // FormData upload — src/services/api.ts sets a global Content-Type:

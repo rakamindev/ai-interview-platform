@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UploadDropzone from "@/components/cvScreening/UploadDropzone";
 import EntryRow, { CANDIDATE_GRID_COLS } from "@/components/cvScreening/EntryRow";
 import { cvScreeningsApi } from "@/services/cvScreenings";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, FileSearch2, Users } from "lucide-react";
-import type { CvScreening, CvScreeningEntry, CvScreeningBatch } from "@/types";
+import { ArrowLeft, ChevronLeft, ChevronRight, FileSearch2, Users } from "lucide-react";
+import type { CvScreening, CvScreeningEntry, CvScreeningBatch, PaginationMeta } from "@/types";
 
 const DECISION_FILTERS: { value: string; label: string }[] = [
   { value: "", label: "All" },
@@ -18,6 +19,8 @@ const DECISION_FILTERS: { value: string; label: string }[] = [
   { value: "invited", label: "Invited" },
   { value: "not_advanced", label: "Not advanced" },
 ];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export default function CvScreeningDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +32,9 @@ export default function CvScreeningDetailPage() {
   const loading = metaLoadedId !== id || entriesLoadedId !== id;
   const [error, setError] = useState(false);
   const [decisionFilter, setDecisionFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+  const [entriesMeta, setEntriesMeta] = useState<PaginationMeta | null>(null);
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
   const [reanalyzingEntryId, setReanalyzingEntryId] = useState<number | null>(null);
   const [cancellingEntryId, setCancellingEntryId] = useState<number | null>(null);
@@ -45,9 +51,16 @@ export default function CvScreeningDetailPage() {
   }, [id]);
 
   const loadEntries = useCallback(async () => {
-    const res = await cvScreeningsApi.entries(Number(id), decisionFilter || undefined);
+    const res = await cvScreeningsApi.entries(Number(id), decisionFilter || undefined, page, perPage);
     setEntries(res.data.entries);
-  }, [id, decisionFilter]);
+    setEntriesMeta(res.data.meta);
+    // A poll-driven refresh can shrink the result set out from under a user
+    // sitting on a later page (e.g. entries moving out of the current filter)
+    // — land them on the new last page instead of stranding them on an empty one.
+    if (res.data.meta.total_pages >= 1 && page > res.data.meta.total_pages) {
+      setPage(res.data.meta.total_pages);
+    }
+  }, [id, decisionFilter, page, perPage]);
 
   useEffect(() => {
     Promise.all([loadScreening(), loadBatches()])
@@ -69,6 +82,16 @@ export default function CvScreeningDetailPage() {
     5000,
     hasPendingEntries
   );
+
+  const handleFilterChange = (value: string) => {
+    setDecisionFilter(value);
+    setPage(1);
+  };
+
+  const handlePerPageChange = (value: number) => {
+    setPerPage(value);
+    setPage(1);
+  };
 
   const handleUpload = async (files: File[], onProgress: (percent: number) => void) => {
     await cvScreeningsApi.uploadBatch(Number(id), files, onProgress);
@@ -150,6 +173,14 @@ export default function CvScreeningDetailPage() {
   // frozen at upload time) — fall back to the screening's current setting only
   // when no batch has been uploaded yet, so there's nothing snapshotted to show.
   const effectiveThreshold = latestBatch?.threshold ?? screening?.threshold;
+
+  // Global 0-indexed offset of this page's first row, so row numbers stay
+  // unique and descending (newest = highest) across pages instead of
+  // restarting at the page size on every page.
+  const pageOffset = entriesMeta ? (entriesMeta.current_page - 1) * entriesMeta.per_page : 0;
+  const totalCount = entriesMeta?.total_count ?? entries.length;
+  const showingFrom = totalCount === 0 ? 0 : pageOffset + 1;
+  const showingTo = totalCount === 0 ? 0 : Math.min(pageOffset + entries.length, totalCount);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -257,7 +288,7 @@ export default function CvScreeningDetailPage() {
                 variant={decisionFilter === f.value ? "secondary" : "ghost"}
                 size="sm"
                 className="h-7 px-3 text-xs"
-                onClick={() => setDecisionFilter(f.value)}
+                onClick={() => handleFilterChange(f.value)}
               >
                 {f.label}
               </Button>
@@ -293,7 +324,7 @@ export default function CvScreeningDetailPage() {
                   <EntryRow
                     key={entry.id}
                     entry={entry}
-                    index={entries.length - i}
+                    index={totalCount - (pageOffset + i)}
                     onReview={handleReview}
                     reviewing={reviewingEntryId === entry.id}
                     onReanalyze={handleReanalyze}
@@ -302,6 +333,57 @@ export default function CvScreeningDetailPage() {
                     cancelling={cancellingEntryId === entry.id}
                   />
                 ))}
+              </div>
+
+              <div className="flex items-center justify-between gap-3 flex-wrap px-5 py-3 border-t text-xs text-muted-foreground">
+                <div>
+                  Showing {showingFrom}–{showingTo} of {totalCount} candidate{totalCount === 1 ? "" : "s"}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span>Rows per page</span>
+                    <Select
+                      value={String(perPage)}
+                      onValueChange={(value) => handlePerPageChange(Number(value))}
+                    >
+                      <SelectTrigger className="h-7 w-[68px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAGE_SIZE_OPTIONS.map((size) => (
+                          <SelectItem key={size} value={String(size)}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>
+                      Page {entriesMeta?.current_page ?? 1} of {entriesMeta?.total_pages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      disabled={!entriesMeta || entriesMeta.current_page <= 1}
+                      onClick={() => setPage((p) => p - 1)}
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      disabled={!entriesMeta || entriesMeta.current_page >= entriesMeta.total_pages}
+                      onClick={() => setPage((p) => p + 1)}
+                      aria-label="Next page"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
