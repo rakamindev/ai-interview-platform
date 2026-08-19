@@ -25,3 +25,21 @@ Each service has its own setup guide. Run the API first, then the web app pointe
 - This is the codebase you assess, harden, and release. Treat it as a version about to ship to a client.
 - Work in the `/assessment` folder at the repo root for your written deliverables; code changes go in `api/` or `web/`.
 - See the case-study brief you were given for what to produce and how it is evaluated.
+
+## What changed in this revamp ("integrity of assessment")
+
+This branch ships one focused PR that makes assessment results honest and trustworthy:
+
+- **Transcript integrity guard** (`TranscriptIntegrity`) — a portfolio is no longer published from an unreadable transcript. Corrupted audio (hallucinated multilingual content) now leads to an `unverifiable` portfolio instead of a misleading low score.
+- **Four honest portfolio states** in the web UI — `generating` (polling), `failed` (readable error + retry), `unverifiable` (reason + review + manual override), and `complete`.
+- **Healthy 429 handling** — rate limits are surfaced as clear errors and retried with proper backoff instead of hammering the Gemini quota.
+- **Robust PDF export** — non-WinAnsi characters no longer crash exports (no more 500), and a portfolio is never marked `complete` without evidence.
+- **Protected data (UU PDP)** — sensitive params/PII are filtered from logs; secrets are gitignored.
+- **Designed failure paths** — timeouts, model errors, partial writes, and duplicate jobs handled explicitly.
+
+### Proof
+
+- `bundle exec rspec` → **18 examples, 0 failures** (first spec suite in the repo), including a seeded-fault test and designed-failure-path specs.
+- `npx tsc --noEmit` → clean.
+- Seeded-fault scratch branch (`scratch-seeded-fault`) shows a red→green cycle with visible history.
+- Full execution narrative: [`docs/execution.md`](docs/execution.md).
