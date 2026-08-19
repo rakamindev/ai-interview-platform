@@ -1,9 +1,9 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download, Volume2 } from "lucide-react";
+import { ArrowLeft, Download, Pencil, Volume2 } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -17,6 +17,7 @@ export default function TranscriptPage() {
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const saveRevision = async (event: FormEvent, turn: TranscriptTurn) => {
     event.preventDefault();
@@ -51,6 +52,12 @@ export default function TranscriptPage() {
     } catch {
       setPlaybackUrl(null);
     }
+  };
+
+  const playTurn = (turn: TranscriptTurn) => {
+    if (!audioRef.current || turn.audio_start_ms === undefined) return;
+    audioRef.current.currentTime = turn.audio_start_ms / 1000;
+    void audioRef.current.play();
   };
 
   const handleDownload = () => {
@@ -100,7 +107,7 @@ export default function TranscriptPage() {
       )}
 
       {playbackUrl && (
-        <audio className="w-full" controls src={playbackUrl}>
+        <audio className="w-full" controls ref={audioRef} src={playbackUrl}>
           Your browser cannot play this recording.
         </audio>
       )}
@@ -147,12 +154,19 @@ export default function TranscriptPage() {
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
                 {!isAI && editingId !== turn.id && (
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => {
-                    setEditingId(turn.id);
-                    setDraft(turn.text);
-                  }}>
-                    Correct transcript
-                  </Button>
+                  <div className="mt-3 flex gap-2">
+                    {playbackUrl && turn.audio_start_ms !== undefined && (
+                      <Button variant="outline" size="icon" title="Play candidate response" onClick={() => playTurn(turn)}>
+                        <Volume2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    <Button variant="outline" size="icon" title="Correct transcript" onClick={() => {
+                      setEditingId(turn.id);
+                      setDraft(turn.text);
+                    }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 )}
                 {!isAI && editingId === turn.id && (
                   <form className="mt-3 space-y-2" onSubmit={(event) => saveRevision(event, turn)}>

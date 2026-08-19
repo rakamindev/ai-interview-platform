@@ -128,7 +128,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -208,23 +208,8 @@ export default function PortfolioPage() {
 
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
-        <>
-          <section className="rounded-lg border p-4 space-y-3">
-            <div>
-              <h2 className="text-sm font-semibold">Reviewer notes</h2>
-              <p className="text-xs text-muted-foreground">Included in the PDF export.</p>
-            </div>
-            <form className="space-y-2" onSubmit={saveNote}>
-              <textarea className="min-h-20 w-full rounded border bg-background p-2 text-sm" value={noteBody} onChange={(event) => setNoteBody(event.target.value)} placeholder="Add an interview review note" required />
-              <Button size="sm" disabled={savingNote}>{savingNote ? "Saving…" : "Add note"}</Button>
-            </form>
-            {notes.length > 0 && (
-              <div className="space-y-2">
-                {notes.map((note) => <p className="rounded bg-muted p-2 text-sm" key={note.id}>{note.body}</p>)}
-              </div>
-            )}
-          </section>
-
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-6">
+          <div className="space-y-6">
           {/* Configured skills */}
           <div className="space-y-3">
             <div>
@@ -291,7 +276,25 @@ export default function PortfolioPage() {
               Run Fit/Gap Analysis →
             </Button>
           </div>
-        </>
+          </div>
+          <aside className="mt-6 lg:mt-0 lg:sticky lg:top-20 lg:self-start">
+            <section className="rounded-lg border p-4 space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold">Reviewer notes</h2>
+                <p className="text-xs text-muted-foreground">Included in the PDF export.</p>
+              </div>
+              <form className="space-y-2" onSubmit={saveNote}>
+                <textarea className="min-h-20 w-full rounded border bg-background p-2 text-sm" value={noteBody} onChange={(event) => setNoteBody(event.target.value)} placeholder="Add an interview review note" required />
+                <Button size="sm" disabled={savingNote}>{savingNote ? "Saving…" : "Add note"}</Button>
+              </form>
+              {notes.length > 0 && (
+                <div className="space-y-2">
+                  {notes.map((note) => <p className="rounded bg-muted p-2 text-sm" key={note.id}>{note.body}</p>)}
+                </div>
+              )}
+            </section>
+          </aside>
+        </div>
       )}
     </div>
   );

@@ -19,7 +19,7 @@ namespace :demo do
 
   desc 'Seed synthetic candidate audio/transcript from URL; PROFILE=low|mid|high'
   task :seed_interview, [:url] => :environment do |_task, arguments|
-    raise 'Synthetic seeding is development/test only' unless Rails.env.local?
+    raise 'Synthetic seeding is development/test only' unless Rails.env.development? || Rails.env.test?
 
     url = arguments.fetch(:url)
     profile = ENV.fetch('PROFILE', 'mid')
@@ -76,16 +76,21 @@ namespace :demo do
         model: model,
         input: "Synthesize this synthetic candidate interview answer naturally. Do not add words.\n\n#{text}",
         response_format: { type: 'audio' },
+        stream: true,
         generation_config: { speech_config: [{ voice: 'Kore' }] }
       }.to_json,
       { 'Content-Type' => 'application/json', 'x-goog-api-key' => api_key, 'Api-Revision' => '2026-05-20' }
     )
     raise "Gemini TTS failed with #{response.status}" unless response.success?
 
-    encoded = JSON.parse(response.body).dig('output_audio', 'data')
-    raise 'Gemini TTS response did not include audio' unless encoded.is_a?(String)
+    chunks = response.body.each_line.filter_map do |line|
+      next unless line.start_with?('data: ')
 
-    Base64.strict_decode64(encoded)
+      extract_audio_data(JSON.parse(line.delete_prefix('data: ')))
+    end
+    raise 'Gemini TTS response did not include audio' if chunks.empty?
+
+    Base64.strict_decode64(chunks.join)
   rescue Faraday::Error => error
     raise "Gemini TTS request failed: #{error.message}"
   end
@@ -100,6 +105,26 @@ namespace :demo do
         probe_count: 3,
         last_signal: 'Synthetic demo fixture'
       )
+    end
+  end
+
+  def extract_audio_data(value)
+    case value
+    when Hash
+      data = value['data']
+      return data if data.is_a?(String) && data.match?(/\A[A-Za-z0-9+\/=]+\z/)
+
+      value.each_value do |child|
+        result = extract_audio_data(child)
+        return result if result
+      end
+      nil
+    when Array
+      value.each do |child|
+        result = extract_audio_data(child)
+        return result if result
+      end
+      nil
     end
   end
 
