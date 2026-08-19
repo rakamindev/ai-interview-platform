@@ -7,6 +7,8 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post "auth/login", to: "authentication#authenticate"
+      post "auth/refresh", to: "authentication#refresh"
+      delete "auth/logout", to: "authentication#logout"
       # Health check
       get  "health", to: proc { [200, {}, [{ status: "ok" }.to_json]] }
 

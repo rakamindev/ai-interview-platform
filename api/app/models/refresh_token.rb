@@ -24,6 +24,10 @@ class RefreshToken < ApplicationRecord
     used_at.present? && used_at < GRACE_PERIOD.ago
   end
 
+  def active?
+    revoked_at.nil? && expires_at > Time.current
+  end
+
   def valid_token?
     active? || (used_at.present? && !grace_period_expired?)
   end

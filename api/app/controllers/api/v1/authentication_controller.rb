@@ -67,28 +67,29 @@ module Api
       private
 
       def store_refresh_cookie(token)
-        cookies[:refresh_token] = {
-          value: token,
-          http_only: true,
-          secure: Rails.env.production?,
-          same_site: :lax,
-          path: "/api/v1/auth",
-          max_age: 604_800
-        }
+        cookie_value = "refresh_token=#{token}; Path=/api/v1/auth; Max-Age=604800; SameSite=Lax; HttpOnly"
+        cookie_value += "; Secure" if Rails.env.production?
+        response.headers["Set-Cookie"] = cookie_value
       end
 
       def clear_refresh_cookie
-        cookies.delete(:refresh_token, path: "/api/v1/auth")
+        cookie_value = "refresh_token=; Path=/api/v1/auth; Max-Age=0; SameSite=Lax; HttpOnly"
+        cookie_value += "; Secure" if Rails.env.production?
+        response.headers["Set-Cookie"] = cookie_value
       end
 
       def extract_refresh_token
-        cookies[:refresh_token]
+        request.headers["Cookie"]&.split("; ")&.each do |cookie|
+          name, value = cookie.split("=", 2)
+          return value if name == "refresh_token"
+        end
+        nil
       end
 
       def verify_csrf!
         return if request.headers["X-Requested-With"].present?
 
-        render json: { errors: [{ status: 403, message: "Missing CSRF token" }] }, status: :forbidden
+        raise ExceptionHandler::Unauthorized, "Missing CSRF token"
       end
 
       def token_hash(token)

@@ -47,6 +47,7 @@ module AiInterview
     # `authorize_auth_token!` which adds a before_action per controller.
 
     config.middleware.use Rack::Attack
+    config.middleware.use ActionDispatch::Cookies
     config.middleware.use TenantResolverMiddleware
   end
 end
