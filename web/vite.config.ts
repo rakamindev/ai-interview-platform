@@ -1,6 +1,25 @@
 import { defineConfig, lazyPlugins } from "vite-plus";
 import react from "@vitejs/plugin-react";
 
+// Node global (config runs under Node); declared locally to avoid pulling in @types/node.
+declare const process: { env: Record<string, string | undefined> };
+
+// Fail a production build if VITE_DEV_TOKEN is set — it would bake a shared dev
+// auth token into the public client bundle (an auth bypass). Dev/test builds are
+// unaffected.
+function guardDevTokenPlugin() {
+  return {
+    name: "guard-dev-token",
+    config(_config: unknown, env: { command: string; mode: string }) {
+      if (env.command === "build" && env.mode === "production" && process.env.VITE_DEV_TOKEN) {
+        throw new Error(
+          "[security] VITE_DEV_TOKEN must be empty for production builds — it would bake a shared auth token into the client bundle.",
+        );
+      }
+    },
+  };
+}
+
 export default defineConfig({
   fmt: {},
   lint: {
@@ -40,7 +59,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: lazyPlugins(() => [react()]),
+  plugins: [guardDevTokenPlugin(), lazyPlugins(() => [react()])],
   resolve: {
     tsconfigPaths: true,
   },
