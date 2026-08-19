@@ -148,32 +148,47 @@ module Portfolios
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      data = if response.is_a?(Hash)
+               response
+             else
+               clean_str = response.to_s.strip.sub(/\A```(?:json)?\s*/i, '').sub(/\s*```\z/, '')
+               JSON.parse(clean_str)
+             end
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        level = skill_data['level'].to_i
+        level = 1 if level < 1 || level > 5
+        confidence = %w[high medium low].include?(skill_data['confidence']&.to_s&.downcase) ? skill_data['confidence'].to_s.downcase : 'low'
+        summary = skill_data['competency_summary'].presence || 'Competency summary not provided by model.'
+
         portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
+          skill_label:        skill_data['skill_label'] || 'Configured Skill',
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level,
+          ai_confidence:      confidence,
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: summary
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        level = skill_data['level'].to_i
+        level = 1 if level < 1 || level > 5
+        confidence = %w[high medium low].include?(skill_data['confidence']&.to_s&.downcase) ? skill_data['confidence'].to_s.downcase : 'low'
+        summary = skill_data['competency_summary'].presence || 'Competency summary not provided by model.'
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
+          skill_label:        skill_data['skill_label'] || 'Discovered Skill',
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level,
+          ai_confidence:      confidence,
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: summary
         )
       end
     end

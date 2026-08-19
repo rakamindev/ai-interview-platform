@@ -36,6 +36,7 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletedSkillIds, setDeletedSkillIds] = useState<number[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -44,12 +45,27 @@ export default function AssessmentEditPage() {
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
+  const handleRemoveSkill = (index: number) => {
+    const target = fields[index] as any;
+    // Check if it has a backend database ID (number)
+    const existingDbId = target?.id && typeof target.id === "number" ? target.id : target?.skill_db_id;
+    if (existingDbId) {
+      setDeletedSkillIds((prev) => [...prev, existingDbId]);
+    }
+    remove(index);
+  };
+
   useEffect(() => {
     assessmentsApi
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        // Map db id to skill_db_id so fieldArray doesn't overwrite it with client-side uuid
+        const formattedSkills = (a.skills || []).map((s) => ({
+          ...s,
+          skill_db_id: s.id,
+        }));
+        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: formattedSkills });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -74,10 +90,31 @@ export default function AssessmentEditPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const activeSkills = data.skills.map((s: any, i) => ({
+        id: s.skill_db_id || (typeof s.id === "number" ? s.id : undefined),
+        skill_id: s.skill_id,
+        skill_label: s.skill_label,
+        is_custom: s.is_custom,
+        expected_level: s.expected_level,
+        display_order: i,
+        scope_include: s.scope_include,
+        scope_exclude: s.scope_exclude,
+        l1_anchor: s.l1_anchor,
+        l2_anchor: s.l2_anchor,
+        l3_anchor: s.l3_anchor,
+        l4_anchor: s.l4_anchor,
+        l5_anchor: s.l5_anchor,
+      }));
+
+      const destroyedSkills = deletedSkillIds.map((delId) => ({
+        id: delId,
+        _destroy: true,
+      }));
+
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: [...activeSkills, ...destroyedSkills],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -143,7 +180,7 @@ export default function AssessmentEditPage() {
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => handleRemoveSkill(index)} />
                   ))}
                 </div>
               </SortableContext>

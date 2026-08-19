@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -50,7 +50,8 @@ module Api
             assessment: {
               id:             @session.assessment.id,
               name:           @session.assessment.name,
-              time_limit_min: @session.assessment.time_limit_min
+              time_limit_min: @session.assessment.time_limit_min,
+              language:       @session.assessment.language || 'en'
             }
           )
         )
@@ -113,19 +114,29 @@ module Api
       end
 
       # POST /sessions/:token/audio_complete  — no JWT, invite token in URL
-      # Called by the frontend when the audio queue drains after a preparing_to_end signal.
-      # Ends the session if all coverage is complete; idempotent if already ended.
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
+      end
+
+      # POST /sessions/:token/consent — no JWT, invite token in URL (UU PDP Compliance)
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        locale = params[:locale].presence || 'id'
+        session.grant_consent!(locale: locale)
+
+        json_response(
+          consented:      true,
+          consented_at:   session.consented_at,
+          consent_locale: session.consent_locale
+        )
       end
 
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
@@ -146,10 +157,13 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:         session.id,
+          role_title:         assessment.name,
+          time_limit_min:     assessment.time_limit_min,
+          session_status:     session.status,
+          language:           assessment.language || 'en',
+          candidate_consent:  session.candidate_consent,
+          consented_at:       session.consented_at
         )
       end
 
@@ -163,19 +177,21 @@ module Api
 
       def session_json(session)
         {
-          id:               session.id,
-          assessment_id:    session.assessment_id,
-          tenant_id:        session.tenant_id,
-          candidate_id:     session.candidate_id,
-          candidate_name:   session.candidate_name,
-          invite_token:     session.invite_token,
-          invite_url:       session.invite_url,
-          status:           session.status,
-          end_reason:       session.end_reason,
-          started_at:       session.started_at,
-          ended_at:         session.ended_at,
-          duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          id:                 session.id,
+          assessment_id:      session.assessment_id,
+          tenant_id:          session.tenant_id,
+          candidate_id:       session.candidate_id,
+          candidate_name:     session.candidate_name,
+          candidate_consent:  session.candidate_consent,
+          consented_at:       session.consented_at,
+          invite_token:       session.invite_token,
+          invite_url:         session.invite_url,
+          status:             session.status,
+          end_reason:         session.end_reason,
+          started_at:         session.started_at,
+          ended_at:           session.ended_at,
+          duration_seconds:   session.duration_seconds,
+          created_at:         session.created_at
         }
       end
 

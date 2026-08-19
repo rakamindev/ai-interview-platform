@@ -62,6 +62,7 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
+          is_override:     portfolio_skill&.dig(:overridden) || false,
           confidence:      portfolio_skill&.dig(:confidence)
         }
       end

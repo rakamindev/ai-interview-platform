@@ -26,8 +26,18 @@ class Session < ApplicationRecord
   def pending? = status == 'pending'
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    frontend_base = ENV['FRONTEND_URL'].presence ||
+                    (ENV['ALLOWED_ORIGINS'].present? && !ENV['ALLOWED_ORIGINS'].include?('*') ? ENV['ALLOWED_ORIGINS'].split(',').first.strip : nil) ||
+                    'http://localhost:5173'
+    "#{frontend_base}/interview/#{invite_token}"
+  end
+
+  def grant_consent!(locale: 'id')
+    update!(
+      candidate_consent: true,
+      consented_at:      Time.current,
+      consent_locale:    locale.to_s
+    )
   end
 
   private

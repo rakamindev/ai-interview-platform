@@ -11,6 +11,14 @@ class PortfolioSkill < ApplicationRecord
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }
   validates :competency_summary, presence: true
 
+  def effective_level
+    assessor_override&.override_level || ai_level
+  end
+
+  def overridden?
+    assessor_override.present?
+  end
+
   # evidence is stored as JSONB array of quote strings
   def evidence_quotes
     Array(evidence)
