@@ -656,6 +656,12 @@ class AudioWebSocketMiddleware
     # Duplicate turn — skip silently (idempotent)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Failed to save transcript turn: #{e.message}")
+    session.update_column(:transcript_capture_failed_at, Time.current) if session.transcript_capture_failed_at.nil?
+    # Flag the session so downstream viewers (assessor transcript page, the
+    # candidate's own "my data" view) can tell "we failed to record this" apart
+    # from "the candidate said nothing" — the two look identical as an empty
+    # transcript otherwise. Only set once per session to avoid a write per
+    # failed turn.
   end
 
   def check_time_ceiling(session, state, browser_ws)
@@ -756,6 +762,7 @@ class AudioWebSocketMiddleware
     return [nil, 'Session not found'] unless session
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+    return [nil, 'Consent required before starting the interview'] unless session.consent_given?
 
     [session, nil]
   end

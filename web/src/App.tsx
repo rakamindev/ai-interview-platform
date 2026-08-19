@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -15,12 +16,16 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import PrivacyPolicyPage from "@/pages/legal/PrivacyPolicyPage";
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <Toaster position="top-right" richColors duration={5000} />
+      <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>
@@ -56,6 +61,7 @@ export default function App() {
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   );
 }

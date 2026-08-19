@@ -12,6 +12,7 @@ export default function TranscriptPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [captureFailed, setCaptureFailed] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -20,6 +21,7 @@ export default function TranscriptPage() {
     ])
       .then(([tRes, sRes]) => {
         setTurns(tRes.data.turns);
+        setCaptureFailed(tRes.data.transcript_capture_failed);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
       .catch(() => setError(true))
@@ -79,7 +81,14 @@ export default function TranscriptPage() {
         </div>
       )}
 
-      {!loading && !error && turns.length === 0 && (
+      {!loading && !error && turns.length === 0 && captureFailed && (
+        <div className="border border-destructive/30 bg-destructive/5 rounded-lg p-6 text-center text-sm text-destructive">
+          Transcript capture failed during this interview — this is not a silent
+          "candidate said nothing," recording genuinely broke partway through.
+        </div>
+      )}
+
+      {!loading && !error && turns.length === 0 && !captureFailed && (
         <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
           No transcript available for this session.
         </div>

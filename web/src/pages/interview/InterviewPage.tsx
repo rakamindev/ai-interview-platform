@@ -21,6 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import ConsentDialog from "@/components/interview/ConsentDialog";
+import MyDataDialog from "@/components/interview/MyDataDialog";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -38,6 +40,9 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [consentStatus, setConsentStatus] = useState<"loading" | "pending" | "given" | "declined">("loading");
+  const [consentSubmitting, setConsentSubmitting] = useState(false);
+  const [myDataOpen, setMyDataOpen] = useState(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -46,9 +51,32 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        setConsentStatus(res.data.consent_given ? "given" : "pending");
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
+  }, [token]);
+
+  const handleConsentAccept = useCallback(async () => {
+    if (!token) return;
+    setConsentSubmitting(true);
+    try {
+      await sessionsApi.submitConsent(token, true);
+      setConsentStatus("given");
+    } finally {
+      setConsentSubmitting(false);
+    }
+  }, [token]);
+
+  const handleConsentDecline = useCallback(async () => {
+    if (!token) return;
+    setConsentSubmitting(true);
+    try {
+      await sessionsApi.submitConsent(token, false);
+    } finally {
+      setConsentSubmitting(false);
+      setConsentStatus("declined");
+    }
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -189,8 +217,28 @@ export default function InterviewPage() {
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
+    if (consentStatus === "declined") {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <h2 className="text-xl font-semibold">Consent required</h2>
+          <p className="text-sm text-muted-foreground">
+            The interview can't proceed without your consent to process your voice and transcript
+            data. If you'd like to reconsider, refresh this page. Otherwise, please contact the
+            hiring team.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+        <ConsentDialog
+          open={consentStatus === "pending"}
+          onAccept={handleConsentAccept}
+          onDecline={handleConsentDecline}
+          submitting={consentSubmitting}
+        />
+
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
@@ -200,7 +248,7 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {consentStatus !== "given" ? null : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
@@ -229,14 +277,47 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
+      <div className="max-w-md mx-auto px-4 py-16">
+        <div className="rounded-2xl border bg-card shadow-sm px-8 py-10 text-center space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50 ring-8 ring-green-50/50">
+            <CheckCircle className="h-7 w-7 text-green-600" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-semibold tracking-tight">Interview Complete</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Thank you. Your responses have been recorded.
+              <br />
+              The hiring team will review your results and follow up with you.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setMyDataOpen(true)}
+          >
+            View or delete your data
+          </Button>
+        </div>
+        {token && <MyDataDialog token={token} open={myDataOpen} onOpenChange={setMyDataOpen} />}
+      </div>
+    );
+  }
+
+  // ── State G: Connection failed (never actually completed) ──────────────
+  if (interviewState === "connection_failed") {
+    return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Connection Lost</h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
+          We couldn't restore your connection, so the interview did not finish.
           <br />
-          The hiring team will review your results and follow up with you.
+          This has not been submitted. Please contact the hiring team for next steps.
         </p>
+        <Button className="w-full" size="lg" onClick={startInterview}>
+          Try to Reconnect
+        </Button>
       </div>
     );
   }

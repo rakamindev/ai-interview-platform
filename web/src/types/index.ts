@@ -9,7 +9,7 @@ export interface Assessment {
   updated_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: SessionStatus;
     end_reason?: string | null;
   };
 }
@@ -81,6 +81,8 @@ export interface Portfolio {
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
+  verdict: Verdict | null;
+  verdict_summary?: string | null;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }
@@ -90,7 +92,7 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: string | number | null; // "L1".."L5", or a raw 1-5 number, or null (unassessed)
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
@@ -164,6 +166,21 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  consent_given: boolean;
+}
+
+export type Verdict = "pass" | "consider" | "failed";
+export type SessionStatus = "pending" | "active" | "ended" | "failed";
+export type InterviewStatus = "pending" | "active" | "completed" | "failed";
+
+export interface Candidate {
+  candidate_id: number;
+  candidate_name?: string;
+  session_id: number;
+  session_status: SessionStatus;
+  interview_status: InterviewStatus;
+  interview_date?: string;
+  verdict?: Verdict | null;
 }
 
 export interface PaginationMeta {
@@ -182,7 +199,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "connection_failed";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

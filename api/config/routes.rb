@@ -16,9 +16,20 @@ Rails.application.routes.draw do
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
       }
 
+      # Download speed test — returns a fixed-size payload for throughput measurement
+      get 'speed_test/download', to: proc { |_env|
+        payload = SecureRandom.random_bytes(2 * 1024 * 1024)
+        [200, { 'Content-Type' => 'application/octet-stream' }, [payload]]
+      }
+
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
+        resources :candidates, only: %i[index] do
+          collection do
+            post :export
+          end
+        end
       end
 
       # Sessions
@@ -35,6 +46,9 @@ Rails.application.routes.draw do
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      post 'sessions/:token/consent',        to: 'sessions#consent'
+      get  'sessions/:token/my_data',        to: 'sessions#my_data'
+      post 'sessions/:token/my_data/delete', to: 'sessions#delete_my_data'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

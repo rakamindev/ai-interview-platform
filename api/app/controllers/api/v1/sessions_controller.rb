@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent my_data delete_my_data]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent my_data delete_my_data]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -108,7 +108,8 @@ module Api
               created_at:     t.created_at
             }
           end,
-          total: turns.count
+          total: turns.count,
+          transcript_capture_failed: @session.transcript_capture_failed?
         )
       end
 
@@ -149,8 +150,66 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          consent_given:   session.consent_given?
         )
+      end
+
+      # POST /sessions/:token/consent  — no JWT, invite token in URL
+      # Records (or withdraws) the candidate's consent to have their voice,
+      # transcript, and name processed — including by the third-party AI
+      # provider — before the interview is allowed to start (UU PDP).
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        given = ActiveModel::Type::Boolean.new.cast(params.dig(:consent, :given))
+        consent = session.consent || session.build_consent
+
+        consent.assign_attributes(
+          given:          given,
+          given_at:       given ? Time.current : nil,
+          policy_version: Consent::CURRENT_POLICY_VERSION,
+          ip_address:     request.remote_ip
+        )
+
+        if consent.save
+          json_response(consent_given: consent.given)
+        else
+          json_error(consent.errors.full_messages.first, :unprocessable_entity)
+        end
+      end
+
+      # GET /sessions/:token/my_data — no JWT, invite token in URL
+      # A candidate's own invite token is the only proof of identity they can
+      # ever offer (there's no candidate login), so it doubles as auth here,
+      # same as consent/audio_complete/candidate_info above.
+      def my_data
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        portfolio = session.portfolio
+
+        json_response(
+          candidate_name: session.candidate_name,
+          data_purged:    session.data_purged?,
+          transcript_capture_failed: session.transcript_capture_failed?,
+          transcript:     session.transcript_turns.ordered.map { |t| { speaker: t.speaker, text: t.text } },
+          verdict:        portfolio&.verdict,
+          skills:         portfolio&.portfolio_skills&.map { |s| { skill_label: s.skill_label, ai_level: s.ai_level } } || []
+        )
+      end
+
+      # POST /sessions/:token/my_data/delete — no JWT, invite token in URL
+      # Purges the candidate's own personal data on request (UU PDP right to
+      # erasure). Reuses the same purge routine the retention task uses, so
+      # there's one definition of "what gets deleted," not two.
+      def delete_my_data
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        session.purge_personal_data!
+        json_response(deleted: true)
       end
 
       private
