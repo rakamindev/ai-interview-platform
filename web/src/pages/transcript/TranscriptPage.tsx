@@ -16,7 +16,7 @@ export default function TranscriptPage() {
   useEffect(() => {
     Promise.all([sessionsApi.getTranscript(Number(sessionId)), sessionsApi.get(Number(sessionId))])
       .then(([tRes, sRes]) => {
-        setTurns(tRes.data.turns);
+        setTurns(tRes.data.turns.filter((t): t is TranscriptTurn => t !== null));
         setCandidateName(sRes.data.session.candidate_name ?? null);
         return;
       })

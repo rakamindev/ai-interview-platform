@@ -83,7 +83,7 @@ export default function LiveMonitorPage() {
         setAssessmentName(s.assessment?.name ?? "");
         if (s.status !== "active") setSessionActive(false);
 
-        const turns = tRes.data.turns;
+        const turns = tRes.data.turns.filter((t): t is TranscriptTurn => t !== null);
         setTranscript(turns.slice(-10));
         if (turns.length > 0) {
           lastTurnRef.current = turns[turns.length - 1].turn_number;
@@ -98,8 +98,9 @@ export default function LiveMonitorPage() {
     try {
       const res = await sessionsApi.getTranscript(Number(sessionId), lastTurnRef.current + 1);
       if (res.data.turns.length > 0) {
-        setTranscript((prev) => [...prev, ...res.data.turns].slice(-10));
-        lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
+        const filtered = res.data.turns.filter((t): t is TranscriptTurn => t !== null);
+        setTranscript((prev) => [...prev, ...filtered].slice(-10));
+        lastTurnRef.current = filtered[filtered.length - 1].turn_number;
       }
     } catch {
       // transient poll failure — silently skip, retry on next interval

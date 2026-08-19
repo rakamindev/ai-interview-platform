@@ -56,6 +56,36 @@ export default function InterviewPage() {
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
 
+  const {
+    playChunk,
+    stop: stopPlayback,
+    scheduleAfterPlayback,
+    waitForDrain,
+    cancelDrain
+  } = useAudioPlayback();
+  const audioCompleteCalledRef = useRef(false);
+  const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const callAudioComplete = useCallback(async () => {
+    if (audioCompleteCalledRef.current || !token) return;
+    audioCompleteCalledRef.current = true;
+    cancelDrain();
+    if (audioCompleteSafetyTimerRef.current) {
+      clearTimeout(audioCompleteSafetyTimerRef.current);
+      audioCompleteSafetyTimerRef.current = null;
+    }
+    // Retry until success — endpoint now always returns ended:true or an error.
+    // ended:false is no longer a valid response; any success means the session ended.
+    const attempt = async (delay: number) => {
+      try {
+        await sessionsApi.audioComplete(token);
+      } catch {
+        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
+      }
+    };
+    attempt(2000);
+  }, [token, cancelDrain]);
+
   const handleStateChange = useCallback(
     (state: InterviewState) => {
       setInterviewState(state);
@@ -98,36 +128,6 @@ export default function InterviewPage() {
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
-
-  const {
-    playChunk,
-    stop: stopPlayback,
-    scheduleAfterPlayback,
-    waitForDrain,
-    cancelDrain
-  } = useAudioPlayback();
-  const audioCompleteCalledRef = useRef(false);
-  const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const callAudioComplete = useCallback(async () => {
-    if (audioCompleteCalledRef.current || !token) return;
-    audioCompleteCalledRef.current = true;
-    cancelDrain();
-    if (audioCompleteSafetyTimerRef.current) {
-      clearTimeout(audioCompleteSafetyTimerRef.current);
-      audioCompleteSafetyTimerRef.current = null;
-    }
-    // Retry until success — endpoint now always returns ended:true or an error.
-    // ended:false is no longer a valid response; any success means the session ended.
-    const attempt = async (delay: number) => {
-      try {
-        await sessionsApi.audioComplete(token);
-      } catch {
-        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
-      }
-    };
-    attempt(2000);
-  }, [token, cancelDrain]);
 
   const handleSpeakerChange = useCallback(
     (newSpeaker: InterviewSpeaker) => {

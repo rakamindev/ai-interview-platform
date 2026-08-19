@@ -127,7 +127,7 @@ async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise
 function average(values: number[]): number {
   if (values.length === 0) return 0;
   if (values.length <= 2) return values.reduce((a, b) => a + b, 0) / values.length;
-  const sorted = values.toSorted((a, b) => a - b);
+  const sorted = values.toSorted((a: number, b: number) => a - b);
   const trimmed = sorted.slice(1, -1);
   return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
 }

@@ -56,7 +56,7 @@ export default function FitGapReportPage() {
       } else if (status === 202) {
         // Report is generating — keep polling
         setGenerating(true);
-      } else if (status >= 500) {
+      } else if (status != null && status >= 500) {
         setError("Server error — please try again later");
         setGenerating(false);
       }

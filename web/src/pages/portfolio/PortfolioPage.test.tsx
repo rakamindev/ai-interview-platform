@@ -71,12 +71,22 @@ describe("PortfolioPage", () => {
 
   it("shows generating state while portfolio is generating", async () => {
     mockSessionsApi.getPortfolio.mockResolvedValue({
-      data: { data: { portfolio: null, status: "generating" } }
-    });
-    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [] } });
+      data: { portfolio: null, status: "generating" }
+    } as any);
+    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [], meta: {} } } as any);
     mockSessionsApi.get.mockResolvedValue({
-      data: { session: { candidate_name: "Alice" } }
-    });
+      data: {
+        session: {
+          id: 10,
+          assessment_id: 1,
+          candidate_name: "Alice",
+          invite_token: "tok",
+          invite_url: "http://x",
+          status: "active"
+        },
+        assessment: { id: 1, name: "Test", time_limit_min: 30 }
+      }
+    } as any);
 
     renderPage();
 
@@ -88,16 +98,24 @@ describe("PortfolioPage", () => {
   it("shows failed state with retry button", async () => {
     mockSessionsApi.getPortfolio.mockResolvedValue({
       data: {
-        data: {
-          portfolio: { generation_status: "failed", skills: [], overrides: [], id: 1 },
-          status: "done"
-        }
+        portfolio: { id: 1, generation_status: "failed", skills: [], overrides: [], session_id: 1 },
+        status: "done"
       }
-    });
-    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [] } });
+    } as any);
+    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [], meta: {} } } as any);
     mockSessionsApi.get.mockResolvedValue({
-      data: { session: { candidate_name: "Bob" } }
-    });
+      data: {
+        session: {
+          id: 1,
+          assessment_id: 1,
+          candidate_name: "Bob",
+          invite_token: "tok",
+          invite_url: "http://x",
+          status: "active"
+        },
+        assessment: { id: 1, name: "Test", time_limit_min: 30 }
+      }
+    } as any);
 
     renderPage();
 
@@ -111,21 +129,30 @@ describe("PortfolioPage", () => {
   it("shows error when PDF export fails instead of downloading corrupt blob", async () => {
     mockSessionsApi.getPortfolio.mockResolvedValue({
       data: {
-        data: {
-          portfolio: {
-            id: 5,
-            generation_status: "complete",
-            skills: [],
-            overrides: []
-          },
-          status: "done"
-        }
+        portfolio: {
+          id: 5,
+          session_id: 1,
+          generation_status: "complete",
+          skills: [],
+          overrides: []
+        },
+        status: "done"
       }
-    });
-    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [] } });
+    } as any);
+    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [], meta: {} } } as any);
     mockSessionsApi.get.mockResolvedValue({
-      data: { session: { candidate_name: "Carol" } }
-    });
+      data: {
+        session: {
+          id: 10,
+          assessment_id: 1,
+          candidate_name: "Carol",
+          invite_token: "tok",
+          invite_url: "http://x",
+          status: "active"
+        },
+        assessment: { id: 1, name: "Test", time_limit_min: 30 }
+      }
+    } as any);
     // Export returns JSON error wrapped in Blob
     const errorBlob = new Blob([JSON.stringify({ message: "Export failed: no transcript" })], {
       type: "application/json"
@@ -133,7 +160,7 @@ describe("PortfolioPage", () => {
     mockPortfoliosApi.exportPortfolio.mockResolvedValue({
       data: errorBlob,
       headers: { "content-type": "application/json" }
-    });
+    } as any);
 
     renderPage();
 
@@ -152,21 +179,30 @@ describe("PortfolioPage", () => {
   it("shows generic error when export throws", async () => {
     mockSessionsApi.getPortfolio.mockResolvedValue({
       data: {
-        data: {
-          portfolio: {
-            id: 5,
-            generation_status: "complete",
-            skills: [],
-            overrides: []
-          },
-          status: "done"
-        }
+        portfolio: {
+          id: 5,
+          session_id: 1,
+          generation_status: "complete",
+          skills: [],
+          overrides: []
+        },
+        status: "done"
       }
-    });
-    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [] } });
+    } as any);
+    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [], meta: {} } } as any);
     mockSessionsApi.get.mockResolvedValue({
-      data: { session: { candidate_name: "Dave" } }
-    });
+      data: {
+        session: {
+          id: 10,
+          assessment_id: 1,
+          candidate_name: "Dave",
+          invite_token: "tok",
+          invite_url: "http://x",
+          status: "active"
+        },
+        assessment: { id: 1, name: "Test", time_limit_min: 30 }
+      }
+    } as any);
     mockPortfoliosApi.exportPortfolio.mockRejectedValue(new Error("Network error"));
 
     renderPage();
