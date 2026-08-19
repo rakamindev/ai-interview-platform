@@ -21,6 +21,25 @@ module Api
         json_error("Skill not found", :not_found)
       end
 
+      # POST /api/v1/skill_taxonomies/suggest
+      def suggest
+        label = params[:skill_label].to_s.strip
+        return json_error("skill_label is required", :unprocessable_entity) if label.blank?
+
+        result = SkillTaxonomies::SuggestMatch.new(skill_label: label).call
+
+        if result
+          json_response(
+            suggestion: skill_json(result[:skill]).merge(
+              confidence: result[:confidence],
+              reasoning:  result[:reasoning]
+            )
+          )
+        else
+          json_response(suggestion: nil)
+        end
+      end
+
       private
 
       def skill_json(skill)
