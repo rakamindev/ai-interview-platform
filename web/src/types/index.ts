@@ -129,11 +129,30 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
+  skill_id?: string;
+  expected_level?: number;
   required_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
+  confidence?: "high" | "medium" | "low";
   is_override?: boolean;
+}
+
+export interface FitGapSummary {
+  total_required: number;
+  assessed_count: number;
+  match_count: number;
+  exceed_count: number;
+  gap_count: number;
+  not_assessed_count: number;
+  low_confidence_count: number;
+  override_count: number;
+  critical_gap_count: number;
+  readiness_score: number;
+  risk_level: "low" | "medium" | "high";
+  recommendation: string;
+  flags: string[];
 }
 
 export interface FitGapReport {
@@ -141,6 +160,7 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
+  comparison_summary?: FitGapSummary;
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
