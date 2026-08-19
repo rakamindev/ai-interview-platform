@@ -1,4 +1,7 @@
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { api } from "@/services/api";
+import { setAuth } from "@/stores/authAtom";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -17,6 +20,18 @@ import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 
 export default function App() {
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const res = await api.post("/auth/refresh");
+        setAuth(res.data.token, res.data.user);
+      } catch {
+        // Refresh failed - user will be redirected to login by ProtectedRoute
+      }
+    };
+    initAuth();
+  }, []);
+
   return (
     <Routes>
       {/* Auth routes */}
