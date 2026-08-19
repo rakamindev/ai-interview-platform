@@ -754,6 +754,7 @@ class AudioWebSocketMiddleware
     end
 
     return [nil, 'Session not found'] unless session
+    return [nil, 'Invite link has expired'] if session.expired?
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 

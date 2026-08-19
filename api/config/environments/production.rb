@@ -46,4 +46,22 @@ Rails.application.configure do
 
   # Use a cache store that supports distributed caching.
   config.cache_store = :redis_cache_store, { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
+
+  # CV uploads — local disk for now (see storage.yml comment re: S3/GCS for prod).
+  config.active_storage.service = :production
+
+  # SMTP delivery — credentials come from application.yml (see SMTP_* keys).
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.raise_delivery_errors = false
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_BASE_URL", "").sub(%r{\Ahttps?://}, ''), protocol: 'https' }
+  config.action_mailer.smtp_settings = {
+    address:              ENV.fetch("SMTP_ADDRESS", "smtp.sendgrid.net"),
+    port:                 ENV.fetch("SMTP_PORT", 587).to_i,
+    domain:               ENV["SMTP_DOMAIN"],
+    user_name:            ENV["SMTP_USERNAME"],
+    password:             ENV["SMTP_PASSWORD"],
+    authentication:       "plain",
+    enable_starttls_auto: true
+  }
 end

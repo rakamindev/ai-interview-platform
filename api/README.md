@@ -52,7 +52,7 @@ rails db:seed
 ## 4. Start Redis via Docker
 
 ```bash
-docker run -d -p 6379:6379 --name redis redis:alpine
+docker run -d -p 6379:6379 --name redis redis:alpine7
 ```
 
 ---

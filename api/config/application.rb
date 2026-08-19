@@ -6,6 +6,8 @@ require 'rails'
 require 'active_model/railtie'
 require 'active_record/railtie'
 require 'action_controller/railtie'
+require 'action_mailer/railtie'
+require 'active_storage/engine'
 
 require_relative '../app/middlewares/application_middleware'
 require_relative '../app/middlewares/tenant_resolver_middleware'
