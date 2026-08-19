@@ -167,7 +167,8 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)) +
+                                portfolio.missing_configured_skills.map(&method(:missing_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
       end
@@ -178,10 +179,28 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
+          is_assessed:       true,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
           evidence:          skill.evidence_quotes,
           competency_summary: skill.competency_summary
+        }
+      end
+
+      # A configured skill Gemini never returned a rating for. Rendered as a
+      # placeholder so it's visible to the assessor instead of silently
+      # vanishing from the portfolio.
+      def missing_skill_json(assessment_skill)
+        {
+          id:                nil,
+          skill_id:          assessment_skill.skill_id,
+          skill_label:       assessment_skill.skill_label,
+          is_discovered:     false,
+          is_assessed:       false,
+          ai_level:          nil,
+          ai_confidence:     nil,
+          evidence:          [],
+          competency_summary: nil
         }
       end
 

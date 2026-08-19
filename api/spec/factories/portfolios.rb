@@ -1,0 +1,7 @@
+FactoryBot.define do
+  factory :portfolio do
+    session
+    generation_status { "complete" }
+    generated_at { Time.current }
+  end
+end
