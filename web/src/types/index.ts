@@ -238,6 +238,12 @@ export interface CvScreeningEntry {
   score?: number | null;
   filename?: string | null;
   created_at?: string;
+  // The entry's own batch-snapshotted vacancy/assessment/threshold — not
+  // necessarily the screening's current ones, which may have changed since
+  // (see CvScreeningEditPage).
+  vacancy_role_title?: string;
+  assessment_name?: string;
+  threshold?: number | null;
 }
 
 // Response shape for GET /vacancies/:id/deletion_check and

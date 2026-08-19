@@ -10,7 +10,7 @@ import EntryRow, { CANDIDATE_GRID_COLS } from "@/components/cvScreening/EntryRow
 import DeleteResourceDialog from "@/components/DeleteResourceDialog";
 import { cvScreeningsApi } from "@/services/cvScreenings";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, ChevronLeft, ChevronRight, FileSearch2, Users } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, FileSearch2, Pencil, Users } from "lucide-react";
 import type { CvScreening, CvScreeningEntry, CvScreeningBatch, PaginationMeta } from "@/types";
 
 const DECISION_FILTERS: { value: string; label: string }[] = [
@@ -175,6 +175,12 @@ export default function CvScreeningDetailPage() {
   // frozen at upload time) — fall back to the screening's current setting only
   // when no batch has been uploaded yet, so there's nothing snapshotted to show.
   const effectiveThreshold = latestBatch?.threshold ?? screening?.threshold;
+  // Only worth flagging when the latest batch actually snapshotted its own
+  // threshold and that value has since drifted from the screening's current
+  // setting (e.g. via CvScreeningEditPage) — otherwise effectiveThreshold
+  // already equals the current one and there's nothing to reconcile.
+  const currentThreshold = screening?.threshold ?? null;
+  const thresholdsDiffer = latestBatch?.threshold != null && latestBatch.threshold !== currentThreshold;
 
   // Global 0-indexed offset of this page's first row, so row numbers stay
   // unique and descending (newest = highest) across pages instead of
@@ -201,12 +207,17 @@ export default function CvScreeningDetailPage() {
         </div>
 
         {screening && (
-          <DeleteResourceDialog
-            resourceLabel="CV screening"
-            resourceName={screening.name}
-            onConfirmDelete={() => cvScreeningsApi.delete(Number(id)).then(() => {})}
-            onDeleted={() => navigate("/cv-screenings")}
-          />
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/cv-screenings/${id}/edit`)}>
+              <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+            </Button>
+            <DeleteResourceDialog
+              resourceLabel="CV screening"
+              resourceName={screening.name}
+              onConfirmDelete={() => cvScreeningsApi.delete(Number(id)).then(() => {})}
+              onDeleted={() => navigate("/cv-screenings")}
+            />
+          </div>
         )}
       </div>
 
@@ -228,6 +239,13 @@ export default function CvScreeningDetailPage() {
             public requirements; everything else is left for{" "}
             <strong className="text-foreground">manual Invite/Reject</strong> review.
           </>
+        )}
+        {thresholdsDiffer && (
+          <div className="mt-1.5 pt-1.5 border-t border-border/60">
+            This is the threshold that decided your already-uploaded candidates. Your current
+            setting is <strong className="text-foreground">{currentThreshold}</strong> — it'll
+            apply the next time you upload CVs to this screening.
+          </div>
         )}
       </div>
 

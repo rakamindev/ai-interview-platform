@@ -12,7 +12,12 @@ module Api
 
       # GET /api/v1/cv_screenings/:cv_screening_id/entries?sort=created_at&decision=needs_review
       def index
-        scope = @cv_screening.cv_screening_entries
+        # A screening's vacancy/assessment can change after batches already exist
+        # (CvScreeningEditPage) — each entry's actual vacancy/assessment is
+        # whatever its own batch snapshotted, so entry_json below reads through
+        # that, not the (possibly since-changed) live @cv_screening. Eager-loaded
+        # here to avoid an N+1 across the whole page of entries.
+        scope = @cv_screening.cv_screening_entries.includes(cv_screening_batch: %i[vacancy assessment])
         scope = scope.where(decision: params[:decision]) if params[:decision].present?
         scope = scope.order(created_at: :desc)
 
@@ -142,7 +147,13 @@ module Api
           decision_reason:        entry.decision_reason,
           score:                  entry.score,
           filename:               entry.cv_file.attached? ? entry.cv_file.filename.to_s : nil,
-          created_at:             entry.created_at
+          created_at:             entry.created_at,
+          # The batch's own snapshotted vacancy/assessment/threshold — not the
+          # screening's current ones, which may have changed since this entry was
+          # decided.
+          vacancy_role_title:     entry.cv_screening_batch.vacancy.role_title,
+          assessment_name:        entry.cv_screening_batch.assessment.name,
+          threshold:              entry.cv_screening_batch.threshold
         }
       end
 

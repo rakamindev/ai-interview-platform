@@ -30,6 +30,26 @@ RSpec.describe 'CV Screening Entries API', type: :request do
       expect(json_body['entries'].first['decision']).to eq('needs_review')
     end
 
+    it "shows the entry's own batch-snapshotted vacancy/assessment/threshold, not the screening's current ones" do
+      create(:cv_screening_entry, cv_screening_batch: batch)
+      other_vacancy = create(:vacancy, organization: organization, public_requirement_text: 'Other.')
+      other_assessment = create(:assessment, organization: organization)
+
+      # Edit the screening after the batch/entry already exist — same as a
+      # recruiter using CvScreeningEditPage post-upload.
+      screening.update!(vacancy_id: other_vacancy.id, assessment_id: other_assessment.id, threshold: 50)
+
+      get "/api/v1/cv_screenings/#{screening.id}/entries", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      entry_json = json_body['entries'].first
+      expect(entry_json['vacancy_role_title']).to eq(batch.vacancy.role_title)
+      expect(entry_json['assessment_name']).to eq(batch.assessment.name)
+      expect(entry_json['vacancy_role_title']).not_to eq(other_vacancy.role_title)
+      expect(entry_json['threshold']).to eq(batch.threshold)
+      expect(entry_json['threshold']).not_to eq(50)
+    end
+
     it 'paginates with page/per_page and returns pagination meta' do
       create_list(:cv_screening_entry, 5, cv_screening_batch: batch)
 

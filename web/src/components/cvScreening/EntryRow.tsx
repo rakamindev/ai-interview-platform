@@ -114,6 +114,17 @@ export default function EntryRow({
         <div className="text-xs text-muted-foreground truncate">
           {entry.detected_email ?? "No email detected"}
         </div>
+        {entry.vacancy_role_title && entry.assessment_name && (
+          <div
+            className="text-[10px] text-muted-foreground/70 truncate"
+            title={`Screened against ${entry.vacancy_role_title} · ${entry.assessment_name}${
+              typeof entry.threshold === "number" ? ` · threshold ${entry.threshold}` : ""
+            }`}
+          >
+            {entry.vacancy_role_title} · {entry.assessment_name}
+            {typeof entry.threshold === "number" && ` · Threshold ${entry.threshold}`}
+          </div>
+        )}
       </div>
 
       <div>

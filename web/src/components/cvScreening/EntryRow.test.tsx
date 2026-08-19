@@ -297,6 +297,71 @@ describe("EntryRow", () => {
         vi.unstubAllGlobals();
     });
 
+    it("shows the screened-against vacancy/assessment below the email when present", () => {
+        render(
+            <EntryRow
+                entry={buildEntry({
+                    vacancy_role_title: "Frontend Engineer Senior",
+                    assessment_name: "Frontend Engineer Senior",
+                })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        expect(
+            screen.getByTitle("Screened against Frontend Engineer Senior · Frontend Engineer Senior")
+        ).toBeInTheDocument();
+    });
+
+    it("also shows the batch's threshold when present, in both the visible text and the title", () => {
+        render(
+            <EntryRow
+                entry={buildEntry({
+                    vacancy_role_title: "Frontend Engineer Senior",
+                    assessment_name: "Frontend Engineer Senior",
+                    threshold: 80,
+                })}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        expect(screen.getByText(/Threshold 80/)).toBeInTheDocument();
+        expect(
+            screen.getByTitle(
+                "Screened against Frontend Engineer Senior · Frontend Engineer Senior · threshold 80"
+            )
+        ).toBeInTheDocument();
+    });
+
+    it("omits the screened-against line when vacancy/assessment info is missing", () => {
+        render(
+            <EntryRow
+                entry={buildEntry()}
+                index={1}
+                onReview={vi.fn()}
+                reviewing={false}
+                onReanalyze={vi.fn()}
+                reanalyzing={false}
+                onCancel={vi.fn()}
+                cancelling={false}
+            />
+        );
+
+        expect(screen.queryByText(/Screened against/)).not.toBeInTheDocument();
+    });
+
     it("falls back to a placeholder when no email was detected", () => {
         render(
             <EntryRow

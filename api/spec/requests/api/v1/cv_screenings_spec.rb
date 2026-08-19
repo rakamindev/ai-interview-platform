@@ -31,6 +31,27 @@ RSpec.describe 'CV Screenings API', type: :request do
     end
   end
 
+  describe 'PATCH /api/v1/cv_screenings/:id' do
+    it 'updates the name, vacancy, assessment, and threshold' do
+      screening = create(:cv_screening, tenant_id: organization.id, vacancy: vacancy, assessment: assessment,
+                                         name: 'Old Name', threshold: 50)
+      new_vacancy = create(:vacancy, organization: organization, public_requirement_text: 'Must know Rails.')
+      new_assessment = create(:assessment, organization: organization)
+
+      patch "/api/v1/cv_screenings/#{screening.id}",
+            params:  { cv_screening: { name: 'New Name', vacancy_id: new_vacancy.id,
+                                        assessment_id: new_assessment.id, threshold: 80 } },
+            headers: headers
+
+      expect(response).to have_http_status(:ok)
+      screening.reload
+      expect(screening.name).to eq('New Name')
+      expect(screening.vacancy_id).to eq(new_vacancy.id)
+      expect(screening.assessment_id).to eq(new_assessment.id)
+      expect(screening.threshold).to eq(80)
+    end
+  end
+
   describe 'GET /api/v1/cv_screenings/:id' do
     it 'returns the screening with entry-decision summary counts' do
       screening = create(:cv_screening, tenant_id: organization.id, vacancy: vacancy, assessment: assessment)

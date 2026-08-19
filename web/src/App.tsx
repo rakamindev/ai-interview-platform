@@ -18,6 +18,7 @@ import InterviewPage from "@/pages/interview/InterviewPage";
 import CvScreeningListPage from "@/pages/cvScreenings/CvScreeningListPage";
 import CvScreeningNewPage from "@/pages/cvScreenings/CvScreeningNewPage";
 import CvScreeningDetailPage from "@/pages/cvScreenings/CvScreeningDetailPage";
+import CvScreeningEditPage from "@/pages/cvScreenings/CvScreeningEditPage";
 
 export default function App() {
   return (
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="/cv-screenings" element={<CvScreeningListPage />} />
         <Route path="/cv-screenings/new" element={<CvScreeningNewPage />} />
         <Route path="/cv-screenings/:id" element={<CvScreeningDetailPage />} />
+        <Route path="/cv-screenings/:id/edit" element={<CvScreeningEditPage />} />
       </Route>
       </Route>
 

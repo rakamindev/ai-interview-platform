@@ -68,7 +68,7 @@ module Api
       end
 
       def cv_screening_update_params
-        params.require(:cv_screening).permit(:vacancy_id, :assessment_id, :threshold)
+        params.require(:cv_screening).permit(:name, :vacancy_id, :assessment_id, :threshold)
       end
 
       def cv_screening_json(screening)
