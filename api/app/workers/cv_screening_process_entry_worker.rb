@@ -18,8 +18,8 @@ class CvScreeningProcessEntryWorker
       CvScreenings::BatchNotifier.new(entry.cv_screening_batch).evaluate_after_entry_decision
     end
     Rails.logger.error(
-      "[CvScreeningProcessEntryWorker] retries exhausted for entry_id=#{entry_id}: " \
-      "#{msg['error_class']}: #{msg['error_message']}"
+      "[CvScreeningProcessEntryWorker] entry_id=#{entry_id} retries exhausted — pipeline failure " \
+      "(NOT a model/Gemini call): #{msg['error_class']}: #{msg['error_message']}"
     )
   end
 
@@ -38,7 +38,10 @@ class CvScreeningProcessEntryWorker
     CvScreenings::DecisionEngine.new(entry: entry).call
     CvScreenings::BatchNotifier.new(entry.cv_screening_batch).evaluate_after_entry_decision
   rescue StandardError => e
-    Rails.logger.error("[CvScreeningProcessEntryWorker] failed for entry_id=#{entry_id}: #{e.class}: #{e.message}")
+    Rails.logger.error(
+      "[CvScreeningProcessEntryWorker] entry_id=#{entry_id} pipeline failure (NOT a model/Gemini " \
+      "call — those are caught separately upstream): #{e.class}: #{e.message}"
+    )
     raise
   ensure
     Current.clear
