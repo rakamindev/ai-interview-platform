@@ -22,6 +22,14 @@ module Portfolios
 
       portfolio.update!(generation_status: 'generating')
 
+      turns = @session.transcript_turns.ordered
+      if turns.empty?
+        save_empty_skills(portfolio)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+        Rails.logger.info("[N10] Empty Portfolio generated (no transcript) for session #{@session.id}")
+        return portfolio
+      end
+
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
@@ -174,6 +182,22 @@ module Portfolios
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
+        )
+      end
+    end
+
+    def save_empty_skills(portfolio)
+      portfolio.portfolio_skills.destroy_all
+      
+      @session.assessment.assessment_skills.order(:display_order).each do |s|
+        portfolio.portfolio_skills.create!(
+          skill_id:           s.skill_id,
+          skill_label:        s.skill_label,
+          is_discovered:      false,
+          ai_level:           1,
+          ai_confidence:      'low',
+          evidence:           [],
+          competency_summary: "No transcript data available. The candidate did not participate or the connection failed before the interview could begin."
         )
       end
     end

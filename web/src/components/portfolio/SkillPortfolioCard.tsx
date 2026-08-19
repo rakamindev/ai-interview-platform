@@ -23,12 +23,12 @@ export default function SkillPortfolioCard({
     <Card>
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <LevelBadge level={effectiveLevel} className="shrink-0" />
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold leading-snug">{skill.skill_label}</span>
                 {skill.is_discovered && (
                   <span className="flex items-center gap-0.5 text-xs text-amber-600">
                     <Zap className="h-3 w-3" /> Discovered
@@ -38,7 +38,9 @@ export default function SkillPortfolioCard({
               <ConfidenceIndicator confidence={skill.ai_confidence} />
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          <div className="self-end sm:self-start shrink-0">
+            <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          </div>
         </div>
 
         {/* Low confidence note */}

@@ -83,6 +83,7 @@ export interface Portfolio {
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+  fit_gap_report_vacancy_ids?: number[];
 }
 
 export interface PortfolioSkill {
@@ -140,6 +141,7 @@ export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
+  vacancy_role_title?: string;
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
