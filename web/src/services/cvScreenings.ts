@@ -35,11 +35,6 @@ export const cvScreeningsApi = {
   batches: (id: number) =>
     api.get<{ batches: CvScreeningBatch[] }>(`/cv_screenings/${id}/batches`),
 
-  confirmBatch: (cvScreeningId: number, batchId: number) =>
-    api.post<{ batch: CvScreeningBatch }>(
-      `/cv_screenings/${cvScreeningId}/batches/${batchId}/confirm`
-    ),
-
   entries: (id: number, decision?: string, page?: number, perPage?: number) =>
     api.get<{ entries: CvScreeningEntry[]; meta: PaginationMeta }>(
       `/cv_screenings/${id}/entries`,

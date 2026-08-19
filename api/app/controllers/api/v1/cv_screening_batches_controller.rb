@@ -6,7 +6,6 @@ module Api
       authorize_auth_token! :assessor
 
       before_action :set_cv_screening
-      before_action :set_batch, only: %i[confirm]
 
       # GET /api/v1/cv_screenings/:cv_screening_id/batches
       # Not in the original design, but the frontend needs this on every page
@@ -49,31 +48,12 @@ module Api
         json_error(e.message, :unprocessable_entity)
       end
 
-      # POST /api/v1/cv_screenings/:cv_screening_id/batches/:id/confirm
-      # FR5: releases a batch's notification emails after they were held because
-      # every auto-decided entry in it landed on the same outcome.
-      def confirm
-        unless @batch.held_for_confirmation?
-          return json_error('Batch is not awaiting confirmation', :unprocessable_entity)
-        end
-
-        CvScreenings::BatchNotifier.new(@batch).release!
-
-        json_response(batch: batch_json(@batch.reload))
-      end
-
       private
 
       def set_cv_screening
         @cv_screening = CvScreening.find(params[:cv_screening_id])
       rescue ActiveRecord::RecordNotFound
         json_error('CV screening not found', :not_found)
-      end
-
-      def set_batch
-        @batch = @cv_screening.cv_screening_batches.find(params[:id])
-      rescue ActiveRecord::RecordNotFound
-        json_error('Batch not found', :not_found)
       end
 
       def current_vacancy_version

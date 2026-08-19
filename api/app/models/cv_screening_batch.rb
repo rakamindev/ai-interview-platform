@@ -7,9 +7,10 @@
 class CvScreeningBatch < ApplicationRecord
   include TenantScoped
 
-  # 'held' = every auto-decided entry in the batch landed on the same outcome
-  # (FR5's confirm-before-firing gate) — notification emails are queued but not
-  # sent until a recruiter explicitly confirms via CvScreeningBatchesController#confirm.
+  # 'held' is no longer set by CvScreenings::BatchNotifier — auto-invite/auto-reject
+  # always release notifications immediately once a batch finishes processing.
+  # Kept in the allowed list only so any pre-existing 'held' row (from before
+  # that change) remains valid; no code path can produce a new one.
   NOTIFICATION_STATUSES = %w[pending held released].freeze
 
   belongs_to :cv_screening
@@ -19,6 +20,4 @@ class CvScreeningBatch < ApplicationRecord
   has_many :cv_screening_entries, dependent: :destroy
 
   validates :notification_status, inclusion: { in: NOTIFICATION_STATUSES }
-
-  def held_for_confirmation? = notification_status == 'held'
 end

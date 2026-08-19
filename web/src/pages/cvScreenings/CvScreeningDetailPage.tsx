@@ -40,7 +40,6 @@ export default function CvScreeningDetailPage() {
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
   const [reanalyzingEntryId, setReanalyzingEntryId] = useState<number | null>(null);
   const [cancellingEntryId, setCancellingEntryId] = useState<number | null>(null);
-  const [confirming, setConfirming] = useState(false);
 
   const loadScreening = useCallback(async () => {
     const res = await cvScreeningsApi.get(Number(id));
@@ -132,19 +131,6 @@ export default function CvScreeningDetailPage() {
       setCancellingEntryId(null);
     } catch {
       setCancellingEntryId(null);
-      setError(true);
-    }
-  };
-
-  const handleConfirmBatch = async () => {
-    if (!latestBatch) return;
-    setConfirming(true);
-    try {
-      await cvScreeningsApi.confirmBatch(Number(id), latestBatch.id);
-      await loadBatches();
-      setConfirming(false);
-    } catch {
-      setConfirming(false);
       setError(true);
     }
   };
@@ -283,18 +269,6 @@ export default function CvScreeningDetailPage() {
         <div className="text-xs text-muted-foreground border rounded-md px-3 py-2 bg-muted/40">
           The latest batch was scored against an <strong>approximate</strong> snapshot of the
           vacancy — reconstructed from its current state, not its actual history at upload time.
-        </div>
-      )}
-
-      {latestBatch?.notification_status === "held" && (
-        <div className="border border-amber-400/50 bg-amber-50 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-sm text-amber-800">
-            Every candidate in the latest batch resolved the same way — review before we notify
-            them.
-          </p>
-          <Button size="sm" onClick={handleConfirmBatch} disabled={confirming}>
-            {confirming ? "Confirming…" : "Confirm & send"}
-          </Button>
         </div>
       )}
 

@@ -28,14 +28,14 @@ RSpec.describe CvScreenings::BatchNotifier do
       expect(ActionMailer::Base.deliveries).to be_empty
     end
 
-    it 'holds the batch — FR5 — when every auto-decided entry landed on the same outcome' do
+    it 'releases immediately even when every auto-decided entry landed on the same outcome' do
       invited_entry
       invited_entry
 
       described_class.new(batch).evaluate_after_entry_decision
 
-      expect(batch.reload.notification_status).to eq('held')
-      expect(ActionMailer::Base.deliveries).to be_empty
+      expect(batch.reload.notification_status).to eq('released')
+      expect(ActionMailer::Base.deliveries.size).to eq(2)
     end
 
     it 'releases immediately when outcomes are mixed' do
@@ -48,13 +48,25 @@ RSpec.describe CvScreenings::BatchNotifier do
       expect(ActionMailer::Base.deliveries.size).to eq(2)
     end
 
-    it 'releases immediately when nothing auto-decided (every entry needs_review)' do
+    it 'stays pending when nothing auto-decided yet (every entry needs_review)' do
       create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review')
 
       described_class.new(batch).evaluate_after_entry_decision
 
-      expect(batch.reload.notification_status).to eq('released')
+      expect(batch.reload.notification_status).to eq('pending')
       expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    it 'still notifies once a needs_review entry is later actually decided (e.g. via Re-analyze)' do
+      entry = create(:cv_screening_entry, cv_screening_batch: batch, decision: 'needs_review')
+      described_class.new(batch).evaluate_after_entry_decision # first pass: nothing decided yet
+      expect(batch.reload.notification_status).to eq('pending')
+
+      entry.update!(decision: 'not_advanced', detected_email: 'c@test.invalid', feedback_text: 'Thanks.')
+      described_class.new(batch).evaluate_after_entry_decision # second pass: now decided
+
+      expect(batch.reload.notification_status).to eq('released')
+      expect(ActionMailer::Base.deliveries.size).to eq(1)
     end
   end
 
