@@ -27,6 +27,9 @@ module Coverage
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       parse_response(response, coverage_maps)
+    rescue StandardError => e
+      Rails.logger.error("[N7/Analyzer] Coverage analyzer error: #{e.class}: #{e.message}")
+      { skill_updates: [], discovered_skills: [] }
     end
 
     private
@@ -117,27 +120,26 @@ module Coverage
       { skill_updates: [], discovered_skills: [] }
     end
 
-    def parse_skill_updates(updates, coverage_maps)
-      updates.filter_map do |update|
-        map = find_map(coverage_maps, update['id'])
-        next unless map
+    VALID_STATES = %w[not_yet initiated partial covered].freeze
 
-        # Skill is already covered — freeze it. Flash keeps seeing old turns
-        # in the sliding window and would keep incrementing probe_count.
+    def parse_skill_updates(updates, coverage_maps)
+      return [] unless updates.is_a?(Array)
+
+      updates.filter_map do |update|
+        next unless update.is_a?(Hash) && update['id'].present?
+
+        map = find_map(coverage_maps, update['id'].to_s)
+        next unless map
         next if map.state == 'covered'
 
-        new_state       = update['new_state']
-        raw_probe_count = update['new_probe_count'].to_i
-        reason          = update['reason']
+        new_state = update['new_state'].to_s
+        next unless VALID_STATES.include?(new_state)
 
-        # The analyzer runs once per candidate turn with a sliding 6-turn window.
-        # Consecutive runs share 5 of 6 turns, so Flash double-counts overlapping
-        # exchanges and inflates probe_count. Cap the increment at +1 per run:
-        # one exchange = one probe. Apply this before the StateEngine gate check
-        # so state advancement also uses the correct count.
+        raw_probe_count = update['new_probe_count'].to_i
+        reason          = update['reason'].to_s
+
         safe_probe = [[raw_probe_count, map.probe_count + 1].min, map.probe_count].max
 
-        # Enforce hard rules via StateEngine
         safe_state = StateEngine.resolve_state(
           current_state:  map.state,
           proposed_state: new_state,
@@ -156,10 +158,14 @@ module Coverage
     end
 
     def parse_discovered(discovered_skills)
-      discovered_skills.map do |d|
+      return [] unless discovered_skills.is_a?(Array)
+
+      discovered_skills.filter_map do |d|
+        next unless d.is_a?(Hash) && d['label'].present?
+
         {
-          label:         d['label'],
-          first_mention: d['first_mention']
+          label:         d['label'].to_s,
+          first_mention: d['first_mention'].to_s
         }
       end
     end

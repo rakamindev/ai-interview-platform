@@ -147,33 +147,48 @@ module Portfolios
       }
     end
 
+    VALID_CONFIDENCES = %w[high medium low].freeze
+
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      return unless data.is_a?(Hash)
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        next unless skill_data.is_a?(Hash) && skill_data['skill_label'].present?
+        next if skill_data['competency_summary'].blank?
+
+        conf = skill_data['confidence'].to_s.downcase
+        conf = 'medium' unless VALID_CONFIDENCES.include?(conf)
+
         portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
+          skill_id:           skill_data['skill_id']&.to_s,
+          skill_label:        skill_data['skill_label'].to_s,
           is_discovered:      false,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          ai_confidence:      conf,
+          evidence:           Array(skill_data['evidence']).map(&:to_s).first(3),
+          competency_summary: skill_data['competency_summary'].to_s
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        next unless skill_data.is_a?(Hash) && skill_data['skill_label'].present?
+        next if skill_data['competency_summary'].blank?
+
+        conf = skill_data['confidence'].to_s.downcase
+        conf = 'medium' unless VALID_CONFIDENCES.include?(conf)
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
+          skill_label:        skill_data['skill_label'].to_s,
           is_discovered:      true,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          ai_confidence:      conf,
+          evidence:           Array(skill_data['evidence']).map(&:to_s).first(3),
+          competency_summary: skill_data['competency_summary'].to_s
         )
       end
     end

@@ -16,18 +16,30 @@ export function useAudioPlayback() {
     return audioCtxRef.current;
   };
 
+  const ensureResumed = useCallback(() => {
+    const ctx = getCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+  }, []);
+
   const playChunk = useCallback(async (raw: ArrayBuffer) => {
     const ctx = getCtx();
-    if (ctx.state === "suspended") await ctx.resume();
+    if (ctx.state === "suspended") {
+      await ctx.resume().catch(() => {});
+    }
 
-    // Raw PCM is Int16 from Gemini
-    const int16 = new Int16Array(raw);
-    const float32 = new Float32Array(int16.length);
-    for (let i = 0; i < int16.length; i++) {
+    if (raw.byteLength < 2) return;
+
+    // Raw PCM is Int16 from Gemini — ensure even byte length alignment
+    const sampleCount = Math.floor(raw.byteLength / 2);
+    const int16 = new Int16Array(raw, 0, sampleCount);
+    const float32 = new Float32Array(sampleCount);
+    for (let i = 0; i < sampleCount; i++) {
       float32[i] = int16[i] / 32768;
     }
 
-    const buffer = ctx.createBuffer(1, float32.length, PLAYBACK_SAMPLE_RATE);
+    const buffer = ctx.createBuffer(1, sampleCount, PLAYBACK_SAMPLE_RATE);
     buffer.copyToChannel(float32, 0);
 
     const source = ctx.createBufferSource();
@@ -84,5 +96,5 @@ export function useAudioPlayback() {
     nextPlayTimeRef.current = 0;
   }, [cancelDrain]);
 
-  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain };
+  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain, ensureResumed };
 }

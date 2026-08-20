@@ -95,4 +95,11 @@ FactoryBot.define do
     culture_narrative { 'Good alignment.' }
     overall_narrative { 'Recommend hire with mentoring.' }
   end
+
+  factory :transcript_turn do
+    session
+    sequence(:turn_number) { |n| n }
+    speaker { 'candidate' }
+    text { 'Sample transcript text' }
+  end
 end

@@ -372,6 +372,8 @@ class AudioWebSocketMiddleware
     old_client&.close
   end
 
+  NON_RETRIABLE_CODES = [1002, 1003, 1007, 1008].freeze
+
   # Handles unexpected Gemini WebSocket close (not GoAway). Audio is buffered during the gap and replayed.
   def handle_gemini_close(browser_ws, state, code:, reason:)
     # Normal close (1000) is intentional unless flagged as inactivity_close (which also uses 1000).
@@ -380,13 +382,15 @@ class AudioWebSocketMiddleware
     state.proactive_reconnect_timer&.cancel
     state.reconnect_attempts ||= 0
 
-    if state.reconnect_attempts < MAX_RECONNECT_ATTEMPTS
+    non_retriable = NON_RETRIABLE_CODES.include?(code.to_i)
+
+    if !non_retriable && state.reconnect_attempts < MAX_RECONNECT_ATTEMPTS
       schedule_gemini_reconnect(browser_ws, state, code)
     else
-      Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
+      Rails.logger.error("[AudioWS] Gemini connection failed (code=#{code}, non_retriable=#{non_retriable}, attempts=#{state.reconnect_attempts})")
       Sessions::EndHandler.new(state.session).call(reason: 'error')
       send_json(browser_ws, type: 'session_ended', reason: 'error',
-                            message: 'The session encountered a problem. Please contact the interviewer.')
+                            message: 'The server is currently experiencing technical difficulties. Please contact the interviewer if this persists.')
       browser_ws.close
     end
   end

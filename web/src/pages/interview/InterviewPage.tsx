@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { AlertTriangle, CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -39,17 +39,27 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
+  const [sessionErrorMessage, setSessionErrorMessage] = useState<string | null>(null);
+
+  const handleSessionEnded = useCallback((payload: { reason?: string; message?: string }) => {
+    if (payload.reason) setSessionEndReason(payload.reason);
+    if (payload.message) setSessionErrorMessage(payload.message);
+  }, []);
 
   // Fetch candidate info
   useEffect(() => {
     if (!token) return;
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
-        setCandidateInfo(res.data);
-        setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        const info = (res.data as any)?.session_id ? res.data : ((res.data as any)?.data ?? res.data);
+        if (info && info.session_id) {
+          setCandidateInfo(info);
+          setSessionId(info.session_id);
+          if (info.session_status === "ended") setInterviewState("complete");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => console.error("Error fetching candidate info:", err));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -95,7 +105,17 @@ export default function InterviewPage() {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
 
-  const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
+  const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain, ensureResumed } = useAudioPlayback();
+
+  useEffect(() => {
+    const handleGesture = () => ensureResumed();
+    window.addEventListener("pointerdown", handleGesture);
+    window.addEventListener("keydown", handleGesture);
+    return () => {
+      window.removeEventListener("pointerdown", handleGesture);
+      window.removeEventListener("keydown", handleGesture);
+    };
+  }, [ensureResumed]);
   const audioCompleteCalledRef = useRef(false);
   const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -139,6 +159,7 @@ export default function InterviewPage() {
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onSessionEnded: handleSessionEnded,
   });
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
@@ -237,7 +258,7 @@ export default function InterviewPage() {
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview} disabled={!pdpConsent}>
+            <Button id="main-start-interview-btn" className="w-full" size="lg" onClick={startInterview} disabled={!pdpConsent || !sessionId}>
               <Mic className="h-4 w-4 mr-2" />
               Start Interview
             </Button>
@@ -247,17 +268,32 @@ export default function InterviewPage() {
     );
   }
 
-  // ── State F: Complete ───────────────────────────────────────────────────
-  if (interviewState === "complete") {
+  // ── State F: Complete / Error ───────────────────────────────────────────────────
+  if (interviewState === "complete" || interviewState === "error") {
+    const isError = interviewState === "error" || sessionEndReason === "error" || Boolean(sessionErrorMessage);
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
+        {isError ? (
+          <>
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <h2 className="text-xl font-semibold">Server Error</h2>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              {sessionErrorMessage || "The server is currently experiencing trouble, please try again later."}
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="text-4xl">✅</div>
+            <h2 className="text-xl font-semibold">Interview Complete</h2>
+            <p className="text-sm text-muted-foreground">
+              Thank you. The interview has been recorded.
+              <br />
+              The hiring team will review your results and follow up with you.
+            </p>
+          </>
+        )}
       </div>
     );
   }

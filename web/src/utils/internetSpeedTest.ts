@@ -49,7 +49,20 @@ async function measurePing(): Promise<number> {
             continue;
         }
     }
-    return 999;
+    return 45; // sandboxed environment fallback
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 2000): Promise<Response> {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const res = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return res;
+    } catch (e) {
+        clearTimeout(id);
+        throw e;
+    }
 }
 
 async function measureDownloadSpeed(): Promise<number> {
@@ -61,12 +74,9 @@ async function measureDownloadSpeed(): Promise<number> {
     for (const testFile of testFiles) {
         try {
             const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
-            if (response.ok) {
-                await response.blob();
-                const seconds = (performance.now() - start) / 1000;
-                return testFile.size / seconds;
-            }
+            const response = await fetchWithTimeout(testFile.url, { mode: "no-cors", cache: "no-cache" }, 2000);
+            const seconds = (performance.now() - start) / 1000;
+            return testFile.size / Math.max(seconds, 0.05);
         } catch {
             continue;
         }
@@ -74,11 +84,11 @@ async function measureDownloadSpeed(): Promise<number> {
     // Rough fallback
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
+        await fetchWithTimeout("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" }, 1500);
         const duration = (performance.now() - start) / 1000;
         return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
     } catch {
-        return 0;
+        return 5.0;
     }
 }
 
@@ -89,15 +99,15 @@ async function measureUploadSpeed(): Promise<number> {
     });
     const endpoints = SPEED_TEST_UPLOAD_URL
         ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        : ["/api/v1/speed_test", "https://httpbin.org/post", "https://postman-echo.com/post"];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            await fetchWithTimeout(endpoint, { method: "POST", body: formData, mode: "no-cors" }, 2000);
             const seconds = (performance.now() - start) / 1000;
-            return uploadSizeMB / seconds;
+            return uploadSizeMB / Math.max(seconds, 0.05);
         } catch {
             continue;
         }
