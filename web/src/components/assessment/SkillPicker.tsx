@@ -28,7 +28,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     skillTaxonomiesApi
       .list()
       .then((res) => setSkills(res.data.skill_taxonomies ?? []))
-      .catch((err) => { console.error("skill_taxonomies fetch failed:", err); setSkills([]); })
+      .catch(() => { setSkills([]); })
       .finally(() => setLoading(false));
   }, [open]);
 

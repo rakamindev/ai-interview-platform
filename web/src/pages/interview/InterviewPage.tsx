@@ -43,9 +43,6 @@ export default function InterviewPage() {
 
   const handleSessionEnded = useCallback((payload: { reason?: string; message?: string }) => {
     if (payload.reason) setSessionEndReason(payload.reason);
-    if (payload.message) {
-      console.error("Session ended with error message from backend:", payload.message);
-    }
   }, []);
 
   // Fetch candidate info
@@ -60,7 +57,7 @@ export default function InterviewPage() {
           if (info.session_status === "ended") setInterviewState("complete");
         }
       })
-      .catch((err) => console.error("Error fetching candidate info:", err));
+      .catch(() => {});
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
