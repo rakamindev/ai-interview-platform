@@ -8,6 +8,13 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
+  session_summary?: {
+    total: number;
+    awaiting: number;
+    in_progress: number;
+    completed: number;
+    failed: number;
+  };
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
