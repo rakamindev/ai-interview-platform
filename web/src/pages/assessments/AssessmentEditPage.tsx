@@ -43,7 +43,13 @@ export default function AssessmentEditPage() {
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+  const [deletedSkills, setDeletedSkills] = useState<AssessmentSkill[]>([]);
 
+  const handleRemove = (index: number) => {
+    const skill = fields[index] as any;
+    if (skill.id) setDeletedSkills((prev) => [...prev, skill]);
+    remove(index);
+  };
   useEffect(() => {
     assessmentsApi
       .get(Number(id))
@@ -77,7 +83,10 @@ export default function AssessmentEditPage() {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: [
+          ...data.skills.map((s, i) => ({ ...s, display_order: i })),
+          ...deletedSkills.map((s) => ({ id: s.id, _destroy: true }))
+        ],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -143,7 +152,7 @@ export default function AssessmentEditPage() {
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => handleRemove(index)} />
                   ))}
                 </div>
               </SortableContext>
