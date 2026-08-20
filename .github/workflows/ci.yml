@@ -29,6 +29,7 @@ jobs:
       DB_PORT: 5432
       DB_NAME: rakamin_test
       DB_USERNAME: postgres
+      ALLOWED_ORIGINS: "*"
     defaults:
       run:
         working-directory: api
