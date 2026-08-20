@@ -11,14 +11,6 @@ api/config/application.yml
 **/tmp/
 api/storage/
 
-# Build output
-web/dist/
-web/.vite/
-web/scripts
-web/test-results
-web/playwright-report
-
-
 # OS
 .DS_Store
 
