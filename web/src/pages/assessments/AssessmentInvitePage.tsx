@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, RefreshCw, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -23,13 +23,17 @@ function SessionRow({
   index,
   assessmentId,
   onCopy,
+  onReinvite,
   copiedId,
+  reinvitingSessionId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onReinvite: (session: Session) => void;
   copiedId: number | null;
+  reinvitingSessionId: number | null;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
@@ -119,6 +123,18 @@ function SessionRow({
               Results
             </Button>
           )}
+          {isEnded && session.end_reason === "error" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onReinvite(session)}
+              disabled={reinvitingSessionId === session.id}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${reinvitingSessionId === session.id ? "animate-spin" : ""}`} />
+              Regenerate link
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -135,6 +151,7 @@ export default function AssessmentInvitePage() {
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
+  const [reinvitingSessionId, setReinvitingSessionId] = useState<number | null>(null);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
@@ -177,6 +194,19 @@ export default function AssessmentInvitePage() {
       setSessions((prev) => [created, ...prev]);
     } finally {
       setCreatingSession(false);
+    }
+  };
+
+  const handleReinviteCandidate = async (session: Session) => {
+    setReinvitingSessionId(session.id);
+    setNewSession(null);
+    try {
+      const res = await assessmentsApi.regenerateInvite(session.id);
+      const resetSession = res.data.session;
+      setNewSession(resetSession);
+      setSessions((prev) => prev.map((item) => item.id === resetSession.id ? resetSession : item));
+    } finally {
+      setReinvitingSessionId(null);
     }
   };
 
@@ -317,7 +347,9 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onReinvite={handleReinviteCandidate}
                   copiedId={copiedId}
+                  reinvitingSessionId={reinvitingSessionId}
                 />
               ))}
             </CardContent>
