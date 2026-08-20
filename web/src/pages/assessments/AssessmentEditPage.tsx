@@ -42,14 +42,32 @@ export default function AssessmentEditPage() {
   });
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+  const { fields, append, remove, move, update } = useFieldArray({ control, name: "skills" });
+
+  const handleRemoveSkill = (index: number) => {
+    const skill = fields[index];
+
+    if (skill.db_id) {
+      update(index, { ...skill, _destroy: true });
+    } else {
+      remove(index);
+    }
+  };
 
   useEffect(() => {
     assessmentsApi
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({
+          name: a.name,
+          time_limit_min: a.time_limit_min,
+          skills: (a.skills ?? []).map((s: AssessmentSkill) => ({
+            ...s,
+            db_id: s.id,
+            id: undefined,
+          })),
+        });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -70,14 +88,20 @@ export default function AssessmentEditPage() {
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) { setError("Add at least one skill."); return; }
+    const activeSkills = data.skills.filter((s) => !s._destroy);
+    if (activeSkills.length === 0) { setError("Add at least one skill."); return; }
     setError(null);
     setSubmitting(true);
     try {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: data.skills.map((s, i) => ({
+          ...s,
+          id: s.db_id,
+          db_id: undefined,
+          display_order: i,
+        })),
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -142,9 +166,11 @@ export default function AssessmentEditPage() {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
-                  {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
-                  ))}
+                  {fields.map((field, index) =>
+                    field._destroy ? null : (
+                      <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => handleRemoveSkill(index)} />
+                    )
+                  )}
                 </div>
               </SortableContext>
             </DndContext>
