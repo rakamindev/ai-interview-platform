@@ -8,7 +8,9 @@
         "build": "tsc && vite build",
         "preview": "vite preview",
         "test": "vitest run",
-        "test:e2e": "playwright test"
+        "test:e2e": "npm run test:e2e:standard && npm run test:e2e:gemini_wrong_hardcode",
+        "test:e2e:standard": "playwright test",
+        "test:e2e:gemini_wrong_hardcode": "cd ../api && killall ruby || true && GEMINI_LIVE_MODEL=invalid_model_123 GEMINI_API_KEY=invalid_key RAILS_ENV=development bundle exec rails s -p 3001 -d && cd ../web && playwright test -c playwright.gemini_error.config.ts; cd ../api && killall ruby || true"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",
@@ -47,6 +49,7 @@
         "@types/react": "^18.3.5",
         "@types/react-dom": "^18.3.0",
         "@vitejs/plugin-react": "^5.2.0",
+        "@vitest/coverage-v8": "^4.1.11",
         "autoprefixer": "^10.4.18",
         "jsdom": "^30.0.1",
         "postcss": "^8.4.35",

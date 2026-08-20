@@ -5,6 +5,7 @@ const audioFixturePath = path.resolve(process.cwd(), 'e2e/fixtures/candidate_spe
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: 'interview_error.spec.ts',
   timeout: 60000,
   fullyParallel: false,
   workers: 1,
@@ -34,8 +35,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'cd ../api && RAILS_ENV=development bundle exec rails s -p 3000',
-      url: 'http://localhost:3000/health',
+      command: 'cd ../api && RAILS_ENV=development bundle exec rails s -p 3001',
+      url: 'http://localhost:3001/health',
       reuseExistingServer: true,
       timeout: 30000,
     },

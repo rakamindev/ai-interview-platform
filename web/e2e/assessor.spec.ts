@@ -13,10 +13,10 @@ test.describe('AI Interview Platform - Assessor UI Flows', () => {
     // Generate a fresh assessment with some sessions via Rails runner
     const apiDir = path.resolve(__dirname, '../../api');
     const cmd = `RAILS_ENV=development bundle exec rails runner "
-      tenant = Tenant.first || Tenant.create!(name: 'Test Tenant')
-      User.find_by(email: 'assessor@example.com') || User.create!(email: 'assessor@example.com', password: 'password', role: 'assessor', tenant: tenant)
-      assessment = Assessment.create!(tenant_id: tenant.id, name: 'E2E Test Role', time_limit_min: 30)
-      3.times { |i| Session.create!(tenant_id: tenant.id, assessment_id: assessment.id, candidate_name: %Q(Candidate \#{i}), status: %w[pending active ended].sample, invite_token: SecureRandom.hex(16)) }
+      org = Organization.first || Organization.create!(id: 0, name: 'Test Org', scheme: 'test', identifier: 'test', host: 'localhost')
+      User.find_by(email: 'assessor@example.com') || User.create!(email: 'assessor@example.com', password: 'password', role: 'admin')
+      assessment = Assessment.create!(tenant_id: org.id, created_by: User.last.id, name: 'E2E Test Role', time_limit_min: 30)
+      3.times { |i| Session.create!(tenant_id: org.id, assessment_id: assessment.id, candidate_name: 'Candidate ' + i.to_s, status: %w[pending active ended].sample, invite_token: SecureRandom.hex(16)) }
       puts 'E2E_ASSESSMENT:' + assessment.id.to_s
     "`;
     const output = execSync(cmd, { cwd: apiDir, encoding: 'utf-8' });
@@ -38,11 +38,15 @@ test.describe('AI Interview Platform - Assessor UI Flows', () => {
   test('Validates Assessment List search and pagination', async ({ page }) => {
     await page.goto('/assessments');
     await expect(page.locator('h1', { hasText: 'Assessments' })).toBeVisible();
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: 'screenshots/1_assessment_list.png', fullPage: true });
 
     // Test Search
     await page.fill('input[placeholder="Search assessments..."]', 'E2E Test Role');
     await page.waitForTimeout(500); // Wait for debounce
     await expect(page.locator('text=E2E Test Role').first()).toBeVisible();
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: 'screenshots/2_assessment_search_result.png', fullPage: true });
   });
 
   test('Validates Candidates List search and status filter', async ({ page }) => {

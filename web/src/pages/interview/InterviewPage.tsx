@@ -40,11 +40,12 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
-  const [sessionErrorMessage, setSessionErrorMessage] = useState<string | null>(null);
 
   const handleSessionEnded = useCallback((payload: { reason?: string; message?: string }) => {
     if (payload.reason) setSessionEndReason(payload.reason);
-    if (payload.message) setSessionErrorMessage(payload.message);
+    if (payload.message) {
+      console.error("Session ended with error message from backend:", payload.message);
+    }
   }, []);
 
   // Fetch candidate info
@@ -270,7 +271,7 @@ export default function InterviewPage() {
 
   // ── State F: Complete / Error ───────────────────────────────────────────────────
   if (interviewState === "complete" || interviewState === "error") {
-    const isError = interviewState === "error" || sessionEndReason === "error" || Boolean(sessionErrorMessage);
+    const isError = interviewState === "error" || sessionEndReason === "error";
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         {isError ? (
@@ -280,7 +281,7 @@ export default function InterviewPage() {
             </div>
             <h2 className="text-xl font-semibold">Server Error</h2>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              {sessionErrorMessage || "The server is currently experiencing trouble, please try again later."}
+              The server is currently experiencing trouble, please try again later.
             </p>
           </>
         ) : (

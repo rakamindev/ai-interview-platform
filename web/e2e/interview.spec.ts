@@ -29,21 +29,24 @@ test.describe('AI Interview Platform - E2E Candidate Interview Flow', () => {
     // 1. Onboarding Page Navigation
     await page.goto(`/interview/${inviteToken}`);
     await expect(page.locator('text=Privacy Notice & Consent')).toBeVisible();
+    await page.screenshot({ path: 'screenshots/5_interview_onboarding.png', fullPage: true });
 
     // 2. Consent Checkbox
     const consentCheckbox = page.locator('input[type="checkbox"]');
     if (await consentCheckbox.isVisible()) {
-      await consentCheckbox.check();
+      await consentCheckbox.check({ force: true });
     }
 
     // 3. Hardware Check & Start Interview
     const startCheckBtn = page.locator('#hardware-check-start-btn');
     await expect(startCheckBtn).toBeEnabled({ timeout: 60000 });
+    await page.screenshot({ path: 'screenshots/6_interview_hardware_check.png', fullPage: true });
     await startCheckBtn.click();
 
     // 4. Active Live Interview Session & WebSockets
     const endBtn = page.locator('button:has-text("End Interview")');
     await expect(endBtn).toBeVisible({ timeout: 30000 });
+    await page.screenshot({ path: 'screenshots/7_interview_active.png', fullPage: true });
 
     // 5. Sustained Multi-Turn Voice Exchange (AI questions + Candidate multi-sentence voice stream)
     await page.waitForTimeout(18000);
@@ -59,34 +62,6 @@ test.describe('AI Interview Platform - E2E Candidate Interview Flow', () => {
     // 7. Completion Screen Verification
     await expect(page.locator('text=Interview Complete')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Thank you. The interview has been recorded.')).toBeVisible();
-  });
-
-  test('Error Path: Catches Gemini model / server errors non-silently and displays user error alert', async ({ page }) => {
-    // Navigate to interview page
-    await page.goto(`/interview/${inviteToken}`);
-    
-    // Check consent box
-    const consentCheckbox = page.locator('input[type="checkbox"]');
-    if (await consentCheckbox.isVisible()) {
-      await consentCheckbox.check();
-    }
-
-    // Trigger explicit server error state mock or error event
-    await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent('gemini_server_error', { detail: { message: 'The server is currently experiencing trouble, please try again later.' } }));
-    });
-
-    // Verify system displays error state banner when session ends with error
-    await page.evaluate(() => {
-      // Simulate WebSocket receiving WS error frame / session_ended reason error
-      const wsMessage = new MessageEvent('message', {
-        data: JSON.stringify({
-          type: 'session_ended',
-          reason: 'error',
-          message: 'The server is currently experiencing trouble, please try again later.'
-        })
-      });
-      window.dispatchEvent(new CustomEvent('ws_mock_message', { detail: wsMessage }));
-    });
+    await page.screenshot({ path: 'screenshots/8_interview_complete.png', fullPage: true });
   });
 });

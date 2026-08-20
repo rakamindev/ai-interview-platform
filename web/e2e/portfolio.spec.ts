@@ -14,21 +14,21 @@ test.describe('AI Interview Platform - Human Review Process', () => {
   test.beforeAll(() => {
     const apiDir = path.resolve(__dirname, '../../api');
     const cmd = `RAILS_ENV=development bundle exec rails runner "
-      tenant = Tenant.first || Tenant.create!(name: 'Test Tenant')
-      User.find_by(email: 'assessor@example.com') || User.create!(email: 'assessor@example.com', password: 'password', role: 'assessor', tenant: tenant)
+      org = Organization.first || Organization.create!(id: 0, name: 'Test Org', scheme: 'test', identifier: 'test', host: 'localhost')
+      User.find_by(email: 'assessor@example.com') || User.create!(email: 'assessor@example.com', password: 'password', role: 'admin')
       
-      assessment = Assessment.create!(tenant_id: tenant.id, name: 'E2E Review Role', time_limit_min: 30)
+      assessment = Assessment.create!(tenant_id: org.id, created_by: User.last.id, name: 'E2E Review Role', time_limit_min: 30)
       
-      session = Session.create!(tenant_id: tenant.id, assessment_id: assessment.id, candidate_name: 'Review Candidate', status: 'ended', end_reason: 'completed', invite_token: SecureRandom.hex(16))
+      session = Session.create!(tenant_id: org.id, assessment_id: assessment.id, candidate_name: 'Review Candidate', status: 'ended', end_reason: 'all_covered', invite_token: SecureRandom.hex(16))
       
-      portfolio = Portfolio.create!(tenant_id: tenant.id, session_id: session.id, status: 'completed', generation_status: 'complete')
+      portfolio = Portfolio.create!(session_id: session.id, generation_status: 'complete')
       
-      PortfolioSkill.create!(portfolio_id: portfolio.id, skill_label: 'Test Skill', ai_level: 3, ai_confidence: 0.9, ai_reasoning: 'AI thinks it is level 3')
+      PortfolioSkill.create!(portfolio_id: portfolio.id, skill_label: 'Test Skill', ai_level: 3, ai_confidence: 'high', competency_summary: 'AI thinks it is level 3')
       
-      vacancy = Vacancy.create!(tenant_id: tenant.id, role_title: 'Target Role', created_by: User.last.id)
+      vacancy = Vacancy.create!(tenant_id: org.id, role_title: 'Target Role', created_by: User.last.id)
       VacancySkill.create!(vacancy_id: vacancy.id, skill_label: 'Test Skill', expected_level: 4)
 
-      FitGapReport.create!(portfolio_id: portfolio.id, vacancy_id: vacancy.id, skill_comparisons: [], overall_narrative: 'Initial')
+      FitGapReport.create!(portfolio_id: portfolio.id, vacancy_id: vacancy.id, skill_comparisons: [{'skill' => 'Test Skill', 'gap' => false}], overall_narrative: 'Initial')
 
       puts 'E2E_DATA:' + [assessment.id, session.id, vacancy.id].join(',')
     "`;
@@ -59,14 +59,14 @@ test.describe('AI Interview Platform - Human Review Process', () => {
     await expect(page.locator('text=Test Skill')).toBeVisible();
     await expect(page.locator('text=AI thinks it is level 3')).toBeVisible();
 
-    // Open override modal
-    await page.click('button:has-text("Override")');
-    await expect(page.locator('h2', { hasText: 'Override Score' })).toBeVisible();
+    // Open override panel
+    await page.click('button:has-text("Override rating")');
+    await expect(page.locator('text=Your rating:')).toBeVisible();
 
     // Adjust grade to Level 4
-    await page.click('button:has-text("L4")');
-    await page.fill('textarea[placeholder="Explain why you are overriding the AI..."]', 'Candidate demonstrated deeper knowledge.');
-    await page.click('button:has-text("Save Override")');
+    await page.click('button[value="4"]');
+    await page.fill('textarea[placeholder="Add context for your override..."]', 'Candidate demonstrated deeper knowledge.');
+    await page.click('button:has-text("Save override")');
 
     // Wait for the UI to reflect the override
     await expect(page.locator('text=Candidate demonstrated deeper knowledge.')).toBeVisible();
@@ -78,16 +78,19 @@ test.describe('AI Interview Platform - Human Review Process', () => {
     await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/portfolio`);
 
     // Click fit/gap comparison
-    await page.click('button:has-text("Compare with Vacancy")');
+    // Wait for page load
+    await expect(page.locator('text=Test Skill')).toBeVisible();
     
     // Select the vacancy
-    await page.locator('button:has-text("Select a vacancy...")').click();
-    await page.locator(`text=Target Role`).click();
+    await page.locator('button:has-text("Choose vacancy...")').click();
+    await page.locator('div[role="option"]:has-text("Target Role")').first().click();
 
     // Trigger analysis
-    await page.click('button:has-text("Analyze Fit")');
+    await page.click('button:has-text("Run Fit/Gap Analysis")');
 
     // Should see generating state or the result if fast enough
     await expect(page.locator('text=Fit/Gap Analysis').first()).toBeVisible();
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: 'screenshots/11_fit_gap_analysis.png', fullPage: true });
   });
 });
