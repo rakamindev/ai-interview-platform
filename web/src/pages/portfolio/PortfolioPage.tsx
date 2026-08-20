@@ -47,7 +47,7 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -232,22 +232,47 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
+          <div className="space-y-3">
+            {portfolio.fit_gap_reports.length > 0 && (
+              <div className="space-y-2">
+                <h2 className="text-sm font-semibold">Fit/Gap Analyses History</h2>
+                <div className="flex flex-wrap gap-2">
+                  {portfolio.fit_gap_reports.map((report) => (
+                    <Button key={report.id} variant="outline" size="sm" asChild>
+                      <Link to={`/assessments/${id}/sessions/${sessionId}/fitgap/${report.vacancy_id}`}>
+                        <span>{report.vacancy_title}</span>
+                        <span className="ml-1.5 flex items-center gap-1">
+                          <span className="rounded bg-green-50 px-1.5 py-0.5 text-green-700">
+                            ✅ {report.skill_comparisons.filter((skill) => skill.result === "match").length} match
+                          </span>
+                          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">
+                            ⚠ {report.skill_comparisons.filter((skill) => skill.result === "gap").length} gap
+                          </span>
+                        </span>
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Choose vacancy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancies.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.role_title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                Run Fit/Gap Analysis →
+              </Button>
+            </div>
           </div>
         </>
       )}

@@ -19,12 +19,32 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     );
 
   if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
+    return <span className="text-xs text-destructive">Last: failed — {session.error_message ?? "interview connection error"}</span>;
 
   if (session.status === "ended")
     return <span className="text-xs text-muted-foreground">Last: completed</span>;
 
   return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+}
+
+function AssessmentSummary({ summary }: { summary: NonNullable<Assessment["session_summary"]> }) {
+  const stats = [
+    { label: "Total", value: summary.total, className: "text-foreground" },
+    { label: "Awaiting", value: summary.awaiting, className: "text-amber-600" },
+    { label: "In progress", value: summary.in_progress, className: "text-primary" },
+    { label: "Completed", value: summary.completed, className: "text-green-600" },
+    { label: "Failed", value: summary.failed, className: "text-destructive" },
+  ];
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2.5">
+      {stats.map((stat) => (
+        <span key={stat.label} className="text-xs text-muted-foreground">
+          {stat.label} <strong className={`ml-0.5 font-semibold ${stat.className}`}>{stat.value}</strong>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function AssessmentListPage() {
@@ -75,8 +95,8 @@ export default function AssessmentListPage() {
               className="cursor-pointer hover:border-primary/40 transition-colors"
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
+              <CardContent className="py-3 px-4 flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm">{a.name}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span className="flex items-center gap-1">
@@ -90,6 +110,7 @@ export default function AssessmentListPage() {
                       </>
                     )}
                   </div>
+                  {a.session_summary && <AssessmentSummary summary={a.session_summary} />}
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </CardContent>

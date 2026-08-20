@@ -39,4 +39,7 @@ export const assessmentsApi = {
       `/assessments/${assessmentId}/sessions`,
       { session: { candidate_name: candidateName, candidate_id: candidateId } }
     ),
+
+  regenerateInvite: (sessionId: number) =>
+    api.post<{ session: Session; invite_url: string }>(`/sessions/${sessionId}/regenerate_invite`),
 };

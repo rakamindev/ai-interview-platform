@@ -168,7 +168,8 @@ module Api
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides:         portfolio.assessor_overrides.map(&method(:override_json))
+          overrides:         portfolio.assessor_overrides.map(&method(:override_json)),
+          fit_gap_reports:   portfolio.fit_gap_reports.includes(:vacancy).order(generated_at: :desc).map(&method(:fit_gap_json))
         }
       end
 
@@ -202,6 +203,7 @@ module Api
           id:                report.id,
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
+          vacancy_title:     report.vacancy.role_title,
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,

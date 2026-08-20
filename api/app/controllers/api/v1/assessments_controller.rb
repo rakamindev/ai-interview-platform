@@ -76,7 +76,11 @@ module Api
       end
 
       def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+        sessions = assessment.sessions.to_a
+        latest = sessions.max_by(&:created_at)
+        failed = sessions.count do |session|
+          session.status == 'failed' || (session.status == 'ended' && session.end_reason == 'error')
+        end
 
         {
           id:             assessment.id,
@@ -87,10 +91,18 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          session_summary: {
+            total:       sessions.length,
+            awaiting:    sessions.count { |session| session.status == 'pending' },
+            in_progress: sessions.count { |session| session.status == 'active' },
+            completed:   sessions.count { |session| session.status == 'ended' && session.end_reason != 'error' },
+            failed:      failed
+          },
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,
-            end_reason: latest.end_reason
+            end_reason: latest.end_reason,
+            error_message: latest.error_message
           }
         }
       end

@@ -13,23 +13,37 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, RefreshCw, Search, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
+
+type CandidateStatusFilter = "all" | "awaiting" | "in_progress" | "completed" | "failed";
+
+function candidateStatus(session: Session): Exclude<CandidateStatusFilter, "all"> {
+  if (session.status === "pending") return "awaiting";
+  if (session.status === "active") return "in_progress";
+  if (session.end_reason === "error") return "failed";
+  return "completed";
+}
 
 function SessionRow({
   session,
   index,
   assessmentId,
   onCopy,
+  onReinvite,
   copiedId,
+  reinvitingSessionId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onReinvite: (session: Session) => void;
   copiedId: number | null;
+  reinvitingSessionId: number | null;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
@@ -67,10 +81,15 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
+          <div className="text-right">
+            <span className="flex items-center justify-end gap-1 text-xs text-destructive">
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+              Failed
+            </span>
+            {session.error_message && (
+              <p className="max-w-64 mt-0.5 text-xs text-muted-foreground">{session.error_message}</p>
+            )}
+          </div>
         )}
         {isEnded && session.end_reason !== "error" && (
           <span className="flex items-center gap-1 text-xs text-green-600">
@@ -114,6 +133,18 @@ function SessionRow({
               Results
             </Button>
           )}
+          {isEnded && session.end_reason === "error" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onReinvite(session)}
+              disabled={reinvitingSessionId === session.id}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${reinvitingSessionId === session.id ? "animate-spin" : ""}`} />
+              Regenerate link
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -130,8 +161,11 @@ export default function AssessmentInvitePage() {
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
+  const [reinvitingSessionId, setReinvitingSessionId] = useState<number | null>(null);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<CandidateStatusFilter>("all");
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -175,6 +209,19 @@ export default function AssessmentInvitePage() {
     }
   };
 
+  const handleReinviteCandidate = async (session: Session) => {
+    setReinvitingSessionId(session.id);
+    setNewSession(null);
+    try {
+      const res = await assessmentsApi.regenerateInvite(session.id);
+      const resetSession = res.data.session;
+      setNewSession(resetSession);
+      setSessions((prev) => prev.map((item) => item.id === resetSession.id ? resetSession : item));
+    } finally {
+      setReinvitingSessionId(null);
+    }
+  };
+
   const copyLink = (session: Session, id: number) => {
     navigator.clipboard.writeText(session.invite_url);
     setCopiedId(id);
@@ -187,6 +234,18 @@ export default function AssessmentInvitePage() {
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
+
+  const normalizedSearch = candidateSearch.trim().toLowerCase();
+  const filteredSessions = sessions
+    .map((session, index) => ({ session, displayIndex: sessions.length - index }))
+    .filter(({ session, displayIndex }) => {
+      const displayName = session.candidate_name || `Candidate ${displayIndex}`;
+      const matchesSearch = !normalizedSearch ||
+        displayName.toLowerCase().includes(normalizedSearch) ||
+        String(session.id).includes(normalizedSearch);
+      const matchesStatus = statusFilter === "all" || candidateStatus(session) === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
 
   if (loading) {
     return (
@@ -284,10 +343,38 @@ export default function AssessmentInvitePage() {
           <h2 className="text-sm font-semibold">
             Candidates
             {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
+              <span className="ml-1.5 text-muted-foreground font-normal">
+                ({filteredSessions.length === sessions.length ? sessions.length : `${filteredSessions.length} of ${sessions.length}`})
+              </span>
             )}
           </h2>
         </div>
+
+        {sessions.length > 0 && (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={candidateSearch}
+                onChange={(event) => setCandidateSearch(event.target.value)}
+                placeholder="Search candidate..."
+                className="pl-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CandidateStatusFilter)}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="awaiting">Awaiting</SelectItem>
+                <SelectItem value="in_progress">In progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {sessions.length === 0 ? (
           <div className="border rounded-lg p-10 text-center space-y-3">
@@ -299,20 +386,27 @@ export default function AssessmentInvitePage() {
               </p>
             </div>
           </div>
+        ) : filteredSessions.length === 0 ? (
+          <div className="border rounded-lg p-8 text-center">
+            <p className="text-sm font-medium">No matching candidates</p>
+            <p className="text-xs text-muted-foreground mt-1">Try another name or status.</p>
+          </div>
         ) : (
           <Card>
             <CardContent className="p-0 divide-y">
-              {sessions.map((session, i) => (
+              {filteredSessions.map(({ session, displayIndex }) => (
                 <SessionRow
                   key={session.id}
                   session={session}
-                  index={sessions.length - i}
+                  index={displayIndex}
                   assessmentId={id!}
                   onCopy={(sid) => {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onReinvite={handleReinviteCandidate}
                   copiedId={copiedId}
+                  reinvitingSessionId={reinvitingSessionId}
                 />
               ))}
             </CardContent>

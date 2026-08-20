@@ -8,9 +8,17 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
+  session_summary?: {
+    total: number;
+    awaiting: number;
+    in_progress: number;
+    completed: number;
+    failed: number;
+  };
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
+    error_message?: string | null;
   };
 }
 
@@ -41,6 +49,7 @@ export interface Session {
   invite_url: string;
   status: "pending" | "active" | "ended";
   end_reason?: string;
+  error_message?: string | null;
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
@@ -83,6 +92,7 @@ export interface Portfolio {
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+  fit_gap_reports: FitGapReport[];
 }
 
 export interface PortfolioSkill {
@@ -140,6 +150,7 @@ export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
+  vacancy_title: string;
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
@@ -164,6 +175,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  error_message?: string | null;
 }
 
 export interface PaginationMeta {
@@ -182,7 +195,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "failed";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
