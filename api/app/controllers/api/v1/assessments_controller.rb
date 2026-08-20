@@ -90,7 +90,8 @@ module Api
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,
-            end_reason: latest.end_reason
+            end_reason: latest.end_reason,
+            error_message: latest.error_message
           }
         }
       end

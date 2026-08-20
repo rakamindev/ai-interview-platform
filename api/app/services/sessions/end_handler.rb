@@ -6,17 +6,18 @@ module Sessions
   # Called on: manual end, all_covered auto-end, time_ceiling, or error.
   class EndHandler
     VALID_REASONS = Session::END_REASONS
+    DEFAULT_ERROR_MESSAGE = 'The interview encountered a connection problem and could not be completed.'
 
     def initialize(session)
       @session = session
     end
 
-    def call(reason: 'manual_assessor')
+    def call(reason: 'manual_assessor', error_message: nil)
       # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
       if @session.ended?
         manual = %w[manual_candidate manual_assessor]
         if manual.include?(reason.to_s) && @session.end_reason == 'error'
-          @session.update_column(:end_reason, reason.to_s)
+          @session.update_columns(end_reason: reason.to_s, error_message: nil)
         end
         return @session
       end
@@ -29,6 +30,7 @@ module Sessions
         @session.update!(
           status:           'ended',
           end_reason:       reason.to_s,
+          error_message:    reason.to_s == 'error' ? (error_message.presence || DEFAULT_ERROR_MESSAGE) : nil,
           ended_at:         Time.current,
           duration_seconds: duration
         )

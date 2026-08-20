@@ -19,7 +19,7 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     );
 
   if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
+    return <span className="text-xs text-destructive">Last: failed — {session.error_message ?? "interview connection error"}</span>;
 
   if (session.status === "ended")
     return <span className="text-xs text-muted-foreground">Last: completed</span>;

@@ -34,6 +34,7 @@ export default function InterviewPage() {
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
+  const [failureMessage, setFailureMessage] = useState<string | null>(null);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
@@ -46,7 +47,10 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") {
+          setFailureMessage(res.data.error_message ?? null);
+          setInterviewState(res.data.end_reason === "error" ? "failed" : "complete");
+        }
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
@@ -88,6 +92,10 @@ export default function InterviewPage() {
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
     setReconnectedPrompt(true);
     reconnectedPromptTimerRef.current = setTimeout(() => setReconnectedPrompt(false), 10_000);
+  }, []);
+
+  const handleSessionEnded = useCallback((reason?: string, message?: string) => {
+    if (reason === "error") setFailureMessage(message ?? "The interview could not be completed. Please contact the interviewer.");
   }, []);
 
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
@@ -138,6 +146,7 @@ export default function InterviewPage() {
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onSessionEnded: handleSessionEnded,
   });
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
@@ -236,6 +245,18 @@ export default function InterviewPage() {
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
+        </p>
+      </div>
+    );
+  }
+
+  if (interviewState === "failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Interview Couldn’t Be Completed</h2>
+        <p className="text-sm text-muted-foreground">
+          {failureMessage ?? "The interview encountered a connection problem. Please contact the interviewer."}
         </p>
       </div>
     );

@@ -67,10 +67,15 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
+          <div className="text-right">
+            <span className="flex items-center justify-end gap-1 text-xs text-destructive">
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+              Failed
+            </span>
+            {session.error_message && (
+              <p className="max-w-64 mt-0.5 text-xs text-muted-foreground">{session.error_message}</p>
+            )}
+          </div>
         )}
         {isEnded && session.end_reason !== "error" && (
           <span className="flex items-center gap-1 text-xs text-green-600">
