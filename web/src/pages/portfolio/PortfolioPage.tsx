@@ -107,7 +107,7 @@ export default function PortfolioPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -120,7 +120,7 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -232,9 +232,9 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Choose vacancy..." />
               </SelectTrigger>
               <SelectContent>
@@ -245,7 +245,7 @@ export default function PortfolioPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+            <Button className="w-full sm:w-auto" onClick={handleRunFitGap} disabled={!selectedVacancy}>
               Run Fit/Gap Analysis →
             </Button>
           </div>

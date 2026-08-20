@@ -35,6 +35,7 @@ export default function AssessmentListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
@@ -42,7 +43,7 @@ export default function AssessmentListPage() {
     const delay = setTimeout(() => {
       setLoading(true);
       assessmentsApi
-        .list(page, search)
+        .list(page, search, limit)
         .then((res) => {
           setAssessments(res.data.assessments);
           setMeta(res.data.meta);
@@ -51,7 +52,7 @@ export default function AssessmentListPage() {
         .finally(() => setLoading(false));
     }, 300);
     return () => clearTimeout(delay);
-  }, [page, search]);
+  }, [page, search, limit]);
 
   return (
     <div className="space-y-4">
@@ -62,7 +63,7 @@ export default function AssessmentListPage() {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search assessments..."
@@ -117,7 +118,7 @@ export default function AssessmentListPage() {
               </CardContent>
             </Card>
           ))}
-          <PaginationControls meta={meta} onPageChange={setPage} />
+          <PaginationControls meta={meta} onPageChange={setPage} limit={limit} onLimitChange={setLimit} />
         </div>
       )}
     </div>

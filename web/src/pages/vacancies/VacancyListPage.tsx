@@ -15,13 +15,14 @@ export default function VacancyListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     const delay = setTimeout(() => {
       setLoading(true);
-      vacanciesApi.list(page, search)
+      vacanciesApi.list(page, search, limit)
         .then((res) => {
           setVacancies(res.data.vacancies);
           setMeta(res.data.meta);
@@ -30,7 +31,7 @@ export default function VacancyListPage() {
         .finally(() => setLoading(false));
     }, 300);
     return () => clearTimeout(delay);
-  }, [page, search]);
+  }, [page, search, limit]);
 
   return (
     <div className="space-y-4">
@@ -41,7 +42,7 @@ export default function VacancyListPage() {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search vacancies..."
@@ -85,7 +86,7 @@ export default function VacancyListPage() {
               </CardContent>
             </Card>
           ))}
-          <PaginationControls meta={meta} onPageChange={setPage} />
+          <PaginationControls meta={meta} onPageChange={setPage} limit={limit} onLimitChange={setLimit} />
         </div>
       )}
     </div>

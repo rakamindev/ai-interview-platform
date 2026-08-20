@@ -47,7 +47,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
   if (!open) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
         {hasOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
