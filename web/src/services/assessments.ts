@@ -9,9 +9,9 @@ export interface AssessmentPayload {
 }
 
 export const assessmentsApi = {
-  list: (page = 1) =>
+  list: (page = 1, search = "") =>
     api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
+      params: { page, search: search || undefined },
     }),
 
   get: (id: number) =>
@@ -31,9 +31,9 @@ export const assessmentsApi = {
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
 
-  getSessions: (assessmentId: number, page = 1) =>
+  getSessions: (assessmentId: number, page = 1, search = "", status = "") =>
     api.get<{ sessions: Session[]; meta: PaginationMeta }>(`/assessments/${assessmentId}/sessions`, {
-      params: { page },
+      params: { page, search: search || undefined, status: status || undefined },
     }),
 
   createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>

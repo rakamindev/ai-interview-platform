@@ -13,9 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PaginationControls from "@/components/PaginationControls";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Search } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -125,28 +127,40 @@ export default function AssessmentInvitePage() {
   const navigate = useNavigate();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
+  
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
+    const s = search.trim();
+    const st = statusFilter === "all" ? "" : statusFilter;
+    const res = await assessmentsApi.getSessions(Number(id), page, s, st);
     setSessions(res.data.sessions);
+    setMeta(res.data.meta);
+  }, [id, page, search, statusFilter]);
+
+  useEffect(() => {
+    assessmentsApi.get(Number(id))
+      .then((res) => setAssessment(res.data.assessment))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
+    const delay = setTimeout(() => {
+      loadSessions();
+    }, 300);
+    return () => clearTimeout(delay);
+  }, [loadSessions]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -169,7 +183,10 @@ export default function AssessmentInvitePage() {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
-      setSessions((prev) => [created, ...prev]);
+      setPage(1);
+      setSearch("");
+      setStatusFilter("all");
+      // loadSessions will trigger due to page/search/status reset
     } finally {
       setCreatingSession(false);
     }
@@ -279,14 +296,36 @@ export default function AssessmentInvitePage() {
       <Separator />
 
       {/* Sessions list */}
-      <div className="space-y-2">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">
             Candidates
-            {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
+            {meta?.total_count > 0 && (
+              <span className="ml-1.5 text-muted-foreground font-normal">({meta.total_count})</span>
             )}
           </h2>
+          <div className="flex items-center gap-2">
+            <div className="relative w-48">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search name..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="pl-8 h-8 text-xs"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="active">Live</SelectItem>
+                <SelectItem value="ended">Ended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {sessions.length === 0 ? (
@@ -318,6 +357,7 @@ export default function AssessmentInvitePage() {
             </CardContent>
           </Card>
         )}
+        <PaginationControls meta={meta} onPageChange={setPage} />
       </div>
 
       {/* Assessment skills detail */}

@@ -9,9 +9,9 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.includes(:sessions).order(created_at: :desc)
+        scope = scope.where("name ILIKE ?", "%#{params[:search]}%") if params[:search].present?
+        assessments = paginate(scope)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),

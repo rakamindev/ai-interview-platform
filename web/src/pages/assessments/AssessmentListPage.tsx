@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import PaginationControls from "@/components/PaginationControls";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ChevronRight, Search } from "lucide-react";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -29,17 +31,27 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
 
 export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    assessmentsApi
-      .list()
-      .then((res) => setAssessments(res.data.assessments))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
+    const delay = setTimeout(() => {
+      setLoading(true);
+      assessmentsApi
+        .list(page, search)
+        .then((res) => {
+          setAssessments(res.data.assessments);
+          setMeta(res.data.meta);
+        })
+        .catch(() => setError(true))
+        .finally(() => setLoading(false));
+    }, 300);
+    return () => clearTimeout(delay);
+  }, [page, search]);
 
   return (
     <div className="space-y-4">
@@ -48,6 +60,16 @@ export default function AssessmentListPage() {
         <Button onClick={() => navigate("/assessments/new")}>
           <Plus className="h-4 w-4 mr-1.5" /> New Assessment
         </Button>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search assessments..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          className="pl-9"
+        />
       </div>
 
       {error && (
@@ -95,6 +117,7 @@ export default function AssessmentListPage() {
               </CardContent>
             </Card>
           ))}
+          <PaginationControls meta={meta} onPageChange={setPage} />
         </div>
       )}
     </div>
