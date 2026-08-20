@@ -50,6 +50,7 @@ test.describe('AI Interview Platform - E2E Candidate Interview Flow', () => {
 
     // 5. Sustained Multi-Turn Voice Exchange (AI questions + Candidate multi-sentence voice stream)
     await page.waitForTimeout(18000);
+    await page.screenshot({ path: 'screenshots/7_interview_active_transcript.png', fullPage: true });
 
     // 6. Manual End Interview
     await endBtn.click();

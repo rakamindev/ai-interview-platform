@@ -30,6 +30,9 @@ test.describe('AI Interview Platform - Human Review Process', () => {
 
       FitGapReport.create!(portfolio_id: portfolio.id, vacancy_id: vacancy.id, skill_comparisons: [{'skill' => 'Test Skill', 'gap' => false}], overall_narrative: 'Initial')
 
+      TranscriptTurn.create!(session_id: session.id, turn_number: 1, speaker: 'ai', text: 'Hello, how are you?')
+      TranscriptTurn.create!(session_id: session.id, turn_number: 2, speaker: 'candidate', text: 'I am doing well, thank you! I am ready for the interview.')
+
       puts 'E2E_DATA:' + [assessment.id, session.id, vacancy.id].join(',')
     "`;
     const output = execSync(cmd, { cwd: apiDir, encoding: 'utf-8' });
@@ -71,6 +74,8 @@ test.describe('AI Interview Platform - Human Review Process', () => {
     // Wait for the UI to reflect the override
     await expect(page.locator('text=Candidate demonstrated deeper knowledge.')).toBeVisible();
     await expect(page.locator('text=L4').first()).toBeVisible();
+
+    await page.screenshot({ path: 'screenshots/9_portfolio_results.png', fullPage: true });
   });
 
   test('Validates role comparison execution', async ({ page }) => {
@@ -89,8 +94,31 @@ test.describe('AI Interview Platform - Human Review Process', () => {
     await page.click('button:has-text("Run Fit/Gap Analysis")');
 
     // Should see generating state or the result if fast enough
-    await expect(page.locator('text=Fit/Gap Analysis').first()).toBeVisible();
+    await expect(page.locator('text=Fit/Gap Report').first()).toBeVisible();
     await page.waitForTimeout(1500);
     await page.screenshot({ path: 'screenshots/11_fit_gap_analysis.png', fullPage: true });
+  });
+
+  test('Validates transcript view', async ({ page }) => {
+    test.skip(!sessionId, 'Data not found');
+    await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/transcript`);
+
+    // Verify transcript bubbles are visible
+    await expect(page.locator('text=Hello, how are you?')).toBeVisible();
+    await expect(page.locator('text=I am doing well')).toBeVisible();
+
+    await page.screenshot({ path: 'screenshots/10_transcript.png', fullPage: true });
+  });
+
+  test('Validates PDF export', async ({ page }) => {
+    test.skip(!sessionId, 'Data not found');
+    await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/portfolio`);
+    await expect(page.locator('text=Test Skill')).toBeVisible();
+    
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("PDF")');
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe(`portfolio-${sessionId}.pdf`);
+    await download.saveAs(`screenshots/portfolio.pdf`);
   });
 });
