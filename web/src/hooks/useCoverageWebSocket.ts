@@ -38,7 +38,12 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     const handleOpen = () => {
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
-      if (token) ws.send(JSON.stringify({ type: "auth", token }));
+      if (token) {
+        ws.send(JSON.stringify({ type: "auth", token }));
+      } else {
+        // oxlint-disable-next-line eslint/no-console
+        console.warn("[coverage-ws] no access token available, connecting unauthenticated");
+      }
     };
     onOpenRef.current = handleOpen;
     ws.addEventListener("open", handleOpen);
