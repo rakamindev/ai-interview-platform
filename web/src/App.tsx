@@ -6,10 +6,13 @@ import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RouteErrorBoundary from "@/components/RouteErrorBoundary";
 import LoginPage from "@/pages/auth/LoginPage";
+import AcceptInvitePage from "@/pages/auth/AcceptInvitePage";
+import InviteAdminPage from "@/pages/admin/InviteAdminPage";
 import AssessmentListPage from "@/pages/assessments/AssessmentListPage";
 import AssessmentNewPage from "@/pages/assessments/AssessmentNewPage";
 import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
 import AssessmentInvitePage from "@/pages/assessments/AssessmentInvitePage";
+import BulkInvitePage from "@/pages/assessments/BulkInvitePage";
 import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
 import FitGapReportPage from "@/pages/fitgap/FitGapReportPage";
@@ -18,6 +21,7 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import OverrideHistoryPage from "@/pages/audit/OverrideHistoryPage";
 
 export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -39,14 +43,16 @@ export default function App() {
     <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
-      {/* TODO(WEB-FIX-01): SignupPage exists at pages/auth/SignupPage.tsx but is unreachable.
-          Needs product decision — domain is admin-only login; open self-signup may not fit.
-          Either wire /signup behind access control or remove the page + its API method. */}
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
+      {/* Deprecated: SignupPage — replaced by admin-invite flow (WEB-NEW-01).
+          Remove once no external links reference /signup. */}
 
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute isAuthReady={isAuthReady} />}>
         <Route element={<AssessorLayout />}>
           <Route path="/" element={<Navigate to="/assessments" replace />} />
+          <Route path="/admin/invite" element={<InviteAdminPage />} />
+          <Route path="/audit/overrides" element={<OverrideHistoryPage />} />
           <Route
             path="/assessments"
             element={
@@ -65,6 +71,7 @@ export default function App() {
               </RouteErrorBoundary>
             }
           />
+          <Route path="/assessments/:id/bulk-invite" element={<BulkInvitePage />} />
           <Route
             path="/assessments/:id/sessions/:sessionId/monitor"
             element={<LiveMonitorPage />}

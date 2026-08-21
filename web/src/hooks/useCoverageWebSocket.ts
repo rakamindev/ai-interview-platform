@@ -1,9 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
 import { getAccessToken } from "@/stores/authAtom";
+import { RECONNECT_DELAYS } from "@/utils/constants";
 import type { CoverageMap } from "@/types";
-
-const RECONNECT_DELAYS = [1000, 2000, 4000];
 
 interface UseCoverageWebSocketResult {
   coverageMap: CoverageMap | null;

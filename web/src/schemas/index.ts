@@ -13,3 +13,6 @@ export { VacancySchema, VacancySkillSchema } from "./vacancy";
 export { SkillComparisonResultSchema, SkillComparisonSchema } from "./comparison";
 
 export { FitGapReportSchema } from "./fitgap";
+
+export { AssessmentFormSchema, VacancyFormSchema } from "./forms";
+export type { AssessmentFormValues, VacancyFormValues } from "./forms";

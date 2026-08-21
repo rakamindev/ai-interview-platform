@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Link } from "react-router-dom";
 import {
   DndContext,
@@ -31,14 +32,12 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import { AssessmentFormSchema } from "@/schemas/forms";
+import type { AssessmentFormValues } from "@/schemas/forms";
 import type { AssessmentSkill } from "@/types";
 
-export interface AssessmentFormValues {
-  name: string;
-  time_limit_min: number;
-  language: "en" | "id";
-  skills: Partial<AssessmentSkill>[];
-}
+// Re-export for backwards compatibility (SkillCard, CustomSkillForm, AssessmentEditPage)
+export type { AssessmentFormValues } from "@/schemas/forms";
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
@@ -47,6 +46,7 @@ export default function AssessmentNewPage() {
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
+    resolver: zodResolver(AssessmentFormSchema),
     defaultValues: {
       name: "",
       time_limit_min: 45,
@@ -139,7 +139,7 @@ export default function AssessmentNewPage() {
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
+            {...register("name")}
           />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>

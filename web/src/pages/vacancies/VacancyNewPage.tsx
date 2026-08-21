@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +11,8 @@ import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
-import type { VacancySkill } from "@/types";
-
-interface VacancyFormValues {
-  role_title: string;
-  culture_dimensions: string;
-  competency_expectations: string;
-  skills: Partial<VacancySkill>[];
-}
+import { VacancyFormSchema } from "@/schemas/forms";
+import type { VacancyFormValues } from "@/schemas/forms";
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
@@ -26,6 +21,7 @@ export default function VacancyNewPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch } = useForm<VacancyFormValues>({
+    resolver: zodResolver(VacancyFormSchema),
     defaultValues: {
       role_title: "",
       culture_dimensions: "",
@@ -74,7 +70,7 @@ export default function VacancyNewPage() {
           <Input
             id="role_title"
             placeholder="Senior Frontend Engineer"
-            {...register("role_title", { required: true })}
+            {...register("role_title")}
           />
         </div>
 
