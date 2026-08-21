@@ -3,7 +3,7 @@
 class PortfolioGeneratorWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :portfolio, retry: 3
+  sidekiq_options queue: :portfolio, retry: 3, lock: :until_executed
 
   sidekiq_retries_exhausted do |msg, _ex|
     session_id = msg['args'].first
@@ -16,8 +16,10 @@ class PortfolioGeneratorWorker
   end
 
   def perform(session_id)
-    session = Session.find(session_id)
-    Portfolios::Generator.new(session: session).call
+    ActiveRecord::Base.transaction do
+      session = Session.find(session_id)
+      Portfolios::Generator.new(session: session).call
+    end
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N10] Session #{session_id} not found — skipping")
   end
