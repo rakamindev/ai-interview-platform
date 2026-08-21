@@ -18,7 +18,7 @@ RSpec.describe "Authentication", type: :request do
       }
 
       expect(response).to have_http_status(:ok)
-      token = response.parsed_body["token"]
+      token = response.parsed_body["access_token"]
       payload = JsonWebToken.decode(token)
 
       # Token scheme should match the referer host's org, not the header
@@ -32,7 +32,7 @@ RSpec.describe "Authentication", type: :request do
       }
 
       expect(response).to have_http_status(:ok)
-      token = response.parsed_body["token"]
+      token = response.parsed_body["access_token"]
       payload = JsonWebToken.decode(token)
 
       expect(payload[:scheme]).to be_present

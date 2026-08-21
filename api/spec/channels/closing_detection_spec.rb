@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AudioWebsocketMiddleware do
+RSpec.describe AudioWebSocketMiddleware do
   subject(:middleware) { described_class.new(nil) }
 
   describe "#ai_closing_detected?" do
