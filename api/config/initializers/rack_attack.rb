@@ -40,5 +40,14 @@ module Rack
         [{ error: "Too many requests. Please try again later." }.to_json]
       ]
     end
+
+    # Instrumentation: log every throttle hit with key and request details.
+    ActiveSupport::Notifications.subscribe("rack.attack") do |_name, _start, _finish, _id, payload|
+      req = payload[:request]
+      Rails.logger.warn(
+        "[RackAttack] throttle_hit key=#{req.env["rack.attack.matched"]} " \
+        "ip=#{req.ip} path=#{req.path} method=#{req.request_method}"
+      )
+    end
   end
 end

@@ -22,7 +22,8 @@ import {
   RefreshCw,
   Zap,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from "lucide-react";
 import { POLL_DEADLINE_MS } from "@/utils/constants";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
@@ -221,9 +222,9 @@ export default function PortfolioPage() {
           <button
             onClick={() => setExportError(null)}
             className="ml-auto text-muted-foreground hover:text-foreground"
-            aria-label="Dismiss error"
+            aria-label="Close"
           >
-            &times;
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
