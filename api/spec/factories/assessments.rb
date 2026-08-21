@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :assessment do
     association :organization
-    created_by { 1 }
+    created_by { association(:user).id }
     sequence(:name) { |n| "Assessment #{n}" }
     time_limit_min { 45 }
     language { "en" }
