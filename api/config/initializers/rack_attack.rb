@@ -12,6 +12,16 @@ module Rack
       req.ip if req.path == "/api/v1/auth/login" && req.post?
     end
 
+    # Throttle refresh-token use: 20 per minute per IP.
+    throttle("auth/refresh", limit: 20, period: 1.minute) do |req|
+      req.ip if req.path == "/api/v1/auth/refresh" && req.post?
+    end
+
+    # Throttle logout: 20 per minute per IP.
+    throttle("auth/logout", limit: 20, period: 1.minute) do |req|
+      req.ip if req.path == "/api/v1/auth/logout" && req.delete?
+    end
+
     # Throttle candidate-facing endpoints: 30 per minute per IP.
     throttle("candidate/session", limit: 30, period: 1.minute) do |req|
       req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})
