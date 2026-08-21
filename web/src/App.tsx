@@ -4,6 +4,7 @@ import { performRefresh } from "@/services/api";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import RouteErrorBoundary from "@/components/RouteErrorBoundary";
 import LoginPage from "@/pages/auth/LoginPage";
 import AssessmentListPage from "@/pages/assessments/AssessmentListPage";
 import AssessmentNewPage from "@/pages/assessments/AssessmentNewPage";
@@ -43,17 +44,35 @@ export default function App() {
       <Route element={<ProtectedRoute isAuthReady={isAuthReady} />}>
         <Route element={<AssessorLayout />}>
           <Route path="/" element={<Navigate to="/assessments" replace />} />
-          <Route path="/assessments" element={<AssessmentListPage />} />
+          <Route
+            path="/assessments"
+            element={
+              <RouteErrorBoundary routeName="assessments">
+                <AssessmentListPage />
+              </RouteErrorBoundary>
+            }
+          />
           <Route path="/assessments/new" element={<AssessmentNewPage />} />
           <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
-          <Route path="/assessments/:id/invite" element={<AssessmentInvitePage />} />
+          <Route
+            path="/assessments/:id/invite"
+            element={
+              <RouteErrorBoundary routeName="assessment-invite">
+                <AssessmentInvitePage />
+              </RouteErrorBoundary>
+            }
+          />
           <Route
             path="/assessments/:id/sessions/:sessionId/monitor"
             element={<LiveMonitorPage />}
           />
           <Route
             path="/assessments/:id/sessions/:sessionId/portfolio"
-            element={<PortfolioPage />}
+            element={
+              <RouteErrorBoundary routeName="portfolio">
+                <PortfolioPage />
+              </RouteErrorBoundary>
+            }
           />
           <Route
             path="/assessments/:id/sessions/:sessionId/transcript"
@@ -71,7 +90,14 @@ export default function App() {
 
       {/* Candidate route (public) */}
       <Route element={<CandidateLayout />}>
-        <Route path="/interview/:token" element={<InterviewPage />} />
+        <Route
+          path="/interview/:token"
+          element={
+            <RouteErrorBoundary routeName="interview" showSessionRecovery>
+              <InterviewPage />
+            </RouteErrorBoundary>
+          }
+        />
       </Route>
     </Routes>
   );

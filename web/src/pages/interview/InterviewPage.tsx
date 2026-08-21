@@ -211,7 +211,7 @@ export default function InterviewPage() {
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
@@ -246,14 +246,14 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
-      </div>
+      </main>
     );
   }
 
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+      <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
@@ -261,7 +261,7 @@ export default function InterviewPage() {
           <br />
           The hiring team will review your results and follow up with you.
         </p>
-      </div>
+      </main>
     );
   }
 
@@ -270,7 +270,7 @@ export default function InterviewPage() {
   const candidateSpeaking = speaker === "candidate";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <main className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
         <span className="text-sm font-medium">AI Interview</span>
@@ -309,6 +309,7 @@ export default function InterviewPage() {
           <button
             className="ml-3 text-blue-500 hover:text-blue-700 shrink-0"
             onClick={() => setReconnectedPrompt(false)}
+            aria-label="Dismiss reconnection notice"
           >
             ✕
           </button>
@@ -400,6 +401,6 @@ export default function InterviewPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

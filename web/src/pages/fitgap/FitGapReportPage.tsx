@@ -143,11 +143,12 @@ export default function FitGapReportPage() {
 
   if (error && !report && !generating) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <main className="max-w-2xl mx-auto space-y-4">
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
             className="text-muted-foreground hover:text-foreground"
+            aria-label="Back to portfolio"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -170,12 +171,12 @@ export default function FitGapReportPage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <main className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -183,6 +184,7 @@ export default function FitGapReportPage() {
             <Link
               to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
               className="text-muted-foreground hover:text-foreground"
+              aria-label="Back to portfolio"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -349,6 +351,6 @@ export default function FitGapReportPage() {
           )}
         </>
       )}
-    </div>
+    </main>
   );
 }

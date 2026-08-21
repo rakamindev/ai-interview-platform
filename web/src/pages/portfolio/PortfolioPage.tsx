@@ -156,13 +156,14 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <main className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/invite`}
             className="text-muted-foreground hover:text-foreground"
+            aria-label="Back to invite"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -221,6 +222,7 @@ export default function PortfolioPage() {
           <button
             onClick={() => setExportError(null)}
             className="ml-auto text-muted-foreground hover:text-foreground"
+            aria-label="Dismiss error"
           >
             &times;
           </button>
@@ -357,6 +359,6 @@ export default function PortfolioPage() {
           </div>
         </>
       )}
-    </div>
+    </main>
   );
 }

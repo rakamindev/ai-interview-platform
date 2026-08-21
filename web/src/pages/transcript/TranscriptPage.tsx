@@ -39,12 +39,13 @@ export default function TranscriptPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <main className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
             className="text-muted-foreground hover:text-foreground"
+            aria-label="Back to portfolio"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -105,6 +106,6 @@ export default function TranscriptPage() {
           })}
         </div>
       )}
-    </div>
+    </main>
   );
 }

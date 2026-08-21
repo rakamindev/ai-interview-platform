@@ -140,7 +140,7 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <main className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -148,6 +148,7 @@ export default function LiveMonitorPage() {
             <Link
               to={`/assessments/${id}/invite`}
               className="text-muted-foreground hover:text-foreground"
+              aria-label="Back to invite"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -324,6 +325,6 @@ export default function LiveMonitorPage() {
           </Button>
         )}
       </div>
-    </div>
+    </main>
   );
 }
