@@ -10,7 +10,7 @@ gem 'rails', '~> 7.0.8'
 
 # Auth
 gem 'bcrypt', '~> 3.1.7'
-gem 'jwt'
+gem 'jwt', '>= 3.2.0'
 
 # Multi-tenancy / request scoping
 gem 'request_store', '~> 1.5'
