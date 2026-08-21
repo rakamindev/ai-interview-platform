@@ -44,7 +44,7 @@ RSpec.describe "WebSocket authentication", type: :request do
       user = create(:user, role: "user")
       token = JsonWebToken.encode(user_id: user.id, role: user.role, scheme: org.scheme)
 
-      middleware = AudioWebsocketMiddleware.new(nil)
+      middleware = AudioWebSocketMiddleware.new(nil)
       env = {
         "HTTP_AUTHORIZATION" => "Bearer #{token}",
         "PATH_INFO" => "/ws/sessions/#{session.id}/audio",
@@ -59,7 +59,7 @@ RSpec.describe "WebSocket authentication", type: :request do
       user = create(:user, role: "admin")
       token = JsonWebToken.encode(user_id: user.id, role: user.role, scheme: org.scheme)
 
-      middleware = AudioWebsocketMiddleware.new(nil)
+      middleware = AudioWebSocketMiddleware.new(nil)
       env = {
         "HTTP_AUTHORIZATION" => "Bearer #{token}",
         "PATH_INFO" => "/ws/sessions/#{session.id}/audio",
@@ -72,7 +72,7 @@ RSpec.describe "WebSocket authentication", type: :request do
     end
 
     it "allows a candidate via invite token (no role check)" do
-      middleware = AudioWebsocketMiddleware.new(nil)
+      middleware = AudioWebSocketMiddleware.new(nil)
       env = {
         "PATH_INFO" => "/ws/sessions/#{session.id}/audio?token=#{session.invite_token}",
         "rack.input" => StringIO.new
