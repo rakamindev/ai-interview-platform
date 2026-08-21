@@ -109,6 +109,7 @@ export default function VacancyNewPage() {
                     <LevelRadio
                       value={watch(`skills.${index}.expected_level`) ?? 3}
                       onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
+                      idPrefix={field.id}
                     />
                   </div>
                 </div>
