@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_19_000010) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_21_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -102,6 +102,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000010) do
     t.bigint "portfolio_id", null: false
     t.bigint "vacancy_id", null: false
     t.jsonb "skill_comparisons", null: false
+    t.jsonb "additional_strengths", default: [], null: false
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
@@ -112,19 +113,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000010) do
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["tenant_id"], name: "index_fit_gap_reports_on_tenant_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
-  end
-
-  create_table "organizations", force: :cascade do |t|
-    t.string "name", limit: 255, null: false
-    t.string "scheme", limit: 255, null: false
-    t.string "identifier", limit: 255, null: false
-    t.string "host", limit: 255, null: false
-    t.string "alias_hosts", default: [], null: false, array: true
-    t.jsonb "config", default: {}, null: false
-    t.timestamptz "created_at", default: -> { "now()" }, null: false
-    t.timestamptz "updated_at", default: -> { "now()" }, null: false
-    t.index ["host"], name: "index_organizations_on_host"
-    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
   create_table "organizations", force: :cascade do |t|
