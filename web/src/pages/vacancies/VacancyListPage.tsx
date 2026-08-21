@@ -22,7 +22,7 @@ export default function VacancyListPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <main className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Vacancies</h1>
         <Button onClick={() => navigate("/vacancies/new")}>
@@ -68,6 +68,6 @@ export default function VacancyListPage() {
           ))}
         </div>
       )}
-    </div>
+    </main>
   );
 }

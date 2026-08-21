@@ -40,7 +40,7 @@ export default function AcceptInvitePage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
           <h1 className="text-2xl font-bold">Invalid Invite Link</h1>
           <p className="text-sm text-muted-foreground">
@@ -51,7 +51,7 @@ export default function AcceptInvitePage() {
             Go to Login
           </Button>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -75,17 +75,17 @@ export default function AcceptInvitePage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
           <h1 className="text-2xl font-bold">Account Created</h1>
           <p className="text-sm text-muted-foreground">Redirecting you to the dashboard...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <main className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Accept Invite</h1>
@@ -127,6 +127,6 @@ export default function AcceptInvitePage() {
           </Button>
         </form>
       </div>
-    </div>
+    </main>
   );
 }
