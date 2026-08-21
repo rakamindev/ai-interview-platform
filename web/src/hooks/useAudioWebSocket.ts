@@ -28,7 +28,7 @@ export function useAudioWebSocket({
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
   const [connectionState, setConnectionState] = useState<
-    "disconnected" | "connecting" | "connected"
+    "disconnected" | "connecting" | "connected" | "unauthenticated"
   >("disconnected");
   const onOpenRef = useRef<(() => void) | null>(null);
   const onMessageRef = useRef<((event: MessageEvent) => void) | null>(null);
@@ -39,11 +39,14 @@ export function useAudioWebSocket({
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    if (!token) {
+      setConnectionState("unauthenticated");
+      return;
+    }
+
     sessionEndedRef.current = false;
     setConnectionState("connecting");
-    const url = token
-      ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
-      : `${WS_URL}/ws/sessions/${sessionId}/audio`;
+    const url = `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`;
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
@@ -51,12 +54,7 @@ export function useAudioWebSocket({
     const handleOpen = () => {
       setConnectionState("connected");
       reconnectAttemptsRef.current = 0;
-      if (token) {
-        ws.send(JSON.stringify({ type: "auth", token }));
-      } else {
-        // oxlint-disable-next-line eslint/no-console
-        console.warn("[audio-ws] no access token available, connecting unauthenticated");
-      }
+      ws.send(JSON.stringify({ type: "auth", token }));
     };
     onOpenRef.current = handleOpen;
     ws.addEventListener("open", handleOpen);

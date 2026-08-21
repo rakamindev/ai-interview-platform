@@ -24,9 +24,8 @@ import {
   FileText,
   AlertTriangle
 } from "lucide-react";
+import { POLL_DEADLINE_MS } from "@/utils/constants";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
-
-const POLL_DEADLINE_MS = 120_000; // 2 minutes
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();

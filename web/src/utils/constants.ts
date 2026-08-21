@@ -1,5 +1,7 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
+export const POLL_DEADLINE_MS = 120_000; // 2 minutes
+
 /** Parse "L3" → 3, passthrough number, return 0 for garbage input */
 export function parseLevel(level: string | number): number {
   if (typeof level === "number") return level;

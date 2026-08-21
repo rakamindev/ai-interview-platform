@@ -12,10 +12,12 @@ vi.hoisted(() => {
       setItem: (k: string, v: string) => store.set(k, v),
       removeItem: (k: string) => store.delete(k),
       clear: () => store.clear(),
-      get length() { return store.size; },
-      key: (i: number) => [...store.keys()][i] ?? null,
+      get length() {
+        return store.size;
+      },
+      key: (i: number) => [...store.keys()][i] ?? null
     },
-    configurable: true,
+    configurable: true
   });
 });
 
@@ -26,7 +28,7 @@ function installRefreshHandlers() {
   server.use(
     http.post(REFRESH_URL, async () => {
       return HttpResponse.json({
-        data: { access_token: "new-token", user: { id: "1", email: "a@b.com", role: "candidate" } },
+        data: { access_token: "new-token", user: { id: "1", email: "a@b.com", role: "candidate" } }
       });
     }),
     http.get(RESOURCE_URL, ({ request }) => {
@@ -35,7 +37,7 @@ function installRefreshHandlers() {
         return HttpResponse.json({ data: { ok: true } });
       }
       return new HttpResponse(null, { status: 401 });
-    }),
+    })
   );
 }
 
@@ -46,7 +48,7 @@ function installFailingRefreshHandlers() {
     }),
     http.get(RESOURCE_URL, () => {
       return new HttpResponse(null, { status: 401 });
-    }),
+    })
   );
 }
 
@@ -68,9 +70,12 @@ describe("api — 401 retry & refresh dedup", () => {
       http.post(REFRESH_URL, async () => {
         refreshCount++;
         return HttpResponse.json({
-          data: { access_token: "new-token", user: { id: "1", email: "a@b.com", role: "candidate" } },
+          data: {
+            access_token: "new-token",
+            user: { id: "1", email: "a@b.com", role: "candidate" }
+          }
         });
-      }),
+      })
     );
     const [res1, res2] = await Promise.all([api.get(RESOURCE_URL), api.get(RESOURCE_URL)]);
     expect(res1.status).toBe(200);
@@ -102,9 +107,12 @@ describe("api — proactive token rotation", () => {
       http.post(REFRESH_URL, async () => {
         refreshCount++;
         return HttpResponse.json({
-          data: { access_token: "new-token", user: { id: "1", email: "a@b.com", role: "candidate" } },
+          data: {
+            access_token: "new-token",
+            user: { id: "1", email: "a@b.com", role: "candidate" }
+          }
         });
-      }),
+      })
     );
     startRefreshTimer();
     expect(refreshCount).toBe(0);
