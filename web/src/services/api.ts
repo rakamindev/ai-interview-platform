@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { ZodType } from "zod";
-import { setAuth, clearAuth } from "@/stores/authAtom";
+import { setAuth, clearAuth, getAccessToken } from "@/stores/authAtom";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1";
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
@@ -22,13 +22,51 @@ export function parseResponse<T>(data: unknown, schema: ZodType<T>, fallback: T)
 // oxlint-disable-next-line import/no-named-as-default-member
 export const api = axios.create({
   baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" }
+  headers: { "Content-Type": "application/json" },
+  // Required for the httpOnly refresh cookie and the csrf_secret cookie to be
+  // sent/stored at all — API and web run on different origins in dev and prod.
+  withCredentials: true
 });
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+const REFRESH_URL = "/auth/refresh";
+const LOGIN_URL = "/auth/login";
 
 api.interceptors.request.use((config) => {
   config.headers["X-Requested-With"] = "XMLHttpRequest";
+  const csrfSecret = readCookie("csrf_secret");
+  if (csrfSecret) {
+    config.headers["X-CSRF-Token"] = csrfSecret;
+  }
+  const accessToken = getAccessToken();
+  if (accessToken && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
   return config;
 });
+
+// Single shared refresh call — every caller (401 retries, the proactive timer)
+// awaits the same in-flight promise instead of each firing its own request.
+let refreshPromise: Promise<{ access_token: string; user: unknown }> | null = null;
+
+export function performRefresh() {
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post(REFRESH_URL)
+      .then((res) => {
+        setAuth(res.data.access_token, res.data.user);
+        return res.data;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
 
 // Unwrap backend envelope: { data: { ... } } → { ... }
 // On 401/403, clear stored credentials and redirect to login.
@@ -40,12 +78,18 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    if (error.response?.status === 401 && !error.config._retry) {
+    // The refresh call itself goes through this same instance/interceptor. If its
+    // own 401 were retried here too, a dead refresh token would recurse forever —
+    // let it fail straight through instead. Each caller of performRefresh() (the
+    // retry branch below, the proactive timer, App.tsx's boot check) already
+    // decides for itself what a failed refresh means, so no redirect belongs here.
+    const isRefreshCall = error.config?.url === REFRESH_URL;
+    const isLoginCall = error.config?.url === LOGIN_URL;
+    if (error.response?.status === 401 && !error.config._retry && !isRefreshCall && !isLoginCall) {
       error.config._retry = true;
       try {
-        const res = await api.post("/auth/refresh");
-        setAuth(res.data.access_token, res.data.user);
-        error.config.headers.Authorization = `Bearer ${res.data.access_token}`;
+        const data = await performRefresh();
+        error.config.headers.Authorization = `Bearer ${data.access_token}`;
         return api(error.config);
       } catch {
         clearAuth();
@@ -65,8 +109,7 @@ export function startRefreshTimer() {
   stopRefreshTimer();
   refreshTimer = setTimeout(async () => {
     try {
-      const res = await api.post("/auth/refresh");
-      setAuth(res.data.access_token, res.data.user);
+      await performRefresh();
       startRefreshTimer(); // restart
     } catch {
       clearAuth();

@@ -20,7 +20,7 @@ export default function AssessorLayout() {
 
   const handleLogout = async () => {
     try {
-      await api.delete("/auth/logout", { withCredentials: true });
+      await api.delete("/auth/logout");
     } catch {
       // Best-effort — clear local state regardless
     }

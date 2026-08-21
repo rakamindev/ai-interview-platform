@@ -1,15 +1,9 @@
-import { atom } from "jotai";
 import { startRefreshTimer } from "@/services/api";
 
 export interface AuthState {
   accessToken: string | null;
   user: { id: string; email: string; role: string } | null;
 }
-
-export const authAtom = atom<AuthState>({
-  accessToken: null,
-  user: null
-});
 
 let _authState: AuthState = { accessToken: null, user: null };
 let _listeners: Array<() => void> = [];
