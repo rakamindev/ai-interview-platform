@@ -2,6 +2,7 @@
 
 class User < ApplicationRecord
   has_secure_password
+  has_many :memberships, dependent: :destroy
   has_many :refresh_tokens, dependent: :destroy
 
   ROLES = %w[admin user].freeze

@@ -8,6 +8,8 @@
 class Organization < ApplicationRecord
   self.table_name = "organizations"
 
+  has_many :memberships, dependent: :destroy
+
   # Mirrors rakamin-api Organisation.identify exactly.
   # Accepts identifier, name, scheme, or host.
   # Returns nil instead of falling back to tenant 0 — a silent fallback to

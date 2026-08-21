@@ -4,8 +4,8 @@ require "ostruct"
 
 # Extracted and simplified from rakamin-api.
 # Bearer token only (no basic auth — AI interview has no whitelist-key consumers).
-# Returns { user_id:, role:, scheme: } from the decoded JWT.
-# Does NOT hit the database for user lookup — trusts the JWT claims.
+# Returns { user_id:, role:, scheme: } from the decoded JWT, with role resolved
+# from the DB membership row when a matching membership exists.
 class AuthorizeApiRequest
   # Roles that map to "assessor" permission in the AI interview context.
   # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
@@ -32,11 +32,29 @@ class AuthorizeApiRequest
   attr_reader :headers, :cookies
 
   def build_user_struct(claims)
+    user_id = claims[:user_id]
+    scheme  = claims[:scheme].to_s
+
+    role = resolve_role_from_membership(user_id, scheme) || claims[:role].to_s
+
     OpenStruct.new(
-      id: claims[:user_id],
-      role: claims[:role].to_s,
-      scheme: claims[:scheme].to_s
+      id: user_id,
+      role: role,
+      scheme: scheme
     )
+  end
+
+  # Resolve the user's effective role from the memberships table for the
+  # organization matching the JWT scheme claim. Falls back to the JWT role
+  # claim when no membership row exists (backwards-compatible).
+  def resolve_role_from_membership(user_id, scheme)
+    return nil if scheme.blank?
+
+    org = Organization.find_by(scheme: scheme)
+    return nil unless org
+
+    membership = Membership.find_by(user_id: user_id, organization_id: org.id)
+    membership&.role
   end
 
   def check_role!(user)

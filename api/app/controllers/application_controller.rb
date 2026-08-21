@@ -39,10 +39,16 @@ class ApplicationController < ActionController::API
     raise ExceptionHandler::TenantNotFound, Message.tenant_not_found
   end
 
-  # AC-4.6: reject when the JWT scheme claim disagrees with the resolved org.
-  # This is a mitigation, not a repair — the scheme claim is unverifiable
-  # inside this service because no user↔organisation membership exists (C1).
+  # AC-4.6: reject when no active membership exists for the user in the
+  # resolved org, or when the JWT scheme claim disagrees with the resolved org.
   def verify_scheme_claim!
+    membership = Membership.find_by(
+      user_id: Current.user.id,
+      organization_id: Current.organization.id
+    )
+
+    raise ExceptionHandler::Unauthorized, "No active membership in this organization" unless membership
+
     return if Current.user.scheme.blank?
     return if Current.user.scheme == Current.organization.scheme
 
