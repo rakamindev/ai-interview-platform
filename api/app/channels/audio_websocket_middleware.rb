@@ -61,6 +61,7 @@ class AudioWebSocketMiddleware
   def handle_audio_websocket(env, session_id)
     browser_ws = Faye::WebSocket.new(env, nil, ping: 30)
     state = ConnectionState.new
+    state.correlation_id = env["HTTP_X_CORRELATION_ID"].presence || SecureRandom.uuid
 
     browser_ws.on(:open)    { |_event| handle_browser_open(env, session_id, browser_ws, state) }
     browser_ws.on(:message) { |event| handle_browser_frame(event, browser_ws, state, session_id) }
@@ -70,6 +71,7 @@ class AudioWebSocketMiddleware
   end
 
   def handle_browser_open(env, session_id, browser_ws, state)
+    Rails.logger.info("[AudioWS] Connection opened: session=#{session_id} correlation_id=#{state.correlation_id}")
     session, error = authenticate_and_load(env, session_id)
 
     if error
@@ -119,7 +121,7 @@ class AudioWebSocketMiddleware
   end
 
   def handle_browser_close(event, browser_ws, state, session_id)
-    Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code}")
+    Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code} correlation_id=#{state.correlation_id}")
     state.browser_disconnected_at = Time.current
     state.proactive_reconnect_timer&.cancel
 
@@ -212,7 +214,7 @@ class AudioWebSocketMiddleware
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           save_transcript_turn(session, turn_number, "candidate", text)
-          CoverageAnalyzerWorker.perform_async(session.id, turn_number)
+          CoverageAnalyzerWorker.perform_async(session.id, turn_number, { "_correlation_id" => state.correlation_id })
           refresh_coverage_cache(session, state)
         end
       rescue StandardError => e
@@ -802,7 +804,7 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response, :correlation_id
 
     def initialize
       @turn_counter = 0

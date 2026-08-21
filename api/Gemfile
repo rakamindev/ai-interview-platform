@@ -43,6 +43,7 @@ gem 'prawn-table', '~> 0.2'
 gem 'bootsnap', require: false
 gem 'kaminari'
 gem 'listen', '~> 3.2'
+gem 'lograge', '~> 0.14'
 
 group :development, :test do
   gem 'byebug', platforms: %i[mri mingw x64_mingw]
