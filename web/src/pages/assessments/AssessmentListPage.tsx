@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
-import type { Assessment } from "@/types";
+import { Plus, Clock, ChevronRight, ChevronLeft } from "lucide-react";
+import type { Assessment, PaginationMeta } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
   if (!session) return null;
@@ -29,17 +29,24 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
 
 export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    setLoading(true);
+    setError(false);
     assessmentsApi
-      .list()
-      .then((res) => setAssessments(res.data.assessments))
+      .list(page)
+      .then((res) => {
+        setAssessments(res.data.assessments);
+        setMeta(res.data.meta);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   return (
     <div className="space-y-4">
@@ -68,34 +75,62 @@ export default function AssessmentListPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {assessments.map((a) => (
-            <Card
-              key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/assessments/${a.id}/invite`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {a.time_limit_min} min
-                    </span>
-                    {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
-                    )}
+        <>
+          <div className="space-y-2">
+            {assessments.map((a) => (
+              <Card
+                key={a.id}
+                className="cursor-pointer hover:border-primary/40 transition-colors"
+                onClick={() => navigate(`/assessments/${a.id}/invite`)}
+              >
+                <CardContent className="py-3 px-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">{a.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {a.time_limit_min} min
+                      </span>
+                      {a.latest_session && (
+                        <>
+                          <span>·</span>
+                          <SessionSummary session={a.latest_session} />
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {meta && meta.total_pages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-muted-foreground">
+                Page {meta.current_page} of {meta.total_pages} ({meta.total_count} total)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= meta.total_pages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
