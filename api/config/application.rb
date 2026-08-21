@@ -6,6 +6,7 @@ require "rails"
 require "active_model/railtie"
 require "active_record/railtie"
 require "action_controller/railtie"
+require "action_mailer/railtie"
 
 require_relative "../app/middlewares/application_middleware"
 require_relative "../app/middlewares/tenant_resolver_middleware"
@@ -19,6 +20,9 @@ module AiInterview
     # API-only mode
     config.api_only = true
 
+    # Enable Action Mailer (needed for AssessmentMailer)
+    config.action_mailer.default_url_options = { host: ENV.fetch("MAILER_HOST", "localhost"), port: ENV.fetch("MAILER_PORT", 3000) }
+
     # Auto-load paths
     config.autoload_paths += %W[
       #{config.root}/app/auth
@@ -28,6 +32,8 @@ module AiInterview
       #{config.root}/app/channels
       #{config.root}/app/clients
       #{config.root}/app/workers
+      #{config.root}/app/mailers
+      #{config.root}/app/serializers
     ]
 
     # Use UUID primary keys by default

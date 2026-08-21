@@ -28,11 +28,27 @@ class FitGapGeneratorWorker
       Rails.logger.warn("[N13] Record not found: #{e.message}")
     rescue StandardError => e
       Rails.logger.error("[N13] FitGapGeneratorWorker failed for portfolio=#{portfolio_id} vacancy=#{vacancy_id}: #{e.class}: #{e.message}")
+      send_generation_failure_notification(portfolio_id, e)
       raise
     ensure
       ActiveRecord::Base.connection.execute(
         ActiveRecord::Base.sanitize_sql_array(["SELECT pg_advisory_unlock(?)", lock_key])
       )
     end
+  end
+
+  private
+
+  def send_generation_failure_notification(portfolio_id, error)
+    portfolio = Portfolio.unscoped.find_by(id: portfolio_id)
+    return unless portfolio
+
+    session = portfolio.session
+    return unless session
+
+    assessment = session.assessment
+    AssessmentMailer.generation_failed(assessment, session, error).deliver_later
+  rescue StandardError => e
+    Rails.logger.error("[N13] Failed to send failure notification: #{e.message}")
   end
 end

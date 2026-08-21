@@ -21,14 +21,14 @@ module Api
           .index_by(&:assessment_id)
 
         json_response(
-          assessments: assessments.map { |a| assessment_json(a, latest_sessions[a.id]) },
+          assessments: assessments.map { |a| AssessmentSerializer.render(a, latest_session: latest_sessions[a.id]) },
           meta: pagination_meta(assessments)
         )
       end
 
       # GET /api/v1/assessments/:id
       def show
-        json_response(assessment: assessment_with_skills_json(@assessment))
+        json_response(assessment: AssessmentSerializer.render(@assessment, with_skills: true))
       end
 
       # POST /api/v1/assessments
@@ -38,7 +38,7 @@ module Api
 
         if assessment.save
           SystemPromptGeneratorWorker.perform_async(assessment.id)
-          json_response({ assessment:, system_prompt_generated: true }, :created)
+          json_response({ assessment: AssessmentSerializer.render(assessment), system_prompt_generated: true }, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
         end
@@ -48,7 +48,7 @@ module Api
       def update
         if @assessment.update(assessment_params)
           SystemPromptGeneratorWorker.perform_async(@assessment.id)
-          json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
+          json_response({ assessment: AssessmentSerializer.render(@assessment, with_skills: true), system_prompt_generated: true })
         else
           json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
         end

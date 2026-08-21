@@ -36,6 +36,7 @@ module Sessions
 
       enqueue_portfolio_generation
       publish_status_update
+      send_session_completed_notification
       Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
 
       @session
@@ -70,6 +71,13 @@ module Sessions
 
       PortfolioGeneratorWorker.perform_async(@session.id)
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+    end
+
+    def send_session_completed_notification
+      assessment = @session.assessment
+      AssessmentMailer.session_completed(assessment, @session).deliver_later
+    rescue StandardError => e
+      Rails.logger.error("[EndHandler] Failed to send session completed email: #{e.message}")
     end
   end
 end

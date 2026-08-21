@@ -32,6 +32,26 @@ module Rack
       req.ip if req.path.match?(%r{\A/api/v1/portfolios/[^/]+/(fitgap|regenerate_fitgap)\z}) && req.post?
     end
 
+    # Throttle assessment creation: 10 per minute per IP.
+    throttle("assessments/create", limit: 10, period: 1.minute) do |req|
+      req.ip if req.path == "/api/v1/assessments" && req.post?
+    end
+
+    # Throttle vacancy creation: 10 per minute per IP.
+    throttle("vacancies/create", limit: 10, period: 1.minute) do |req|
+      req.ip if req.path == "/api/v1/vacancies" && req.post?
+    end
+
+    # Throttle portfolio/fitgap regeneration: 5 per minute per IP.
+    throttle("portfolios/regenerate", limit: 5, period: 1.minute) do |req|
+      req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/portfolio/regenerate\z}) && req.post?
+    end
+
+    # Throttle fitgap regeneration: 5 per minute per IP.
+    throttle("fitgap/regenerate", limit: 5, period: 1.minute) do |req|
+      req.ip if req.path.match?(%r{\A/api/v1/portfolios/[^/]+/regenerate_fitgap\z}) && req.post?
+    end
+
     # Return 429 JSON instead of the default plain-text response.
     self.throttled_responder = lambda do |_req|
       [

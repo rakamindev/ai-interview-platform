@@ -15,7 +15,7 @@ module Api
         assessment = Assessment.find(params[:assessment_id])
         sessions = assessment.sessions.order(created_at: :desc)
 
-        json_response(sessions: sessions.map(&method(:session_json)))
+        json_response(sessions: sessions.map { |s| SessionSerializer.render(s) })
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -23,7 +23,7 @@ module Api
       # GET /api/v1/sessions/:id
       def show
         json_response(
-          session: session_json(@session).merge(
+          session: SessionSerializer.render(@session).merge(
             assessment: {
               id: @session.assessment.id,
               name: @session.assessment.name,
@@ -46,7 +46,7 @@ module Api
         if session.save
           json_response(
             {
-              session: session_json(session),
+              session: SessionSerializer.render(session),
               invite_url: session.invite_url
             },
             :created
@@ -54,6 +54,48 @@ module Api
         else
           json_error(session.errors.full_messages.first, :unprocessable_entity)
         end
+      rescue ActiveRecord::RecordNotFound
+        json_error("Assessment not found", :not_found)
+      end
+
+      # POST /api/v1/assessments/:assessment_id/sessions/bulk_create
+      def bulk_create
+        assessment = Assessment.find(params[:assessment_id])
+        candidates = params.require(:candidates)
+
+        unless candidates.is_a?(Array) && candidates.present?
+          return json_error("candidates must be a non-empty array", :unprocessable_entity)
+        end
+
+        if candidates.size > 100
+          return json_error("Maximum 100 candidates per request", :unprocessable_entity)
+        end
+
+        results = Sessions::BulkInviter.new(
+          assessment: assessment,
+          candidates: candidates,
+          tenant_id: current_tenant_id
+        ).call
+
+        json_response(
+          {
+            results: results.map do |r|
+              {
+                identifier: r.identifier,
+                success: r.success,
+                session_id: r.session&.id,
+                invite_url: r.session&.invite_url,
+                error: r.error
+              }
+            end,
+            summary: {
+              total: results.size,
+              successful: results.count(&:success),
+              failed: results.count { |r| !r.success }
+            }
+          },
+          :ok
+        )
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -69,7 +111,7 @@ module Api
         result = Sessions::EndHandler.new(@session).call(reason: reason)
 
         if result
-          json_response(session: session_json(@session.reload))
+          json_response(session: SessionSerializer.render(@session.reload))
         else
           json_error("Failed to end session", :unprocessable_entity)
         end
@@ -156,24 +198,6 @@ module Api
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found)
-      end
-
-      def session_json(session)
-        {
-          id: session.id,
-          assessment_id: session.assessment_id,
-          tenant_id: session.tenant_id,
-          candidate_id: session.candidate_id,
-          candidate_name: session.candidate_name,
-          invite_token: session.invite_token,
-          invite_url: session.invite_url,
-          status: session.status,
-          end_reason: session.end_reason,
-          started_at: session.started_at,
-          ended_at: session.ended_at,
-          duration_seconds: session.duration_seconds,
-          created_at: session.created_at
-        }
       end
 
       def coverage_map_json(map)

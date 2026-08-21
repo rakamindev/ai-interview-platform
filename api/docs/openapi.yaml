@@ -1,0 +1,662 @@
+openapi: "3.0.3"
+info:
+  title: AI Interview Platform API
+  version: "1.0.0"
+  description: |
+    Multi-tenant AI hiring-interview platform API.
+    Handles assessments, sessions, portfolios, and fit-gap analysis.
+
+servers:
+  - url: /api/v1
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "401":
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      responses:
+        "200":
+          description: Token refreshed
+        "401":
+          description: Invalid/expired refresh token
+
+  /auth/logout:
+    delete:
+      tags: [Auth]
+      summary: Logout and revoke refresh token
+      responses:
+        "200":
+          description: Logged out
+
+  /assessments:
+    get:
+      tags: [Assessments]
+      summary: List assessments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of assessments
+    post:
+      tags: [Assessments]
+      summary: Create assessment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentInput"
+      responses:
+        "201":
+          description: Assessment created
+        "422":
+          description: Validation error
+
+  /assessments/{id}:
+    get:
+      tags: [Assessments]
+      summary: Get assessment with skills
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Assessment details
+        "404":
+          description: Not found
+    put:
+      tags: [Assessments]
+      summary: Update assessment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentInput"
+      responses:
+        "200":
+          description: Assessment updated
+        "422":
+          description: Validation error
+    delete:
+      tags: [Assessments]
+      summary: Delete assessment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Assessment deleted
+
+  /assessments/{assessment_id}/sessions:
+    get:
+      tags: [Sessions]
+      summary: List sessions for assessment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assessment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of sessions
+    post:
+      tags: [Sessions]
+      summary: Create session (single candidate)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assessment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session:
+                  type: object
+                  properties:
+                    candidate_id:
+                      type: string
+                    candidate_name:
+                      type: string
+      responses:
+        "201":
+          description: Session created with invite URL
+        "404":
+          description: Assessment not found
+
+  /assessments/{assessment_id}/sessions/bulk_create:
+    post:
+      tags: [Sessions]
+      summary: Bulk create sessions for multiple candidates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assessment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [candidates]
+              properties:
+                candidates:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    properties:
+                      candidate_id:
+                        type: string
+                      candidate_name:
+                        type: string
+      responses:
+        "200":
+          description: Per-row success/failure summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        identifier:
+                          type: string
+                        success:
+                          type: boolean
+                        session_id:
+                          type: string
+                        invite_url:
+                          type: string
+                        error:
+                          type: string
+                  summary:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      successful:
+                        type: integer
+                      failed:
+                        type: integer
+        "422":
+          description: Invalid input
+
+  /sessions/{id}:
+    get:
+      tags: [Sessions]
+      summary: Get session details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Session details
+        "404":
+          description: Not found
+
+  /sessions/{id}/end:
+    post:
+      tags: [Sessions]
+      summary: End a session
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session:
+                  type: object
+                  properties:
+                    reason:
+                      type: string
+                      enum: [manual_candidate, manual_assessor, all_covered, time_ceiling, error]
+      responses:
+        "200":
+          description: Session ended
+        "422":
+          description: Invalid reason or already ended
+
+  /sessions/{id}/coverage:
+    get:
+      tags: [Sessions]
+      summary: Get coverage maps for session
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Coverage maps
+
+  /sessions/{id}/transcript:
+    get:
+      tags: [Sessions]
+      summary: Get transcript turns
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from_turn
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transcript turns
+
+  /sessions/{token}/candidate:
+    get:
+      tags: [Sessions]
+      summary: Get candidate info (no JWT, invite token only)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Candidate session info
+        "401":
+          description: Expired token
+        "404":
+          description: Invalid token
+
+  /sessions/{token}/audio_complete:
+    post:
+      tags: [Sessions]
+      summary: Signal audio complete (no JWT, invite token only)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session ended
+        "401":
+          description: Expired token
+
+  /sessions/{id}/portfolio:
+    get:
+      tags: [Portfolios]
+      summary: Get portfolio for session
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Portfolio details
+        "202":
+          description: Still generating
+
+  /sessions/{id}/portfolio/regenerate:
+    post:
+      tags: [Portfolios]
+      summary: Regenerate failed portfolio
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Regeneration queued
+        "404":
+          description: No portfolio found
+        "422":
+          description: Portfolio not in failed state
+
+  /portfolios/{id}/fitgap:
+    post:
+      tags: [Portfolios]
+      summary: Generate fit/gap report
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vacancy_id:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Cached report or generation queued
+        "202":
+          description: Generation in progress
+
+  /portfolios/{id}/regenerate_fitgap:
+    post:
+      tags: [Portfolios]
+      summary: Regenerate fit/gap report
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vacancy_id:
+                  type: string
+                  format: uuid
+      responses:
+        "202":
+          description: Regeneration queued
+
+  /portfolios/{id}/export:
+    get:
+      tags: [Portfolios]
+      summary: Export portfolio as PDF or JSON
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [pdf, json]
+        - name: vacancy_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Exported file
+        "422":
+          description: Portfolio not ready
+
+  /vacancies:
+    get:
+      tags: [Vacancies]
+      summary: List vacancies
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of vacancies
+    post:
+      tags: [Vacancies]
+      summary: Create vacancy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VacancyInput"
+      responses:
+        "201":
+          description: Vacancy created
+        "422":
+          description: Validation error
+
+  /vacancies/{id}:
+    get:
+      tags: [Vacancies]
+      summary: Get vacancy with skills
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Vacancy details
+        "404":
+          description: Not found
+    put:
+      tags: [Vacancies]
+      summary: Update vacancy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VacancyInput"
+      responses:
+        "200":
+          description: Vacancy updated
+    delete:
+      tags: [Vacancies]
+      summary: Delete vacancy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Vacancy deleted
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AssessmentInput:
+      type: object
+      required: [name, time_limit_min]
+      properties:
+        name:
+          type: string
+        time_limit_min:
+          type: integer
+          enum: [10, 30, 45, 60, 90]
+        language:
+          type: string
+          enum: [en, id]
+        assessment_skills_attributes:
+          type: array
+          items:
+            type: object
+            properties:
+              skill_id:
+                type: string
+              skill_label:
+                type: string
+              is_custom:
+                type: boolean
+              expected_level:
+                type: integer
+              display_order:
+                type: integer
+
+    VacancyInput:
+      type: object
+      required: [role_title]
+      properties:
+        role_title:
+          type: string
+        culture_dimensions:
+          type: string
+        competency_expectations:
+          type: string
+        vacancy_skills_attributes:
+          type: array
+          items:
+            type: object
+            properties:
+              skill_id:
+                type: string
+              skill_label:
+                type: string
+              expected_level:
+                type: integer
