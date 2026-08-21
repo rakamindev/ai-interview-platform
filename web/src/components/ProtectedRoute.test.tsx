@@ -8,10 +8,12 @@ vi.hoisted(() => {
       setItem: (k: string, v: string) => store.set(k, v),
       removeItem: (k: string) => store.delete(k),
       clear: () => store.clear(),
-      get length() { return store.size; },
-      key: (i: number) => [...store.keys()][i] ?? null,
+      get length() {
+        return store.size;
+      },
+      key: (i: number) => [...store.keys()][i] ?? null
     },
-    configurable: true,
+    configurable: true
   });
 });
 
@@ -30,7 +32,7 @@ function renderWithRouter(initialEntry = "/protected") {
         </Route>
         <Route path="/login" element={<div data-testid="login">Login Page</div>} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -47,7 +49,7 @@ describe("ProtectedRoute", () => {
             <Route path="/" element={<div>Child</div>} />
           </Route>
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
     expect(container.innerHTML).toBe("");
   });

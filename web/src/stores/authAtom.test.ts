@@ -8,10 +8,12 @@ vi.hoisted(() => {
       setItem: (k: string, v: string) => store.set(k, v),
       removeItem: (k: string) => store.delete(k),
       clear: () => store.clear(),
-      get length() { return store.size; },
-      key: (i: number) => [...store.keys()][i] ?? null,
+      get length() {
+        return store.size;
+      },
+      key: (i: number) => [...store.keys()][i] ?? null
     },
-    configurable: true,
+    configurable: true
   });
 });
 

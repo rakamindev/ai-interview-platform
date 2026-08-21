@@ -10,6 +10,7 @@ interface UseCoverageWebSocketResult {
   sessionEnded: boolean;
   sessionEndReason: string | null;
   isConnected: boolean;
+  authState: "authenticated" | "unauthenticated";
 }
 
 export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketResult {
@@ -17,6 +18,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [authState, setAuthState] = useState<"authenticated" | "unauthenticated">("authenticated");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,18 +34,18 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const token = getAccessToken();
+    if (!token) {
+      setAuthState("unauthenticated");
+      return;
+    }
+    setAuthState("authenticated");
     const ws = new WebSocket(`${WS_URL}/ws/sessions/${sessionId}/coverage`);
     wsRef.current = ws;
 
     const handleOpen = () => {
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
-      if (token) {
-        ws.send(JSON.stringify({ type: "auth", token }));
-      } else {
-        // oxlint-disable-next-line eslint/no-console
-        console.warn("[coverage-ws] no access token available, connecting unauthenticated");
-      }
+      ws.send(JSON.stringify({ type: "auth", token }));
     };
     onOpenRef.current = handleOpen;
     ws.addEventListener("open", handleOpen);
@@ -109,5 +111,5 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     };
   }, [connect]);
 
-  return { coverageMap, sessionEnded, sessionEndReason, isConnected };
+  return { coverageMap, sessionEnded, sessionEndReason, isConnected, authState };
 }

@@ -9,9 +9,8 @@ import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, AlertTriangle } from "lucide-react";
+import { POLL_DEADLINE_MS } from "@/utils/constants";
 import type { FitGapReport, Portfolio } from "@/types";
-
-const POLL_DEADLINE_MS = 120_000; // 2 minutes
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{

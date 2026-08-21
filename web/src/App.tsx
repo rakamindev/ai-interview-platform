@@ -38,6 +38,9 @@ export default function App() {
     <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
+      {/* TODO(WEB-FIX-01): SignupPage exists at pages/auth/SignupPage.tsx but is unreachable.
+          Needs product decision — domain is admin-only login; open self-signup may not fit.
+          Either wire /signup behind access control or remove the page + its API method. */}
 
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute isAuthReady={isAuthReady} />}>

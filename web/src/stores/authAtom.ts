@@ -13,8 +13,14 @@ function notify() {
 }
 
 export function setAuth(auth: AuthState): void;
-export function setAuth(accessToken: string, user: { id: string; email: string; role: string }): void;
-export function setAuth(authOrToken: AuthState | string, user?: { id: string; email: string; role: string }) {
+export function setAuth(
+  accessToken: string,
+  user: { id: string; email: string; role: string }
+): void;
+export function setAuth(
+  authOrToken: AuthState | string,
+  user?: { id: string; email: string; role: string }
+) {
   if (typeof authOrToken === "string" && user) {
     _authState = { accessToken: authOrToken, user };
   } else if (typeof authOrToken === "object") {

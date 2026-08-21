@@ -92,6 +92,12 @@ jobs:
       - name: Type check
         working-directory: web
         run: npx tsc --noEmit
+      - name: Lint
+        working-directory: web
+        run: npx oxlint src/
+      - name: Format check
+        working-directory: web
+        run: npx oxfmt --check src/
       - name: Vitest
         working-directory: web
         run: npm run test
