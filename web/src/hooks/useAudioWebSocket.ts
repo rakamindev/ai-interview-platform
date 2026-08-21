@@ -27,7 +27,7 @@ export function useAudioWebSocket({
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
   const [connectionState, setConnectionState] = useState<
-    "disconnected" | "connecting" | "connected" | "unauthenticated"
+    "disconnected" | "connecting" | "connected" | "reconnecting" | "unauthenticated"
   >("disconnected");
   const onOpenRef = useRef<(() => void) | null>(null);
   const onMessageRef = useRef<((event: MessageEvent) => void) | null>(null);
@@ -133,16 +133,20 @@ export function useAudioWebSocket({
     ws.addEventListener("error", handleError);
 
     const handleClose = () => {
-      setConnectionState("disconnected");
-      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
+      if (sessionEndedRef.current) {
+        setConnectionState("disconnected");
+        return; // session ended cleanly — do not reconnect
+      }
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
+        setConnectionState("reconnecting");
         onStateChange("reconnecting");
         reconnectTimerRef.current = setTimeout(() => {
           reconnectAttemptsRef.current += 1;
           connectRef.current();
         }, RECONNECT_DELAYS[attempt]);
       } else {
+        setConnectionState("disconnected");
         onStateChange("complete");
       }
     };

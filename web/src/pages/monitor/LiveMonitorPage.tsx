@@ -62,9 +62,8 @@ export default function LiveMonitorPage() {
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { coverageMap, sessionEnded, sessionEndReason, isConnected } = useCoverageWebSocket(
-    Number(sessionId)
-  );
+  const { coverageMap, sessionEnded, sessionEndReason, isConnected, connectionStatus } =
+    useCoverageWebSocket(Number(sessionId));
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {
@@ -162,11 +161,19 @@ export default function LiveMonitorPage() {
           <span
             className={cn(
               "flex items-center gap-1 text-xs",
-              isConnected ? "text-green-600" : "text-muted-foreground"
+              connectionStatus === "connected"
+                ? "text-green-600"
+                : connectionStatus === "reconnecting"
+                  ? "text-amber-600"
+                  : "text-muted-foreground"
             )}
           >
             <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
+            {connectionStatus === "connected"
+              ? "Live"
+              : connectionStatus === "reconnecting"
+                ? "Reconnecting..."
+                : "Disconnected"}
           </span>
         </div>
       </div>
