@@ -28,8 +28,11 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      clearToken();
-      window.location.href = "/login";
+      const isLoginPage = window.location.pathname === "/login";
+      if (!isLoginPage) {
+        clearToken();
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
