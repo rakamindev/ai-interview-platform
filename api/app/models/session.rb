@@ -5,6 +5,7 @@ class Session < ApplicationRecord
 
   STATUSES   = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
+  INVITE_TOKEN_TTL = 7.days
 
   belongs_to :assessment
   has_many :transcript_turns, dependent: :destroy
@@ -16,6 +17,7 @@ class Session < ApplicationRecord
   validates :end_reason, inclusion: { in: END_REASONS }, allow_nil: true
 
   before_validation :generate_invite_token, on: :create
+  before_create :set_expires_at
 
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
@@ -24,6 +26,10 @@ class Session < ApplicationRecord
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+
+  def expired?
+    expires_at.present? && expires_at < Time.current
+  end
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
@@ -34,5 +40,9 @@ class Session < ApplicationRecord
 
   def generate_invite_token
     self.invite_token ||= SecureRandom.hex(32)
+  end
+
+  def set_expires_at
+    self.expires_at ||= INVITE_TOKEN_TTL.from_now
   end
 end
