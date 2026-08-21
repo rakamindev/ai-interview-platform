@@ -44,8 +44,8 @@ export default function AcceptInvitePage() {
         <div className="w-full max-w-sm text-center space-y-4">
           <h1 className="text-2xl font-bold">Invalid Invite Link</h1>
           <p className="text-sm text-muted-foreground">
-            This invite link is invalid or missing a token. Please contact your
-            administrator for a new invite.
+            This invite link is invalid or missing a token. Please contact your administrator for a
+            new invite.
           </p>
           <Button variant="outline" onClick={() => navigate("/login")}>
             Go to Login
@@ -78,9 +78,7 @@ export default function AcceptInvitePage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
           <h1 className="text-2xl font-bold">Account Created</h1>
-          <p className="text-sm text-muted-foreground">
-            Redirecting you to the dashboard...
-          </p>
+          <p className="text-sm text-muted-foreground">Redirecting you to the dashboard...</p>
         </div>
       </div>
     );
@@ -91,9 +89,7 @@ export default function AcceptInvitePage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Accept Invite</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Create your account to get started
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Create your account to get started</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -119,9 +115,7 @@ export default function AcceptInvitePage() {
               {...register("password_confirmation")}
             />
             {errors.password_confirmation && (
-              <p className="text-xs text-destructive">
-                {errors.password_confirmation.message}
-              </p>
+              <p className="text-xs text-destructive">{errors.password_confirmation.message}</p>
             )}
           </div>
 

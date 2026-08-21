@@ -18,7 +18,9 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<"connected" | "reconnecting" | "disconnected">("disconnected");
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "reconnecting" | "disconnected"
+  >("disconnected");
   const [authState, setAuthState] = useState<"authenticated" | "unauthenticated">("authenticated");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);

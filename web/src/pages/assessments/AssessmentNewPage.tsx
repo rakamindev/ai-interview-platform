@@ -136,11 +136,7 @@ export default function AssessmentNewPage() {
           <Label htmlFor="name">
             Role title <span className="text-destructive">*</span>
           </Label>
-          <Input
-            id="name"
-            placeholder="Senior Frontend Engineer"
-            {...register("name")}
-          />
+          <Input id="name" placeholder="Senior Frontend Engineer" {...register("name")} />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 

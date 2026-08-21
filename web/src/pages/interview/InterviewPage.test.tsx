@@ -56,9 +56,7 @@ vi.mock("@/components/interview/InterviewTimer", () => ({
 }));
 
 vi.mock("@/components/interview/ConnectionStatus", () => ({
-  default: ({ state }: { state: string }) => (
-    <div data-testid="connection-status">{state}</div>
-  )
+  default: ({ state }: { state: string }) => <div data-testid="connection-status">{state}</div>
 }));
 
 vi.mock("@/components/interview/TranscriptBubble", () => ({
@@ -119,9 +117,7 @@ describe("InterviewPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Backend Developer")).toBeInTheDocument();
     });
-    expect(
-      screen.getByText(/This is a voice interview/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/This is a voice interview/)).toBeInTheDocument();
     expect(screen.getByText(/The AI will ask follow-up questions/)).toBeInTheDocument();
   });
 
@@ -157,9 +153,7 @@ describe("InterviewPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Interview Complete")).toBeInTheDocument();
     });
-    expect(
-      screen.getByText(/Thank you\. The interview has been recorded/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Thank you\. The interview has been recorded/)).toBeInTheDocument();
   });
 
   it("handles getCandidateInfo error gracefully", async () => {

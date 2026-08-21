@@ -184,9 +184,7 @@ export default function OverrideHistoryPage() {
                         {LEVEL_LABELS[event.override_level] ?? event.override_level}
                       </span>
                     </td>
-                    <td className="p-3 text-muted-foreground">
-                      {event.assessor_email ?? "—"}
-                    </td>
+                    <td className="p-3 text-muted-foreground">{event.assessor_email ?? "—"}</td>
                     <td className="p-3 text-muted-foreground">
                       {event.overridden_at
                         ? new Date(event.overridden_at).toLocaleDateString()
