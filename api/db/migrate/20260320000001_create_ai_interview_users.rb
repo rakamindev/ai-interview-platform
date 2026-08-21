@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateAiInterviewUsers < ActiveRecord::Migration[7.0]
+class CreateAiInterviewUsers < ActiveRecord::Migration[8.0]
   def up
     execute "SET search_path TO ai_interview, public"
 

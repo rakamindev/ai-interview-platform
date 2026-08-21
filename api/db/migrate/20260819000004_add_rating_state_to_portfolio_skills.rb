@@ -7,7 +7,7 @@
 # The rollback deletes unrated rows and logs the count rather than writing
 # 1 into them — inventing a rating during the rollback of the migration
 # that fixes invented ratings would be absurd.
-class AddRatingStateToPortfolioSkills < ActiveRecord::Migration[7.0]
+class AddRatingStateToPortfolioSkills < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def up

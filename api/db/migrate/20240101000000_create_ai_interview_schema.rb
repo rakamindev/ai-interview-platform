@@ -2,7 +2,7 @@
 
 # Creates the ai_interview PostgreSQL schema and all AI Interview tables within it.
 # Tables use tenant_id (references public.organizations.id) for multi-tenant scoping.
-class CreateAiInterviewSchema < ActiveRecord::Migration[7.0]
+class CreateAiInterviewSchema < ActiveRecord::Migration[8.0]
   def up
     # Create dedicated schema
     execute "CREATE SCHEMA IF NOT EXISTS ai_interview"

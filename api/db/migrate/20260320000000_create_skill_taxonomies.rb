@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateSkillTaxonomies < ActiveRecord::Migration[7.0]
+class CreateSkillTaxonomies < ActiveRecord::Migration[8.0]
   def up
     execute "SET search_path TO ai_interview, public"
 

@@ -2,7 +2,7 @@
 
 # Adds invite_expires_at to sessions so invite tokens expire after 14 days.
 # Backfills existing sessions to created_at + 14 days.
-class AddInviteExpiresAtToSessions < ActiveRecord::Migration[7.0]
+class AddInviteExpiresAtToSessions < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def up
