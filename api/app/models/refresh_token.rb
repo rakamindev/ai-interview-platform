@@ -33,11 +33,15 @@ class RefreshToken < ApplicationRecord
   end
 
   def self.revoke_all_for_user(user_id)
-    active.where(user_id: user_id).find_each(&:revoke!)
+    where(user_id: user_id, revoked_at: nil).find_each(&:revoke!)
   end
 
   def self.find_by_token_hash(hash)
     find_by(token_hash: hash)
+  end
+
+  def self.hash_token(token)
+    Digest::SHA256.hexdigest(token)
   end
 
   def self.cleanup

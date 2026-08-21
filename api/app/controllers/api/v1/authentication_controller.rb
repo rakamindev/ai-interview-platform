@@ -37,15 +37,17 @@ module Api
         token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
         return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token") unless token_record&.valid_token?
 
-        if token_record.grace_period_expired?
-          token_record.revoke!
-          new_token = issue_refresh_token(token_record.user_id)
-          store_refresh_cookie(new_token)
-        else
-          new_token = issue_refresh_token(token_record.user_id)
-          store_refresh_cookie(new_token)
-          token_record.mark_used! if token_record.used_at.nil?
+        if token_record.used_at.present? && token_record.grace_period_expired?
+          # Same rotated-away token replayed after the grace window: treat as theft, kill the whole session family.
+          RefreshToken.revoke_all_for_user(token_record.user_id)
+          return json_error("Refresh token reuse detected", :unauthorized, details: "refresh_token_reused")
         end
+
+        new_token = issue_refresh_token(token_record.user_id)
+        store_refresh_cookie(new_token)
+        token_record.mark_used! if token_record.used_at.nil?
+        token_record.revoke!
+        store_csrf_cookie
 
         user = User.find(token_record.user_id)
         scheme = resolve_scheme
@@ -56,6 +58,7 @@ module Api
 
       # DELETE /api/v1/auth/logout
       def logout
+        verify_csrf!
         refresh_token_value = extract_refresh_token
         if refresh_token_value
           token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
@@ -68,23 +71,22 @@ module Api
       private
 
       def store_refresh_cookie(token)
-        cookie_value = "refresh_token=#{token}; Path=/api/v1/auth; Max-Age=604800; SameSite=Lax; HttpOnly"
-        cookie_value += "; Secure" if Rails.env.production?
-        response.headers["Set-Cookie"] = cookie_value
+        cookies[:refresh_token] = {
+          value: token,
+          path: "/api/v1/auth",
+          max_age: 604_800,
+          same_site: :lax,
+          httponly: true,
+          secure: Rails.env.production?
+        }
       end
 
       def clear_refresh_cookie
-        cookie_value = "refresh_token=; Path=/api/v1/auth; Max-Age=0; SameSite=Lax; HttpOnly"
-        cookie_value += "; Secure" if Rails.env.production?
-        response.headers["Set-Cookie"] = cookie_value
+        cookies.delete(:refresh_token, path: "/api/v1/auth")
       end
 
       def extract_refresh_token
-        request.headers["Cookie"]&.split("; ")&.each do |cookie|
-          name, value = cookie.split("=", 2)
-          return value if name == "refresh_token"
-        end
-        nil
+        cookies[:refresh_token]
       end
 
       def store_csrf_cookie
@@ -102,13 +104,13 @@ module Api
       def verify_csrf!
         expected = cookies[:csrf_secret]
         actual = request.headers["X-CSRF-Token"]
-        return if expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, actual)
+        return if expected.present? && actual.present? && ActiveSupport::SecurityUtils.secure_compare(expected, actual)
 
         raise(ExceptionHandler::InvalidToken, "CSRF token mismatch")
       end
 
       def token_hash(token)
-        Digest::SHA256.hexdigest(token)
+        RefreshToken.hash_token(token)
       end
 
       def issue_refresh_token(user_id)
@@ -122,10 +124,7 @@ module Api
       end
 
       def resolve_scheme
-        scheme_from_referer ||
-          ActiveRecord::Base.connection.select_value(
-            "SELECT scheme FROM organizations LIMIT 1"
-          ) || "test-corp"
+        scheme_from_referer || Organization.order(:created_at).limit(1).pick(:scheme) || "test-corp"
       end
 
       def scheme_from_referer
