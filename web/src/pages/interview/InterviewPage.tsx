@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, X } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -309,9 +309,9 @@ export default function InterviewPage() {
           <button
             className="ml-3 text-blue-500 hover:text-blue-700 shrink-0"
             onClick={() => setReconnectedPrompt(false)}
-            aria-label="Dismiss reconnection notice"
+            aria-label="Close"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}

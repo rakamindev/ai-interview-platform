@@ -28,6 +28,7 @@ npm run dev
 |---|---|---|
 | `VITE_API_BASE_URL` | Yes | Backend REST API, e.g. `http://localhost:3001/api/v1` |
 | `VITE_WS_BASE_URL` | Yes | WebSocket server, e.g. `ws://localhost:3001` |
+| `VITE_REQUIRE_CAMERA` | No | Require camera access before interview starts (`true`/`false`, default `false`) |
 
 All other variables are optional — remove or leave blank as needed.
 

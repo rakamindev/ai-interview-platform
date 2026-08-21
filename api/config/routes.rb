@@ -1,9 +1,31 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  HEALTH_CHECK = proc { [200, {}, [{ status: "ok" }.to_json]] }
+  HEALTH_LIVE = proc { [200, {}, [{ status: "ok" }.to_json]] }
 
-  get "/health", to: HEALTH_CHECK
+  get "/health", to: HEALTH_LIVE
+
+  get "/health/live", to: HEALTH_LIVE
+
+  get "/health/ready", to: proc { |env|
+    checks = {}
+    begin
+      ActiveRecord::Base.connection.execute("SELECT 1")
+      checks[:db] = "ok"
+    rescue StandardError => e
+      checks[:db] = "error: #{e.message}"
+    end
+    begin
+      Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/1")).ping
+      checks[:redis] = "ok"
+    rescue StandardError => e
+      checks[:redis] = "error: #{e.message}"
+    end
+    healthy = checks.values.all? { |v| v == "ok" }
+    status = healthy ? 200 : 503
+    body = { status: healthy ? "ok" : "degraded", checks: checks }
+    [status, { "Content-Type" => "application/json" }, [body.to_json]]
+  }
 
   namespace :api do
     namespace :v1 do
@@ -12,7 +34,7 @@ Rails.application.routes.draw do
       post "auth/refresh", to: "authentication#refresh"
       delete "auth/logout", to: "authentication#logout"
       # Health check
-      get  "health", to: HEALTH_CHECK
+      get  "health", to: HEALTH_LIVE
 
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post "speed_test", to: proc { |env|
