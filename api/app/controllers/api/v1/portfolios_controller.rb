@@ -16,12 +16,12 @@ module Api
 
         if @portfolio.failed?
           return json_response(
-            portfolio: portfolio_json(@portfolio),
+            portfolio: PortfolioSerializer.render(@portfolio),
             error: @portfolio.generation_error
           )
         end
 
-        json_response(portfolio: portfolio_json(@portfolio))
+        json_response(portfolio: PortfolioSerializer.render(@portfolio))
       end
 
       # POST /api/v1/sessions/:id/portfolio/regenerate
@@ -37,7 +37,7 @@ module Api
 
         json_response(
           message: "Portfolio generation queued",
-          portfolio: portfolio_json(portfolio)
+          portfolio: PortfolioSerializer.render(portfolio)
         )
       end
 
@@ -160,44 +160,6 @@ module Api
         json_error("Portfolio not found", :not_found)
       end
 
-      def portfolio_json(portfolio)
-        {
-          id: portfolio.id,
-          session_id: portfolio.session_id,
-          candidate_id: portfolio.candidate_id,
-          generation_status: portfolio.generation_status,
-          generated_at: portfolio.generated_at,
-          generation_error: portfolio.generation_error,
-          skills: portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides: portfolio.assessor_overrides.map(&method(:override_json))
-        }
-      end
-
-      def portfolio_skill_json(skill)
-        {
-          id: skill.id,
-          skill_id: skill.skill_id,
-          skill_label: skill.skill_label,
-          is_discovered: skill.is_discovered,
-          ai_level: skill.ai_level,
-          ai_confidence: skill.ai_confidence,
-          evidence: skill.evidence_quotes,
-          competency_summary: skill.competency_summary
-        }
-      end
-
-      def override_json(override)
-        {
-          id: override.id,
-          portfolio_skill_id: override.portfolio_skill_id,
-          ai_level: override.ai_level,
-          override_level: override.override_level,
-          assessor_notes: override.assessor_notes,
-          overridden_by: override.overridden_by,
-          overridden_at: override.overridden_at
-        }
-      end
-
       def fit_gap_json(report)
         {
           id: report.id,
@@ -215,7 +177,7 @@ module Api
       def build_export_json(portfolio, vacancy_id = nil)
         data = {
           exported_at: Time.current.iso8601,
-          portfolio: portfolio_json(portfolio)
+          portfolio: PortfolioSerializer.render(portfolio)
         }
 
         if vacancy_id.present?

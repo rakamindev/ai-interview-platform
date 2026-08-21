@@ -12,6 +12,10 @@ class PortfolioGeneratorWorker
       generation_status: "failed",
       generation_error: "Failed after #{msg['retry_count']} retries: #{msg['error_message']}"
     )
+    if session
+      assessment = session.assessment
+      AssessmentMailer.generation_failed(assessment, session, msg["error_message"]).deliver_later
+    end
     Rails.logger.error("[N10] Portfolio generation permanently failed for session #{session_id}")
   end
 
