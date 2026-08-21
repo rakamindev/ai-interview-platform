@@ -9,6 +9,7 @@ interface UseCoverageWebSocketResult {
   sessionEnded: boolean;
   sessionEndReason: string | null;
   isConnected: boolean;
+  connectionStatus: "connected" | "reconnecting" | "disconnected";
   authState: "authenticated" | "unauthenticated";
 }
 
@@ -17,6 +18,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "reconnecting" | "disconnected">("disconnected");
   const [authState, setAuthState] = useState<"authenticated" | "unauthenticated">("authenticated");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -43,6 +45,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
 
     const handleOpen = () => {
       setIsConnected(true);
+      setConnectionStatus("connected");
       reconnectAttemptsRef.current = 0;
       ws.send(JSON.stringify({ type: "auth", token }));
     };
@@ -74,6 +77,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
       if (!activeRef.current) return;
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
+        setConnectionStatus("reconnecting");
         reconnectTimerRef.current = setTimeout(() => {
           reconnectAttemptsRef.current += 1;
           connectRef.current();
@@ -85,6 +89,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
 
     const handleError = () => {
       setIsConnected(false);
+      setConnectionStatus("disconnected");
     };
     onErrorRef.current = handleError;
     ws.addEventListener("error", handleError);
@@ -110,5 +115,5 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     };
   }, [connect]);
 
-  return { coverageMap, sessionEnded, sessionEndReason, isConnected, authState };
+  return { coverageMap, sessionEnded, sessionEndReason, isConnected, connectionStatus, authState };
 }
