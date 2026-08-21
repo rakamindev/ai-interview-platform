@@ -35,6 +35,9 @@ async function measurePing(): Promise<number> {
       return 999;
     }
   }
+  // Production: return failure — first-party endpoint required.
+  // Third-party fallback only available in dev mode.
+  if (!import.meta.env.DEV) return 999;
   const testUrls = [
     "https://www.google.com/favicon.ico",
     "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
@@ -54,6 +57,9 @@ async function measurePing(): Promise<number> {
 }
 
 async function measureDownloadSpeed(): Promise<number> {
+  // Production: require first-party endpoint via VITE_SPEED_TEST_DOWNLOAD_URL.
+  // Third-party CDN fallback only available in dev mode.
+  if (!import.meta.env.DEV) return 0;
   const testFiles = [
     { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
     { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },
@@ -90,9 +96,13 @@ async function measureUploadSpeed(): Promise<number> {
   const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
     type: "application/octet-stream"
   });
+  // Production: require first-party endpoint via VITE_SPEED_TEST_UPLOAD_URL.
+  // Third-party fallback only available in dev mode.
   const endpoints = SPEED_TEST_UPLOAD_URL
     ? [SPEED_TEST_UPLOAD_URL]
-    : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+    : import.meta.env.DEV
+      ? ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"]
+      : [];
   for (const endpoint of endpoints) {
     try {
       const formData = new FormData();
@@ -106,7 +116,7 @@ async function measureUploadSpeed(): Promise<number> {
       continue;
     }
   }
-  return 0.5; // conservative fallback
+  return 0.5; // conservative fallback (dev only; production returns 0 above)
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {

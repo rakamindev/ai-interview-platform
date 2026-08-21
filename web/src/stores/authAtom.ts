@@ -1,3 +1,4 @@
+import { atom, getDefaultStore } from "jotai";
 import { startRefreshTimer } from "@/services/api";
 
 export interface AuthState {
@@ -5,12 +6,12 @@ export interface AuthState {
   user: { id: string; email: string; role: string } | null;
 }
 
-let _authState: AuthState = { accessToken: null, user: null };
-let _listeners: Array<() => void> = [];
+export const authAtom = atom<AuthState>({
+  accessToken: null,
+  user: null
+});
 
-function notify() {
-  _listeners.forEach((fn) => fn());
-}
+const store = getDefaultStore();
 
 export function setAuth(auth: AuthState): void;
 export function setAuth(
@@ -22,30 +23,28 @@ export function setAuth(
   user?: { id: string; email: string; role: string }
 ) {
   if (typeof authOrToken === "string" && user) {
-    _authState = { accessToken: authOrToken, user };
+    store.set(authAtom, { accessToken: authOrToken, user });
   } else if (typeof authOrToken === "object") {
-    _authState = authOrToken;
+    store.set(authAtom, authOrToken);
   }
-  notify();
   startRefreshTimer();
 }
 
 export function clearAuth() {
-  _authState = { accessToken: null, user: null };
-  notify();
+  store.set(authAtom, { accessToken: null, user: null });
 }
 
 export function getAccessToken(): string | null {
-  return _authState.accessToken;
+  return store.get(authAtom).accessToken;
 }
 
 export function getAuthState(): AuthState {
-  return _authState;
+  return store.get(authAtom);
 }
 
+// Kept for backwards compatibility with components that use
+// manual subscriptions (e.g. ProtectedRoute).
 export function onAuthChange(fn: () => void): () => void {
-  _listeners.push(fn);
-  return () => {
-    _listeners = _listeners.filter((l) => l !== fn);
-  };
+  const unsub = store.sub(authAtom, () => fn());
+  return unsub;
 }

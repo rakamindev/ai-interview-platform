@@ -1,3 +1,5 @@
+export const RECONNECT_DELAYS = [1000, 2000, 4000] as const;
+
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
 export const POLL_DEADLINE_MS = 120_000; // 2 minutes

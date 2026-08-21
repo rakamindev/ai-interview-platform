@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
+import { RECONNECT_DELAYS } from "@/utils/constants";
 import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker } from "@/types";
 
 interface UseAudioWebSocketOptions {
@@ -11,8 +12,6 @@ interface UseAudioWebSocketOptions {
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
 }
-
-const RECONNECT_DELAYS = [1000, 2000, 4000];
 
 export function useAudioWebSocket({
   sessionId,
