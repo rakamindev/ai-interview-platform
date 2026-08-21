@@ -6,7 +6,7 @@
 # the operator cannot demonstrate a human was ever meaningfully involved.
 #
 # Backfills one event per existing override so history starts complete.
-class CreateAssessorOverrideEvents < ActiveRecord::Migration[7.0]
+class CreateAssessorOverrideEvents < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def up

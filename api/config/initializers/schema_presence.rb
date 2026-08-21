@@ -14,6 +14,6 @@ begin
       CREATE SCHEMA ai_interview;
     EXCEPTION WHEN duplicate_schema THEN null; END $$;
   SQL
-rescue ActiveRecord::NoDatabaseError, PG::ConnectionBad => e
+rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, PG::ConnectionBad => e
   Rails.logger.debug { "ai_interview schema not created yet — database unavailable: #{e.message}" }
 end

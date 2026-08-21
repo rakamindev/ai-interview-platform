@@ -6,7 +6,7 @@
 #
 # Backfills from sessions.tenant_id → portfolios → portfolio_skills → rest.
 # NOT NULL after verifying zero nulls; the migration raises if any remain.
-class AddTenantIdToPortfolioFamily < ActiveRecord::Migration[7.0]
+class AddTenantIdToPortfolioFamily < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def up

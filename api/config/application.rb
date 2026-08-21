@@ -16,7 +16,7 @@ Bundler.require(*Rails.groups)
 
 module AiInterview
   class Application < Rails::Application
-    config.load_defaults 7.0
+    config.load_defaults 8.0
 
     # API-only mode
     config.api_only = true
@@ -25,17 +25,17 @@ module AiInterview
     config.action_mailer.default_url_options = { host: ENV.fetch("MAILER_HOST", "localhost"), port: ENV.fetch("MAILER_PORT", 3000) }
 
     # Auto-load paths
-    config.autoload_paths += %W[
-      #{config.root}/app/auth
-      #{config.root}/app/lib
-      #{config.root}/app/middlewares
-      #{config.root}/app/services
-      #{config.root}/app/channels
-      #{config.root}/app/clients
-      #{config.root}/app/workers
-      #{config.root}/app/mailers
-      #{config.root}/app/serializers
-    ]
+    config.autoload_paths.push(
+      "#{config.root}/app/auth",
+      "#{config.root}/app/lib",
+      "#{config.root}/app/middlewares",
+      "#{config.root}/app/services",
+      "#{config.root}/app/channels",
+      "#{config.root}/app/clients",
+      "#{config.root}/app/workers",
+      "#{config.root}/app/mailers",
+      "#{config.root}/app/serializers"
+    )
 
     # Use UUID primary keys by default
     config.generators do |g|

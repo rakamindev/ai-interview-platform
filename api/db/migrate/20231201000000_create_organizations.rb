@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateOrganizations < ActiveRecord::Migration[7.0]
+class CreateOrganizations < ActiveRecord::Migration[8.0]
   def change
     create_table :organizations do |t|
       t.string :name,        limit: 255, null: false

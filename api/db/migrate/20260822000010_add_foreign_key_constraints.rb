@@ -19,7 +19,7 @@
 #
 # All queries must return 0 before running this migration.
 
-class AddForeignKeyConstraints < ActiveRecord::Migration[7.0]
+class AddForeignKeyConstraints < ActiveRecord::Migration[8.0]
   def up
     # tenant_id → organizations.id on all tenant-scoped tables
     add_foreign_key :assessments, :organizations, column: :tenant_id

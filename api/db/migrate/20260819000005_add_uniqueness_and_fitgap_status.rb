@@ -5,7 +5,7 @@
 #
 # Each unique index is preceded by a duplicate pre-check that raises with the
 # offending IDs rather than failing on the index at 3am.
-class AddUniquenessAndFitgapStatus < ActiveRecord::Migration[7.0]
+class AddUniquenessAndFitgapStatus < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def up

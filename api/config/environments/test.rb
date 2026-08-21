@@ -6,7 +6,7 @@ Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.
-  config.cache_classes = true
+  config.enable_reloading = false
 
   # Eager loading loads your whole application. When running a single test locally,
   # this might not be necessary. It's recommended that you set this to true in CI though.
@@ -25,7 +25,7 @@ Rails.application.configure do
 
   # Render exception templates for rescuable exceptions and return status
   # code for other exceptions.
-  config.action_dispatch.show_exceptions = false
+  config.action_dispatch.show_exceptions = :none
 
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false

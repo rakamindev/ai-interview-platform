@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateMemberships < ActiveRecord::Migration[7.0]
+class CreateMemberships < ActiveRecord::Migration[8.0]
   def change
     create_table :memberships, id: :uuid do |t|
       t.references :user, null: false, foreign_key: true, type: :bigint

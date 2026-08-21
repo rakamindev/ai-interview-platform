@@ -3,8 +3,8 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
-  # Code is not reloaded between requests.
-  config.cache_classes = false
+  # Code is reloaded between requests.
+  config.enable_reloading = true
 
   # Do not eager load code on boot.
   config.eager_load = false
