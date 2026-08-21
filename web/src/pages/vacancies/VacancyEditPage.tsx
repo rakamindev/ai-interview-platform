@@ -71,16 +71,16 @@ export default function VacancyEditPage() {
 
   if (loading)
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-2xl mx-auto space-y-4" role="status" aria-label="Loading vacancy">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
       </div>
     );
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <main className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
+        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground" aria-label="Back to vacancies">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm font-medium">Edit Vacancy</span>
@@ -104,6 +104,7 @@ export default function VacancyEditPage() {
                   type="button"
                   onClick={() => remove(index)}
                   className="text-muted-foreground hover:text-destructive"
+                  aria-label="Remove skill"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -145,6 +146,6 @@ export default function VacancyEditPage() {
           append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })
         }
       />
-    </div>
+    </main>
   );
 }

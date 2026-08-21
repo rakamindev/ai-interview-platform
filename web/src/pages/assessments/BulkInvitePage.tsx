@@ -68,6 +68,7 @@ function SortableCandidateRow({
       <button
         type="button"
         className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+        aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
       >
@@ -100,6 +101,7 @@ function SortableCandidateRow({
         type="button"
         onClick={() => onRemove(row.id)}
         className="text-muted-foreground hover:text-destructive"
+        aria-label="Remove candidate"
         disabled={row.status === "loading"}
       >
         <X className="h-4 w-4" />
@@ -225,9 +227,9 @@ export default function BulkInvitePage() {
   const errorCount = rows.filter((r) => r.status === "error").length;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <main className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Assessments</span>
@@ -304,6 +306,6 @@ export default function BulkInvitePage() {
           </Button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

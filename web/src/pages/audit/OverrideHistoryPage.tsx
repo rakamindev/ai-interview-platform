@@ -68,9 +68,9 @@ export default function OverrideHistoryPage() {
   }, [fetchEvents]);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <main className="max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Audit</span>
@@ -224,6 +224,6 @@ export default function OverrideHistoryPage() {
           )}
         </>
       )}
-    </div>
+    </main>
   );
 }

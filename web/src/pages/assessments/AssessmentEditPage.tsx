@@ -99,7 +99,7 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-2xl mx-auto space-y-4" role="status" aria-label="Loading assessment">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
@@ -109,9 +109,9 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <main className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -225,6 +225,6 @@ export default function AssessmentEditPage() {
         onOpenChange={setPickerOpen}
         onSelect={(s) => append({ ...s, display_order: fields.length })}
       />
-    </div>
+    </main>
   );
 }
