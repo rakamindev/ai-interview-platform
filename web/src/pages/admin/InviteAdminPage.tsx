@@ -74,8 +74,7 @@ export default function InviteAdminPage() {
         <div>
           <h1 className="text-lg font-semibold">Invite Admin or Assessor</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Generate an invite link for a new team member. The link expires after
-            24 hours.
+            Generate an invite link for a new team member. The link expires after 24 hours.
           </p>
         </div>
 
@@ -93,8 +92,8 @@ export default function InviteAdminPage() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Share this link with the person you want to invite. They will be
-              prompted to create a password.
+              Share this link with the person you want to invite. They will be prompted to create a
+              password.
             </p>
             <Button variant="outline" onClick={() => setInviteUrl(null)}>
               Invite Another
@@ -112,9 +111,7 @@ export default function InviteAdminPage() {
                 placeholder="colleague@company.com"
                 {...register("email")}
               />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
-              )}
+              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -131,9 +128,7 @@ export default function InviteAdminPage() {
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.role && (
-                <p className="text-xs text-destructive">{errors.role.message}</p>
-              )}
+              {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}

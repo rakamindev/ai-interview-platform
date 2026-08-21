@@ -18,7 +18,16 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Upload, X, GripVertical, Loader2, Check, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Upload,
+  X,
+  GripVertical,
+  Loader2,
+  Check,
+  AlertCircle
+} from "lucide-react";
 import { api } from "@/services/api";
 
 interface CandidateRow {
@@ -40,8 +49,9 @@ function SortableCandidateRow({
   onUpdate: (id: string, field: "name" | "email", value: string) => void;
   onRemove: (id: string) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: row.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: row.id
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -80,7 +90,9 @@ function SortableCandidateRow({
         disabled={row.status === "loading"}
       />
       <div className="w-6 flex items-center justify-center">
-        {row.status === "loading" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        {row.status === "loading" && (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        )}
         {row.status === "success" && <Check className="h-4 w-4 text-green-600" />}
         {row.status === "error" && <AlertCircle className="h-4 w-4 text-destructive" />}
       </div>
@@ -177,9 +189,7 @@ export default function BulkInvitePage() {
 
     // Mark all as loading
     setRows((prev) =>
-      prev.map((r) =>
-        r.name.trim() && r.email.trim() ? { ...r, status: "loading" as const } : r
-      )
+      prev.map((r) => (r.name.trim() && r.email.trim() ? { ...r, status: "loading" as const } : r))
     );
 
     try {
@@ -233,11 +243,7 @@ export default function BulkInvitePage() {
               Add multiple candidates to this assessment at once.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-          >
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4 mr-1" />
             Import CSV
           </Button>
@@ -251,15 +257,8 @@ export default function BulkInvitePage() {
         </div>
 
         {/* Candidate rows */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={rows.map((r) => r.id)}
-            strategy={verticalListSortingStrategy}
-          >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
               {rows.map((row, index) => (
                 <SortableCandidateRow
@@ -284,23 +283,15 @@ export default function BulkInvitePage() {
         {/* Summary */}
         {(successCount > 0 || errorCount > 0) && (
           <div className="text-sm text-muted-foreground">
-            {successCount > 0 && (
-              <span className="text-green-600">{successCount} sent</span>
-            )}
+            {successCount > 0 && <span className="text-green-600">{successCount} sent</span>}
             {successCount > 0 && errorCount > 0 && <span> · </span>}
-            {errorCount > 0 && (
-              <span className="text-destructive">{errorCount} failed</span>
-            )}
+            {errorCount > 0 && <span className="text-destructive">{errorCount} failed</span>}
           </div>
         )}
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => history.back()}
-          >
+          <Button type="button" variant="outline" onClick={() => history.back()}>
             Done
           </Button>
           <Button

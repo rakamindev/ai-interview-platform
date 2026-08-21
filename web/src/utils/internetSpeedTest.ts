@@ -101,7 +101,11 @@ async function measureUploadSpeed(): Promise<number> {
   const endpoints = SPEED_TEST_UPLOAD_URL
     ? [SPEED_TEST_UPLOAD_URL]
     : import.meta.env.DEV
-      ? ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"]
+      ? [
+          "https://httpbin.org/post",
+          "https://www.httpbin.org/post",
+          "https://postman-echo.com/post"
+        ]
       : [];
   for (const endpoint of endpoints) {
     try {
