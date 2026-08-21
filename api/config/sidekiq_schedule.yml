@@ -1,0 +1,4 @@
+refresh_token_cleanup:
+  cron: "0 3 * * *"
+  class: RefreshTokenCleanupWorker
+  queue: default

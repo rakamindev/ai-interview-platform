@@ -51,7 +51,12 @@ export function useAudioWebSocket({
     const handleOpen = () => {
       setConnectionState("connected");
       reconnectAttemptsRef.current = 0;
-      if (token) ws.send(JSON.stringify({ type: "auth", token }));
+      if (token) {
+        ws.send(JSON.stringify({ type: "auth", token }));
+      } else {
+        // oxlint-disable-next-line eslint/no-console
+        console.warn("[audio-ws] no access token available, connecting unauthenticated");
+      }
     };
     onOpenRef.current = handleOpen;
     ws.addEventListener("open", handleOpen);

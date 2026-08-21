@@ -25,6 +25,7 @@ gem 'figaro'
 # Background jobs
 gem 'redis', '~> 5.0'
 gem 'sidekiq', '~> 7.0'
+gem 'sidekiq-cron', '~> 1.12'
 
 # WebSocket
 gem 'faye-websocket'

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class ApplicationController < ActionController::API
+  include ActionController::Cookies
   include Response
   include ExceptionHandler
 
@@ -74,7 +75,7 @@ class ApplicationController < ActionController::API
 
   def authenticate_with_roles!(roles)
     roles = roles.flatten.map(&:to_s)
-    result = AuthorizeApiRequest.new(request.headers, roles).call
+    result = AuthorizeApiRequest.new(request.headers, roles, cookies: cookies).call
     Current.user = result[:user]
   end
 

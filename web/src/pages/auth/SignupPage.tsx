@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
+import { setAuth } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,6 @@ import { Loader2 } from "lucide-react";
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const setAuth = useSetAtom(authAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
@@ -24,9 +22,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const res = await authApi.signup({ email, password, role });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
+      setAuth(res.data.access_token, res.data.user);
       navigate("/assessments");
     } catch {
       setError("Signup failed. Please try again.");

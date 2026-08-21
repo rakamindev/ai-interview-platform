@@ -6,7 +6,8 @@ export interface LoginPayload {
 }
 
 export interface LoginResponse {
-  token: string;
+  access_token: string;
+  user: { id: string; email: string; role: string };
 }
 
 export const authApi = {

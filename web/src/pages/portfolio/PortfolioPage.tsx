@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
+const POLL_DEADLINE_MS = 120_000; // 2 minutes
+
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
@@ -39,6 +41,7 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -52,6 +55,7 @@ export default function PortfolioPage() {
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
+      setTimedOut(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -75,8 +79,18 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
+  // Stop polling after deadline
+  useEffect(() => {
+    if (!generating) return;
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+      setGenerating(false);
+    }, POLL_DEADLINE_MS);
+    return () => clearTimeout(timer);
+  }, [generating]);
+
   // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  usePolling(fetchPortfolio, 5000, generating && !timedOut);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -224,7 +238,7 @@ export default function PortfolioPage() {
       )}
 
       {/* Generating state */}
-      {!error && generating && (
+      {!error && generating && !timedOut && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
@@ -236,14 +250,36 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {/* Timed out state */}
+      {!error && timedOut && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
+          <p className="text-sm text-muted-foreground">
+            Portfolio generation is taking longer than expected.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              setTimedOut(false);
+              await sessionsApi.regeneratePortfolio(Number(sessionId));
+              setGenerating(true);
+            }}
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+          </Button>
+        </div>
+      )}
+
       {/* Failed state */}
-      {!generating && portfolio?.generation_status === "failed" && (
+      {!generating && !timedOut && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
           <Button
             variant="outline"
             size="sm"
             onClick={async () => {
+              setTimedOut(false);
               await sessionsApi.regeneratePortfolio(Number(sessionId));
               setGenerating(true);
             }}
@@ -254,7 +290,7 @@ export default function PortfolioPage() {
       )}
 
       {/* Ready state */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {!generating && !timedOut && portfolio?.generation_status === "complete" && (
         <>
           {/* Configured skills */}
           <div className="space-y-3">

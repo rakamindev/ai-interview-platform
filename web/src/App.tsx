@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { performRefresh } from "@/services/api";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -17,13 +19,28 @@ import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 
 export default function App() {
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        await performRefresh();
+      } catch {
+        // Refresh failed - user will be redirected to login by ProtectedRoute
+      } finally {
+        setIsAuthReady(true);
+      }
+    };
+    initAuth();
+  }, []);
+
   return (
     <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
 
       {/* Assessor routes (protected) */}
-      <Route element={<ProtectedRoute />}>
+      <Route element={<ProtectedRoute isAuthReady={isAuthReady} />}>
         <Route element={<AssessorLayout />}>
           <Route path="/" element={<Navigate to="/assessments" replace />} />
           <Route path="/assessments" element={<AssessmentListPage />} />

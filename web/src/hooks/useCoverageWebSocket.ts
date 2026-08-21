@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
-import { getStoredToken } from "@/stores/authAtom";
+import { getAccessToken } from "@/stores/authAtom";
 import type { CoverageMap } from "@/types";
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -31,14 +31,19 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     if (!activeRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const token = getStoredToken();
+    const token = getAccessToken();
     const ws = new WebSocket(`${WS_URL}/ws/sessions/${sessionId}/coverage`);
     wsRef.current = ws;
 
     const handleOpen = () => {
       setIsConnected(true);
       reconnectAttemptsRef.current = 0;
-      if (token) ws.send(JSON.stringify({ type: "auth", token }));
+      if (token) {
+        ws.send(JSON.stringify({ type: "auth", token }));
+      } else {
+        // oxlint-disable-next-line eslint/no-console
+        console.warn("[coverage-ws] no access token available, connecting unauthenticated");
+      }
     };
     onOpenRef.current = handleOpen;
     ws.addEventListener("open", handleOpen);

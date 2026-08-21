@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_19_000005) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_19_000010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -127,6 +127,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000005) do
     t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
+  create_table "organizations", force: :cascade do |t|
+    t.string "name", limit: 255, null: false
+    t.string "scheme", limit: 255, null: false
+    t.string "identifier", limit: 255, null: false
+    t.string "host", limit: 255, null: false
+    t.string "alias_hosts", default: [], null: false, array: true
+    t.jsonb "config", default: {}, null: false
+    t.timestamptz "created_at", default: -> { "now()" }, null: false
+    t.timestamptz "updated_at", default: -> { "now()" }, null: false
+    t.index ["host"], name: "index_organizations_on_host"
+    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
+  end
+
   create_table "portfolio_skills", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.string "skill_id", limit: 50
@@ -154,6 +167,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000005) do
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
     t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
+  end
+
+  create_table "refresh_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "token_hash", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_refresh_tokens_on_expires_at"
+    t.index ["token_hash"], name: "index_refresh_tokens_on_token_hash", unique: true
+    t.index ["user_id"], name: "index_refresh_tokens_on_user_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -241,6 +267,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000005) do
   add_foreign_key "fit_gap_reports", "vacancies"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
+  add_foreign_key "refresh_tokens", "users"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
   add_foreign_key "vacancy_skills", "vacancies"

@@ -11,9 +11,10 @@ class AuthorizeApiRequest
   # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
   ASSESSOR_ROLES = %w[admin assessor].freeze
 
-  def initialize(headers = {}, required_roles = [])
+  def initialize(headers = {}, required_roles = [], cookies: {})
     @headers = headers
     @required_roles = Array(required_roles)
+    @cookies = cookies
   end
 
   # Returns an OpenStruct with :id, :role, :scheme
@@ -28,7 +29,7 @@ class AuthorizeApiRequest
 
   private
 
-  attr_reader :headers
+  attr_reader :headers, :cookies
 
   def build_user_struct(claims)
     OpenStruct.new(
