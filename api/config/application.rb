@@ -9,6 +9,7 @@ require "action_controller/railtie"
 require "action_mailer/railtie"
 
 require_relative "../app/middlewares/application_middleware"
+require_relative "../app/middlewares/correlation_id_middleware"
 require_relative "../app/middlewares/tenant_resolver_middleware"
 
 Bundler.require(*Rails.groups)
@@ -53,6 +54,7 @@ module AiInterview
 
     config.middleware.use Rack::Attack
     config.middleware.use ActionDispatch::Cookies
+    config.middleware.use CorrelationIdMiddleware
     config.middleware.use TenantResolverMiddleware
   end
 end

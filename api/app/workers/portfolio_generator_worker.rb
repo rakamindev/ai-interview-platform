@@ -19,7 +19,8 @@ class PortfolioGeneratorWorker
     Rails.logger.error("[N10] Portfolio generation permanently failed for session #{session_id}")
   end
 
-  def perform(session_id)
+  def perform(session_id, opts = {})
+    Rails.logger.info("[N10] correlation_id=#{Current.correlation_id} session=#{session_id}")
     session = Session.find(session_id)
     Portfolios::Generator.new(session: session).call
   rescue ActiveRecord::RecordNotFound
