@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import PaginationControls from "@/components/PaginationControls";
 import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight, Search } from "lucide-react";
@@ -84,12 +85,14 @@ export default function AssessmentListPage() {
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No assessments yet"
+          description="Create your first assessment to start evaluating candidates."
+          actionLabel="Create Assessment"
+          actionIcon={Plus}
+          onAction={() => navigate("/assessments/new")}
+        />
       ) : (
         <div className="space-y-2">
           {assessments.map((a) => (
