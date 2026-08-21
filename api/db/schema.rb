@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_22_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_22_000010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -261,15 +261,25 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_22_000001) do
 
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
+  add_foreign_key "assessor_override_events", "organizations", column: "tenant_id"
+  add_foreign_key "assessor_override_events", "portfolio_skills"
+  add_foreign_key "assessments", "organizations", column: "tenant_id"
+  add_foreign_key "assessments", "users", column: "created_by"
   add_foreign_key "coverage_maps", "sessions"
+  add_foreign_key "fit_gap_reports", "organizations", column: "tenant_id"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "portfolio_skills", "organizations", column: "tenant_id"
   add_foreign_key "portfolio_skills", "portfolios"
+  add_foreign_key "portfolios", "organizations", column: "tenant_id"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "refresh_tokens", "users"
   add_foreign_key "sessions", "assessments"
+  add_foreign_key "sessions", "organizations", column: "tenant_id"
   add_foreign_key "transcript_turns", "sessions"
+  add_foreign_key "vacancies", "organizations", column: "tenant_id"
+  add_foreign_key "vacancies", "users", column: "created_by"
   add_foreign_key "vacancy_skills", "vacancies"
 end

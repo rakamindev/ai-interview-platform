@@ -90,23 +90,44 @@ module Api
       end
 
       def store_csrf_cookie
-        secret = SecureRandom.hex(32)
+        secret = csrf_signing_key
+        data = csrf_session_data
+        token = OpenSSL::HMAC.hexdigest("SHA256", secret, data)
         cookies[:csrf_secret] = {
-          value: secret,
+          value: token,
           expires: 7.days.from_now,
           secure: Rails.env.production?,
           same_site: :lax,
           httponly: false
         }
-        @csrf_secret = secret
+        @csrf_secret = token
       end
 
       def verify_csrf!
-        expected = cookies[:csrf_secret]
-        actual = request.headers["X-CSRF-Token"]
-        return if expected.present? && actual.present? && ActiveSupport::SecurityUtils.secure_compare(expected, actual)
+        stored = cookies[:csrf_secret]
+        header = request.headers["X-CSRF-Token"]
+        return if stored.present? && header.present? && ActiveSupport::SecurityUtils.secure_compare(stored, header)
 
         raise(ExceptionHandler::InvalidToken, "CSRF token mismatch")
+      end
+
+      def csrf_session_data
+        rt = extract_refresh_token
+        rt_hash = rt ? token_hash(rt) : "anonymous"
+        user_id = extract_refresh_token_user_id || "none"
+        "#{user_id}:#{rt_hash}"
+      end
+
+      def csrf_signing_key
+        Rails.application.credentials.csrf_secret_key || ENV.fetch("CSRF_SECRET_KEY") { SecureRandom.hex(32) }
+      end
+
+      def extract_refresh_token_user_id
+        rt = extract_refresh_token
+        return nil unless rt
+
+        record = RefreshToken.find_by(token_hash: token_hash(rt))
+        record&.user_id&.to_s
       end
 
       def token_hash(token)

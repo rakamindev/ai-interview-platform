@@ -62,6 +62,14 @@ jobs:
       - name: RuboCop
         working-directory: api
         run: bundle exec rubocop --parallel
+      - name: Brakeman
+        working-directory: api
+        run: bundle exec brakeman --no-pager
+      - name: Bundler Audit
+        working-directory: api
+        run: |
+          bundle exec bundler-audit update
+          bundle exec bundler-audit check
       - name: Migration round-trip
         working-directory: api
         run: |
