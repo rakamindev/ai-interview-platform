@@ -143,7 +143,7 @@ GEM
     json-schema (6.2.0)
       addressable (~> 2.8)
       bigdecimal (>= 3.1, < 5)
-    jwt (3.1.2)
+    jwt (3.2.0)
       base64
     kaminari (1.2.2)
       activesupport (>= 4.1.0)
@@ -381,7 +381,7 @@ DEPENDENCIES
   faraday-retry
   faye-websocket
   figaro
-  jwt
+  jwt (>= 3.2.0)
   kaminari
   listen (~> 3.2)
   matrix

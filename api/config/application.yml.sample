@@ -28,8 +28,8 @@ WEB_BASE_URL: "http://localhost:5173"
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds
 
-# CORS
-ALLOWED_ORIGINS: "*"
+# CORS — must NOT be "*" when credentials: true (browsers reject it per Fetch spec).
+ALLOWED_ORIGINS: "http://localhost:5173"
 
 # Sidekiq / Redis
 REDIS_URL: "redis://localhost:6379/1"

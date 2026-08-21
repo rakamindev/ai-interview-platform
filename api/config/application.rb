@@ -43,8 +43,7 @@ module AiInterview
     #   3. TenantResolverMiddleware— decodes JWT scheme claim → sets Current.organization
     #                               + Current.tenant_id for every request.
     #
-    # AuthTokenMiddleware is NOT global — controllers opt in via
-    # `authorize_auth_token!` which adds a before_action per controller.
+    # Controllers opt in via `authorize_auth_token!` which adds a before_action.
 
     config.middleware.use Rack::Attack
     config.middleware.use ActionDispatch::Cookies
