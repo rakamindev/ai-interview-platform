@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  get "/health", to: proc { [200, {}, [{ status: "ok" }.to_json]] }
+  HEALTH_CHECK = proc { [200, {}, [{ status: "ok" }.to_json]] }
+
+  get "/health", to: HEALTH_CHECK
 
   namespace :api do
     namespace :v1 do
@@ -10,7 +12,7 @@ Rails.application.routes.draw do
       post "auth/refresh", to: "authentication#refresh"
       delete "auth/logout", to: "authentication#logout"
       # Health check
-      get  "health", to: proc { [200, {}, [{ status: "ok" }.to_json]] }
+      get  "health", to: HEALTH_CHECK
 
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post "speed_test", to: proc { |env|
