@@ -26,29 +26,59 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
-  const { fields, append, remove } = useFieldArray({ control, name: "skills" });
+  const { fields, append, remove, update } = useFieldArray({ control, name: "skills" });
+
+  const handleRemoveSkill = (index: number) => {
+    const skill = fields[index];
+
+    if (skill.db_id) {
+      update(index, { ...skill, _destroy: true });
+    } else {
+      remove(index);
+    }
+  };
 
   useEffect(() => {
-    vacanciesApi.get(Number(id)).then((res) => {
-      const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
+    vacanciesApi
+      .get(Number(id)).then((res) => {
+        const v = res.data.vacancy;
+        reset({ 
+          role_title: v.role_title, 
+          culture_dimensions: v.culture_dimensions, 
+          competency_expectations: v.competency_expectations, 
+          skills: (v.skills ?? []).map((s: VacancySkill) => ({
+            ...s,
+            db_id: s.id,
+            id: undefined,
+          })) });
+      }).catch(() => {}).finally(() => setLoading(false));
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
+    const activeSkills = data.skills.filter((s) => !s._destroy);
+    if (activeSkills.length === 0) { setError("Add at least one skill."); return; }
+    setError(null);
     setSubmitting(true);
     try {
       await vacanciesApi.update(Number(id), {
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
+        vacancy_skills_attributes: data.skills.map((s, i) => ({
+          ...s,
+          id: s.db_id,
+          db_id: undefined,
+          display_order: i,
+        })),
       });
       navigate("/vacancies");
+    } catch (e: any) {
+      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
     } finally {
       setSubmitting(false);
     }
@@ -72,13 +102,13 @@ export default function VacancyEditPage() {
         <div className="space-y-3">
           <Label>Expected skills</Label>
           {fields.map((field, index) => (
-            <div key={field.id} className="border rounded-lg p-3 space-y-2">
+            field._destroy ? null : (<div key={field.id} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
+                <button type="button" onClick={() => handleRemoveSkill(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
               </div>
               <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
-            </div>
+            </div>)
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Add skill
