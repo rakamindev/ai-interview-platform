@@ -66,6 +66,7 @@ export default function App() {
       </Route>
 
       {/* Candidate route (public) */}
+      {/* udah VVV */}
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
       </Route>
