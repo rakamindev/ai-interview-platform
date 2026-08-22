@@ -23,6 +23,14 @@ test.beforeAll(() => {
 
 test.describe('AI Interview Platform - Error Flow', () => {
   test('Error Path: Catches Gemini model / server errors non-silently and displays user error alert', async ({ page }) => {
+    // Mock WebSocket to immediately send an error
+    await page.routeWebSocket(/.*/, ws => {
+      ws.onMessage(() => {
+        // As soon as client sends something (like auth), simulate server error
+        ws.send(JSON.stringify({ type: 'error', message: 'Simulated Gemini error', recoverable: false }));
+      });
+    });
+
     // Navigate to interview page
     await page.goto(`/interview/${inviteToken}`);
     
@@ -36,9 +44,9 @@ test.describe('AI Interview Platform - Error Flow', () => {
     await expect(startCheckBtn).toBeEnabled({ timeout: 60000 });
     await startCheckBtn.click();
 
-    // Verify system displays non-technical friendly error alert after backend retries fail (takes longer)
-    await expect(page.locator('text=Server Error')).toBeVisible({ timeout: 45000 });
-    await expect(page.locator('text=The server is currently experiencing trouble, please try again later.')).toBeVisible({ timeout: 10000 });
+    // Verify system displays non-technical friendly error alert immediately
+    await expect(page.locator('text=Server Error')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=The server is currently experiencing trouble, please try again later.')).toBeVisible();
     await page.waitForTimeout(1000);
     await page.screenshot({ path: 'screenshots/9_interview_error.png', fullPage: true });
   });

@@ -55,7 +55,7 @@ test.describe('AI Interview Platform - Human Review Process', () => {
   });
 
   test('Validates viewing portfolio and manual grade adjustment', async ({ page }) => {
-    test.skip(!sessionId, 'Data not found');
+    expect(sessionId, 'Data must exist').toBeDefined();
     await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/portfolio`);
     
     // Verify skill is displayed
@@ -79,7 +79,7 @@ test.describe('AI Interview Platform - Human Review Process', () => {
   });
 
   test('Validates role comparison execution', async ({ page }) => {
-    test.skip(!sessionId, 'Data not found');
+    expect(sessionId, 'Data must exist').toBeDefined();
     await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/portfolio`);
 
     // Click fit/gap comparison
@@ -100,7 +100,7 @@ test.describe('AI Interview Platform - Human Review Process', () => {
   });
 
   test('Validates transcript view', async ({ page }) => {
-    test.skip(!sessionId, 'Data not found');
+    expect(sessionId, 'Data must exist').toBeDefined();
     await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/transcript`);
 
     // Verify transcript bubbles are visible
@@ -111,7 +111,7 @@ test.describe('AI Interview Platform - Human Review Process', () => {
   });
 
   test('Validates PDF export', async ({ page }) => {
-    test.skip(!sessionId, 'Data not found');
+    expect(sessionId, 'Data must exist').toBeDefined();
     await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/portfolio`);
     await expect(page.locator('text=Test Skill')).toBeVisible();
     

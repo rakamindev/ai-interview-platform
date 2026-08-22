@@ -50,7 +50,7 @@ test.describe('AI Interview Platform - Assessor UI Flows', () => {
   });
 
   test('Validates Candidates List search and status filter', async ({ page }) => {
-    test.skip(!assessmentId, 'Assessment ID not found');
+    expect(assessmentId, 'Assessment ID must exist').toBeDefined();
     await page.goto(`/assessments/${assessmentId}/invite`);
     
     // Check search

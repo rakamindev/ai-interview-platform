@@ -43,7 +43,7 @@ test.describe('AI Interview Platform - Portfolio Generating State', () => {
   });
 
   test('Validates generating portfolio screen', async ({ page }) => {
-    test.skip(!sessionId, 'Data not found');
+    expect(sessionId, 'Data must exist').toBeDefined();
     await page.goto(`/assessments/${assessmentId}/sessions/${sessionId}/portfolio`);
     
     // Verify generating message is displayed
