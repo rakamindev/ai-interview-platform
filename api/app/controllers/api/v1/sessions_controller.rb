@@ -136,6 +136,10 @@ module Api
           return json_error("Invalid or expired invite token", :not_found)
         end
 
+        if session.expired?
+          return json_error("This interview link has expired. Please contact the hiring team for a new link.", :gone)
+        end
+
         # Resolve tenant from the session's own tenant_id so we can load the assessment
         assessment = Assessment.unscoped
                                .where(tenant_id: session.tenant_id)

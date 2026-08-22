@@ -48,7 +48,7 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("error"));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -236,6 +236,21 @@ export default function InterviewPage() {
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State G: Error (invalid link, network failure) ──────────────────────
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">❌</div>
+        <h2 className="text-xl font-semibold">Unable to Join Interview</h2>
+        <p className="text-sm text-muted-foreground">
+          This interview link is invalid or has expired.
+          <br />
+          Please contact the hiring team for a new link.
         </p>
       </div>
     );

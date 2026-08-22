@@ -10,16 +10,21 @@
 #
 # All queries will be scoped to Current.tenant_id automatically.
 # On create/update, tenant_id is set from Current.tenant_id.
+#
+# FAIL-CLOSED: if tenant is not resolved, returns none (empty result set)
+# instead of all rows. This prevents cross-tenant data leaks when
+# TenantResolverMiddleware fails or is bypassed.
 module TenantScoped
   extend ActiveSupport::Concern
 
   included do
-    # Default scope: filter by current tenant
+    # Default scope: filter by current tenant.
+    # Returns none when tenant is not resolved — fail-closed security.
     default_scope do
-      if RequestStore.store.key?(:tenant_id)
+      if Current.tenant_id.present?
         where(tenant_id: Current.tenant_id)
       else
-        all
+        none
       end
     end
 
