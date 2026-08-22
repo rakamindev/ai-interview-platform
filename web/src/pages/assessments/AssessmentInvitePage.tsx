@@ -11,13 +11,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PaginationControls from "@/components/PaginationControls";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Search } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Search, Trash2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -25,12 +36,14 @@ function SessionRow({
   index,
   assessmentId,
   onCopy,
+  onDeleteClick,
   copiedId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onDeleteClick: (id: number) => void;
   copiedId: number | null;
 }) {
   const navigate = useNavigate();
@@ -116,6 +129,14 @@ function SessionRow({
               Results
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => onDeleteClick(session.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </div>
@@ -139,6 +160,7 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null);
 
   const loadSessions = useCallback(async () => {
     const s = search.trim();
@@ -203,6 +225,18 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
+  };
+
+  const handleDeleteSession = async () => {
+    if (!deletingSessionId) return;
+    try {
+      await sessionsApi.delete(deletingSessionId);
+      loadSessions();
+    } catch (e) {
+      console.error("Failed to delete session", e);
+    } finally {
+      setDeletingSessionId(null);
+    }
   };
 
   if (loading) {
@@ -351,6 +385,7 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onDeleteClick={(sid) => setDeletingSessionId(sid)}
                   copiedId={copiedId}
                 />
               ))}
@@ -378,6 +413,23 @@ export default function AssessmentInvitePage() {
           </div>
         </>
       )}
+
+      <AlertDialog open={deletingSessionId !== null} onOpenChange={(open) => !open && setDeletingSessionId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. It will permanently delete this candidate's session, audio recordings, and results.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

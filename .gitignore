@@ -17,3 +17,5 @@ api/storage/
 # Agents
 .agents
 graphify-out
+assessment/
+

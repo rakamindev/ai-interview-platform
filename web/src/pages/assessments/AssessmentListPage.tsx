@@ -6,8 +6,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import PaginationControls from "@/components/PaginationControls";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight, Search } from "lucide-react";
+import { Plus, Clock, ChevronRight, Search, Trash2 } from "lucide-react";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -38,22 +48,37 @@ export default function AssessmentListPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
 
+  const loadAssessments = () => {
+    setLoading(true);
+    assessmentsApi
+      .list(page, search, limit)
+      .then((res) => {
+        setAssessments(res.data.assessments);
+        setMeta(res.data.meta);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
-    const delay = setTimeout(() => {
-      setLoading(true);
-      assessmentsApi
-        .list(page, search, limit)
-        .then((res) => {
-          setAssessments(res.data.assessments);
-          setMeta(res.data.meta);
-        })
-        .catch(() => setError(true))
-        .finally(() => setLoading(false));
-    }, 300);
+    const delay = setTimeout(loadAssessments, 300);
     return () => clearTimeout(delay);
   }, [page, search, limit]);
+
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    try {
+      await assessmentsApi.delete(deletingId);
+      loadAssessments();
+    } catch (e) {
+      console.error("Failed to delete assessment", e);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -117,13 +142,43 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingId(a.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}
           <PaginationControls meta={meta} onPageChange={setPage} limit={limit} onLimitChange={setLimit} />
         </div>
       )}
+
+      <AlertDialog open={deletingId !== null} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the assessment and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
