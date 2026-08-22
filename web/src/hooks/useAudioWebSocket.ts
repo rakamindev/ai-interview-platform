@@ -12,7 +12,7 @@ interface UseAudioWebSocketOptions {
   onReconnected?: () => void;
 }
 
-const RECONNECT_DELAYS = [1000, 2000, 4000];
+const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
 
 export function useAudioWebSocket({
   sessionId,
@@ -32,7 +32,8 @@ export function useAudioWebSocket({
   );
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN 
+      || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 
     sessionEndedRef.current = false;
     setConnectionState("connecting");
