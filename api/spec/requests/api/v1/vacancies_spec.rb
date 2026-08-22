@@ -41,4 +41,13 @@ RSpec.describe 'API Vacancies', type: :request do
       expect(json['vacancy']['id']).to eq(vacancy.id)
     end
   end
+
+  describe 'DELETE /api/v1/vacancies/:id' do
+    it 'deletes the vacancy' do
+      expect {
+        delete "/api/v1/vacancies/#{vacancy.id}", headers: headers
+      }.to change(Vacancy, :count).by(-1)
+      expect(response).to have_http_status(:ok)
+    end
+  end
 end

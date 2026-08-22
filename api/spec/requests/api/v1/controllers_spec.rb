@@ -42,6 +42,15 @@ RSpec.describe 'API Controllers', type: :request do
     end
   end
 
+  describe 'DELETE /api/v1/assessments/:id' do
+    it 'deletes the assessment' do
+      expect {
+        delete "/api/v1/assessments/#{assessment.id}", headers: headers
+      }.to change(Assessment, :count).by(-1)
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
   describe 'POST /api/v1/auth/login' do
     let!(:user) { create(:user, email: 'assessor@example.com', password: 'password123', role: 'admin') }
 

@@ -33,4 +33,13 @@ RSpec.describe 'API Sessions', type: :request do
       expect(json['session']['id']).to eq(session_record.id)
     end
   end
+
+  describe 'DELETE /api/v1/sessions/:id' do
+    it 'deletes the session' do
+      expect {
+        delete "/api/v1/sessions/#{session_record.id}", headers: headers
+      }.to change(Session, :count).by(-1)
+      expect(response).to have_http_status(:ok)
+    end
+  end
 end
