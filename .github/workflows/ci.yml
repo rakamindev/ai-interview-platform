@@ -46,6 +46,7 @@ jobs:
       GEMINI_LIVE_MODEL: stub
       GEMINI_FLASH_MODEL: stub
       GEMINI_PRO_MODEL: stub
+      CI: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
