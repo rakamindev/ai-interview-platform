@@ -9,13 +9,17 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.includes(:sessions, :assessment_skills).order(updated_at: :desc)
+        scope = scope.where("name ILIKE ?", "%#{params[:q]}%") if params[:q].present?
+        assessments = paginate(scope)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
-          meta: pagination_meta(assessments)
+          meta: pagination_meta(assessments),
+          stats: {
+            total_candidates: Session.count,
+            live_now:         Session.where(status: "active").count
+          }
         )
       end
 
@@ -28,10 +32,11 @@ module Api
       def create
         assessment = Assessment.new(assessment_params)
         assessment.created_by = current_user.id
+        assessment.updated_by = current_user.id
 
         if assessment.save
           SystemPromptGeneratorWorker.perform_async(assessment.id)
-          json_response({ assessment:, system_prompt_generated: true }, :created)
+          json_response({ assessment: assessment_with_skills_json(assessment), system_prompt_generated: true }, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
         end
@@ -39,6 +44,8 @@ module Api
 
       # PUT /api/v1/assessments/:id
       def update
+        @assessment.updated_by = current_user.id
+
         if @assessment.update(assessment_params)
           SystemPromptGeneratorWorker.perform_async(@assessment.id)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
@@ -49,8 +56,11 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          json_error("Cannot delete an assessment with existing sessions", details: @assessment.errors.full_messages)
+        end
       end
 
       private
@@ -79,18 +89,22 @@ module Api
         latest = assessment.sessions.max_by(&:created_at)
 
         {
-          id:             assessment.id,
-          name:           assessment.name,
-          time_limit_min: assessment.time_limit_min,
-          language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
-          created_by:     assessment.created_by,
-          created_at:     assessment.created_at,
-          updated_at:     assessment.updated_at,
+          id:               assessment.id,
+          name:             assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          language:         assessment.language || 'en',
+          system_prompt:    assessment.system_prompt,
+          created_by:       assessment.created_by,
+          created_at:       assessment.created_at,
+          updated_at:       assessment.updated_at,
+          updated_by_email: User.find_by(id: assessment.updated_by)&.email,
+          sessions_count:   assessment.sessions.size,
+          skill_labels:     assessment.assessment_skills.sort_by(&:display_order).map(&:skill_label),
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,
-            end_reason: latest.end_reason
+            end_reason: latest.end_reason,
+            expired:    latest.expired?
           }
         }
       end
@@ -115,15 +129,6 @@ module Api
             }
           end
         )
-      end
-
-      def pagination_meta(collection)
-        {
-          current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
-        }
       end
     end
   end

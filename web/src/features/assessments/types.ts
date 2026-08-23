@@ -7,10 +7,14 @@ export interface Assessment {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
+  updated_by_email?: string | null;
   skills?: AssessmentSkill[];
+  sessions_count?: number;
+  skill_labels?: string[];
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
+    expired?: boolean;
   };
 }
 
