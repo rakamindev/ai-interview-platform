@@ -11,8 +11,8 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { m } from "@/paraglide/messages.js";
 
 const navItems = [
-  { href: "/assessments", label: m.nav.assessments(), icon: ClipboardList },
-  { href: "/vacancies", label: m.nav.vacancies(), icon: Briefcase }
+  { href: "/assessments", label: m.nav_assessments(), icon: ClipboardList },
+  { href: "/vacancies", label: m.nav_vacancies(), icon: Briefcase }
 ];
 
 export default function AssessorLayout() {
@@ -39,7 +39,7 @@ export default function AssessorLayout() {
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">{m.nav.brand()}</span>
+              <span className="font-semibold text-sm">{m.nav_brand()}</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -62,14 +62,14 @@ export default function AssessorLayout() {
           <div className="flex items-center gap-3">
             {tenant.name && (
               <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
-                {m.nav.tenant({ name: tenant.name })}
+                {m.nav_tenant({ name: tenant.name })}
               </span>
             )}
             <ThemeToggle />
             <LanguageSwitcher />
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-1.5" />
-              {m.nav.logout()}
+              {m.nav_logout()}
             </Button>
           </div>
         </div>

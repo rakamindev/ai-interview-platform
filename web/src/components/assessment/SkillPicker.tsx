@@ -58,13 +58,13 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{m.skill_picker.add_taxonomy()}</DialogTitle>
+          <DialogTitle>{m.skill_picker_add_taxonomy()}</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={m.skill_picker.search()}
+            placeholder={m.skill_picker_search()}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
@@ -78,7 +78,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">{m.skill_picker.no_results()}</p>
+            <p className="text-sm text-muted-foreground text-center py-6">{m.skill_picker_no_results()}</p>
           ) : (
             filtered.map((s) => (
               <button

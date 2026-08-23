@@ -20,8 +20,8 @@ export default function TranscriptBubble({ speaker, text, interim }: TranscriptB
         )}
       >
         <span className="block text-xs font-medium mb-0.5 text-muted-foreground">
-          {isCandidate ? m.transcript_bubble.you() : m.transcript_bubble.ai()}
-          {interim && ` · ${m.transcript_bubble.listening()}`}
+          {isCandidate ? m.transcript_bubble_you() : m.transcript_bubble_ai()}
+          {interim && ` · ${m.transcript_bubble_listening()}`}
         </span>
         {text}
       </div>

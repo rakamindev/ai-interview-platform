@@ -20,7 +20,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
     return (
       <span className="flex items-center gap-1 text-xs text-verdict-match">
         <span className="h-2 w-2 rounded-full bg-verdict-match" />
-        {m.confidence.high()}
+        {m.confidence_high()}
       </span>
     );
   }
@@ -28,7 +28,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
     return (
       <span className="flex items-center gap-1 text-xs text-verdict-gap">
         <span className="h-2 w-2 rounded-full bg-verdict-gap" />
-        {m.confidence.medium()}
+        {m.confidence_medium()}
       </span>
     );
   }
@@ -36,7 +36,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
     return (
       <span className="flex items-center gap-1 text-xs text-verdict-unknown">
         <span className="h-2 w-2 rounded-full bg-verdict-unknown" />
-        {m.confidence.low()}
+        {m.confidence_low()}
       </span>
     );
   }

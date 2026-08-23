@@ -72,19 +72,19 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
           <thead>
             <tr className="border-b bg-muted/50">
               <th scope="col" className="text-left px-4 py-2.5 font-medium">
-                {m.fitgap.table_skill()}
+                {m.fitgap_table_skill()}
               </th>
               <th scope="col" className="text-center px-4 py-2.5 font-medium">
-                {m.fitgap.table_required()}
+                {m.fitgap_table_required()}
               </th>
               <th scope="col" className="text-center px-4 py-2.5 font-medium">
-                {m.fitgap.table_candidate()}
+                {m.fitgap_table_candidate()}
               </th>
               <th scope="col" className="text-center px-4 py-2.5 font-medium">
-                {m.fitgap.table_confidence()}
+                {m.fitgap_table_confidence()}
               </th>
               <th scope="col" className="text-center px-4 py-2.5 font-medium">
-                {m.fitgap.table_result()}
+                {m.fitgap_table_result()}
               </th>
             </tr>
           </thead>
@@ -130,22 +130,22 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         {matchCount > 0 && (
           <span>
-            {m.fitgap.match()} {matchCount}
+            {m.fitgap_match()} {matchCount}
           </span>
         )}
         {gapCount > 0 && (
           <span>
-            {m.fitgap.gap()} {gapCount}
+            {m.fitgap_gap()} {gapCount}
           </span>
         )}
         {exceedCount > 0 && (
           <span>
-            {m.fitgap.exceeds()} {exceedCount}
+            {m.fitgap_exceeds()} {exceedCount}
           </span>
         )}
         {insufficientCount > 0 && (
           <span>
-            {m.fitgap.insufficient_evidence()} {insufficientCount}
+            {m.fitgap_insufficient_evidence()} {insufficientCount}
           </span>
         )}
       </div>

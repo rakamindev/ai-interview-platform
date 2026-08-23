@@ -10,7 +10,7 @@ export default function ConnectionStatus({ state }: ConnectionStatusProps) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-green-600">
         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-        {m.connection.connected()}
+        {m.connection_connected()}
       </div>
     );
   }
@@ -18,14 +18,14 @@ export default function ConnectionStatus({ state }: ConnectionStatusProps) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-amber-600">
         <Loader2 className="h-3 w-3 animate-spin" />
-        {m.connection.reconnecting()}
+        {m.connection_reconnecting()}
       </div>
     );
   }
   return (
     <div className="flex items-center gap-1.5 text-xs text-destructive">
       <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-      {m.connection.lost()}
+      {m.connection_lost()}
     </div>
   );
 }
