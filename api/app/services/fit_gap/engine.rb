@@ -43,7 +43,9 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
+        # A skill can now carry a nil level (not assessed). Treat that as not_assessed —
+        # never subtract nil from the expected level, and never fold it into a Gap.
+        if portfolio_skill && portfolio_skill[:effective_level]
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
