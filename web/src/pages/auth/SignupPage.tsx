@@ -14,6 +14,7 @@ export default function SignupPage() {
   const setAuth = useSetAtom(authAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,17 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (
+			password &&
+			password !== confirmPassword
+		) {
+			setError('Passwords do not match');
+			return;
+		}
+
     setLoading(true);
+
     try {
       const res = await authApi.signup({ email, password, role });
       const token = res.data.token;
@@ -64,6 +75,18 @@ export default function SignupPage() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="confirm-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </div>

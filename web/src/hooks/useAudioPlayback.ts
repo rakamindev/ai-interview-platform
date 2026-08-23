@@ -8,6 +8,8 @@ export function useAudioPlayback() {
   const onDrainedRef = useRef<(() => void) | null>(null);
   const drainCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const stoppedRef = useRef(false);
+
   const getCtx = () => {
     if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
       audioCtxRef.current = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
@@ -17,6 +19,8 @@ export function useAudioPlayback() {
   };
 
   const playChunk = useCallback(async (raw: ArrayBuffer) => {
+    if (stoppedRef.current) return;
+    
     const ctx = getCtx();
     if (ctx.state === "suspended") await ctx.resume();
 
@@ -78,6 +82,7 @@ export function useAudioPlayback() {
   }, []);
 
   const stop = useCallback(() => {
+    stoppedRef.current = true;
     cancelDrain();
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
