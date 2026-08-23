@@ -20,7 +20,7 @@ class PortfolioGeneratorWorker
   end
 
   def perform(session_id, opts = {})
-    Rails.logger.info("[N10] correlation_id=#{Current.correlation_id} session=#{session_id}")
+    Rails.logger.info("[N10] correlation_id=#{Current.correlation_id { nil }} session=#{session_id}")
     session = Session.find(session_id)
     Portfolios::Generator.new(session: session).call
   rescue ActiveRecord::RecordNotFound

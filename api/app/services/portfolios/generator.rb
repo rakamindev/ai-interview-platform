@@ -7,8 +7,8 @@ module Portfolios
   class Generator
     def initialize(session:, gemini_client: nil)
       @session = session
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model: ENV.fetch("GEMINI_PRO_MODEL", "gemini-2.0-pro-001"),
+      @gemini_client = gemini_client || Gemini::ClientFactory.build(
+        model: ENV.fetch("GEMINI_PRO_MODEL", "gemini-3.5-flash"),
         timeout: 180 # up to 3 minutes for large transcripts
       )
     end
@@ -22,6 +22,13 @@ module Portfolios
       )
 
       portfolio.update!(generation_status: "generating")
+
+      if @session.transcript_turns.where(speaker: "candidate").none?
+        portfolio.portfolio_skills.destroy_all
+        portfolio.update!(generation_status: "complete", generated_at: Time.current)
+        Rails.logger.info("[N10] Skipping generation for session #{@session.id} — no candidate turns")
+        return portfolio
+      end
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)

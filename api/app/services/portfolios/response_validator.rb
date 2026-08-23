@@ -30,7 +30,7 @@ module Portfolios
 
       int_level = case raw_level
                   when Integer then raw_level
-                  when Float  then raw_level.round
+                  when Float  then raw_level.to_i
                   when String then raw_level.sub(/\A[Ll]/, "").to_i
                   else return nil
                   end
