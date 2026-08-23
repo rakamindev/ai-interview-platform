@@ -198,11 +198,7 @@ export default function InterviewPage() {
     onFrame: send,
     onError: (error) => {
       const denied = error.name === "NotAllowedError";
-      setAudioCaptureError(
-        denied
-          ? m.interview_mic_blocked()
-          : m.interview_mic_error()
-      );
+      setAudioCaptureError(denied ? m.interview_mic_blocked() : m.interview_mic_error());
       disconnect();
       setHardwareCheckDone(false);
       setInterviewState("idle");
@@ -307,7 +303,9 @@ export default function InterviewPage() {
             {candidateInfo?.role_title ?? m.interview_title()}
           </h1>
           {candidateInfo && (
-            <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} {m.interview_minutes()}</p>
+            <p className="text-sm text-muted-foreground">
+              {candidateInfo.time_limit_min} {m.interview_minutes()}
+            </p>
           )}
         </div>
 
@@ -480,15 +478,15 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background">
+      <div className="border-t py-3 flex items-center justify-between sticky bottom-0 bg-background">
         <Button variant={micMuted ? "destructive" : "outline"} size="sm" onClick={toggleMic}>
           {micMuted ? (
             <>
-              <MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted
+              <MicOff className="h-3.5 w-3.5" /> Muted
             </>
           ) : (
             <>
-              <Mic className="h-3.5 w-3.5 mr-1.5" />
+              <Mic className="h-3.5 w-3.5" />
               {micActuallyCapturing ? m.interview_mic_on() : m.interview_mic_paused()}
             </>
           )}
@@ -502,7 +500,7 @@ export default function InterviewPage() {
               onClick={submitAnswer}
               disabled={!micActuallyCapturing}
             >
-              <Check className="h-3.5 w-3.5 mr-1.5" />
+              <Check className="h-3.5 w-3.5" />
               {m.interview_im_done()}
             </Button>
           )}
@@ -510,7 +508,7 @@ export default function InterviewPage() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm">
-                <UnplugIcon className="h-3.5 w-3.5 mr-1.5" />
+                <UnplugIcon className="h-3.5 w-3.5" />
                 {m.interview_end_interview()}
               </Button>
             </AlertDialogTrigger>
