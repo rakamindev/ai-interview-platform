@@ -13,15 +13,9 @@ interface PageHeaderProps {
   className?: string;
 }
 
-/**
- * Page-level heading used across assessor pages: title (+ optional back
- * link and subtitle) on the left, actions on the right. Replaces the
- * `<h1 className="text-lg font-semibold">` markup that used to be
- * copy-pasted per page.
- */
 export default function PageHeader({ title, subtitle, backTo, actions, className }: PageHeaderProps) {
   return (
-    <div className={cn("flex items-start justify-between gap-4", className)}>
+    <div className={cn("flex flex-wrap items-start justify-between gap-3", className)}>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           {backTo && (
