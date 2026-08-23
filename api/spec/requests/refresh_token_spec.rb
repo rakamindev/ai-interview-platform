@@ -12,6 +12,8 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     post "/api/v1/auth/login", params: {
       email: params.fetch(:email, user.email),
       password: params.fetch(:password, "password")
+    }, headers: {
+      "Referer" => "http://test-corp.localhost/"
     }
     response
   end
@@ -40,7 +42,8 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     post "/api/v1/auth/refresh",
       headers: {
         "X-CSRF-Token" => csrf || "",
-        "Cookie" => cookie_header
+        "Cookie" => cookie_header,
+        "Referer" => "http://test-corp.localhost/"
       }
     response
   end

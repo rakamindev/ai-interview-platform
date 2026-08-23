@@ -49,11 +49,12 @@ RSpec.describe "Candidate Info", type: :request do
 
     context "when the assessment is missing" do
       it "returns 404 with assessment_not_found code" do
-        # Create a session with a deleted assessment
         orphan_session = create(:session, tenant_id: org.id, status: "pending", end_reason: nil)
         orphan_session.update_column(:invite_expires_at, 14.days.from_now)
-        # Delete the assessment
-        Assessment.unscoped.where(id: orphan_session.assessment_id).delete_all
+        # Temporarily disable FK triggers to set a non-existent assessment_id
+        ActiveRecord::Base.connection.execute("ALTER TABLE ai_interview.sessions DISABLE TRIGGER ALL")
+        orphan_session.update_column(:assessment_id, -999)
+        ActiveRecord::Base.connection.execute("ALTER TABLE ai_interview.sessions ENABLE TRIGGER ALL")
 
         get "/api/v1/sessions/#{orphan_session.invite_token}/candidate"
 

@@ -215,7 +215,7 @@ describe("PortfolioPage", () => {
     await userEvent.click(jsonButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Export failed. Please try again.")).toBeInTheDocument();
+      expect(screen.getByText("Export failed")).toBeInTheDocument();
     });
   });
 
@@ -249,8 +249,7 @@ describe("PortfolioPage", () => {
               overridden_by: 1,
               overridden_at: "2025-01-15T10:30:00Z"
             }
-          ],
-          session_id: 1
+          ]
         },
         status: "done"
       }

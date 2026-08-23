@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_23_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_23_145839) do
   create_schema "ai_interview"
 
   # These are extensions that must be enabled in order to support this database
@@ -26,6 +26,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000002) do
   create_enum "ai_interview.fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "ai_interview.generation_event_type", ["stale_marked", "restored"]
   create_enum "ai_interview.generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "ai_interview.narrative_source", ["ai", "fallback"]
   create_enum "ai_interview.rating_state", ["rated", "unrated"]
   create_enum "ai_interview.session_status", ["pending", "active", "ended", "failed"]
   create_enum "ai_interview.speaker_type", ["ai", "candidate"]
@@ -107,6 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000002) do
     t.text "culture_narrative"
     t.datetime "generated_at", default: -> { "now()" }
     t.text "generation_error"
+    t.enum "narrative_source", default: "ai", null: false, enum_type: "narrative_source"
     t.text "overall_narrative"
     t.bigint "portfolio_id", null: false
     t.jsonb "skill_comparisons", null: false

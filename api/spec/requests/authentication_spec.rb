@@ -41,6 +41,8 @@ RSpec.describe "Authentication", type: :request do
       post "/api/v1/auth/login", params: {
         email: candidate_user.email,
         password: "password"
+      }, headers: {
+        "Referer" => "http://#{org.host}/"
       }
 
       expect(response).to have_http_status(:ok)
