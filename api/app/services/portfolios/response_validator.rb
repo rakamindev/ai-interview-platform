@@ -35,7 +35,7 @@ module Portfolios
                   else return nil
                   end
 
-      VALID_LEVELS.include?(int_level) ? int_level : nil
+      int_level.to_i.clamp(1, 5)
     end
 
     def normalize(raw, is_discovered:)
