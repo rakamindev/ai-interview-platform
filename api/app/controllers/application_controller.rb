@@ -25,7 +25,8 @@ class ApplicationController < ActionController::API
   def require_tenant!
     return if tenant_resolved?
 
-    raise ExceptionHandler::TenantNotFound, Message.tenant_not_found
+    msg = Message.tenant_not_found
+    raise ExceptionHandler::TenantNotFound, msg[:message]
   end
 
   # AC-4.6: reject when no active membership exists for the user in the
