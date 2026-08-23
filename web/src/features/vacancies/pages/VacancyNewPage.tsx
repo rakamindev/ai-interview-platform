@@ -50,7 +50,7 @@ export default function VacancyNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -140,6 +140,7 @@ export default function VacancyNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        excludeLabels={fields.map((f) => f.skill_label?.toLowerCase()).filter(Boolean) as string[]}
       />
     </div>
   );

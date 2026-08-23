@@ -16,9 +16,10 @@ interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (skill: Partial<AssessmentSkill>) => void;
+  excludeLabels?: string[];
 }
 
-export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
+export default function SkillPicker({ open, onOpenChange, onSelect, excludeLabels = [] }: SkillPickerProps) {
   const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -33,9 +34,9 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
       .finally(() => setLoading(false));
   }, [open]);
 
-  const filtered = skills.filter((s) =>
-    s.skill_label.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = skills
+    .filter((s) => !excludeLabels.includes(s.skill_label.toLowerCase()))
+    .filter((s) => s.skill_label.toLowerCase().includes(query.toLowerCase()));
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({

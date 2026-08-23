@@ -23,7 +23,8 @@ import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
 import SkillCard from "@/features/assessments/components/SkillCard";
 import SkillPicker from "@/shared/components/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import DeleteConfirmDialog from "@/shared/components/DeleteConfirmDialog";
+import { ArrowLeft, Plus, Loader2, Trash2 } from "lucide-react";
 import { assessmentsApi } from "@/features/assessments/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/features/assessments/constants";
 import type { AssessmentSkill } from "@/features/assessments/types";
@@ -36,6 +37,12 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  // Skill ids that existed on the server when this page loaded — used to tell
+  // Rails' nested attributes which ones to _destroy when they're removed from
+  // the list (simply omitting them from the payload does NOT delete them).
+  const [originalSkillIds, setOriginalSkillIds] = useState<number[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -50,6 +57,7 @@ export default function AssessmentEditPage() {
       .then((res) => {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        setOriginalSkillIds((a.skills ?? []).map((s) => s.id).filter((v): v is number => v != null));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -74,10 +82,18 @@ export default function AssessmentEditPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const remainingIds = new Set(data.skills.map((s) => s.id).filter((v): v is number => v != null));
+      const destroyedSkills = originalSkillIds
+        .filter((skillId) => !remainingIds.has(skillId))
+        .map((skillId) => ({ id: skillId, _destroy: true }));
+
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: [
+          ...data.skills.map((s, i) => ({ ...s, display_order: i })),
+          ...destroyedSkills,
+        ],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -87,9 +103,22 @@ export default function AssessmentEditPage() {
     }
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await assessmentsApi.delete(Number(id));
+      navigate("/assessments");
+    } catch (e: any) {
+      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to delete.");
+      setDeleteOpen(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-3xl mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
@@ -99,7 +128,7 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -162,16 +191,35 @@ export default function AssessmentEditPage() {
         <Separator />
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Changes
+        <div className="flex items-center justify-between">
+          <Button type="button" variant="destructive" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-1.5" /> Delete
           </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Changes
+            </Button>
+          </div>
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ ...s, display_order: fields.length })}
+        excludeLabels={fields.map((f) => f.skill_label?.toLowerCase()).filter(Boolean) as string[]}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete this assessment?"
+        description="This can't be undone. Assessments with existing candidate sessions can't be deleted."
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
     </div>
   );
 }

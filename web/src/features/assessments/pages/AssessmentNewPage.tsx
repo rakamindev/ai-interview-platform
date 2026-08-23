@@ -107,7 +107,7 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
@@ -257,6 +257,7 @@ export default function AssessmentNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
+        excludeLabels={fields.map((f) => f.skill_label?.toLowerCase()).filter(Boolean) as string[]}
       />
     </div>
   );
