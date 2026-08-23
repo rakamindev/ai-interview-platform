@@ -64,6 +64,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: ai-interview-config
+            - secretRef:
+                name: ai-interview-secrets
 
           env:
             - name: POD_ID
