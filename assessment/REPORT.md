@@ -1,8 +1,16 @@
 # AI Interview Platform — Product Engineer Case Study
 
 **Candidate:** Albert Ade Kristadeo
-**Branch:** `feat/fit-gap-integrity`
 **Scope:** `api/` (Rails 7 · PostgreSQL · Sidekiq) and `web/` (React 18 · TypeScript · Vite · Tailwind · Radix)
+
+## Submission links
+
+| | |
+|---|---|
+| **Video walkthrough** | https://youtu.be/bs6h74YCspc |
+| **Pull request** | https://github.com/rakamindev/ai-interview-platform/compare/main...myst-al:feat/fit-gap-integrity |
+| **Branch** | [`myst-al/ai-interview-platform` → `feat/fit-gap-integrity`](https://github.com/myst-al/ai-interview-platform/tree/feat/fit-gap-integrity) |
+| **Seeded fault branch** | [`spike/seeded-fault`](https://github.com/myst-al/ai-interview-platform/tree/spike/seeded-fault) — fault [`075e96e`](https://github.com/myst-al/ai-interview-platform/commit/075e96e), revert [`49f1636`](https://github.com/myst-al/ai-interview-platform/commit/49f1636) |
 
 ---
 
@@ -621,7 +629,9 @@ The candidate's own view. Worth looking at while thinking about UU PDP: this is 
 
 # Video
 
-*(3–5 minute walkthrough — link to be added.)*
+**https://youtu.be/bs6h74YCspc**
+
+A walkthrough of the same argument this report makes, in order: what the report looked like before, the `to_i.clamp(1, 5)` line that caused it, the fixed screen with the unassessed skills stated and counted, the cross-tenant read and write, both suites running, the seeded fault failing, and the two things I would escalate rather than claim as finished.
 
 ---
 
