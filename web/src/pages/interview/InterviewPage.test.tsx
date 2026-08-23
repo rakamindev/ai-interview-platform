@@ -15,7 +15,9 @@ vi.mock("@/hooks/useAudioCapture", () => ({
     start: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn(),
     mute: vi.fn(),
-    unmute: vi.fn()
+    unmute: vi.fn(),
+    isSending: false,
+    analyserRef: { current: null }
   }))
 }));
 
@@ -25,7 +27,8 @@ vi.mock("@/hooks/useAudioPlayback", () => ({
     stop: vi.fn(),
     scheduleAfterPlayback: vi.fn((cb: () => void) => cb()),
     waitForDrain: vi.fn(),
-    cancelDrain: vi.fn()
+    cancelDrain: vi.fn(),
+    analyserRef: { current: null }
   }))
 }));
 
@@ -117,8 +120,8 @@ describe("InterviewPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Backend Developer")).toBeInTheDocument();
     });
-    expect(screen.getByText(/This is a voice interview/)).toBeInTheDocument();
-    expect(screen.getByText(/The AI will ask follow-up questions/)).toBeInTheDocument();
+    expect(screen.getByText(/Speak clearly and naturally/)).toBeInTheDocument();
+    expect(screen.getByText(/There are no wrong answers/)).toBeInTheDocument();
   });
 
   it("shows connection status when connected", async () => {
@@ -156,13 +159,94 @@ describe("InterviewPage", () => {
     expect(screen.getByText(/Thank you\. The interview has been recorded/)).toBeInTheDocument();
   });
 
-  it("handles getCandidateInfo error gracefully", async () => {
-    mockSessionsApi.getCandidateInfo.mockRejectedValue(new Error("Network error"));
+  it("shows invalid invite screen for invite_invalid error", async () => {
+    mockSessionsApi.getCandidateInfo.mockRejectedValue({
+      response: { data: { errors: [{ code: "invite_invalid" }] } }
+    });
 
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Interview Complete")).toBeInTheDocument();
+      expect(screen.getByText("Invalid Interview Link")).toBeInTheDocument();
     });
+    expect(screen.getByText(/invalid or malformed/)).toBeInTheDocument();
+    expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+  });
+
+  it("shows expired invite screen for invite_expired error", async () => {
+    mockSessionsApi.getCandidateInfo.mockRejectedValue({
+      response: { data: { errors: [{ code: "invite_expired" }] } }
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Interview Link Expired")).toBeInTheDocument();
+    });
+    expect(screen.getByText(/has expired/)).toBeInTheDocument();
+    expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+  });
+
+  it("shows unavailable screen for assessment_not_found error", async () => {
+    mockSessionsApi.getCandidateInfo.mockRejectedValue({
+      response: { data: { errors: [{ code: "assessment_not_found" }] } }
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Interview Unavailable")).toBeInTheDocument();
+    });
+    expect(screen.getByText(/couldn't load your interview/)).toBeInTheDocument();
+    expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+  });
+
+  it("shows connection error screen for network failure", async () => {
+    mockSessionsApi.getCandidateInfo.mockRejectedValue({ request: {} });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Connection Error")).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Unable to reach the server/)).toBeInTheDocument();
+    expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+  });
+
+  it("does not show retry button for invite_invalid", async () => {
+    mockSessionsApi.getCandidateInfo.mockRejectedValue({
+      response: { data: { errors: [{ code: "invite_invalid" }] } }
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid Interview Link")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Retry")).not.toBeInTheDocument();
+  });
+
+  it("shows retry button for invite_error", async () => {
+    mockSessionsApi.getCandidateInfo.mockRejectedValue({
+      response: { data: { errors: [{ code: "assessment_not_found" }] } }
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Interview Unavailable")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Retry")).toBeInTheDocument();
+  });
+
+  it("shows retry button for network_error", async () => {
+    mockSessionsApi.getCandidateInfo.mockRejectedValue({ request: {} });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Connection Error")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Retry")).toBeInTheDocument();
   });
 });

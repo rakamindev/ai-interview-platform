@@ -79,7 +79,11 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "invite_invalid"
+  | "invite_expired"
+  | "invite_error"
+  | "network_error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

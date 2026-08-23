@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import * as React from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +22,9 @@ import { useAudioLevels } from "@/hooks/useAudioLevels";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
+import { getErrorCode } from "@/services/api";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Check, Mic, MicOff, X, Zap, UnplugIcon } from "lucide-react";
+import { CheckCircle, Check, Mic, MicOff, X, Zap, UnplugIcon, AlertTriangle } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 import { m } from "@/paraglide/messages.js";
 import { Separator } from "@/components/ui/separator";
@@ -64,9 +66,28 @@ export default function InterviewPage() {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
-        return;
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        if (!err?.response) {
+          setInterviewState("network_error");
+          return;
+        }
+        const code = getErrorCode(err);
+        switch (code) {
+          case "invite_invalid":
+            setInterviewState("invite_invalid");
+            break;
+          case "invite_expired":
+            setInterviewState("invite_expired");
+            break;
+          case "assessment_not_found":
+            setInterviewState("invite_error");
+            break;
+          default:
+            setInterviewState("invite_error");
+            break;
+        }
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -345,7 +366,58 @@ export default function InterviewPage() {
     );
   }
 
-  // ── State F: Complete ───────────────────────────────────────────────────
+  // ── State F: Error screens ──────────────────────────────────────────────
+  if (
+    interviewState === "invite_invalid" ||
+    interviewState === "invite_expired" ||
+    interviewState === "invite_error" ||
+    interviewState === "network_error"
+  ) {
+    type ErrorState = "invite_invalid" | "invite_expired" | "invite_error" | "network_error";
+    const configs: Record<ErrorState, { icon: React.ReactNode; title: string; description: string; retry: boolean }> = {
+      invite_invalid: {
+        icon: <AlertTriangle className="h-10 w-10 text-amber-500" />,
+        title: "Invalid Interview Link",
+        description:
+          "This interview link is invalid or malformed. Please contact your recruiter for a new link.",
+        retry: false
+      },
+      invite_expired: {
+        icon: <AlertTriangle className="h-10 w-10 text-amber-500" />,
+        title: "Interview Link Expired",
+        description:
+          "This interview link has expired. Please contact your recruiter for a new link.",
+        retry: false
+      },
+      invite_error: {
+        icon: <AlertTriangle className="h-10 w-10 text-amber-500" />,
+        title: "Interview Unavailable",
+        description:
+          "We couldn't load your interview. Please try again or contact support.",
+        retry: true
+      },
+      network_error: {
+        icon: <AlertTriangle className="h-10 w-10 text-amber-500" />,
+        title: "Connection Error",
+        description:
+          "Unable to reach the server. Please check your internet connection and try again.",
+        retry: true
+      }
+    };
+    const cfg = configs[interviewState];
+    return (
+      <main className="max-w-2xl w-full mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
+        {cfg.icon}
+        <h2 className="text-xl font-semibold">{cfg.title}</h2>
+        <p className="text-sm text-muted-foreground max-w-md">{cfg.description}</p>
+        {cfg.retry && (
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        )}
+      </main>
+    );
+  }
+
+  // ── State G: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
       <main className="max-w-2xl w-full mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
