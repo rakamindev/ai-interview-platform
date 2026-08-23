@@ -89,6 +89,7 @@ export interface WsControlMessage {
     | "session_ended"
     | "transcript"
     | "transcription"
+    | "transcript_partial"
     | "reconnecting"
     | "reconnected"
     | "speaker_changed"

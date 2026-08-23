@@ -63,12 +63,23 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   match: "Match",
   gap: "Gap",
   exceed: "Exceeds",
-  not_assessed: "Not assessed"
+  not_assessed: "Not assessed",
+  insufficient_evidence: "Insufficient evidence"
+};
+
+// Session end reason display — mirrors Session::END_REASONS in the backend
+export const SESSION_END_REASON_LABELS: Record<string, string> = {
+  manual_candidate: "ended by candidate",
+  manual_assessor: "ended by assessor",
+  all_covered: "all skills covered",
+  time_ceiling: "time limit reached",
+  error: "an error occurred"
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   match: "text-verdict-match bg-verdict-match/10",
   gap: "text-verdict-gap bg-verdict-gap/10",
   exceed: "text-verdict-exceed bg-verdict-exceed/10",
-  not_assessed: "text-verdict-unknown bg-verdict-unknown/10"
+  not_assessed: "text-verdict-unknown bg-verdict-unknown/10",
+  insufficient_evidence: "text-verdict-unknown bg-verdict-unknown/10"
 };

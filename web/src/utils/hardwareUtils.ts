@@ -47,21 +47,16 @@ export function getOSInfo() {
   return os;
 }
 
-export async function checkCamera(): Promise<MediaStream | null> {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { max: 640 },
-        height: { max: 480 },
-        frameRate: { max: 20 },
-        facingMode: "user"
-      },
-      audio: true
-    });
-    return stream;
-  } catch {
-    return null;
-  }
+export async function checkCamera(): Promise<MediaStream> {
+  return navigator.mediaDevices.getUserMedia({
+    video: {
+      width: { max: 640 },
+      height: { max: 480 },
+      frameRate: { max: 20 },
+      facingMode: "user"
+    },
+    audio: true
+  });
 }
 
 export function getCurrentTime(): string {

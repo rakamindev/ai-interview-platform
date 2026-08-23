@@ -21,8 +21,8 @@ vi.hoisted(() => {
   });
 });
 
-const REFRESH_URL = "http://localhost:3000/api/v1/auth/refresh";
-const RESOURCE_URL = "http://localhost:3000/api/v1/some-resource";
+const REFRESH_URL = "http://localhost:3001/api/v1/auth/refresh";
+const RESOURCE_URL = "http://localhost:3001/api/v1/some-resource";
 
 function installRefreshHandlers() {
   server.use(
