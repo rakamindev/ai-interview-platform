@@ -47,7 +47,7 @@ export default function VacancyNewPage() {
       navigate("/vacancies");
     } catch (e: unknown) {
       const err = e as { response?: { data?: { errors?: { message?: string }[] } } };
-      setError(err?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
+      setError(err?.response?.data?.errors?.[0]?.message ?? m.vacancy_save_error());
     } finally {
       setSubmitting(false);
     }
@@ -70,7 +70,7 @@ export default function VacancyNewPage() {
           </Label>
           <Input
             id="role_title"
-            placeholder="Senior Frontend Engineer"
+            placeholder={m.vacancy_role_placeholder()}
             {...register("role_title")}
           />
         </div>
@@ -103,7 +103,7 @@ export default function VacancyNewPage() {
                     </button>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Expected level:</span>
+                    <span className="text-xs text-muted-foreground">{m.vacancy_expected_level_label()}</span>
                     <LevelRadio
                       value={watch(`skills.${index}.expected_level`) ?? 3}
                       onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
@@ -126,7 +126,7 @@ export default function VacancyNewPage() {
           <Label htmlFor="culture_dimensions">{m.vacancy_company_culture()}</Label>
           <Textarea
             id="culture_dimensions"
-            placeholder="Ownership-driven, async-first, direct feedback culture..."
+            placeholder={m.vacancy_culture_placeholder()}
             rows={3}
             {...register("culture_dimensions")}
           />
@@ -136,7 +136,7 @@ export default function VacancyNewPage() {
           <Label htmlFor="competency_expectations">{m.vacancy_competency_expectations()}</Label>
           <Textarea
             id="competency_expectations"
-            placeholder="Strong communicator who can align cross-functional teams..."
+            placeholder={m.vacancy_competency_placeholder()}
             rows={3}
             {...register("competency_expectations")}
           />
