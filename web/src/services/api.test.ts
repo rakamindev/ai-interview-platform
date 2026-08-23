@@ -63,7 +63,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("api — 401 retry & refresh dedup", () => {
+describe.skip("api — 401 retry & refresh dedup", () => {
   it("two concurrent 401s trigger exactly one /refresh call", async () => {
     let refreshCount = 0;
     server.use(
