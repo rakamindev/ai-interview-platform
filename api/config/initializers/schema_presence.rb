@@ -1,19 +1,26 @@
 # frozen_string_literal: true
 
-# db/schema.rb cannot hold the schema-creation statement: Rails regenerates
-# that file after every migration, so a manual `CREATE SCHEMA` line is silently
-# clobbered. Every table lives in the `ai_interview` schema (database.yml
-# schema_search_path), so `db:schema:load` fails on a fresh database without it.
+# db/schema.rb *does* now auto-regenerate its own `create_schema "ai_interview"`
+# statement (Rails dumps a create_schema line for any non-public schema in
+# schema_search_path) — so this initializer must NOT also create the schema:
+# db:schema:load would then crash with PG::DuplicateSchema the moment both
+# this initializer and schema.rb's own statement try to create it in the
+# same run. schema.rb is the single source of truth for schema creation.
 #
-# Ensure the schema exists at boot instead. Cosmetic-only on any database where
-# it already exists; raises nothing when the database does not exist yet
-# (db:create / db:prepare handle that path).
+# What this initializer still needs to guarantee: the database's own
+# search_path default is "ai_interview,public" *before* Rails' first
+# connection to a brand-new database. database.yml's schema_search_path
+# config key is not reliably honored by whichever connection db:create /
+# db:schema:load use internally, so unqualified `create_table` calls in
+# schema.rb can otherwise land in `public`. ALTER DATABASE sets Postgres's
+# own per-database default, which every future connection picks up
+# regardless of Rails' connection-handling internals.
 begin
-  ActiveRecord::Base.connection.execute(<<~SQL.squish)
-    DO $$ BEGIN
-      CREATE SCHEMA ai_interview;
-    EXCEPTION WHEN duplicate_schema THEN null; END $$;
-  SQL
+  db_name = ActiveRecord::Base.connection_db_config.database
+  ActiveRecord::Base.connection.execute(
+    "ALTER DATABASE #{ActiveRecord::Base.connection.quote_table_name(db_name)} " \
+    "SET search_path TO ai_interview, public"
+  )
 rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, PG::ConnectionBad => e
-  Rails.logger.debug { "ai_interview schema not created yet — database unavailable: #{e.message}" }
+  Rails.logger.debug { "ai_interview search_path not set — database unavailable: #{e.message}" }
 end

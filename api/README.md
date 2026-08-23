@@ -37,9 +37,9 @@ Set `GEMINI_STUB=true` in `config/application.yml` to run without a key.
 | `SECRET_KEY_BASE` | Must match `rakamin-api` — JWT tokens are shared |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | PostgreSQL (default: `localhost` / `5432` / `rakamin_development` / `postgres`) |
 | `GEMINI_API_KEY` | Google AI Studio key (not needed when `GEMINI_STUB=true`) |
-| `GEMINI_LIVE_MODEL` | e.g. `gemini-2.0-flash-live-001` |
-| `GEMINI_FLASH_MODEL` | e.g. `gemini-2.0-flash-001` |
-| `GEMINI_PRO_MODEL` | e.g. `gemini-2.0-pro-001` |
+| `GEMINI_LIVE_MODEL` | e.g. `gemini-3.1-flash-live-preview` |
+| `GEMINI_FLASH_MODEL` | e.g. `gemini-3.5-flash` |
+| `GEMINI_PRO_MODEL` | e.g. `gemini-3.5-flash` |
 | `REDIS_URL` | Default: `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
 | `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |

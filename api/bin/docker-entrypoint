@@ -10,7 +10,16 @@ until pg_isready -h "${DB_HOST:-postgres}" -p "${DB_PORT:-5432}" -U "${DB_USERNA
 done
 
 echo "== db:prepare =="
-bundle exec rails db:prepare
+# db:prepare's own db:schema:load fast-path for a fresh DB doesn't reliably
+# apply schema_search_path, scattering ai_interview tables into `public`
+# (see lib/tasks/force_migrate.rake). db:create + db:force_migrate is
+# idempotent the same way — safe on every boot.
+flock tmp/db_prepare.lock -c "bundle exec rails db:create db:force_migrate"
+
+echo "== db:prepare (test) =="
+# Keeps rakamin_test present and migrated so `bundle exec rspec` never falls
+# back to running against the dev database (see spec/rails_helper.rb).
+flock tmp/db_prepare_test.lock -c "RAILS_ENV=test DB_NAME=rakamin_test bundle exec rails db:create db:force_migrate"
 
 # Seed only when the database is empty. Idempotent: db:seed uses
 # find_or_initialize, so a concurrent api/sidekiq double-run is safe.
