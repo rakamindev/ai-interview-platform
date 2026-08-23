@@ -108,9 +108,11 @@ module FitGap
       expected_level  = vacancy_skill.expected_level
       delta           = candidate_level - expected_level
 
-      # SEED-4: low confidence gate removed — asserts gap on thin evidence
+      # AC-1.5: low confidence → insufficient_evidence (delta shown, not asserted).
       confidence = portfolio_skill[:confidence]
-      result = if delta.zero?
+      result = if confidence.present? && CONFIDENCE_THRESHOLD.exclude?(confidence)
+                 "insufficient_evidence"
+               elsif delta.zero?
                  "match"
                else
                  (delta.positive? ? "exceed" : "gap")
