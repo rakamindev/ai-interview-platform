@@ -13,6 +13,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     css: false,
-    include: ["src/**/*.test.{ts,tsx}"]
+    include: ["src/**/*.test.{ts,tsx}"],
+    env: {
+      VITE_API_BASE_URL: "http://localhost:3001/api/v1",
+      VITE_WS_BASE_URL: "ws://localhost:3001"
+    }
   }
 });
