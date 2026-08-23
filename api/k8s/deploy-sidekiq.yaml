@@ -58,7 +58,8 @@ spec:
           image: asia-southeast2-docker.pkg.dev/rakamin-poc/rakamin-images/ai-interview-api:latest
           imagePullPolicy: Always
           command: ["bundle"]
-          args: ["exec", "sidekiq", "-e", "staging"]
+          # Rails env comes from RAILS_ENV in the ai-interview-config ConfigMap
+          args: ["exec", "sidekiq"]
 
           envFrom:
             - configMapRef:
@@ -85,7 +86,7 @@ spec:
             - name: MALLOC_CONF
               value: "background_thread:true,metadata_thp:auto,dirty_decay_ms:5000,muzzy_decay_ms:5000,narenas:2"
             - name: OTEL_SERVICE_NAME
-              value: ai-interview-sidekiq-staging
+              value: ai-interview-sidekiq
 
           # Sidekiq writes a status file that signals readiness
           readinessProbe:
