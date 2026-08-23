@@ -79,7 +79,7 @@ module FitGap
         effective_level: nil,
         level_source: "none",
         confidence: nil,
-        is_override_removed: false,
+        is_override: false,
         delta: nil,
         result: "not_assessed",
         schema_version: SCHEMA_VERSION
@@ -170,8 +170,7 @@ module FitGap
           ai_level: skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence: skill.ai_confidence,
-          level_source: override ? "assessor" : "ai",
-          is_override: override.present?
+          level_source: override ? "assessor" : "ai"
         }
       end
     end
