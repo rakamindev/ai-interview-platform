@@ -14,7 +14,7 @@ import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
 import OverrideHistory from "./OverrideHistory";
 import { portfoliosApi } from "@/services/portfolios";
-import { Loader2, ShieldCheck, ArrowDownCircle } from "lucide-react";
+import { Loader2, ShieldCheck, ArrowDownCircle, AlertTriangle } from "lucide-react";
 import { m } from "@/paraglide/messages.js";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
@@ -92,6 +92,13 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
               <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
+            </div>
+          )}
+
+          {skill.ai_presence === "stale" && hasOverride && (
+            <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              AI no longer reports this skill — your override is preserved.
             </div>
           )}
 
