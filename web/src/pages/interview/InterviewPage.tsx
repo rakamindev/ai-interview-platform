@@ -433,12 +433,14 @@ export default function InterviewPage() {
           </div>
         ) : (
           <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : listeningLabel}
-              variant="ai"
-              levels={aiLevels}
-            />
+            {!candidateSpeaking && (
+              <VoiceBars
+                active={aiSpeaking}
+                label={aiSpeaking ? "AI speaking" : listeningLabel}
+                variant="ai"
+                levels={aiLevels}
+              />
+            )}
 
             {candidateSpeaking && (
               <VoiceBars
