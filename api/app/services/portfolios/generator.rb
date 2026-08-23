@@ -11,7 +11,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.1-pro-preview'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -25,7 +25,7 @@ module Portfolios
 
       raise FinalizedPortfolio, 'Cannot regenerate a portfolio after its decision is finalized' if portfolio.portfolio_decision&.finalized?
 
-      portfolio.update!(generation_status: 'generating')
+      portfolio.update!(generation_status: 'generating', generation_error: nil)
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)

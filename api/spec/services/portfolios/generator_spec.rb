@@ -33,6 +33,7 @@ RSpec.describe Portfolios::Generator do
     result = described_class.new(session:, gemini_client:).call
 
     expect(result).to be_complete
+    expect(result.generation_error).to be_nil
     expect(result.portfolio_decision).to have_attributes(
       ai_outcome: 'pass',
       ai_rationale: valid_response.dig('overall_recommendation', 'rationale')
