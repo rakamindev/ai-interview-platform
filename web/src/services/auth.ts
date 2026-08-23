@@ -16,6 +16,8 @@ export const authApi = {
   signup: (data: { email: string; password: string; role: "admin" | "user" }) =>
     api.post<LoginResponse>("/signup", data),
 
+  logout: () => api.delete("/auth/delete"),
+
   acceptInvite: (data: { token: string; password: string }) =>
     api.post<LoginResponse>("/auth/accept_invite", data),
 

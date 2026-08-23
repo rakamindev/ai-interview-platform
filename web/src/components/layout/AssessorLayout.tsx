@@ -2,13 +2,14 @@ import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAtomValue } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { clearAuth } from "@/stores/authAtom";
-import { api, stopRefreshTimer } from "@/services/api";
+import { stopRefreshTimer } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { m } from "@/paraglide/messages.js";
+import { authApi } from "@/services/auth";
 
 const navItems = [
   { href: "/assessments", label: m.nav_assessments(), icon: ClipboardList },
@@ -22,7 +23,7 @@ export default function AssessorLayout() {
 
   const handleLogout = async () => {
     try {
-      await api.delete("/auth/logout");
+      await authApi.logout();
     } catch {
       // Best-effort — clear local state regardless
     }
