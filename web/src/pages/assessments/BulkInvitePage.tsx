@@ -29,6 +29,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { api } from "@/services/api";
+import { m } from "@/(paraglide)/messages.js";
 
 interface CandidateRow {
   id: string;
@@ -76,7 +77,7 @@ function SortableCandidateRow({
       </button>
       <span className="text-sm text-muted-foreground w-6 text-right">{index + 1}</span>
       <Input
-        placeholder="Candidate name"
+        placeholder={m.assessment.candidate_name()}
         value={row.name}
         onChange={(e) => onUpdate(row.id, "name", e.target.value)}
         className="flex-1"
@@ -183,7 +184,7 @@ export default function BulkInvitePage() {
   const handleSendAll = async () => {
     const validRows = rows.filter((r) => r.name.trim() && r.email.trim());
     if (validRows.length === 0) {
-      setError("Add at least one candidate with a name and email.");
+      setError(m.assessment.add_at_least_one());
       return;
     }
     setError(null);
@@ -232,22 +233,22 @@ export default function BulkInvitePage() {
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="text-sm text-muted-foreground">Assessments</span>
+        <span className="text-sm text-muted-foreground">{m.nav.assessments()}</span>
         <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Bulk Invite Candidates</span>
+        <span className="text-sm font-medium">{m.assessment.bulk_invite()}</span>
       </div>
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Invite Candidates</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.assessment.invite_candidate()}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Add multiple candidates to this assessment at once.
+              {m.assessment.bulk_invite_desc()}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4 mr-1" />
-            Import CSV
+            {m.assessment.import_csv()}
           </Button>
           <input
             ref={fileInputRef}
@@ -277,7 +278,7 @@ export default function BulkInvitePage() {
 
         <Button type="button" variant="outline" size="sm" onClick={addRow}>
           <Plus className="h-3.5 w-3.5 mr-1" />
-          Add Row
+          {m.assessment.add_row()}
         </Button>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -285,16 +286,16 @@ export default function BulkInvitePage() {
         {/* Summary */}
         {(successCount > 0 || errorCount > 0) && (
           <div className="text-sm text-muted-foreground">
-            {successCount > 0 && <span className="text-green-600">{successCount} sent</span>}
+            {successCount > 0 && <span className="text-green-600">{successCount} {m.assessment.sent()}</span>}
             {successCount > 0 && errorCount > 0 && <span> · </span>}
-            {errorCount > 0 && <span className="text-destructive">{errorCount} failed</span>}
+            {errorCount > 0 && <span className="text-destructive">{errorCount} {m.assessment.bulk_failed()}</span>}
           </div>
         )}
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => history.back()}>
-            Done
+            {m.assessment.done()}
           </Button>
           <Button
             type="button"
@@ -302,7 +303,7 @@ export default function BulkInvitePage() {
             disabled={submitting || rows.every((r) => !r.name.trim() || !r.email.trim())}
           >
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Send Invites
+            {m.assessment.send_invites()}
           </Button>
         </div>
       </div>

@@ -33,6 +33,7 @@ import PageHeader from "@/components/PageHeader";
 import { Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import { m } from "@/(paraglide)/messages.js";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
 
 export default function AssessmentEditPage() {
@@ -78,7 +79,7 @@ export default function AssessmentEditPage() {
 
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) {
-      setError("Add at least one skill.");
+      setError(m.assessment.add_skill_error());
       return;
     }
     setError(null);
@@ -112,7 +113,7 @@ export default function AssessmentEditPage() {
   return (
     <main className="max-w-2xl mx-auto">
       <PageHeader
-        title="Edit Assessment"
+        title={m.assessment.edit()}
         backTo="/assessments"
         backLabel="Back to assessments"
       />
@@ -120,14 +121,14 @@ export default function AssessmentEditPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="name">
-            Role title <span className="text-destructive">*</span>
+            {m.assessment.role_title()} <span className="text-destructive">*</span>
           </Label>
           <Input id="name" {...register("name", { required: true })} />
         </div>
 
         <div className="space-y-1.5">
           <Label>
-            Session time limit <span className="text-destructive">*</span>
+            {m.assessment.session_time_limit()} <span className="text-destructive">*</span>
           </Label>
           <Select
             value={String(form.watch("time_limit_min"))}
@@ -149,10 +150,10 @@ export default function AssessmentEditPage() {
         <Separator />
 
         <div className="space-y-3">
-          <Label>Skills to assess</Label>
+          <Label>{m.assessment.skills_to_assess()}</Label>
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              No skills added yet.
+              {m.assessment.no_skills()}
             </div>
           ) : (
             <DndContext
@@ -180,7 +181,7 @@ export default function AssessmentEditPage() {
           )}
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
+              <Plus className="h-3.5 w-3.5 mr-1" /> {m.assessment.add_from_taxonomy()}
             </Button>
             <Button
               type="button"
@@ -195,7 +196,7 @@ export default function AssessmentEditPage() {
                 })
               }
             >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill
+              <Plus className="h-3.5 w-3.5 mr-1" /> {m.assessment.add_custom_skill()}
             </Button>
           </div>
         </div>
@@ -209,11 +210,11 @@ export default function AssessmentEditPage() {
             variant="outline"
             onClick={() => navigate(`/assessments/${id}/invite`)}
           >
-            Cancel
+            {m.assessment.cancel()}
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Changes
+            {m.assessment.save_changes()}
           </Button>
         </div>
       </form>
