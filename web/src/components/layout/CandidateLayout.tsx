@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { m } from "@/paraglide/messages.js";
+import { LayoutDashboard } from "lucide-react";
 
 export default function CandidateLayout() {
   return (
@@ -7,7 +8,10 @@ export default function CandidateLayout() {
       {/* Minimal header — no nav */}
       <header className="border-b bg-background">
         <div className="max-w-2xl mx-auto px-4 h-12 flex items-center">
-          <span className="font-semibold text-sm text-muted-foreground">{m.interview_title()}</span>
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-sm">{m.nav_brand()}</span>
+          </div>
         </div>
       </header>
 
