@@ -164,6 +164,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  consent_given: boolean;
 }
 
 export interface PaginationMeta {

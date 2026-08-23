@@ -74,8 +74,12 @@ module Gemini
 
     def parse_response(response)
       unless response.success?
+        # PDP: log status + size only — the body may echo transcript content
+        # sent for scoring. Full payload stays available via exception objects.
+        Rails.logger.error(
+          "[Gemini::HttpClient] API error status=#{response.status} bytes=#{response.body.to_s.bytesize}"
+        )
         raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
         raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
       end
 

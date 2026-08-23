@@ -17,6 +17,10 @@ class Session < ApplicationRecord
 
   before_validation :generate_invite_token, on: :create
 
+  # Sessions are rendered inside the assessments index (latest_session), so
+  # any session change must invalidate that cache too.
+  after_commit { Assessment.bump_cache_version }
+
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
   scope :ended,   -> { where(status: 'ended') }

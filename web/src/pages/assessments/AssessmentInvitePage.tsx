@@ -11,114 +11,25 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Trash2 } from "lucide-react";
+import SessionRow from "@/components/assessor/SessionRow";
 import type { Assessment, Session } from "@/types";
-
-function SessionRow({
-  session,
-  index,
-  assessmentId,
-  onCopy,
-  copiedId,
-}: {
-  session: Session;
-  index: number;
-  assessmentId: string;
-  onCopy: (id: number) => void;
-  copiedId: number | null;
-}) {
-  const navigate = useNavigate();
-  const isLive = session.status === "active";
-  const isEnded = session.status === "ended";
-  const isPending = session.status === "pending";
-  const displayName = session.candidate_name || `Candidate ${index}`;
-
-  return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-          {index}
-        </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
-          {session.started_at && (
-            <div className="text-xs text-muted-foreground">
-              {new Date(session.started_at).toLocaleDateString()}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Awaiting candidate
-          </span>
-        )}
-        {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Live
-          </span>
-        )}
-        {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
-        )}
-        {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
-        )}
-
-        <div className="flex items-center gap-1.5">
-          {isPending && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(session.id)}
-            >
-              {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
-              ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
-              )}
-            </Button>
-          )}
-          {isLive && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
-            >
-              <Eye className="h-3 w-3 mr-1" /> Monitor
-            </Button>
-          )}
-          {isEnded && session.end_reason !== "error" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
-            >
-              Results
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AssessmentInvitePage() {
   const { id } = useParams<{ id: string }>();
@@ -179,6 +90,15 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(session.invite_url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDeleteSession = async (id: number) => {
+    try {
+      await sessionsApi.destroySession(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      alert("Failed to delete session. Please try again.");
+    }
   };
 
   const copyNewSessionLink = () => {
@@ -313,6 +233,7 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onDeleted={handleDeleteSession}
                 />
               ))}
             </CardContent>

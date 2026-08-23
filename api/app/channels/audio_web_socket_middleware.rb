@@ -7,6 +7,11 @@ require 'faye/websocket'
 class AudioWebSocketMiddleware
   AUDIO_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/audio\z}
 
+  # Error marker for the consent gate (see authenticate_and_load). The open
+  # handler maps it to the distinct 'consent_required' WS error code so the
+  # frontend shows the consent screen instead of a generic auth failure.
+  CONSENT_REQUIRED_ERROR = 'Consent required'
+
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
   BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
@@ -50,7 +55,8 @@ class AudioWebSocketMiddleware
     session, error = authenticate_and_load(env, session_id)
 
     if error
-      browser_ws.send({ type: 'error', code: 'auth_failed', message: error, recoverable: false }.to_json)
+      code = error == CONSENT_REQUIRED_ERROR ? 'consent_required' : 'auth_failed'
+      browser_ws.send({ type: 'error', code: code, message: error, recoverable: false }.to_json)
       browser_ws.close
       return
     end
@@ -756,6 +762,8 @@ class AudioWebSocketMiddleware
     return [nil, 'Session not found'] unless session
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+    # UU PDP: no consent on record — never let audio reach the processor.
+    return [nil, CONSENT_REQUIRED_ERROR] if session.consent_given_at.nil?
 
     [session, nil]
   end

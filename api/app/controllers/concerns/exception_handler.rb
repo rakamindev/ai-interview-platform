@@ -40,6 +40,7 @@ module ExceptionHandler
   def render_exception(e)
     status = exception_status(e)
     message = Rails.env.production? ? human_message(e) : e.message
+    Rails.logger.error("[Exception] #{e.class}: #{e.message}\n#{e.backtrace&.first(12).join("\n")}")
 
     render json: {
       errors: [{

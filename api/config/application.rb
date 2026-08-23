@@ -19,17 +19,6 @@ module AiInterview
     # API-only mode
     config.api_only = true
 
-    # Auto-load paths
-    config.autoload_paths += %W[
-      #{config.root}/app/auth
-      #{config.root}/app/lib
-      #{config.root}/app/middlewares
-      #{config.root}/app/services
-      #{config.root}/app/channels
-      #{config.root}/app/clients
-      #{config.root}/app/workers
-    ]
-
     # Use UUID primary keys by default
     config.generators do |g|
       g.orm :active_record, primary_key_type: :uuid

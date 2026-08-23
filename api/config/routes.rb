@@ -22,7 +22,7 @@ Rails.application.routes.draw do
       end
 
       # Sessions
-      resources :sessions, only: %i[show] do
+      resources :sessions, only: %i[show destroy] do
         member do
           post :end_session
           get  :coverage
@@ -34,6 +34,7 @@ Rails.application.routes.draw do
 
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
+      post 'sessions/:token/consent',        to: 'sessions#give_consent'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
 
       # Portfolio skills overrides

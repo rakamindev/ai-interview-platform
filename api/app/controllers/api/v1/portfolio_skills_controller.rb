@@ -14,7 +14,7 @@ module Api
         if existing
           if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
             regenerate_stale_fitgap_reports
-            json_response(override: override_json(existing))
+            json_response(override: AssessorOverrideSerializer.new(existing).as_json)
           else
             json_error(existing.errors.full_messages.first, :unprocessable_entity)
           end
@@ -29,7 +29,7 @@ module Api
 
           if new_override.save
             regenerate_stale_fitgap_reports
-            json_response({ override: override_json(new_override) }, :created)
+            json_response({ override: AssessorOverrideSerializer.new(new_override).as_json }, :created)
           else
             json_error(new_override.errors.full_messages.first, :unprocessable_entity)
           end
@@ -58,17 +58,6 @@ module Api
         params.require(:override).permit(:override_level, :assessor_notes)
       end
 
-      def override_json(override)
-        {
-          id:                 override.id,
-          portfolio_skill_id: override.portfolio_skill_id,
-          ai_level:           override.ai_level,
-          override_level:     override.override_level,
-          assessor_notes:     override.assessor_notes,
-          overridden_by:      override.overridden_by,
-          overridden_at:      override.overridden_at
-        }
-      end
     end
   end
 end

@@ -57,6 +57,19 @@ class ApplicationController < ActionController::API
     Current.user = result[:user]
   end
 
+  # ── Serialization ───────────────────────────────────────────────────────────
+
+  # serialize(record, with: SessionSerializer)
+  # serialize(sessions, with: SessionSerializer)   # collections too
+  # Options are forwarded, e.g. with_skills: true.
+  def serialize(resource, with:, **options)
+    if resource.respond_to?(:to_ary)
+      resource.map { |item| with.new(item, **options).as_json }
+    else
+      with.new(resource, **options).as_json
+    end
+  end
+
   # ── Params ──────────────────────────────────────────────────────────────────
 
   def query_params

@@ -13,6 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import VoiceBars from "@/components/interview/VoiceBars";
+import ConsentGate from "@/components/interview/ConsentGate";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
@@ -32,6 +33,9 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  // UU PDP consent gate — server-side state is the source of truth; this only
+  // mirrors it so the consent screen shows/hides immediately.
+  const [consentGiven, setConsentGiven] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,10 +50,17 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        setConsentGiven(res.data.consent_given);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
+
+  const handleGiveConsent = async () => {
+    if (!token) return;
+    await sessionsApi.giveConsent(token);
+    setConsentGiven(true); // server has the timestamp; mirror locally
+  };
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -200,7 +211,10 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {!consentGiven ? (
+          /* ── UU PDP consent gate ────────────────────────────────────── */
+          <ConsentGate onAgree={handleGiveConsent} />
+      ) : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
@@ -233,9 +247,11 @@ export default function InterviewPage() {
         <div className="text-4xl">✅</div>
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
+          Thank you. Your interview has been transcribed and will be
+          AI-assisted for assessment, then reviewed by the hiring team.
           <br />
-          The hiring team will review your results and follow up with you.
+          You may request deletion of your interview data at any time by
+          contacting the hiring team.
         </p>
       </div>
     );
@@ -320,13 +336,14 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-x-4 gap-y-2 flex-wrap sticky bottom-0 bg-white">
         <ConnectionStatus state={wsConnectionStatus} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 ml-auto">
           <Button
             variant={micMuted ? "destructive" : "outline"}
             size="sm"
+            className="shrink-0"
             onClick={toggleMic}
           >
             {micMuted ? (
@@ -338,7 +355,7 @@ export default function InterviewPage() {
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
+            <Button variant="outline" size="sm" className="shrink-0">End Interview</Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -354,7 +371,8 @@ export default function InterviewPage() {
           </AlertDialogContent>
         </AlertDialog>
         {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
+          <Button variant="outline" size="sm"
+            className="text-xs opacity-50 shrink-0 hidden sm:inline-flex"
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
             ⚡ Force reconnect
           </Button>

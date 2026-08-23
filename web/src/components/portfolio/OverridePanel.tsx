@@ -43,18 +43,18 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
   if (!open) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {hasOverride ? (
           <>
-            <div className="flex items-center gap-1.5 text-sm">
+            <div className="flex items-center gap-1.5 text-sm flex-wrap">
               <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
+              <span className="text-xs text-green-600 font-medium whitespace-nowrap">Overridden ✓</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-              <Pencil className="h-3 w-3 mr-1" /> Edit override
+            <Button variant="ghost" size="sm" className="shrink-0" onClick={() => setOpen(true)}>
+              <Pencil className="h-3 w-3 mr-1" /> Edit
             </Button>
           </>
         ) : (

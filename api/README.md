@@ -95,3 +95,75 @@ Runs on **port 5173** by default.
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
 | Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+
+---
+
+## Running Tests
+
+### Setup test database
+
+```bash
+RAILS_ENV=test bundle exec rails db:create db:migrate
+```
+
+### Run all tests
+
+```bash
+RAILS_ENV=test bundle exec rspec
+```
+
+### Run specific test file
+
+```bash
+RAILS_ENV=test bundle exec rspec spec/models/session_spec.rb
+```
+
+### Run specific test by line number
+
+```bash
+RAILS_ENV=test bundle exec rspec spec/models/session_spec.rb:25
+```
+
+### Run tests with documentation format
+
+```bash
+RAILS_ENV=test bundle exec rspec --format documentation
+```
+
+### Test coverage
+
+| Category | Specs | What's Tested |
+|---|---|---|
+| Models | 17 | Validations, associations, scopes, callbacks, TenantScoped & CacheVersion concerns |
+| Services | 8 | StateEngine, MapInjector, StartHandler, EndHandler, SystemPromptCompiler, PdfGenerator, FitGap::Engine, Portfolios::Generator |
+| Workers | 4 | CoverageAnalyzer, PortfolioGenerator, FitGapGenerator, SystemPromptGenerator (incl. tenant context) |
+| Requests (API endpoints) | 13 | Assessments, Sessions (+ erasure), PortfolioSkills, Vacancies, SkillTaxonomies, Auth, Consent, Health/SpeedTest, RateLimiting, Response format contracts, Index caching, Session data erasure |
+| Auth & Concerns | 1 | AuthorizeApiRequest |
+| Serializers | 1 | Contract specs for all 9 serializers against shared key-sets |
+
+**Total: 390 examples** — includes rate limiter tests (login 5/min per IP, candidate endpoints 30/min per IP), multi-tenancy isolation tests, response contract specs (exact key-set + type + N+1 regression), cache invalidation tests (no stale data after writes, no cross-tenant leakage), UU PDP tests (consent gate, right-to-erasure cascades), and Gemini client mocking (no real API calls in tests).
+
+---
+
+## UU PDP — Data Retention & Erasure
+
+Interview data is personal data and must not be retained indefinitely.
+
+### Retention purge
+
+```bash
+bundle exec rails pdp:purge_expired                     # purge sessions ended > 90 days ago
+PDP_RETENTION_DAYS=30 rails pdp:purge_expired           # custom window
+PDP_RETENTION_DAYS=0 rails pdp:purge_expired            # disabled (no-op)
+```
+
+Rules:
+- Only **ended** sessions are purged — live/pending interviews are never touched
+- Cascades remove all personal-data children: `transcript_turns`, `coverage_maps`, `portfolio` → `portfolio_skills` → `assessor_overrides`, and `fit_gap_reports`
+- Deletes run in batches of 100 to avoid long DB locks
+
+Schedule daily via k8s CronJob / crontab:
+
+```
+0 3 * * * cd /app && bundle exec rails pdp:purge_expired
+```

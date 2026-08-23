@@ -12,6 +12,11 @@ export const sessionsApi = {
       session: { reason },
     }),
 
+  // UU PDP right to erasure — permanently removes the session and all
+  // personal-data cascades (transcript, portfolio, fit/gap reports).
+  destroySession: (id: number) =>
+    api.delete<{ message: string }>(`/sessions/${id}`),
+
   getCoverage: (id: number) =>
     api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
@@ -28,6 +33,10 @@ export const sessionsApi = {
 
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+
+  // UU PDP — records the candidate's timestamped consent (lawful basis).
+  giveConsent: (token: string) =>
+    api.post<{ consent_recorded: boolean }>(`/sessions/${token}/consent`),
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),

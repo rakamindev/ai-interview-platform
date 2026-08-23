@@ -285,11 +285,12 @@ module Gemini
         parts << 'audio' if has_audio
         if has_input_tx
           input_tx_text = sc.dig('inputTranscription', 'parts', 0, 'text') || sc.dig('inputTranscription', 'text')
-          parts << "inputTx=#{input_tx_text.truncate(50)}" if input_tx_text.present?
+          # PDP: log length metadata only — never transcript content.
+          parts << "inputTx(#{input_tx_text.length} chars)" if input_tx_text.present?
         end
         if has_output_tx
           output_tx_text = sc.dig('outputTranscription', 'parts', 0, 'text') || sc.dig('outputTranscription', 'text')
-          parts << "outputTx=#{output_tx_text.truncate(50)}" if output_tx_text.present?
+          parts << "outputTx(#{output_tx_text.length} chars)" if output_tx_text.present?
         end
         parts << 'turnComplete' if turn_complete
         parts << 'generationComplete' if gen_complete
@@ -446,7 +447,7 @@ module Gemini
       resumption = data['sessionResumption'] || data['sessionResumptionUpdate']
       return unless resumption
 
-      Rails.logger.debug("[Gemini::LiveClient] Resumption data: #{resumption.to_json}")
+      Rails.logger.debug("[Gemini::LiveClient] Resumption update received (keys=#{resumption.keys.join(',')})")
       handle = resumption['newHandle'] || resumption['handle'] || resumption['token']
       return unless handle.present?
 

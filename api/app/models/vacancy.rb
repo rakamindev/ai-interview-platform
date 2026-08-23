@@ -2,6 +2,7 @@
 
 class Vacancy < ApplicationRecord
   include TenantScoped
+  include CacheVersion
 
   has_many :vacancy_skills, dependent: :destroy
   has_many :fit_gap_reports, dependent: :destroy

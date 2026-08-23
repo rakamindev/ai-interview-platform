@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import PaginationControls from "@/components/common/PaginationControls";
+import { usePagination } from "@/hooks/usePagination";
 import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight } from "lucide-react";
-import type { Assessment } from "@/types";
+import type { Assessment, PaginationMeta } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
   if (!session) return null;
@@ -29,17 +31,23 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
 
 export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
+  const { page, setPage } = usePagination();
 
   useEffect(() => {
+    setLoading(true);
     assessmentsApi
-      .list()
-      .then((res) => setAssessments(res.data.assessments))
+      .list(page)
+      .then((res) => {
+        setAssessments(res.data.assessments);
+        setMeta(res.data.meta);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   return (
     <div className="space-y-4">
@@ -97,6 +105,8 @@ export default function AssessmentListPage() {
           ))}
         </div>
       )}
+
+      <PaginationControls meta={meta} onPageChange={setPage} disabled={loading} />
     </div>
   );
 }
