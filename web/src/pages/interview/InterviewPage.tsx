@@ -22,9 +22,10 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Check, Mic, MicOff, X, Zap } from "lucide-react";
+import { CheckCircle, Check, Mic, MicOff, X, Zap, UnplugIcon } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 import { m } from "@/paraglide/messages.js";
+import { Separator } from "@/components/ui/separator";
 
 // Mirrors Gemini::LiveClient::CANDIDATE_SILENCE_BUFFER_MS (api/app/clients/gemini/live_client.rb) —
 // no shared config between frontend/backend today, keep these in sync by hand.
@@ -377,7 +378,13 @@ export default function InterviewPage() {
     <main className="max-w-2xl w-full mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
-        <span className="text-sm font-medium">{m.interview_title()}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">
+            {candidateInfo?.role_title ?? m.interview_title()}
+          </span>
+          <Separator orientation="vertical" className="h-4" />
+          <ConnectionStatus state={wsConnectionStatus} />
+        </div>
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
@@ -479,64 +486,61 @@ export default function InterviewPage() {
 
       {/* Bottom bar */}
       <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background">
-        <ConnectionStatus state={wsConnectionStatus} />
+        <Button variant={micMuted ? "destructive" : "outline"} size="sm" onClick={toggleMic}>
+          {micMuted ? (
+            <>
+              <MicOff className="h-3.5 w-3.5" /> Muted
+            </>
+          ) : (
+            <>
+              <Mic className="h-3.5 w-3.5" />
+              {micActuallyCapturing ? m.interview_mic_on() : m.interview_mic_paused()}
+            </>
+          )}
+        </Button>
 
-        <div className="flex items-center gap-3">
-          <Button variant={micMuted ? "destructive" : "outline"} size="sm" onClick={toggleMic}>
-            {micMuted ? (
-              <>
-                <MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted
-              </>
-            ) : (
-              <>
-                <Mic className="h-3.5 w-3.5 mr-1.5" />
-                {micActuallyCapturing ? m.interview_mic_on() : m.interview_mic_paused()}
-              </>
-            )}
+        {candidateSpeaking && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={submitAnswer}
+            disabled={!micActuallyCapturing}
+          >
+            <Check className="h-3.5 w-3.5" />
+            {m.interview_im_done()}
           </Button>
+        )}
 
-          {candidateSpeaking && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={submitAnswer}
-              disabled={!micActuallyCapturing}
-            >
-              <Check className="h-3.5 w-3.5 mr-1.5" />
-              {m.interview_im_done()}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <UnplugIcon className="h-3.5 w-3.5" />
+              {m.interview_end_interview()}
             </Button>
-          )}
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm">
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{m.interview_end_confirm()}</AlertDialogTitle>
+              <AlertDialogDescription>{m.interview_end_confirm_desc()}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={endInterview}>
                 {m.interview_end_interview()}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{m.interview_end_confirm()}</AlertDialogTitle>
-                <AlertDialogDescription>{m.interview_end_confirm_desc()}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={endInterview}>
-                  {m.interview_end_interview()}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          {import.meta.env.DEV && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs opacity-50"
-              onClick={() => sendJson({ type: "debug_force_reconnect" })}
-            >
-              <Zap className="h-4 w-4" /> Force reconnect
-            </Button>
-          )}
-        </div>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {import.meta.env.DEV && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs opacity-50"
+            onClick={() => sendJson({ type: "debug_force_reconnect" })}
+          >
+            <Zap className="h-4 w-4" /> Force reconnect
+          </Button>
+        )}
       </div>
     </main>
   );
