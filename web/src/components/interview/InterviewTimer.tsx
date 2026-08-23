@@ -38,7 +38,7 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
   return (
     <span
       className={cn(
-        "font-mono text-sm font-medium tabular-nums",
+        "font-mono text-sm font-medium tabular-nums flex items-center gap-2",
         isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground"
       )}
     >
