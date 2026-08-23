@@ -87,6 +87,26 @@ RSpec.describe Portfolios::Generator do
     end
   end
 
+  describe "a retry succeeds after an earlier attempt left a stale error" do
+    it "clears generation_error instead of leaving it behind on a completed portfolio" do
+      portfolio = session.create_portfolio!(candidate_id: session.candidate_id,
+                                             generation_status: "failed", generation_error: "boom")
+      gemini_returns(
+        "configured_skills" => [
+          { "skill_id" => skill_a.skill_id, "skill_label" => skill_a.skill_label,
+            "level" => 3, "confidence" => "high", "evidence" => [], "competency_summary" => "summary" },
+          { "skill_id" => skill_b.skill_id, "skill_label" => skill_b.skill_label,
+            "level" => 3, "confidence" => "high", "evidence" => [], "competency_summary" => "summary 2" }
+        ],
+        "discovered_skills" => []
+      )
+
+      generator.call
+
+      expect(portfolio.reload.generation_error).to be_nil
+    end
+  end
+
   describe "a save fails partway through" do
     it "rolls back the whole batch instead of leaving a partial portfolio" do
       gemini_returns(
@@ -129,6 +149,68 @@ RSpec.describe Portfolios::Generator do
 
       expect(portfolio.portfolio_skills.where(skill_id: skill_a.skill_id).count).to eq(1)
       expect(portfolio.portfolio_skills.find_by(skill_id: skill_a.skill_id).competency_summary).to eq("second pass")
+    end
+  end
+
+  describe "coverage was never tracked live but a transcript exists" do
+    let!(:map_a) { create(:coverage_map, session:, skill_id: skill_a.skill_id, skill_label: skill_a.skill_label) }
+    let!(:map_b) { create(:coverage_map, session:, skill_id: skill_b.skill_id, skill_label: skill_b.skill_label) }
+    let(:worker) { instance_double(CoverageAnalyzerWorker) }
+
+    before do
+      session.transcript_turns.create!(turn_number: 1, speaker: "ai", text: "Q1")
+      session.transcript_turns.create!(turn_number: 2, speaker: "candidate", text: "A1")
+      session.transcript_turns.create!(turn_number: 3, speaker: "ai", text: "Q2")
+      session.transcript_turns.create!(turn_number: 4, speaker: "candidate", text: "A2")
+
+      allow(CoverageAnalyzerWorker).to receive(:new).and_return(worker)
+      allow(worker).to receive(:perform)
+
+      gemini_returns("configured_skills" => [], "discovered_skills" => [])
+    end
+
+    it "backfills coverage from the saved transcript, one candidate turn at a time, before generating" do
+      generator.call
+
+      expect(worker).to have_received(:perform).with(session.id, 2, force: true)
+      expect(worker).to have_received(:perform).with(session.id, 4, force: true)
+      expect(worker).to have_received(:perform).twice
+    end
+  end
+
+  describe "coverage already has probes recorded" do
+    let!(:map_a) { create(:coverage_map, session:, skill_id: skill_a.skill_id, probe_count: 1) }
+
+    before do
+      session.transcript_turns.create!(turn_number: 1, speaker: "candidate", text: "A1")
+      gemini_returns("configured_skills" => [], "discovered_skills" => [])
+    end
+
+    it "does not re-run analysis" do
+      expect(CoverageAnalyzerWorker).not_to receive(:new)
+      generator.call
+    end
+  end
+
+  describe "a custom skill (no real skill_id) where Gemini invents its own id format" do
+    it "still matches on skill_label instead of discarding the rating" do
+      custom_skill = create(:assessment_skill, assessment:, skill_id: nil, skill_label: "Node.js / Backend Development")
+      session2 = create(:session, assessment:)
+      generator2 = described_class.new(session: session2, gemini_client:)
+
+      gemini_returns(
+        "configured_skills" => [
+          { "skill_id" => "node.js-/-backend-development", "skill_label" => custom_skill.skill_label,
+            "level" => 2, "confidence" => "high", "evidence" => [], "competency_summary" => "summary" }
+        ],
+        "discovered_skills" => []
+      )
+
+      portfolio = generator2.call
+
+      rated = portfolio.portfolio_skills.find_by(skill_label: custom_skill.skill_label)
+      expect(rated.status).to eq("rated")
+      expect(rated.ai_level).to eq(2)
     end
   end
 
