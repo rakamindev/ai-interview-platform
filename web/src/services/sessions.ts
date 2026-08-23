@@ -1,34 +1,37 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type {CandidateInfo, CoverageMap, Portfolio, Session, TranscriptTurn} from "@/types";
 
 export const sessionsApi = {
-  get: (id: number) =>
-    api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
-      `/sessions/${id}`
-    ),
+    get: (id: number) =>
+        api.get<{ session: Session; assessment: { id: number; name: string; time_limit_min: number } }>(
+            `/sessions/${id}`
+        ),
 
-  endSession: (id: number, reason = "manual_assessor") =>
-    api.post<{ session: Session }>(`/sessions/${id}/end_session`, {
-      session: { reason },
-    }),
+    endSession: (id: number, reason = "manual_assessor") =>
+        api.post<{ session: Session }>(`/sessions/${id}/end_session`, {
+            session: {reason},
+        }),
 
-  getCoverage: (id: number) =>
-    api.get<CoverageMap>(`/sessions/${id}/coverage`),
+    resetSession: (assessment_id: number, id: number) =>
+        api.post<{ session: Session }>(`/assessments/${assessment_id}/sessions/${id}/reset`),
 
-  getTranscript: (id: number, fromTurn?: number) =>
-    api.get<{ turns: TranscriptTurn[]; total: number }>(`/sessions/${id}/transcript`, {
-      params: fromTurn ? { from_turn: fromTurn } : undefined,
-    }),
+    getCoverage: (id: number) =>
+        api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
-  getPortfolio: (id: number) =>
-    api.get<{ portfolio: Portfolio } | { status: string }>(`/sessions/${id}/portfolio`),
+    getTranscript: (id: number, fromTurn?: number) =>
+        api.get<{ turns: TranscriptTurn[]; total: number }>(`/sessions/${id}/transcript`, {
+            params: fromTurn ? {from_turn: fromTurn} : undefined,
+        }),
 
-  regeneratePortfolio: (id: number) =>
-    api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),
+    getPortfolio: (id: number) =>
+        api.get<{ portfolio: Portfolio } | { status: string }>(`/sessions/${id}/portfolio`),
 
-  getCandidateInfo: (token: string) =>
-    api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+    regeneratePortfolio: (id: number) =>
+        api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),
 
-  audioComplete: (token: string) =>
-    api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+    getCandidateInfo: (token: string) =>
+        api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+
+    audioComplete: (token: string) =>
+        api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
 };

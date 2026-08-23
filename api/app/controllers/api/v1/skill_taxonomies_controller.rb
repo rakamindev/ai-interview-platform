@@ -1,42 +1,79 @@
 # frozen_string_literal: true
 
 module Api
-  module V1
-    class SkillTaxonomiesController < ApiController
-      authorize_auth_token! :assessor
+    module V1
+        class SkillTaxonomiesController < ApiController
+            authorize_auth_token! :assessor
 
-      # GET /api/v1/skill_taxonomies
-      def index
-        skills = SkillTaxonomy.order(:skill_id)
-        skills = skills.where(category: params[:category]) if params[:category].present?
+            before_action :set_skill, only: %i[show]
 
-        json_response(skill_taxonomies: skills.map(&method(:skill_json)))
-      end
+            # GET /api/v1/skill_taxonomies
+            def index
+                full = params[:full].present?
 
-      # GET /api/v1/skill_taxonomies/:skill_id
-      def show
-        skill = SkillTaxonomy.find_by!(skill_id: params[:skill_id])
-        json_response(skill: skill_json(skill))
-      rescue ActiveRecord::RecordNotFound
-        json_error("Skill not found", :not_found)
-      end
+                cache_key = [
+                    Current.tenant_id,
+                    SkillTaxonomy.model_name.cache_key,
+                    'index',
+                    params.to_unsafe_h.sort.to_h,
+                    SkillTaxonomy.cache_version
+                ]
 
-      private
+                skill_taxonomies = Rails.cache.fetch(cache_key, expires_in: 1.day) do
+                    skills = SkillTaxonomy.order(:skill_id)
+                    skills = skills.where(category: params[:category]) if params[:category].present?
 
-      def skill_json(skill)
-        {
-          skill_id:      skill.skill_id,
-          skill_label:   skill.skill_label,
-          category:      skill.category,
-          scope_include: skill.scope_include,
-          scope_exclude: skill.scope_exclude,
-          l1_anchor:     skill.l1_anchor,
-          l2_anchor:     skill.l2_anchor,
-          l3_anchor:     skill.l3_anchor,
-          l4_anchor:     skill.l4_anchor,
-          l5_anchor:     skill.l5_anchor
-        }
-      end
+                    skills.map do |skill|
+                        if full
+                            ::Api::V1::SkillTaxonomySerializer.detail(skill)
+                        else
+                            ::Api::V1::SkillTaxonomySerializer.list(skill)
+                        end
+                    end
+                end
+
+                json_response(skill_taxonomies: skill_taxonomies)
+            end
+
+            # GET /api/v1/skill_taxonomies/:skill_id
+            def show
+                cache_key = [
+                    Current.tenant_id,
+                    SkillTaxonomy.model_name.cache_key,
+                    'show',
+                    params[:skill_id],
+                    SkillTaxonomy.cache_version
+                ]
+
+                result = Rails.cache.fetch(cache_key, expires_in: 1.day) do
+                    ::Api::V1::SkillTaxonomySerializer.detail(@skill)
+                end
+
+
+                json_response(skill: result)
+            rescue ActiveRecord::RecordNotFound
+                json_error('Skill not found', :not_found)
+            end
+
+            private
+
+            def set_skill
+                cache_key = [
+                    Current.tenant_id,
+                    SkillTaxonomy.model_name.cache_key,
+                    params[:id],
+                    SkillTaxonomy.cache_version
+                ]
+
+                @skill = Rails.cache.fetch(cache_key, expires_in: 1.day) do
+                    SkillTaxonomy.find_by!(skill_id:  params[:skill_id])
+                end
+
+            rescue ActiveRecord::RecordNotFound
+                json_error('Skill not found', :not_found)
+            end
+
+
+        end
     end
-  end
 end

@@ -10,41 +10,37 @@
 #   authorize_auth_token! :any              # any authenticated user
 #   authorize_auth_token!                   # just validate token; no role check
 class AuthTokenMiddleware < ApplicationMiddleware
-  def initialize(app, *roles)
-    super(app)
-    @required_roles = roles.flatten.map(&:to_s)
-  end
-
-  def call(env)
-    request = ActionDispatch::Request.new(env)
-
-    result = capture_error do
-      AuthorizeApiRequest.new(request.headers, @required_roles).call
+    def initialize(app, *roles)
+        super(app)
+        @required_roles = roles.flatten.map(&:to_s)
     end
 
-    if @error
-      return error(*@error) unless @required_roles.empty?
+    def call(env)
+        request = ActionDispatch::Request.new(env)
+
+        result = capture_error do
+            AuthorizeApiRequest.new(request.headers, @required_roles).call
+        end
+
+        return error(*@error) if @error && !@required_roles.empty?
+
+        Current.user = result[:user] if result
+
+        super
     end
 
-    if result
-      Current.user = result[:user]
+    private
+
+    def capture_error
+        yield
+    rescue ExceptionHandler::Unauthorized => e
+        @error ||= [403, e.message]
+        nil
+    rescue ExceptionHandler::MissingToken, ExceptionHandler::InvalidToken => e
+        @error ||= [401, e.message]
+        nil
+    rescue StandardError => _e
+        @error ||= [401, 'Request not authenticated']
+        nil
     end
-
-    super
-  end
-
-  private
-
-  def capture_error
-    yield
-  rescue ExceptionHandler::Unauthorized => e
-    @error ||= [403, e.message]
-    nil
-  rescue ExceptionHandler::MissingToken, ExceptionHandler::InvalidToken => e
-    @error ||= [401, e.message]
-    nil
-  rescue StandardError => _e
-    @error ||= [401, 'Request not authenticated']
-    nil
-  end
 end

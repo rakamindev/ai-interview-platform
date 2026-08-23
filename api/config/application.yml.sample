@@ -5,6 +5,8 @@
 SECRET_KEY_BASE: "your_secret_key_base_here"
 
 # Database (shared with rakamin-api)
+APP_DEBUG: true
+FE_URL: "http://localhost:5173"
 DB_HOST: "localhost"
 DB_PORT: "5432"
 DB_NAME: "rakamin_development"

@@ -6,28 +6,30 @@
 #
 # Only includes the fields we need for tenant resolution.
 class Organization < ApplicationRecord
-  self.table_name = 'organizations'
+    self.table_name = 'organizations'
 
-  # Mirrors rakamin-api Organisation.identify exactly.
-  # Accepts identifier, name, scheme, or host.
-  def self.identify(identifier)
-    return default_organization if identifier.blank?
+    has_many :users
 
-    sql_string = <<~SQL.squish
-      (? IN (identifier, name, scheme, host)) OR
-      (alias_hosts && ARRAY[?]::varchar[])
-    SQL
+    # Mirrors rakamin-api Organisation.identify exactly.
+    # Accepts identifier, name, scheme, or host.
+    def self.identify(identifier)
+        return default_organization if identifier.blank?
 
-    where(sql_string, identifier, Array(identifier)).first ||
-      default_organization
-  end
+        sql_string = <<~SQL.squish
+            (? IN (identifier, name, scheme, host)) OR
+            (alias_hosts && ARRAY[?]::varchar[])
+        SQL
 
-  def self.default_organization
-    where(id: 0).first
-  end
+        where(sql_string, identifier, Array(identifier)).first ||
+            default_organization
+    end
 
-  # Convenience: is this the system default org?
-  def default?
-    id.zero?
-  end
+    def self.default_organization
+        where(id: 0).first
+    end
+
+    # Convenience: is this the system default org?
+    def default?
+        id.zero?
+    end
 end

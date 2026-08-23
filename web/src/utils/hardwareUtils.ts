@@ -32,7 +32,7 @@ export function getBrowserInfo() {
         browser = "Edge";
         version = userAgent.match(/edg\/([\d.]+)/i)?.[1] || "";
     }
-    return { browser, version };
+    return {browser, version};
 }
 
 export function getOSInfo() {
@@ -51,9 +51,9 @@ export async function checkCamera(): Promise<MediaStream | null> {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
-                width: { max: 640 },
-                height: { max: 480 },
-                frameRate: { max: 20 },
+                width: {max: 640},
+                height: {max: 480},
+                frameRate: {max: 20},
                 facingMode: "user",
             },
             audio: true,

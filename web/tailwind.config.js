@@ -46,16 +46,16 @@ export default {
             },
             keyframes: {
                 "accordion-down": {
-                    from: { height: "0" },
-                    to: { height: "var(--radix-accordion-content-height)" },
+                    from: {height: "0"},
+                    to: {height: "var(--radix-accordion-content-height)"},
                 },
                 "accordion-up": {
-                    from: { height: "var(--radix-accordion-content-height)" },
-                    to: { height: "0" },
+                    from: {height: "var(--radix-accordion-content-height)"},
+                    to: {height: "0"},
                 },
                 "voice-bar": {
-                    "0%, 100%": { height: "4px" },
-                    "50%": { height: "32px" },
+                    "0%, 100%": {height: "4px"},
+                    "50%": {height: "32px"},
                 },
             },
             animation: {

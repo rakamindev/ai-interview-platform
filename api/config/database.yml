@@ -3,27 +3,27 @@
 # AI interview tables are in the ai_interview schema.
 
 default: &default
-  adapter: postgresql
-  encoding: unicode
-  username: <%= ENV['DB_USERNAME'] %>
-  password: <%= ENV['DB_PASSWORD'] %>
-  host: <%= ENV['DB_HOST'] %>
-  database: <%= ENV['DB_NAME'] %>
-  port: <%= ENV.fetch('DB_PORT', 5432) %>
-  pool: <%= ENV.fetch('DB_POOL', ENV.fetch('RAILS_MAX_THREADS', 5).to_i + 10) %>
-  timeout: 5000
-  schema_search_path: "ai_interview,public"
+    adapter: postgresql
+    encoding: unicode
+    username: <%= ENV['DB_USERNAME'] %>
+    password: <%= ENV['DB_PASSWORD'] %>
+    host: <%= ENV['DB_HOST'] %>
+    database: <%= ENV['DB_NAME'] %>
+    port: <%= ENV.fetch('DB_PORT', 5432) %>
+    pool: <%= ENV.fetch('DB_POOL', ENV.fetch('RAILS_MAX_THREADS', 5).to_i + 10) %>
+    timeout: 5000
+    schema_search_path: "ai_interview,public"
 
 development:
-  <<: *default
-  database: rakamin_development
+    <<: *default
+    database: rakamin_development
 
 test:
-  <<: *default
-  database: rakamin_test
+    <<: *default
+    database: rakamin_test
 
 staging:
-  <<: *default
+    <<: *default
 
 production:
-  <<: *default
+    <<: *default

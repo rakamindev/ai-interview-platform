@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_23_201756) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -27,8 +27,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessment_skills", force: :cascade do |t|
     t.bigint "assessment_id", null: false
-    t.string "skill_id", limit: 50
-    t.string "skill_label", limit: 255, null: false
     t.boolean "is_custom", default: false, null: false
     t.text "scope_include"
     t.text "scope_exclude"
@@ -39,20 +37,24 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "l5_anchor", null: false
     t.integer "expected_level"
     t.integer "display_order", default: 0, null: false
+    t.bigint "skill_taxonomy_id"
+    t.string "skill_label"
     t.index ["assessment_id"], name: "index_assessment_skills_on_assessment_id"
+    t.index ["skill_taxonomy_id"], name: "index_assessment_skills_on_skill_taxonomy_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_assessment_skills_expected_level"
   end
 
   create_table "assessments", force: :cascade do |t|
     t.bigint "tenant_id", null: false
     t.bigint "created_by", null: false
-    t.string "name", limit: 255, null: false
     t.integer "time_limit_min", null: false
     t.text "system_prompt"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.bigint "vacancy_id"
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
+    t.index ["vacancy_id"], name: "index_assessments_on_vacancy_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
 
@@ -70,16 +72,15 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "coverage_maps", force: :cascade do |t|
     t.bigint "session_id", null: false
-    t.string "skill_id", limit: 50
-    t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
     t.enum "state", default: "not_yet", null: false, enum_type: "coverage_state"
     t.integer "probe_count", default: 0, null: false
     t.text "last_signal"
     t.datetime "updated_at", default: -> { "now()" }
-    t.index ["session_id", "skill_label"], name: "index_coverage_maps_on_session_id_and_skill_label", unique: true
+    t.bigint "skill_taxonomy_id"
     t.index ["session_id"], name: "idx_coverage_session"
     t.index ["session_id"], name: "index_coverage_maps_on_session_id"
+    t.index ["skill_taxonomy_id"], name: "index_coverage_maps_on_skill_taxonomy_id"
   end
 
   create_table "fit_gap_reports", force: :cascade do |t|
@@ -109,14 +110,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "portfolio_skills", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
-    t.string "skill_id", limit: 50
-    t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
     t.integer "ai_level", null: false
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.bigint "skill_taxonomy_id"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
+    t.index ["skill_taxonomy_id"], name: "index_portfolio_skills_on_skill_taxonomy_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
@@ -182,7 +183,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "role", limit: 20, default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "organization_id", null: false
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
+    t.index ["organization_id"], name: "index_users_on_organization_id"
   end
 
   create_table "vacancies", force: :cascade do |t|
@@ -193,26 +196,32 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "status"
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
   end
 
   create_table "vacancy_skills", force: :cascade do |t|
     t.bigint "vacancy_id", null: false
-    t.string "skill_id", limit: 50
-    t.string "skill_label", limit: 255, null: false
     t.integer "expected_level", null: false
+    t.bigint "skill_taxonomy_id"
+    t.index ["skill_taxonomy_id"], name: "index_vacancy_skills_on_skill_taxonomy_id"
     t.index ["vacancy_id"], name: "index_vacancy_skills_on_vacancy_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
 
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessment_skills", "skill_taxonomies"
+  add_foreign_key "assessments", "vacancies"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
   add_foreign_key "portfolio_skills", "portfolios"
+  add_foreign_key "portfolio_skills", "skill_taxonomies"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
+  add_foreign_key "users", "organizations"
+  add_foreign_key "vacancy_skills", "skill_taxonomies"
   add_foreign_key "vacancy_skills", "vacancies"
 end

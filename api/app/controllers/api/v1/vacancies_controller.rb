@@ -1,119 +1,184 @@
 # frozen_string_literal: true
 
 module Api
-  module V1
-    class VacanciesController < ApiController
-      authorize_auth_token! :assessor
+    module V1
+        class VacanciesController < ApiController
+            authorize_auth_token! :assessor
 
-      before_action :set_vacancy, only: %i[show update destroy]
+            before_action :set_vacancy, only: %i[show update destroy]
 
-      # GET /api/v1/vacancies
-      def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+            # GET /api/v1/vacancies
+            def index
+                cache_key = [
+                    Current.tenant_id,
+                    Vacancy.model_name.cache_key,
+                    'index',
+                    params.to_unsafe_h.sort.to_h,
+                    Vacancy.cache_version
+                ]
 
-        json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
-          meta: pagination_meta(vacancies)
-        )
-      end
+                result = Rails.cache.fetch(cache_key, expires_in: 1.day) do
+                    vacancies = Vacancy.order(
+                        Arel.sql(
+                            "CASE status
+                             WHEN 'running' THEN 1
+                             WHEN 'draft' THEN 2
+                             WHEN 'completed' THEN 3
+                             END"
+                        ),
+                        created_at: :desc
+                    )
 
-      # GET /api/v1/vacancies/:id
-      def show
-        json_response(vacancy: vacancy_with_skills_json(@vacancy))
-      end
+                    vacancies = vacancies.where(status: params[:status]) if params[:status].present?
 
-      # POST /api/v1/vacancies
-      def create
-        vacancy = Vacancy.new(vacancy_params)
-        vacancy.created_by = current_user.id
+                    if params[:q].present?
+                        q = "%#{params[:q]}%"
 
-        if vacancy.save
-          json_response({ vacancy: vacancy_with_skills_json(vacancy) }, :created)
-        else
-          json_error(vacancy.errors.full_messages.first, :unprocessable_entity)
+                        vacancies = vacancies.where(
+                            'role_title ILIKE :q
+                             OR culture_dimensions ILIKE :q
+                             OR competency_expectations ILIKE :q',
+                            q: q
+                        )
+                    end
+
+                    vacancies = paginate(vacancies)
+
+                    {
+                        vacancies: vacancies.map { |vacancy|  ::Api::V1::VacancySerializer.list(vacancy)},
+                        counters: {
+                            running: Vacancy.where(status: Vacancy::STATUS.running).count,
+                            completed: Vacancy.where(status: Vacancy::STATUS.completed).count,
+                            draft: Vacancy.where(status: Vacancy::STATUS.draft).count,
+                        },
+                        meta: ::Api::V1::VacancySerializer.pagination_meta(vacancies)
+                    }
+                end
+
+                json_response(result)
+            end
+
+            # GET /api/v1/vacancies/options
+            def options
+                cache_key = [
+                    Current.tenant_id,
+                    Vacancy.model_name.cache_key,
+                    'options',
+                    Vacancy.cache_version
+                ]
+
+                result = Rails.cache.fetch(cache_key, expires_in: 1.day) do
+                    vacancies = Vacancy
+                                    .left_joins(:assessment)
+                                    .where(status: [Vacancy::STATUS.running, Vacancy::STATUS.draft])
+                                    .where(assessment: { id: nil })
+                                    .order(:role_title)
+
+                    {
+                        vacancies: vacancies.map do |vacancy|
+                            ::Api::V1::VacancySerializer.list(vacancy)
+                        end
+                    }
+                end
+
+                json_response(result)
+            end
+
+            # GET /api/v1/vacancies/:id
+            def show
+                cache_key = [
+                    Current.tenant_id,
+                    Vacancy.model_name.cache_key,
+                    'show',
+                    params[:id],
+                    Vacancy.cache_version
+                ]
+
+                result = Rails.cache.fetch(cache_key, expires_in: 1.day) do
+                    {
+                        vacancy: ::Api::V1::VacancySerializer.detail_with_skills(@vacancy)
+                    }
+                end
+
+                json_response(result)
+            end
+
+            # POST /api/v1/vacancies
+            def create
+                vacancy = Vacancy.new(vacancy_params)
+                vacancy.created_by = current_user.id
+
+                if vacancy.save
+                    if Rails.env.development?
+                        json_response(
+                            {
+                                vacancy: ::Api::V1::VacancySerializer.detail_with_skills(vacancy)
+                            },
+                            :created
+                        )
+                    else
+                        json_response({ success: true })
+                    end
+                else
+                    json_error(
+                        vacancy.errors.full_messages.join(', '),
+                        :unprocessable_entity
+                    )
+                end
+            end
+
+            # PUT /api/v1/vacancies/:id
+            def update
+                if @vacancy.update(vacancy_params)
+                    json_response(
+                        vacancy: ::Api::V1::VacancySerializer.detail_with_skills(@vacancy)
+                    )
+                else
+                    json_error(
+                        @vacancy.errors.full_messages.join(', '),
+                        :unprocessable_entity
+                    )
+                end
+            end
+
+            # DELETE /api/v1/vacancies/:id
+            def destroy
+                @vacancy.destroy
+
+                json_response(message: 'Vacancy deleted')
+            end
+
+            private
+
+            def set_vacancy
+                cache_key = [
+                    Current.tenant_id,
+                    Vacancy.model_name.cache_key,
+                    params[:id],
+                    Vacancy.cache_version
+                ]
+
+                @vacancy = Rails.cache.fetch(cache_key, expires_in: 1.day) do
+                    Vacancy.find(params[:id])
+                end
+            rescue ActiveRecord::RecordNotFound
+                json_error('Vacancy not found', :not_found)
+            end
+
+            def vacancy_params
+                params.require(:vacancy).permit(
+                    :role_title,
+                    :status,
+                    :culture_dimensions,
+                    :competency_expectations,
+                    vacancy_skills_attributes: %i[
+                        id
+                        skill_taxonomy_id
+                        expected_level
+                        _destroy
+                    ]
+                )
+            end
         end
-      end
-
-      # PUT /api/v1/vacancies/:id
-      def update
-        if @vacancy.update(vacancy_params)
-          json_response(vacancy: vacancy_with_skills_json(@vacancy))
-        else
-          json_error(@vacancy.errors.full_messages.first, :unprocessable_entity)
-        end
-      end
-
-      # DELETE /api/v1/vacancies/:id
-      def destroy
-        @vacancy.destroy
-        json_response(message: "Vacancy deleted")
-      end
-
-      private
-
-      def set_vacancy
-        @vacancy = Vacancy.find(params[:id])
-      rescue ActiveRecord::RecordNotFound
-        json_error("Vacancy not found", :not_found)
-      end
-
-      def vacancy_params
-        params.require(:vacancy).permit(
-          :role_title,
-          :culture_dimensions,
-          :competency_expectations,
-          vacancy_skills_attributes: %i[
-            id skill_id skill_label expected_level _destroy
-          ]
-        )
-      end
-
-      def vacancy_json(vacancy)
-        {
-          id:                       vacancy.id,
-          role_title:               vacancy.role_title,
-          culture_dimensions:       vacancy.culture_dimensions,
-          competency_expectations:  vacancy.competency_expectations,
-          created_by:               vacancy.created_by,
-          created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
-        }
-      end
-
-      def vacancy_with_skills_json(vacancy)
-        skills = vacancy.vacancy_skills
-
-        # Preload taxonomy anchors in one query to avoid N+1
-        skill_ids    = skills.filter_map(&:skill_id).uniq
-        taxonomy_map = SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
-
-        vacancy_json(vacancy).merge(
-          skills: skills.map { |s| vacancy_skill_json(s, taxonomy_map[s.skill_id]) }
-        )
-      end
-
-      def vacancy_skill_json(skill, taxonomy)
-        {
-          id:             skill.id,
-          skill_id:       skill.skill_id,
-          skill_label:    skill.skill_label,
-          expected_level: skill.expected_level,
-          l1_anchor:      taxonomy&.l1_anchor,
-          l2_anchor:      taxonomy&.l2_anchor,
-          l3_anchor:      taxonomy&.l3_anchor,
-          l4_anchor:      taxonomy&.l4_anchor,
-          l5_anchor:      taxonomy&.l5_anchor
-        }
-      end
-
-      def pagination_meta(collection)
-        {
-          current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
-        }
-      end
     end
-  end
 end

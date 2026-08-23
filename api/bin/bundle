@@ -8,5 +8,5 @@
 # to run `bundle exec` commands in the context of the application.
 #
 
-require "bundler/setup"
-load Gem.bin_path("bundler", "bundle")
+require 'bundler/setup'
+load Gem.bin_path('bundler', 'bundle')

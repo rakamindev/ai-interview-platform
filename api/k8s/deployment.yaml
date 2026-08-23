@@ -61,8 +61,8 @@ spec:
         - name: ai-interview-api
           image: asia-southeast2-docker.pkg.dev/rakamin-poc/rakamin-images/ai-interview-api:latest
           imagePullPolicy: Always
-          command: ["bundle"]
-          args: ["exec", "puma", "-C", "config/puma.rb"]
+          command: [ "bundle" ]
+          args: [ "exec", "puma", "-C", "config/puma.rb" ]
 
           ports:
             - containerPort: 3001
@@ -125,7 +125,7 @@ spec:
             preStop:
               exec:
                 # Drain in-flight WebSocket sessions before SIGTERM; 90s grace gives Puma time to finish.
-                command: ["sh", "-c", "sleep 30"]
+                command: [ "sh", "-c", "sleep 30" ]
 
           resources:
             requests:
