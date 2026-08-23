@@ -1,218 +1,258 @@
-# Skrip Video — langkah demi langkah
+# Panduan Rekam Video — Detail Banget
 
-**Target 4:30. Maksimal 5:00.**
+Target **4 menit 30 detik**. Maksimal 5 menit.
 
-Tiap bagian ada tiga hal:
+Anda **hanya butuh 2 aplikasi**:
 
-- **TAMPILKAN** — apa yang ada di layar
-- **LAKUKAN** — apa yang Anda klik atau scroll
-- **UCAPKAN** — baca keras-keras, kata per kata
-
-Kalimatnya sengaja dibuat pendek. Baca pelan. Tidak apa-apa berhenti sebentar antar kalimat — jeda terdengar percaya diri, buru-buru tidak.
-
-> Istilah teknis sengaja dibiarkan dalam Bahasa Inggris (fit/gap report, tenant, override, migration). Itu cara engineer Indonesia bicara sehari-hari, dan menerjemahkannya justru terdengar aneh.
-
----
-
-## Sebelum merekam
-
-**1. Hapus data tes.** Anda sempat membuat assessment "Senior FE" waktu explore. Hapus supaya daftarnya terlihat rapi:
-
-```bash
-cd D:/Project/Testing/Rakamin/ai-interview-platform
-docker compose exec api bundle exec rails runner "Current.tenant_id=1; a=Assessment.find_by(name:'Senior FE'); a&.sessions&.destroy_all; a&.destroy; puts 'removed'"
-```
-
-**2. Jalankan semuanya.**
-
-```bash
-docker compose up -d
-```
-
-```bash
-cd web && npm run dev
-```
-
-Tunggu sampai `curl http://localhost:3001/health` mengembalikan `{"status":"ok"}`.
-
-**3. Buka tab berikut, urut.** Supaya Anda tidak pernah menunggu loading saat merekam.
-
-| Tab | Isi |
+| Aplikasi | Dipakai untuk |
 |---|---|
-| 1 | `assessment/screenshots/00-BEFORE-fitgap-desktop.png` — buka di image viewer, full screen |
-| 2 | http://localhost:5173/assessments/2/sessions/2/fitgap/2 |
-| 3 | Editor, buka file `api/app/services/portfolios/generator.rb` |
-| 4 | Terminal, sudah di-clear, posisi di root repo |
+| **Google Chrome** | Menampilkan gambar, aplikasi, dan kode |
+| **Cursor** | Cuma untuk terminal-nya (jalankan test) |
 
-**4. Setelan.** Zoom browser **110%**. Rekam minimal 1280×800. Tutup Slack, WhatsApp, email — jangan ada notifikasi muncul di layar.
-
-**5. Rekam tes 20 detik dulu.** Pastikan mikrofon benar-benar terekam sebelum Anda rekam penuh.
+Kode **tidak** dilihat di Cursor. Kode dilihat lewat GitHub di Chrome. Jadi Anda tidak perlu buka file apa pun di Cursor.
 
 ---
 
-## BAGIAN 1 — Masalahnya (0:00 – 0:35)
+# BAGIAN A — Persiapan (30 menit sebelum rekam)
 
-**TAMPILKAN:** Tab 1, screenshot "before", full screen.
+## A1. Nyalakan aplikasinya
+
+Buka **Cursor**. Tekan **Ctrl + `** (tombol backtick, di kiri angka 1) untuk membuka terminal di bawah.
+
+Ketik ini, lalu Enter:
+
+```bash
+cd D:/Project/Testing/Rakamin/ai-interview-platform && docker compose up -d
+```
+
+Tunggu sampai muncul tulisan `Started`. Kira-kira 30 detik.
+
+Sekarang buka terminal **kedua**. Di Cursor klik tanda **+** di pojok kanan panel terminal. Ketik:
+
+```bash
+cd D:/Project/Testing/Rakamin/ai-interview-platform/web && npm run dev
+```
+
+Biarkan terminal ini jalan terus. **Jangan ditutup.** Kalau muncul `Local: http://localhost:5173/` berarti sudah benar.
+
+## A2. Cek aplikasinya hidup
+
+Kembali ke terminal **pertama**. Ketik:
+
+```bash
+curl http://localhost:3001/health
+```
+
+Harus muncul: `{"status":"ok"}`
+
+Kalau belum muncul, tunggu 30 detik lagi lalu ulangi.
+
+## A3. Siapkan 4 tab Chrome
+
+Buka **Google Chrome**. Buat 4 tab, **urut dari kiri ke kanan**. Cara buat tab baru: **Ctrl + T**.
+
+Copy-paste link ini satu per satu:
+
+**Tab 1** — gambar "sebelum diperbaiki"
+```
+file:///D:/Project/Testing/Rakamin/ai-interview-platform/assessment/screenshots/00-BEFORE-fitgap-desktop.png
+```
+
+**Tab 2** — aplikasi yang sudah diperbaiki
+```
+http://localhost:5173/assessments/2/sessions/2/fitgap/2
+```
+
+**Tab 3** — kode lama yang bermasalah
+```
+https://github.com/myst-al/ai-interview-platform/blob/main/api/app/services/portfolios/generator.rb#L161
+```
+
+**Tab 4** — bukti test-nya gagal saat bug ditanam
+```
+https://github.com/myst-al/ai-interview-platform/commit/075e96e
+```
+
+> **Penting:** cek Tab 2 sekarang. Harus muncul tabel dengan kolom **Required** terisi (L4, L3, L4, L3, L3, L3, L2). Kalau halamannya kosong atau minta login, lompat ke **Bagian D — Kalau Ada Masalah** di bawah.
+
+## A4. Rapikan layar
+
+1. Di Chrome tekan **Ctrl + Shift + Plus** sampai zoom jadi **110%** (lihat di pojok kanan address bar)
+2. Tutup WhatsApp, Slack, email — jangan sampai ada notifikasi muncul
+3. Tutup tab Chrome lain yang tidak dipakai
+
+## A5. Pasang aplikasi perekam
+
+Pakai **Loom** — paling gampang, dan langsung memberi link.
+
+1. Buka https://www.loom.com → **Sign up** (gratis)
+2. Install extension Chrome-nya
+3. Klik ikon Loom di pojok kanan atas Chrome
+4. Pilih **Screen + Cam** (atau **Screen only** kalau tidak mau muncul wajah)
+5. Pilih **Full screen**
+6. Pastikan microphone-nya benar (ada indikator bergerak saat Anda bicara)
+
+## A6. Tes rekam 20 detik
+
+**Jangan lewati langkah ini.** Rekam 20 detik, bicara apa saja, lalu putar ulang. Pastikan **suara Anda terdengar**. Banyak orang merekam 5 menit lalu baru sadar mic-nya mati.
+
+---
+
+# BAGIAN B — Rekaman
+
+Tulisan **UCAPKAN** dibaca keras-keras, kata per kata. Baca **pelan**. Berhenti sebentar antar kalimat itu bagus — terdengar tenang.
+
+Kalau salah ngomong: diam 2 detik, ulangi kalimatnya saja. **Jangan ulang dari awal.**
+
+---
+
+## 🎬 BAGIAN 1 — Masalahnya (0:00 – 0:35)
+
+### 👉 Klik **Tab 1** (gambar "sebelum")
 
 **UCAPKAN:**
 
-> "Platform ini mewawancarai kandidat dengan AI. Menilai mereka berdasarkan behavioural anchors. Lalu memberi recruiter sebuah fit-gap report."
+> "Platform ini mewawancarai kandidat menggunakan AI. Menilai mereka berdasarkan behavioural anchors. Lalu memberikan sebuah fit-gap report kepada recruiter."
 
-> "Saya mau mulai dari bagaimana report itu terlihat sebelum saya ubah."
+> "Saya mau mulai dari bagaimana report ini terlihat sebelum saya perbaiki."
 
-**LAKUKAN:** Gerakkan mouse pelan-pelan ke bawah, menyusuri kolom **Required** yang kosong.
+### 👉 Gerakkan mouse pelan ke bawah, di kolom **Required** yang kosong
 
 **UCAPKAN:**
 
-> "Kolom ini namanya Required. Ini level yang dibutuhkan oleh role tersebut. Kolomnya kosong di semua baris."
+> "Kolom ini namanya Required. Ini level yang dibutuhkan oleh posisi tersebut. Kolomnya kosong, di semua baris."
 
 > "Jadi ini gap report yang tidak bisa memberi tahu kita, gap-nya diukur dari mana."
 
-**LAKUKAN:** Arahkan mouse ke baris summary di bawah.
+### 👉 Gerakkan mouse ke baris paling bawah (tulisan Match 1, Gap 2, Exceeds 1)
 
 **UCAPKAN:**
 
-> "Dan summary ini bilang satu match, dua gap, satu exceeds. Itu empat skill. Padahal role ini butuh tujuh."
+> "Dan ringkasan di bawah ini bilang: satu match, dua gap, satu exceeds. Totalnya empat skill. Padahal posisi ini membutuhkan tujuh skill."
 
-> "Tiga skill tidak pernah dinilai sama sekali. Mereka tidak muncul di hitungan mana pun. Recruiter yang membaca ini akan mengira dia sedang melihat evaluasi yang lengkap."
+> "Tiga skill sisanya tidak pernah dinilai sama sekali. Dan mereka tidak muncul di hitungan mana pun. Recruiter yang membaca ini akan mengira dia sedang melihat evaluasi yang sudah lengkap."
 
 ---
 
-## BAGIAN 2 — Kenapa bisa terjadi (0:35 – 1:35)
+## 🎬 BAGIAN 2 — Penyebabnya (0:35 – 1:30)
 
-**TAMPILKAN:** Tab 3, editor.
+### 👉 Klik **Tab 3** (GitHub, file generator.rb)
 
-**UCAPKAN:**
-
-> "Awalnya saya kira ini cuma bug tampilan. Ternyata bukan. Akarnya sampai ke database."
-
-**LAKUKAN:** Jalankan ini di Tab 4 supaya kode aslinya muncul di layar:
-
-```bash
-git show main:api/app/services/portfolios/generator.rb | grep -n "clamp"
-```
+Halaman akan langsung menyorot baris 161. Kalau tidak, scroll cari tulisan `.to_i.clamp(1, 5)`.
 
 **UCAPKAN:**
 
-> "Kolom `ai_level` itu NOT NULL, dengan check constraint satu sampai lima. Jadi tidak ada cara untuk menyimpan informasi *skill ini tidak kami nilai*."
+> "Awalnya saya kira ini cuma masalah tampilan. Ternyata bukan. Akar masalahnya sampai ke database."
 
-> "Akibatnya kodenya melakukan ini."
+> "Kolom `ai_level` di database itu NOT NULL, dengan batasan nilai satu sampai lima. Jadi tidak ada cara untuk menyimpan informasi: skill ini tidak kami nilai."
 
-**LAKUKAN:** Tunjuk bagian `to_i.clamp(1, 5)`.
+### 👉 Arahkan mouse ke tulisan `.to_i.clamp(1, 5)`
 
-**UCAPKAN (pelan — ini kalimat paling penting di video):**
+**UCAPKAN — pelan-pelan, ini kalimat paling penting di seluruh video:**
 
-> "`nil.to_i` hasilnya nol. Nol di-clamp ke rentang satu sampai lima, jadinya **satu**."
+> "Akibatnya kodenya melakukan ini. `nil.to_i` hasilnya nol. Lalu nol dibatasi ke rentang satu sampai lima. Hasilnya jadi **satu**."
 
-> "Dan L1 di taxonomy ini artinya: mengerjakan dengan arahan eksplisit. Belum bisa bekerja mandiri."
+*Diam 1 detik.*
 
-*Berhenti satu detik.*
+> "Dan L1 di sistem penilaian ini artinya: mengerjakan dengan arahan penuh. Belum bisa bekerja mandiri."
 
-> "Jadi skill yang sebenarnya cuma tidak sempat ditanyakan karena waktu wawancara habis, tercatat permanen di evaluasi orang sungguhan sebagai kelemahan yang terdokumentasi."
+*Diam 1 detik.*
 
-> "Sistemnya mengubah *tidak adanya bukti* menjadi *bukti ketidakmampuan*. Lalu menyembunyikannya di summary yang jumlahnya tidak pernah pas."
+> "Jadi skill yang sebenarnya cuma tidak sempat ditanyakan karena waktu wawancara habis, tercatat permanen di evaluasi orang sungguhan, sebagai kelemahan yang terdokumentasi."
 
-> "Frontend-nya punya bug yang sama, terpisah. `parseLevel` juga mengembalikan satu kalau gagal parsing. Dua layer berbeda sama-sama memutuskan bahwa *tidak tahu* berarti *paling rendah*."
+> "Sistemnya mengubah tidak adanya bukti, menjadi bukti ketidakmampuan."
+
+> "Dan frontend-nya punya bug yang sama persis, secara terpisah. Fungsi `parseLevel` juga mengembalikan angka satu kalau gagal membaca nilainya. Dua lapisan berbeda sama-sama memutuskan bahwa tidak tahu berarti paling rendah."
 
 ---
 
-## BAGIAN 3 — Perbaikannya (1:35 – 2:25)
+## 🎬 BAGIAN 3 — Hasil perbaikannya (1:30 – 2:20)
 
-**TAMPILKAN:** Tab 2, report yang sudah diperbaiki.
+### 👉 Klik **Tab 2** (aplikasi yang sudah diperbaiki)
 
 **UCAPKAN:**
 
 > "Kandidat yang sama. Data yang sama. API yang sama."
 
-**LAKUKAN:** Tunjuk kolom Required.
+### 👉 Arahkan mouse ke kolom **Required**
 
 **UCAPKAN:**
 
-> "Sekarang Required terisi di semua baris."
+> "Sekarang kolom Required terisi di semua baris."
 
-**LAKUKAN:** Tunjuk banner abu-abu di atas tabel.
-
-**UCAPKAN:**
-
-> "Dan di atas tabel: tiga dari tujuh skill tidak dinilai. Ini gambaran yang belum lengkap tentang kandidat. Tidak adanya bukti bukan berarti ada kekurangan."
-
-**LAKUKAN:** Tunjuk angka summary.
+### 👉 Arahkan mouse ke kotak abu-abu di atas tabel
 
 **UCAPKAN:**
 
-> "Hitungannya sekarang totalnya tujuh. Dan baris yang tidak dinilai warnanya abu-abu, bukan merah. Itu informasi yang hilang, bukan temuan negatif tentang seseorang."
+> "Dan di atas tabel ada peringatan: tiga dari tujuh skill tidak dinilai. Ini gambaran yang belum lengkap tentang kandidat. Tidak adanya bukti, bukan berarti ada kekurangan."
 
-**LAKUKAN:** Arahkan mouse ke badge `✎ was L3` di baris *Testing & Quality Assurance*. Tahan supaya tooltip-nya muncul.
-
-**UCAPKAN:**
-
-> "Di sini assessor meng-override model, dari L3 turun ke L2. Report yang lama menampilkan L2 tanpa tanda apa pun bahwa ada manusia yang mengubahnya."
-
-> "Flag-nya sebenarnya sudah ada di engine. Dihitung, lalu dibuang sebelum dikirim. Sementara tampilannya tetap mencetak legend yang menjanjikan penanda yang tidak akan pernah muncul."
-
-**LAKUKAN:** Scroll ke bawah, ke kartu narasi.
+### 👉 Arahkan mouse ke angka ringkasan di bawah tabel
 
 **UCAPKAN:**
 
-> "Narasi ini live dari Gemini. Perhatikan isinya: skill-skill ini tidak dinilai, jadi ini tidak boleh dianggap evaluasi yang lengkap."
+> "Hitungannya sekarang totalnya tujuh. Dan baris yang tidak dinilai warnanya abu-abu, bukan merah. Karena itu informasi yang hilang, bukan temuan negatif tentang seseorang."
 
-> "Saya ubah prompt-nya supaya wajib menyebutkan itu. Jadi kejujurannya tetap terjaga di layer AI, bukan cuma di fallback."
+### 👉 Arahkan mouse ke badge ungu bertuliskan `was L3` (baris Testing & Quality Assurance), lalu **diamkan mouse di situ 2 detik** sampai tooltip muncul
+
+**UCAPKAN:**
+
+> "Di baris ini, seorang assessor mengubah penilaian model dari L3 turun ke L2. Report yang lama menampilkan L2 tanpa tanda apa pun bahwa ada manusia yang mengubahnya."
+
+> "Padahal penandanya sudah dihitung di dalam engine. Tapi dibuang sebelum dikirim ke frontend. Sementara tampilannya tetap mencetak keterangan yang menjanjikan penanda yang tidak akan pernah muncul."
+
+### 👉 Scroll ke bawah, sampai kotak "Culture & Competency Fit"
+
+**UCAPKAN:**
+
+> "Narasi ini dihasilkan langsung oleh Gemini, bukan teks statis. Dan perhatikan isinya: skill-skill ini tidak dinilai, sehingga ini tidak boleh dianggap sebagai evaluasi yang lengkap."
+
+> "Saya yang mengubah prompt-nya supaya wajib menyebutkan itu. Jadi kejujurannya tetap terjaga sampai di lapisan AI."
 
 ---
 
-## BAGIAN 4 — Temuan keamanan (2:25 – 3:05)
+## 🎬 BAGIAN 4 — Temuan keamanan (2:20 – 3:00)
 
-**TAMPILKAN:** Tab 4, terminal.
-
-**LAKUKAN:** Jalankan ini supaya kode lamanya muncul:
-
-```bash
-git show main:api/app/controllers/api/v1/portfolios_controller.rb | grep -n "Portfolio.find"
-```
+### 👉 Tetap di Tab 2. Bagian ini cukup diucapkan saja.
 
 **UCAPKAN:**
 
-> "Saat menelusuri controller, saya menemukan sesuatu yang lebih serius."
+> "Saat menelusuri controller, saya menemukan sesuatu yang jauh lebih serius."
 
-> "Assessment, Session, dan Vacancy semuanya tenant-scoped. Portfolio tidak punya tenant id, dan tidak ada scoping sama sekali."
+> "Model Assessment, Session, dan Vacancy semuanya sudah dibatasi per tenant. Tapi model Portfolio tidak punya tenant id, dan tidak dibatasi sama sekali."
 
-> "Semua lookup-nya global find, pakai integer berurutan."
+> "Semua pencariannya memakai global find, dengan angka yang berurutan."
 
-> "Jadi assessor mana pun yang sudah login bisa membaca kandidat milik perusahaan lain. Termasuk export PDF-nya, yang isinya kutipan wawancara apa adanya."
+> "Artinya, assessor mana pun yang sudah login bisa membaca data kandidat milik perusahaan lain. Termasuk file PDF-nya, yang isinya kutipan wawancara apa adanya."
 
-**LAKUKAN:** Jalankan:
+*Diam 1 detik.*
 
-```bash
-git show main:api/app/controllers/api/v1/portfolio_skills_controller.rb | grep -n "joins"
-```
+> "Dan ada satu endpoint yang kelihatannya sudah dijaga, tapi ternyata tidak. Perintah `joins` itu tidak menambahkan filter tenant, kalau model yang di-join memang tidak dibatasi."
 
-**UCAPKAN:**
+> "Jadi itu bukan cuma bisa dibaca. Bisa diubah. Anda bisa mengubah hasil evaluasi kandidat perusahaan lain, dan tercatat atas nama akun Anda sendiri."
 
-> "Dan yang ini kelihatannya sudah dijaga. Ternyata tidak. `joins` tidak menambahkan filter tenant kalau model yang di-join memang tidak di-scope."
+> "Menurut UU PDP, itu pelanggaran pembatasan tujuan pemrosesan data pribadi. Bukan sekadar bug otorisasi."
 
-> "Itu artinya cross-tenant **write**. Anda bisa mengubah evaluasi hiring perusahaan lain, dan tercatat atas nama user id Anda sendiri."
-
-> "Menurut UU PDP, itu pelanggaran pembatasan tujuan pemrosesan data pribadi, bukan sekadar bug otorisasi."
-
-> "Saya menambahkan concern yang menurunkan tenant dari session. Saya buat explicit scope, bukan default scope, karena background worker memang berjalan tanpa tenant. Saya lebih memilih syaratnya terlihat jelas di setiap pemanggilan daripada tersembunyi."
+> "Saya menambahkan sebuah concern yang mengambil tenant dari session. Saya sengaja buat explicit scope, bukan default scope. Karena background worker memang berjalan tanpa tenant, dan saya lebih memilih syaratnya terlihat jelas di setiap pemanggilan, daripada tersembunyi."
 
 ---
 
-## BAGIAN 5 — Pembuktian (3:05 – 4:00)
+## 🎬 BAGIAN 5 — Pembuktian (3:00 – 4:00)
 
-**TAMPILKAN:** Tab 4, terminal.
+### 👉 Pindah ke **Cursor**. Klik terminal **pertama** (yang tadi dipakai `docker compose`).
 
-**LAKUKAN:** Jalankan:
+Ketik perintah ini, lalu Enter:
 
 ```bash
 docker compose exec -e RAILS_ENV=test api bundle exec rspec
 ```
 
-**UCAPKAN:**
+Tunggu sampai selesai (sekitar 25 detik). Akan muncul `54 examples, 0 failures`.
 
-> "Lima puluh empat example. Waktu saya mulai, folder spec-nya tidak ada. File `.rspec` ada, tapi menunjuk ke tempat kosong."
+**UCAPKAN sambil menunggu:**
 
-**LAKUKAN:** Jalankan:
+> "Lima puluh empat test di backend. Waktu saya mulai mengerjakan ini, folder spec-nya tidak ada sama sekali. File konfigurasinya ada, tapi menunjuk ke tempat kosong."
+
+### 👉 Setelah hasilnya muncul, ketik:
 
 ```bash
 cd web && npm test
@@ -220,78 +260,110 @@ cd web && npm test
 
 **UCAPKAN:**
 
-> "Delapan belas di frontend. Di sana juga belum ada test runner sama sekali."
+> "Delapan belas test di frontend. Di sana juga sebelumnya belum ada test runner sama sekali."
 
-*Berhenti sebentar.*
+*Diam 1 detik.*
 
-> "Tapi test yang hijau cuma membuktikan kode melakukan apa yang dia lakukan. Jadi saya rusak sengaja."
+> "Tapi test yang hijau itu cuma membuktikan bahwa kode melakukan apa yang dia lakukan. Jadi saya rusak sengaja, untuk membuktikan test-nya benar-benar bekerja."
 
-**LAKUKAN:** Jalankan:
-
-```bash
-git show 075e96e --stat
-```
+### 👉 Klik **Tab 4** di Chrome (halaman commit GitHub)
 
 **UCAPKAN:**
 
 > "Saya kembalikan kedua bug tadi di branch terpisah, supaya bisa melihat test-nya gagal."
 
-> "Mengembalikan clamp menghasilkan tujuh kegagalan. Nil, string kosong, kata 'three', nol, dan sembilan semuanya kembali jadi level, bukan nil."
+> "Mengembalikan bug yang pertama menghasilkan tujuh kegagalan. Nilai kosong, angka nol, dan bahkan nilai yang valid seperti L4, semuanya kembali menjadi angka satu."
 
-> "Mengembalikan nama field lama menghasilkan tiga kegagalan."
+> "Mengembalikan bug yang kedua menghasilkan tiga kegagalan."
 
-> "Yang paling saya suka yang ini: *found multiple elements with the text em-dash*. Waktu bug-nya ada, kolom Required juga jatuh ke tanda strip. Jadi baris yang tidak dinilai menampilkan dua strip."
+> "Yang paling menarik yang ini: test-nya bilang *menemukan lebih dari satu elemen bertuliskan tanda strip*. Karena waktu bug-nya ada, kolom Required juga ikut kosong dan menampilkan strip. Jadi satu baris menampilkan dua strip sekaligus."
 
-> "Itu sidik jari persis dari bug aslinya. Dan bisa dilihat di screenshot before yang saya buka di awal tadi."
+> "Itu sidik jari persis dari bug aslinya. Dan bisa dilihat langsung di screenshot yang saya tunjukkan di awal video tadi."
 
-> "Bug yang saya tanam dan revert-nya, dua-duanya ada di git history."
+> "Bug yang saya tanam, dan proses mengembalikannya, dua-duanya tercatat di git history."
 
 ---
 
-## BAGIAN 6 — Yang belum saya selesaikan (4:00 – 4:30)
+## 🎬 BAGIAN 6 — Yang belum selesai (4:00 – 4:30)
 
-**TAMPILKAN:** Bebas. Wajah Anda, atau report. Bagian ini diucapkan saja.
+### 👉 Tidak perlu klik apa-apa. Cukup diucapkan.
 
 **UCAPKAN:**
 
 > "Ada dua hal yang sengaja tidak saya tutup."
 
-> "Pertama. Saya memperbaiki empat model yang saya temukan tidak ter-scope. Model berikutnya yang ditambahkan orang lain akan membuka lubang itu lagi. Ini butuh guard di level arsitektur, bukan empat tambalan. Saya belum mau bilang pekerjaan tenancy ini selesai."
+> "Pertama. Saya memperbaiki empat model yang saya temukan tidak dibatasi per tenant. Tapi model berikutnya yang ditambahkan orang lain akan membuka lubang itu lagi. Ini butuh pengaman di level arsitektur, bukan empat tambalan. Jadi saya belum berani bilang pekerjaan ini selesai."
 
-> "Kedua. Tabel users tidak punya tenant id. Itu tabel global yang dipakai bersama dengan API utama. Dari repository ini saja saya tidak bisa memastikan apakah keanggotaan user ke organisasi sudah divalidasi di sisi upstream. Kalau belum, perbaikan saya perlu tapi belum cukup. Itu pertanyaan yang ingin saya dapat jawabannya sebelum ini rilis."
+> "Kedua. Tabel users tidak punya tenant id. Itu tabel global yang dipakai bersama dengan API utama. Dari repository ini saja, saya tidak bisa memastikan apakah keanggotaan user ke organisasi sudah divalidasi di sisi upstream. Kalau ternyata belum, perbaikan saya ini perlu, tapi belum cukup. Itu pertanyaan yang ingin saya dapatkan jawabannya sebelum ini rilis ke production."
 
-> "Satu hal terakhir. Migration-nya menolak untuk di-rollback selama masih ada baris yang belum ternilai. Dia tidak mengisi ulang ke L1. Karena itu akan diam-diam merugikan kandidat-kandidat tadi, saat operator mengira dia hanya melakukan rollback biasa."
+*Diam 1 detik.*
+
+> "Satu hal terakhir. Migration yang saya buat menolak untuk di-rollback selama masih ada data yang belum ternilai. Dia tidak mengisinya kembali menjadi L1. Karena kalau begitu, kandidat-kandidat tadi akan dirugikan lagi secara diam-diam, saat operator mengira dia hanya melakukan rollback biasa."
 
 > "Terima kasih."
 
----
-
-## Aturan main
-
-**Jangan lewati Bagian 6.** Mengakui apa yang belum selesai dan alasannya justru terbaca sebagai pertimbangan matang. Dan itu memang yang diminta di brief — mereka menyebutnya *constraint signal*.
-
-**Kalau kepanjangan,** jangan potong Bagian 2, 4, atau 5. Potong Bagian 3 — screenshot sudah menjelaskannya.
-
-**Kalau salah ngomong,** berhenti, diam dua detik, ulangi kalimatnya. Jedanya bisa dipotong nanti. Jangan mengulang rekaman dari awal.
+### 👉 Klik tombol **Stop** di Loom
 
 ---
 
-## Pertanyaan yang kemungkinan besar ditanyakan
+# BAGIAN C — Setelah rekaman
 
-Siapkan jawabannya. Ini tiga keputusan yang paling gampang dipertanyakan, dan jawabannya bagus.
+1. Loom otomatis membuka halaman videonya
+2. Klik tombol **Share** → **Copy link**
+3. Kirim link-nya ke saya, bersama link Pull Request
+4. Saya masukkan ke laporan, render ulang PDF-nya
+5. Anda upload PDF-nya ke portal Rakamin
 
-**"Kenapa yang diubah frontend-nya, bukan API-nya, untuk `required_level`?"**
+---
 
-> `skill_comparisons` disimpan sebagai JSONB. Semua report yang sudah tersimpan isinya `expected_level`. Mengubah sisi client memperbaiki semuanya tanpa perlu backfill. Selain itu, satu nama konsisten dari kolom database, lewat service, sampai ke PDF export — yang memang sudah membaca key yang benar. Kalau API-nya yang diganti nama, PDF export-nya justru rusak.
+# BAGIAN D — Kalau Ada Masalah
 
-**"Kenapa tidak pakai `default_scope` untuk tenancy?"**
+## Tab 2 kosong / muncul halaman login
 
-> Sidekiq worker berjalan di luar request, tanpa tenant di RequestStore. Dengan default scope, worker akan diam-diam tidak melihat apa pun, atau saya harus menaburkan `unscoped` di mana-mana. Explicit scope membuat syaratnya terlihat di tempat yang penting.
+Token-nya kadaluarsa. Di terminal Cursor, ketik:
 
-**"Kenapa nullable, bukan enum `evidence_state`?"**
+```bash
+cd D:/Project/Testing/Rakamin/ai-interview-platform
+docker compose exec api bundle exec rails runner "puts JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' }, 14.days)"
+```
 
-> Satu kolom nullable, dibanding enum baru plus backfill plus jalur tulis baru di generator. Perbedaan antara *tidak pernah ditanyakan* dan *bukti tidak cukup* diturunkan di report layer, karena di situlah manusia membacanya. Kalau nanti perlu di-query lewat SQL, enum itu migration berikutnya — dan logika turunannya sudah mendefinisikan artinya.
+Copy hasilnya (deretan huruf panjang). Buka file `web/.env` di Cursor, ganti baris `VITE_DEV_TOKEN=` dengan token baru. Simpan. Refresh Chrome.
 
-**"Berapa banyak yang ditulis AI?"**
+## Tab 2 muncul tulisan "Summary" dengan kotak kuning
 
-Jawab jujur. Brief-nya memang menganjurkan pakai AI, tapi minta Anda memverifikasinya. Siapkan satu contoh nyata — yang paling kuat ada di report: ada komentar kode usang yang mengklaim endpoint fit/gap mengecek override. Padahal tidak. Temuan itu terlihat meyakinkan, dan ternyata salah — `regenerate_stale_fitgap_reports` menanganinya dari sisi endpoint override. Mengecek jalur tulisnya dulu sebelum menuliskan temuan itulah yang menyelamatkannya.
+Berarti Gemini-nya gagal. Video tetap bisa jalan — tapi di Bagian 3, ganti kalimat terakhir jadi:
+
+> "Kalau panggilan ke AI gagal, sistem tidak diam. Dia memberi peringatan bahwa narasi ini dibuat otomatis dan bukan penilaian budaya kerja."
+
+Itu justru menunjukkan penanganan error-nya bekerja.
+
+## Halaman error / tidak bisa dibuka sama sekali
+
+Di terminal Cursor:
+
+```bash
+cd D:/Project/Testing/Rakamin/ai-interview-platform
+docker compose restart api
+```
+
+Tunggu 40 detik, refresh Chrome.
+
+---
+
+# BAGIAN E — Pertanyaan yang mungkin ditanya saat interview
+
+Ini tiga keputusan yang paling mungkin dipertanyakan. Hafalkan **intinya**, jangan kata per kata.
+
+**"Kenapa yang diubah frontend-nya, bukan API-nya?"**
+
+> Data report yang lama sudah tersimpan di database dalam format JSONB, dan isinya memakai nama `expected_level`. Kalau saya ubah frontend-nya, semua report lama langsung ikut benar tanpa perlu migrasi data. Selain itu, PDF export-nya sudah membaca nama yang benar — kalau API-nya yang saya ubah, PDF-nya justru rusak.
+
+**"Kenapa tidak pakai `default_scope` untuk tenant?"**
+
+> Karena Sidekiq worker berjalan di luar request, jadi tidak ada tenant-nya. Dengan default scope, worker-nya akan diam-diam tidak melihat data apa pun. Explicit scope membuat syaratnya terlihat di tempat yang memang penting.
+
+**"Berapa banyak yang dikerjakan AI?"**
+
+Jawab jujur. Brief-nya memang menganjurkan pakai AI, asal diverifikasi. Contoh nyatanya:
+
+> Ada komentar di kode yang menyatakan endpoint fit/gap mengecek override. Ternyata kodenya tidak melakukan itu. Temuannya terlihat meyakinkan, dan ternyata salah — ternyata ditangani dari sisi endpoint yang lain. Karena saya cek dulu jalur penulisannya sebelum menuliskan temuan itu, kesalahannya ketahuan sebelum masuk laporan.
