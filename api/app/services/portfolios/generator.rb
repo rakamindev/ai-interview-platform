@@ -158,7 +158,7 @@ module Portfolios
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           parse_level(skill_data['level']),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
@@ -170,12 +170,21 @@ module Portfolios
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           parse_level(skill_data['level']),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
       end
+    end
+
+    # Strict level parsing (AC4): a clean integer 1-5 stays; anything else — a missing
+    # level, "L3", "3.5", 0, 6, garbage — becomes nil = "not assessed", never a fabricated 1.
+    def parse_level(raw)
+      return raw if raw.is_a?(Integer) && raw.between?(1, 5)
+      return raw.to_i if raw.is_a?(String) && raw.match?(/\A[1-5]\z/)
+
+      nil
     end
   end
 end
