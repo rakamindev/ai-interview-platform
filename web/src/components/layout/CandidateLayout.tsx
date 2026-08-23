@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import { m } from "@/paraglide/messages.js";
 
 export default function CandidateLayout() {
   return (
@@ -6,7 +7,7 @@ export default function CandidateLayout() {
       {/* Minimal header — no nav */}
       <header className="border-b bg-background">
         <div className="max-w-2xl mx-auto px-4 h-12 flex items-center">
-          <span className="font-semibold text-sm text-muted-foreground">AI Interview</span>
+          <span className="font-semibold text-sm text-muted-foreground">{m.interview.title()}</span>
         </div>
       </header>
 

@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { m } from "@/paraglide/messages.js";
 
 const navItems = [
-  { href: "/assessments", label: "Assessments", icon: ClipboardList },
-  { href: "/vacancies", label: "Vacancies", icon: Briefcase }
+  { href: "/assessments", label: m.nav.assessments(), icon: ClipboardList },
+  { href: "/vacancies", label: m.nav.vacancies(), icon: Briefcase }
 ];
 
 export default function AssessorLayout() {
@@ -37,7 +39,7 @@ export default function AssessorLayout() {
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <span className="font-semibold text-sm">{m.nav.brand()}</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -60,13 +62,14 @@ export default function AssessorLayout() {
           <div className="flex items-center gap-3">
             {tenant.name && (
               <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
-                Tenant: {tenant.name}
+                {m.nav.tenant({ name: tenant.name })}
               </span>
             )}
             <ThemeToggle />
+            <LanguageSwitcher />
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+              {m.nav.logout()}
             </Button>
           </div>
         </div>
