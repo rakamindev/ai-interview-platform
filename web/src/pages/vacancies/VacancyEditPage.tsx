@@ -73,10 +73,10 @@ export default function VacancyEditPage() {
 
   if (loading)
     return (
-      <div className="max-w-2xl mx-auto space-y-4" role="status" aria-label="Loading vacancy">
+      <output className="max-w-2xl mx-auto space-y-4 block" aria-label="Loading vacancy">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
-      </div>
+      </output>
     );
 
   return (

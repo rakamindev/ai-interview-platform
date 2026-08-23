@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const ZERO_LEVELS = (barCount: number) => new Array(barCount).fill(0);
+const ZERO_LEVELS = (barCount: number) => Array.from({ length: barCount }, () => 0);
 
 // Polls an AnalyserNode via rAF and buckets its frequency data into `barCount`
 // normalized (0-1) levels, for driving real-time audio visualizers.
@@ -24,7 +24,7 @@ export function useAudioLevels(
     const tick = () => {
       analyser.getByteFrequencyData(data);
 
-      const next = new Array(barCount).fill(0);
+      const next = Array.from({ length: barCount }, () => 0);
       for (let i = 0; i < barCount; i++) {
         const start = i * bucketSize;
         const end = i === barCount - 1 ? data.length : start + bucketSize;
