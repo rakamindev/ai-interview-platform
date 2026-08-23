@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  HEALTH_LIVE = proc { [200, {}, [{ status: "ok" }.to_json]] }
+  HEALTH_LIVE = proc { [200, { "Content-Type" => "application/json" }, [{ status: "ok" }.to_json]] }
 
   get "/health", to: HEALTH_LIVE
 
@@ -33,6 +33,8 @@ Rails.application.routes.draw do
       post "auth/login", to: "authentication#authenticate"
       post "auth/refresh", to: "authentication#refresh"
       delete "auth/logout", to: "authentication#logout"
+      post "auth/invites", to: "invites#create"
+      post "auth/accept_invite", to: "invites#accept"
       # Health check
       get  "health", to: HEALTH_LIVE
 
@@ -73,6 +75,9 @@ Rails.application.routes.draw do
           resources :override_events, only: %i[index]
         end
       end
+
+      # Tenant-wide override audit log (Audit Override History page)
+      get "override_events", to: "override_events#audit"
 
       # B7 Skill Taxonomy (read-only reference data)
       get  "skill_taxonomies", to: "skill_taxonomies#index"
