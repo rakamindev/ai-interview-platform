@@ -7,7 +7,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.1-pro-preview'),
         timeout: 180
       )
     end
@@ -15,13 +15,14 @@ module Portfolios
     def call
       portfolio = find_or_create_portfolio
       claim_for_generation!(portfolio)
+      backfill_coverage_if_stale!
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       ActiveRecord::Base.transaction(requires_new: true) do
         save_skills(portfolio, response)
-        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
       end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
@@ -147,16 +148,25 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
-      configured_by_key = index_by_skill_key(data['configured_skills'])
+      configured_skills = Array(data['configured_skills'])
 
       portfolio.portfolio_skills.destroy_all
 
       @session.assessment.assessment_skills.each do |assessment_skill|
-        skill_data = configured_by_key[skill_key(assessment_skill.skill_id, assessment_skill.skill_label)]
+        skill_data = find_skill_data(configured_skills, assessment_skill)
         create_configured_skill(portfolio, assessment_skill, skill_data)
       end
 
       Array(data['discovered_skills']).each { |skill_data| create_discovered_skill(portfolio, skill_data) }
+    end
+
+    def find_skill_data(configured_skills, assessment_skill)
+      if assessment_skill.skill_id.present?
+        configured_skills.find { |d| d['skill_id'] == assessment_skill.skill_id }
+      else
+        label = assessment_skill.skill_label.to_s.downcase.strip
+        configured_skills.find { |d| d['skill_label'].to_s.downcase.strip == label }
+      end
     end
 
     def create_configured_skill(portfolio, assessment_skill, skill_data)
@@ -208,12 +218,14 @@ module Portfolios
       level if level && (1..5).cover?(level)
     end
 
-    def index_by_skill_key(configured_skills)
-      Array(configured_skills).index_by { |skill_data| skill_key(skill_data['skill_id'], skill_data['skill_label']) }
-    end
+    def backfill_coverage_if_stale!
+      return if @session.coverage_maps.empty?
+      return unless @session.coverage_maps.sum(:probe_count).zero?
+      return if @session.transcript_turns.empty?
 
-    def skill_key(skill_id, skill_label)
-      skill_id.presence || skill_label
+      @session.transcript_turns.where(speaker: "candidate").order(:turn_number).each do |turn|
+        CoverageAnalyzerWorker.new.perform(@session.id, turn.turn_number, force: true)
+      end
     end
 
     def find_or_create_portfolio
