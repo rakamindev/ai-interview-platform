@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
+import EmptyState from "@/components/EmptyState";
+import { Loader2, History } from "lucide-react";
 import { api } from "@/services/api";
 import { LEVEL_LABELS } from "@/utils/constants";
 
@@ -69,16 +70,13 @@ export default function OverrideHistoryPage() {
 
   return (
     <main className="max-w-4xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Audit</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Override History</span>
-      </div>
-
-      <h1 className="text-lg font-semibold mb-4">Assessor Override History</h1>
+      <PageHeader
+        title="Assessor Override History"
+        description="Tenant-wide audit log of every AI rating an assessor has overridden."
+        eyebrow="Audit"
+        backTo="/assessments"
+        backLabel="Back to assessments"
+      />
 
       {/* Filters */}
       <div className="border rounded-lg p-4 mb-6 space-y-4">
@@ -144,9 +142,11 @@ export default function OverrideHistoryPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : events.length === 0 ? (
-        <div className="border rounded-lg p-8 text-center text-sm text-muted-foreground">
-          No override events found.
-        </div>
+        <EmptyState
+          icon={History}
+          title="No override events found"
+          description="Overrides an assessor makes on a candidate's AI-rated skills will show up here."
+        />
       ) : (
         <>
           <div className="border rounded-lg overflow-hidden">

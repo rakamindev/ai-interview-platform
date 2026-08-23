@@ -22,7 +22,8 @@ import { sessionsApi } from "@/services/sessions";
 import {
   COVERAGE_STATE_LABELS,
   COVERAGE_STATE_WIDTH,
-  COVERAGE_STATE_COLOR
+  COVERAGE_STATE_COLOR,
+  SESSION_END_REASON_LABELS
 } from "@/utils/constants";
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn, Session } from "@/types";
@@ -59,6 +60,7 @@ export default function LiveMonitorPage() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
   const [sessionActive, setSessionActive] = useState(true);
+  const [initialEndReason, setInitialEndReason] = useState<string | null>(null);
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -77,10 +79,13 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     Promise.all([sessionsApi.get(Number(sessionId)), sessionsApi.getTranscript(Number(sessionId))])
       .then(([sRes, tRes]) => {
-        const s = sRes.data.session as Session & { assessment?: { name?: string } };
+        const s = sRes.data.session as Session & { assessment?: { name?: string }; end_reason?: string | null };
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
-        if (s.status !== "active") setSessionActive(false);
+        if (s.status !== "active") {
+          setSessionActive(false);
+          setInitialEndReason(s.end_reason ?? null);
+        }
 
         const turns = tRes.data.turns.filter((t): t is TranscriptTurn => t !== null);
         setTranscript(turns.slice(-10));
@@ -151,7 +156,7 @@ export default function LiveMonitorPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Live Monitor</h1>
           </div>
           {assessmentName && <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>}
         </div>
@@ -161,32 +166,38 @@ export default function LiveMonitorPage() {
           <span
             className={cn(
               "flex items-center gap-1 text-xs",
-              connectionStatus === "connected"
-                ? "text-green-600"
-                : connectionStatus === "reconnecting"
-                  ? "text-amber-600"
-                  : "text-muted-foreground"
+              sessionEnded || !sessionActive
+                ? "text-muted-foreground"
+                : connectionStatus === "connected"
+                  ? "text-green-600"
+                  : connectionStatus === "reconnecting"
+                    ? "text-amber-600"
+                    : "text-muted-foreground"
             )}
           >
             <Radio className="h-3 w-3" />
-            {connectionStatus === "connected"
-              ? "Live"
-              : connectionStatus === "reconnecting"
-                ? "Reconnecting..."
-                : "Disconnected"}
+            {sessionEnded || !sessionActive
+              ? "Ended"
+              : connectionStatus === "connected"
+                ? "Live"
+                : connectionStatus === "reconnecting"
+                  ? "Reconnecting..."
+                  : "Disconnected"}
           </span>
         </div>
       </div>
 
       {/* Session ended banner */}
-      {sessionEnded && (
+      {(sessionEnded || !sessionActive) && (
         <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>
-            {sessionEndReason && (
+            {(sessionEndReason ?? initialEndReason) && (
               <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
+                —{" "}
+                {SESSION_END_REASON_LABELS[(sessionEndReason ?? initialEndReason)!] ??
+                  (sessionEndReason ?? initialEndReason)!.replace(/_/g, " ")}
               </span>
             )}
           </div>

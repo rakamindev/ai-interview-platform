@@ -72,9 +72,9 @@ export default function InviteAdminPage() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-lg font-semibold">Invite Admin or Assessor</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Invite Admin or Assessor</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Generate an invite link for a new team member. The link expires after 24 hours.
+            Generate an invite link for a new team member. The link expires after 3 days.
           </p>
         </div>
 

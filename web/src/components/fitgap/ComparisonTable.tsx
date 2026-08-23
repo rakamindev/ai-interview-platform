@@ -103,9 +103,9 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
                       {LEVEL_LABELS[c.candidate_level] ?? `L${c.candidate_level}`}
                       {c.is_override && (
                         <OverrideProvenance
-                          actor={c.override_actor}
-                          reason={c.override_reason}
-                          at={c.override_at}
+                          actor={c.override_actor ?? undefined}
+                          reason={c.override_reason ?? undefined}
+                          at={c.override_at ?? undefined}
                         />
                       )}
                     </span>
@@ -114,7 +114,7 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
                   )}
                 </td>
                 <td className="px-4 py-2.5 text-center">
-                  <ConfidenceDot confidence={c.confidence} />
+                  <ConfidenceDot confidence={c.confidence ?? undefined} />
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   <ResultBadge comparison={c} />

@@ -151,7 +151,7 @@ export default function FitGapReportPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Fit/Gap Report</h1>
         </div>
         <Card>
           <CardContent className="py-12 text-center space-y-3">
@@ -187,7 +187,7 @@ export default function FitGapReportPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Fit/Gap Report</h1>
           </div>
         </div>
 
