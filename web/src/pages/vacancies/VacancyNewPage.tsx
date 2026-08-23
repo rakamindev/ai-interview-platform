@@ -12,7 +12,7 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import PageHeader from "@/components/PageHeader";
 import { vacanciesApi } from "@/services/vacancies";
 import { Plus, X, Loader2 } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import { VacancyFormSchema } from "@/schemas/forms";
 import type { VacancyFormValues } from "@/schemas/forms";
 

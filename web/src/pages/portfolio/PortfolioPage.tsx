@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { POLL_DEADLINE_MS } from "@/utils/constants";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();

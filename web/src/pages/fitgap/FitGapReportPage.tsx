@@ -11,7 +11,7 @@ import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, AlertTriangle } from "lucide-react";
 import { POLL_DEADLINE_MS } from "@/utils/constants";
 import type { FitGapReport, Portfolio } from "@/types";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{

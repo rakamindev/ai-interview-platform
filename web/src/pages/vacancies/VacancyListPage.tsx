@@ -6,7 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { vacanciesApi } from "@/services/vacancies";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import type { Vacancy } from "@/types";
 
 export default function VacancyListPage() {
