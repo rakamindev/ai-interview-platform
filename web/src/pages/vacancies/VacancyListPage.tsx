@@ -63,9 +63,11 @@ export default function VacancyListPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Vacancies</h1>
-        <Button onClick={() => navigate("/vacancies/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
-        </Button>
+        {(!loading && vacancies.length > 0) && (
+          <Button onClick={() => navigate("/vacancies/new")}>
+            <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
+          </Button>
+        )}
       </div>
 
       <div className="relative w-full sm:max-w-sm">

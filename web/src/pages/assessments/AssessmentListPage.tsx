@@ -84,9 +84,11 @@ export default function AssessmentListPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Assessment
-        </Button>
+        {(!loading && assessments.length > 0) && (
+          <Button onClick={() => navigate("/assessments/new")}>
+            <Plus className="h-4 w-4 mr-1.5" /> New Assessment
+          </Button>
+        )}
       </div>
 
       <div className="relative w-full sm:max-w-sm">
