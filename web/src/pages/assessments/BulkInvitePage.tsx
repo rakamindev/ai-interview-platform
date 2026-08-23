@@ -29,7 +29,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { api } from "@/services/api";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 interface CandidateRow {
   id: string;

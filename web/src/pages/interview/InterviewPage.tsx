@@ -24,7 +24,7 @@ import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import { CheckCircle, Check, Mic, MicOff, X, Zap } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 // Mirrors Gemini::LiveClient::CANDIDATE_SILENCE_BUFFER_MS (api/app/clients/gemini/live_client.rb) —
 // no shared config between frontend/backend today, keep these in sync by hand.

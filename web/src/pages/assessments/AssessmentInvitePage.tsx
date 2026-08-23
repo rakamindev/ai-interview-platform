@@ -19,7 +19,7 @@ import EmptyState from "@/components/EmptyState";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { Copy, Check, Eye, Pencil, Plus, UserRound } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
