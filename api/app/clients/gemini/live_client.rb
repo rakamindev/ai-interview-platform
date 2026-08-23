@@ -18,6 +18,13 @@ module Gemini
     SILENCE_FRAME_SAMPLES = 640
     SILENCE_FRAME = ("\x00" * (SILENCE_FRAME_SAMPLES * 2)).freeze
 
+    # How long the candidate can pause mid-answer before Gemini's VAD finalizes their turn.
+    # Frontend must mirror this (see SILENCE_BUFFER_SECONDS in InterviewPage.tsx) — no shared config today.
+    CANDIDATE_SILENCE_BUFFER_MS = 25_000
+
+    # Maps Assessment::SUPPORTED_LANGUAGES codes to BCP-47 tags for Gemini's speechConfig.languageCode.
+    LANGUAGE_CODES = { "en" => "en-US", "id" => "id-ID" }.freeze
+
     attr_reader :resumption_token, :connected, :connected_at, :inactivity_close
 
     def initialize(
@@ -25,9 +32,12 @@ module Gemini
       api_key: nil,
       model: nil,
       voice: "Puck",
+      language: nil,
       on_audio: nil,
       on_input_transcription: nil,
+      on_input_transcription_partial: nil,
       on_output_transcription: nil,
+      on_output_transcription_partial: nil,
       on_model_turn_complete: nil,
       on_go_away: nil,
       on_close: nil,
@@ -39,6 +49,7 @@ module Gemini
       @api_key = api_key || ENV.fetch("GEMINI_API_KEY")
       @model = model || ENV.fetch("GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview")
       @voice = voice
+      @language_code = LANGUAGE_CODES[language]
       @resumption_token = nil
       @connected = false
       @ws = nil
@@ -51,7 +62,9 @@ module Gemini
 
       @on_audio = on_audio
       @on_input_transcription = on_input_transcription
+      @on_input_transcription_partial = on_input_transcription_partial
       @on_output_transcription = on_output_transcription
+      @on_output_transcription_partial = on_output_transcription_partial
       @on_model_turn_complete = on_model_turn_complete
       @on_go_away = on_go_away
       @on_close = on_close
@@ -95,6 +108,14 @@ module Gemini
 
       @ws.send({ realtimeInput: { text: text } }.to_json)
       true
+    end
+
+    # Explicitly signals end-of-input-turn (candidate-initiated), bypassing silence-based VAD.
+    def end_turn!
+      return unless @connected && @ws
+
+      @ws.send({ realtimeInput: { audioStreamEnd: true } }.to_json)
+      Rails.logger.info("[Gemini::LiveClient] end_turn! sent (audioStreamEnd)")
     end
 
     # Prompts Gemini to speak first via realtimeInput.text.
@@ -312,7 +333,7 @@ module Gemini
               voiceConfig: {
                 prebuiltVoiceConfig: { voiceName: @voice }
               }
-            }
+            }.merge(@language_code ? { languageCode: @language_code } : {})
           },
           systemInstruction: {
             parts: [{ text: @system_prompt }]
@@ -321,6 +342,11 @@ module Gemini
           outputAudioTranscription: {},
           contextWindowCompression: {
             slidingWindow: {}
+          },
+          realtimeInputConfig: {
+            automaticActivityDetection: {
+              silenceDurationMs: CANDIDATE_SILENCE_BUFFER_MS
+            }
           }
         }
       }
@@ -374,14 +400,24 @@ module Gemini
 
       text = input_tx.dig("parts", 0, "text") || input_tx["text"]
       @input_text_buffer << text.to_s
+      @on_input_transcription_partial&.call(@input_text_buffer)
     end
+
+    ANOMALOUS_TRANSCRIPTION_PATTERN = /\[\s*\d+m\d+s\d+ms\s*-\s*\d+m\d+s\d+ms\s*\]/
 
     def handle_output_transcription(data)
       output_tx = data.dig("serverContent", "outputTranscription")
       return unless output_tx
 
       text = output_tx.dig("parts", 0, "text") || output_tx["text"]
+      if text.to_s.match?(ANOMALOUS_TRANSCRIPTION_PATTERN)
+        Rails.logger.warn(
+          "[Gemini::LiveClient] Anomalous outputTranscription (caption-timestamp artifact) " \
+          "resumption_token=#{@resumption_token.inspect} text=#{text.inspect}"
+        )
+      end
       @output_text_buffer << text.to_s
+      @on_output_transcription_partial&.call(@output_text_buffer)
     end
 
     # Must run before turnComplete handling — both can arrive in the same message and order matters.
