@@ -56,8 +56,8 @@ api-ps: check-api-env
 	$(API) ps
 
 api-test: check-api-env
-	$(API) exec -e RAILS_ENV=test -e DB_NAME=rakamin_test api bundle exec rails db:create db:force_migrate
-	$(API) exec -e RAILS_ENV=test -e DB_NAME=rakamin_test api bundle exec rspec
+	$(API) exec -e RAILS_ENV=test -e DB_NAME=rakamin_test -e GEMINI_STUB=true api bundle exec rails db:create db:force_migrate
+	$(API) exec -e RAILS_ENV=test -e DB_NAME=rakamin_test -e GEMINI_STUB=true api bundle exec rspec
 
 api-console: check-api-env
 	$(API) exec api bundle exec rails c
