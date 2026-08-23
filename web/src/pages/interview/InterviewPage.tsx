@@ -199,8 +199,8 @@ export default function InterviewPage() {
       const denied = error.name === "NotAllowedError";
       setAudioCaptureError(
         denied
-          ? "Microphone access was blocked. Enable it in your browser's site settings for this page, then reload."
-          : "Couldn't access your microphone. Check that it's connected and not in use by another app."
+          ? m.interview_mic_blocked()
+          : m.interview_mic_error()
       );
       disconnect();
       setHardwareCheckDone(false);
@@ -306,7 +306,7 @@ export default function InterviewPage() {
             {candidateInfo?.role_title ?? m.interview_title()}
           </h1>
           {candidateInfo && (
-            <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} minutes</p>
+            <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} {m.interview_minutes()}</p>
           )}
         </div>
 
@@ -334,7 +334,7 @@ export default function InterviewPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
               <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
+              <span>{m.interview_hardware_passed_ready()}</span>
             </div>
             <Button className="w-full" size="lg" onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
@@ -392,24 +392,19 @@ export default function InterviewPage() {
         (connectionLostLong ? (
           <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
             <span className="animate-pulse">●</span>
-            <span>
-              Connection is taking too long to restore. Please wait, and contact the interviewer if
-              this persists.
-            </span>
+            <span>{m.interview_connection_lost_long()}</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
             <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
+            <span>{m.interview_reconnecting_brief()}</span>
           </div>
         ))}
 
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>
-            Reconnected — please say <strong>"check"</strong> or continue your answer to resume.
-          </span>
+          <span>{m.interview_reconnected_prompt()}</span>
           <button
             className="ml-3 text-blue-500 hover:text-blue-700 shrink-0"
             onClick={() => setReconnectedPrompt(false)}
@@ -451,7 +446,7 @@ export default function InterviewPage() {
 
             {silenceCountdown !== null && (
               <p className="text-xs text-muted-foreground animate-pulse">
-                Submitting your answer in {silenceCountdown}s — keep talking to continue.
+                {m.interview_silence_countdown({ seconds: silenceCountdown })}
               </p>
             )}
 
@@ -485,7 +480,7 @@ export default function InterviewPage() {
           <Button variant={micMuted ? "destructive" : "outline"} size="sm" onClick={toggleMic}>
             {micMuted ? (
               <>
-                <MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted
+                <MicOff className="h-3.5 w-3.5 mr-1.5" /> {m.interview_muted_button()}
               </>
             ) : (
               <>
@@ -519,7 +514,7 @@ export default function InterviewPage() {
                 <AlertDialogDescription>{m.interview_end_confirm_desc()}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
                 <AlertDialogAction onClick={endInterview}>
                   {m.interview_end_interview()}
                 </AlertDialogAction>
@@ -533,7 +528,7 @@ export default function InterviewPage() {
               className="text-xs opacity-50"
               onClick={() => sendJson({ type: "debug_force_reconnect" })}
             >
-              <Zap className="h-4 w-4" /> Force reconnect
+              <Zap className="h-4 w-4" /> {m.interview_force_reconnect()}
             </Button>
           )}
         </div>
