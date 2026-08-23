@@ -75,6 +75,9 @@ jobs:
         run: |
           bundle exec rails db:migrate:down VERSION=20260411000000
           bundle exec rails db:migrate:up VERSION=20260411000000
+      - name: Schema load check
+        working-directory: api
+        run: bundle exec rails db:schema:load
 
   web:
     name: Web
