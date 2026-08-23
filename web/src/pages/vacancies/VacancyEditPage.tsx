@@ -81,18 +81,18 @@ export default function VacancyEditPage() {
 
   return (
     <main className="max-w-2xl mx-auto">
-      <PageHeader title={m.vacancy.edit()} backTo="/vacancies" backLabel={m.common.back()} />
+      <PageHeader title={m.vacancy_edit()} backTo="/vacancies" backLabel={m.common_back()} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label>
-            {m.vacancy.role_title()} <span className="text-destructive">*</span>
+            {m.vacancy_role_title()} <span className="text-destructive">*</span>
           </Label>
           <Input {...register("role_title", { required: true })} />
         </div>
         <Separator />
         <div className="space-y-3">
-          <Label>{m.vacancy.expected_skills()}</Label>
+          <Label>{m.vacancy_expected_skills()}</Label>
           {fields.map((field, index) => (
             <div key={field.id} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
@@ -114,25 +114,25 @@ export default function VacancyEditPage() {
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> {m.vacancy.add_skill()}
+            <Plus className="h-3.5 w-3.5 mr-1" /> {m.vacancy_add_skill()}
           </Button>
         </div>
         <Separator />
         <div className="space-y-1.5">
-          <Label>{m.vacancy.company_culture()}</Label>
+          <Label>{m.vacancy_company_culture()}</Label>
           <Textarea rows={3} {...register("culture_dimensions")} />
         </div>
         <div className="space-y-1.5">
-          <Label>{m.vacancy.competency_expectations()}</Label>
+          <Label>{m.vacancy_competency_expectations()}</Label>
           <Textarea rows={3} {...register("competency_expectations")} />
         </div>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>
-            {m.vacancy.cancel()}
+            {m.vacancy_cancel()}
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {m.vacancy.save_changes()}
+            {m.vacancy_save_changes()}
           </Button>
         </div>
       </form>

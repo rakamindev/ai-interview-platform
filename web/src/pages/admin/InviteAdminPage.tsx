@@ -47,7 +47,7 @@ export default function InviteAdminPage() {
       const res = await authApi.createInvite(data);
       setInviteUrl(res.data.invite_url);
     } catch {
-      setError(m.admin.failed_to_create());
+      setError(m.admin_failed_to_create());
     } finally {
       setSubmitting(false);
     }
@@ -72,18 +72,18 @@ export default function InviteAdminPage() {
         </Link>
         <span className="text-sm text-muted-foreground">Admin</span>
         <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">{m.admin.invite_title()}</span>
+        <span className="text-sm font-medium">{m.admin_invite_title()}</span>
       </div>
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">{m.admin.invite_subtitle()}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{m.admin.generate_invite()}.</p>
+          <h1 className="text-xl font-semibold tracking-tight">{m.admin_invite_subtitle()}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{m.admin_generate_invite()}.</p>
         </div>
 
         {inviteUrl ? (
           <div className="border rounded-lg p-6 space-y-4">
-            <h2 className="font-medium">{m.admin.invite_generated()}</h2>
+            <h2 className="font-medium">{m.admin_invite_generated()}</h2>
             <div className="flex items-center gap-2">
               <Input readOnly value={inviteUrl} className="flex-1 font-mono text-sm" />
               <Button
@@ -99,16 +99,16 @@ export default function InviteAdminPage() {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">{m.admin.share_link()}.</p>
+            <p className="text-xs text-muted-foreground">{m.admin_share_link()}.</p>
             <Button variant="outline" onClick={() => setInviteUrl(null)}>
-              {m.admin.invite_another()}
+              {m.admin_invite_another()}
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">
-                {m.admin.email()} <span className="text-destructive">*</span>
+                {m.admin_email()} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
@@ -120,7 +120,7 @@ export default function InviteAdminPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>{m.admin.role()}</Label>
+              <Label>{m.admin_role()}</Label>
               <Select
                 defaultValue="assessor"
                 onValueChange={(v) => setValue("role", v as "admin" | "assessor")}
@@ -129,8 +129,8 @@ export default function InviteAdminPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="assessor">{m.admin.assessor()}</SelectItem>
-                  <SelectItem value="admin">{m.admin.admin()}</SelectItem>
+                  <SelectItem value="assessor">{m.admin_assessor()}</SelectItem>
+                  <SelectItem value="admin">{m.admin_admin()}</SelectItem>
                 </SelectContent>
               </Select>
               {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
@@ -140,11 +140,11 @@ export default function InviteAdminPage() {
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => history.back()}>
-                {m.admin.cancel()}
+                {m.admin_cancel()}
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {m.admin.generate_link()}
+                {m.admin_generate_link()}
               </Button>
             </div>
           </form>

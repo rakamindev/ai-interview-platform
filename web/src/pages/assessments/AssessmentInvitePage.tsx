@@ -61,25 +61,25 @@ function SessionRow({
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            {m.assessment.awaiting_candidate()}
+            {m.assessment_awaiting_candidate()}
           </span>
         )}
         {isLive && (
           <span className="flex items-center gap-1 text-xs text-primary">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            {m.assessment.live()}
+            {m.assessment_live()}
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
           <span className="flex items-center gap-1 text-xs text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            {m.assessment.failed()}
+            {m.assessment_failed()}
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
           <span className="flex items-center gap-1 text-xs text-green-600">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            {m.assessment.completed()}
+            {m.assessment_completed()}
           </span>
         )}
 
@@ -93,11 +93,11 @@ function SessionRow({
             >
               {copiedId === session.id ? (
                 <>
-                  <Check className="h-3 w-3 mr-1" /> {m.assessment.copied()}
+                  <Check className="h-3 w-3 mr-1" /> {m.assessment_copied()}
                 </>
               ) : (
                 <>
-                  <Copy className="h-3 w-3 mr-1" /> {m.assessment.copy_link()}
+                  <Copy className="h-3 w-3 mr-1" /> {m.assessment_copy_link()}
                 </>
               )}
             </Button>
@@ -111,7 +111,7 @@ function SessionRow({
                 navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)
               }
             >
-              <Eye className="h-3 w-3 mr-1" /> {m.assessment.monitor()}
+              <Eye className="h-3 w-3 mr-1" /> {m.assessment_monitor()}
             </Button>
           )}
           {isEnded && session.end_reason !== "error" && (
@@ -123,7 +123,7 @@ function SessionRow({
                 navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)
               }
             >
-              {m.assessment.results()}
+              {m.assessment_results()}
             </Button>
           )}
         </div>
@@ -231,11 +231,11 @@ export default function AssessmentInvitePage() {
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
-              <Pencil className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.edit_link()}
+              <Pencil className="h-3.5 w-3.5 mr-1.5" /> {m.assessment_edit_link()}
             </Button>
             <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              {creatingSession ? "Creating..." : m.assessment.invite_candidate()}
+              {creatingSession ? "Creating..." : m.assessment_invite_candidate()}
             </Button>
           </>
         }
@@ -245,10 +245,10 @@ export default function AssessmentInvitePage() {
         <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle>{m.assessment.invite_candidate()}</DialogTitle>
+              <DialogTitle>{m.assessment_invite_candidate()}</DialogTitle>
             </DialogHeader>
             <div className="space-y-2 py-2">
-              <Label htmlFor="candidate-name">{m.assessment.candidate_name()}</Label>
+              <Label htmlFor="candidate-name">{m.assessment_candidate_name()}</Label>
               <Input
                 id="candidate-name"
                 placeholder="e.g. Budi Santoso"
@@ -262,9 +262,9 @@ export default function AssessmentInvitePage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
-                {m.assessment.cancel()}
+                {m.assessment_cancel()}
               </Button>
-              <Button onClick={handleInviteCandidate}>{m.assessment.create_link()}</Button>
+              <Button onClick={handleInviteCandidate}>{m.assessment_create_link()}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -291,11 +291,11 @@ export default function AssessmentInvitePage() {
               <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
                 {newSessionCopied ? (
                   <>
-                    <Check className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.copied()}
+                    <Check className="h-3.5 w-3.5 mr-1.5" /> {m.assessment_copied()}
                   </>
                 ) : (
                   <>
-                    <Copy className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.copy_link()}
+                    <Copy className="h-3.5 w-3.5 mr-1.5" /> {m.assessment_copy_link()}
                   </>
                 )}
               </Button>
@@ -309,7 +309,7 @@ export default function AssessmentInvitePage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">
-              {m.assessment.candidates()}
+              {m.assessment_candidates()}
               {sessions.length > 0 && (
                 <span className="ml-1.5 text-muted-foreground font-normal">
                   ({sessions.length})
@@ -321,9 +321,9 @@ export default function AssessmentInvitePage() {
           {sessions.length === 0 ? (
             <EmptyState
               icon={UserRound}
-              title={m.assessment.no_candidates()}
+              title={m.assessment_no_candidates()}
               description='Click "Invite Candidate" to generate an interview link.'
-              actionLabel={m.assessment.invite_candidate()}
+              actionLabel={m.assessment_invite_candidate()}
               onAction={openInviteDialog}
             />
           ) : (
@@ -352,7 +352,7 @@ export default function AssessmentInvitePage() {
           <>
             <Separator />
             <div className="space-y-2">
-              <h2 className="text-sm font-semibold">{m.assessment.skills_assessed()}</h2>
+              <h2 className="text-sm font-semibold">{m.assessment_skills_assessed()}</h2>
               <ul className="space-y-1">
                 {assessment.skills.map((s) => (
                   <li

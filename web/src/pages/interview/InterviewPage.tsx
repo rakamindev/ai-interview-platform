@@ -303,7 +303,7 @@ export default function InterviewPage() {
       <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">
-            {candidateInfo?.role_title ?? m.interview.title()}
+            {candidateInfo?.role_title ?? m.interview_title()}
           </h1>
           {candidateInfo && (
             <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} minutes</p>
@@ -338,7 +338,7 @@ export default function InterviewPage() {
             </div>
             <Button className="w-full" size="lg" onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
-              {m.interview.start()}
+              {m.interview_start()}
             </Button>
           </div>
         )}
@@ -351,8 +351,8 @@ export default function InterviewPage() {
     return (
       <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
         <CheckCircle className="h-10 w-10 text-green-500" />
-        <h2 className="text-xl font-semibold">{m.interview.complete()}</h2>
-        <p className="text-sm text-muted-foreground">{m.interview.complete_thank()}</p>
+        <h2 className="text-xl font-semibold">{m.interview_complete()}</h2>
+        <p className="text-sm text-muted-foreground">{m.interview_complete_thank()}</p>
       </main>
     );
   }
@@ -364,20 +364,20 @@ export default function InterviewPage() {
   // hasn't muted it themselves, and the capture gate (server-driven) is open.
   const micActuallyCapturing = candidateSpeaking && !micMuted && captureSending;
   const listeningLabel = micMuted
-    ? m.interview.muted()
+    ? m.interview_muted()
     : candidateSpeaking
       ? micActuallyCapturing
-        ? m.interview.listening()
+        ? m.interview_listening()
         : awaitingResponse
-          ? m.interview.submitting()
-          : m.interview.connecting_mic()
-      : m.interview.waiting_turn();
+          ? m.interview_submitting()
+          : m.interview_connecting_mic()
+      : m.interview_waiting_turn();
 
   return (
     <main className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
-        <span className="text-sm font-medium">{m.interview.title()}</span>
+        <span className="text-sm font-medium">{m.interview_title()}</span>
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
@@ -424,12 +424,12 @@ export default function InterviewPage() {
       <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
         {interviewState === "connecting" ? (
           <div className="text-sm text-muted-foreground animate-pulse">
-            {m.interview.connecting()}
+            {m.interview_connecting()}
           </div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
             <VoiceBars active={true} label="AI speaking" variant="ai" levels={aiLevels} />
-            <p className="text-xs text-muted-foreground">{m.interview.wrapping_up()}</p>
+            <p className="text-xs text-muted-foreground">{m.interview_wrapping_up()}</p>
           </div>
         ) : (
           <>
@@ -490,7 +490,7 @@ export default function InterviewPage() {
             ) : (
               <>
                 <Mic className="h-3.5 w-3.5 mr-1.5" />
-                {micActuallyCapturing ? m.interview.mic_on() : m.interview.mic_paused()}
+                {micActuallyCapturing ? m.interview_mic_on() : m.interview_mic_paused()}
               </>
             )}
           </Button>
@@ -503,25 +503,25 @@ export default function InterviewPage() {
               disabled={!micActuallyCapturing}
             >
               <Check className="h-3.5 w-3.5 mr-1.5" />
-              {m.interview.im_done()}
+              {m.interview_im_done()}
             </Button>
           )}
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm">
-                {m.interview.end_interview()}
+                {m.interview_end_interview()}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{m.interview.end_confirm()}</AlertDialogTitle>
-                <AlertDialogDescription>{m.interview.end_confirm_desc()}</AlertDialogDescription>
+                <AlertDialogTitle>{m.interview_end_confirm()}</AlertDialogTitle>
+                <AlertDialogDescription>{m.interview_end_confirm_desc()}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={endInterview}>
-                  {m.interview.end_interview()}
+                  {m.interview_end_interview()}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -13,11 +13,11 @@ import { m } from "@/paraglide/messages.js";
 
 const AcceptInviteSchema = z
   .object({
-    password: z.string().min(8, m.auth.password_min()),
+    password: z.string().min(8, m.auth_password_min()),
     password_confirmation: z.string()
   })
   .refine((data) => data.password === data.password_confirmation, {
-    message: m.auth.passwords_dont_match(),
+    message: m.auth_passwords_dont_match(),
     path: ["password_confirmation"]
   });
 
@@ -43,10 +43,10 @@ export default function AcceptInvitePage() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
-          <h1 className="text-2xl font-bold">{m.auth.invalid_invite_link()}</h1>
-          <p className="text-sm text-muted-foreground">{m.auth.invalid_invite()}</p>
+          <h1 className="text-2xl font-bold">{m.auth_invalid_invite_link()}</h1>
+          <p className="text-sm text-muted-foreground">{m.auth_invalid_invite()}</p>
           <Button variant="outline" onClick={() => navigate("/login")}>
-            {m.auth.go_to_login()}
+            {m.auth_go_to_login()}
           </Button>
         </div>
       </main>
@@ -65,7 +65,7 @@ export default function AcceptInvitePage() {
       setSuccess(true);
       setTimeout(() => navigate("/assessments"), 1500);
     } catch {
-      setError(m.auth.invalid_invite());
+      setError(m.auth_invalid_invite());
     } finally {
       setLoading(false);
     }
@@ -75,8 +75,8 @@ export default function AcceptInvitePage() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
-          <h1 className="text-2xl font-bold">{m.auth.account_created()}</h1>
-          <p className="text-sm text-muted-foreground">{m.auth.redirecting()}</p>
+          <h1 className="text-2xl font-bold">{m.auth_account_created()}</h1>
+          <p className="text-sm text-muted-foreground">{m.auth_redirecting()}</p>
         </div>
       </main>
     );
@@ -86,13 +86,13 @@ export default function AcceptInvitePage() {
     <main className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{m.auth.accept_invite_title()}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{m.auth.create_account_subtitle()}</p>
+          <h1 className="text-2xl font-bold">{m.auth_accept_invite_title()}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{m.auth_create_account_subtitle()}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="password">{m.auth.password()}</Label>
+            <Label htmlFor="password">{m.auth_password()}</Label>
             <Input
               id="password"
               type="password"
@@ -105,7 +105,7 @@ export default function AcceptInvitePage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password_confirmation">{m.auth.confirm_password()}</Label>
+            <Label htmlFor="password_confirmation">{m.auth_confirm_password()}</Label>
             <Input
               id="password_confirmation"
               type="password"
@@ -121,7 +121,7 @@ export default function AcceptInvitePage() {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {m.auth.create_account()}
+            {m.auth_create_account()}
           </Button>
         </form>
       </div>

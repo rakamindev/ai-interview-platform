@@ -51,14 +51,14 @@ export default function TranscriptPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">{m.transcript.title()}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.transcript_title()}</h1>
             {candidateName && <p className="text-sm text-muted-foreground">{candidateName}</p>}
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
           <Button variant="outline" size="sm" onClick={handleDownload}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
-            {m.transcript.download_txt()}
+            {m.transcript_download_txt()}
           </Button>
         )}
       </div>
@@ -73,13 +73,13 @@ export default function TranscriptPage() {
 
       {!loading && error && (
         <div className="border rounded-lg p-6 text-center text-sm text-destructive">
-          {m.transcript.failed_to_load()}
+          {m.transcript_failed_to_load()}
         </div>
       )}
 
       {!loading && !error && turns.length === 0 && (
         <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-          {m.transcript.no_transcript()}
+          {m.transcript_no_transcript()}
         </div>
       )}
 
@@ -99,7 +99,7 @@ export default function TranscriptPage() {
                     isAI ? "text-muted-foreground" : "text-primary"
                   }`}
                 >
-                  {isAI ? m.transcript.ai_interviewer() : m.transcript.candidate()}
+                  {isAI ? m.transcript_ai_interviewer() : m.transcript_candidate()}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
               </div>

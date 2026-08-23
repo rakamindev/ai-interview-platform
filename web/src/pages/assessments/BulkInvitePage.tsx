@@ -77,7 +77,7 @@ function SortableCandidateRow({
       </button>
       <span className="text-sm text-muted-foreground w-6 text-right">{index + 1}</span>
       <Input
-        placeholder={m.assessment.candidate_name()}
+        placeholder={m.assessment_candidate_name()}
         value={row.name}
         onChange={(e) => onUpdate(row.id, "name", e.target.value)}
         className="flex-1"
@@ -184,7 +184,7 @@ export default function BulkInvitePage() {
   const handleSendAll = async () => {
     const validRows = rows.filter((r) => r.name.trim() && r.email.trim());
     if (validRows.length === 0) {
-      setError(m.assessment.add_at_least_one());
+      setError(m.assessment_add_at_least_one());
       return;
     }
     setError(null);
@@ -237,22 +237,22 @@ export default function BulkInvitePage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="text-sm text-muted-foreground">{m.nav.assessments()}</span>
+        <span className="text-sm text-muted-foreground">{m.nav_assessments()}</span>
         <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">{m.assessment.bulk_invite()}</span>
+        <span className="text-sm font-medium">{m.assessment_bulk_invite()}</span>
       </div>
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight">
-              {m.assessment.invite_candidate()}
+              {m.assessment_invite_candidate()}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">{m.assessment.bulk_invite_desc()}</p>
+            <p className="text-sm text-muted-foreground mt-1">{m.assessment_bulk_invite_desc()}</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4 mr-1" />
-            {m.assessment.import_csv()}
+            {m.assessment_import_csv()}
           </Button>
           <input
             ref={fileInputRef}
@@ -282,7 +282,7 @@ export default function BulkInvitePage() {
 
         <Button type="button" variant="outline" size="sm" onClick={addRow}>
           <Plus className="h-3.5 w-3.5 mr-1" />
-          {m.assessment.add_row()}
+          {m.assessment_add_row()}
         </Button>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -292,13 +292,13 @@ export default function BulkInvitePage() {
           <div className="text-sm text-muted-foreground">
             {successCount > 0 && (
               <span className="text-green-600">
-                {successCount} {m.assessment.sent()}
+                {successCount} {m.assessment_sent()}
               </span>
             )}
             {successCount > 0 && errorCount > 0 && <span> · </span>}
             {errorCount > 0 && (
               <span className="text-destructive">
-                {errorCount} {m.assessment.bulk_failed()}
+                {errorCount} {m.assessment_bulk_failed()}
               </span>
             )}
           </div>
@@ -307,7 +307,7 @@ export default function BulkInvitePage() {
         {/* Actions */}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => history.back()}>
-            {m.assessment.done()}
+            {m.assessment_done()}
           </Button>
           <Button
             type="button"
@@ -315,7 +315,7 @@ export default function BulkInvitePage() {
             disabled={submitting || rows.every((r) => !r.name.trim() || !r.email.trim())}
           >
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {m.assessment.send_invites()}
+            {m.assessment_send_invites()}
           </Button>
         </div>
       </div>

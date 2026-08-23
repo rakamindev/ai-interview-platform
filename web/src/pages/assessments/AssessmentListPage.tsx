@@ -16,17 +16,17 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     return (
       <span className="flex items-center gap-1 text-xs text-primary">
         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        {m.assessment.live_now()}
+        {m.assessment_live_now()}
       </span>
     );
 
   if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">{m.assessment.last_failed()}</span>;
+    return <span className="text-xs text-destructive">{m.assessment_last_failed()}</span>;
 
   if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">{m.assessment.last_completed()}</span>;
+    return <span className="text-xs text-muted-foreground">{m.assessment_last_completed()}</span>;
 
-  return <span className="text-xs text-muted-foreground">{m.assessment.awaiting_candidate()}</span>;
+  return <span className="text-xs text-muted-foreground">{m.assessment_awaiting_candidate()}</span>;
 }
 
 export default function AssessmentListPage() {
@@ -46,18 +46,18 @@ export default function AssessmentListPage() {
   return (
     <main>
       <PageHeader
-        title={m.nav.assessments()}
+        title={m.nav_assessments()}
         description="Skill-based interview templates and their candidate sessions."
         actions={
           <Button onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> {m.assessment.new()}
+            <Plus className="h-4 w-4 mr-1.5" /> {m.assessment_new()}
           </Button>
         }
       />
 
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive mb-4">
-          {m.assessment.failed_to_load()}
+          {m.assessment_failed_to_load()}
         </div>
       )}
 
@@ -70,9 +70,9 @@ export default function AssessmentListPage() {
       ) : assessments.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title={m.assessment.no_assessments()}
+          title={m.assessment_no_assessments()}
           description="Create an assessment to start inviting candidates to AI-led interviews."
-          actionLabel={m.assessment.create_first()}
+          actionLabel={m.assessment_create_first()}
           onAction={() => navigate("/assessments/new")}
         />
       ) : (
