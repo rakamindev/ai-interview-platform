@@ -24,6 +24,7 @@ import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import { CheckCircle, Check, Mic, MicOff, X, Zap } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { m } from "@/(paraglide)/messages.js";
 
 // Mirrors Gemini::LiveClient::CANDIDATE_SILENCE_BUFFER_MS (api/app/clients/gemini/live_client.rb) —
 // no shared config between frontend/backend today, keep these in sync by hand.
@@ -298,7 +299,7 @@ export default function InterviewPage() {
     return (
       <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
+          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? m.interview.title()}</h1>
           {candidateInfo && (
             <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} minutes</p>
           )}
@@ -313,10 +314,9 @@ export default function InterviewPage() {
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
+              <p>• {m.interview.tip_1()}</p>
+              <p>• {m.interview.tip_2()}</p>
+              <p>• {m.interview.tip_3()}</p>
             </div>
             <HardwareCheck
               onStart={() => {
@@ -329,11 +329,11 @@ export default function InterviewPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
               <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
+                <span>Hardware checks passed. You're ready to start.</span>
             </div>
             <Button className="w-full" size="lg" onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
-              Start Interview
+              {m.interview.start()}
             </Button>
           </div>
         )}
@@ -346,11 +346,9 @@ export default function InterviewPage() {
     return (
       <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
         <CheckCircle className="h-10 w-10 text-green-500" />
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <h2 className="text-xl font-semibold">{m.interview.complete()}</h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
+          {m.interview.complete_thank()}
         </p>
       </main>
     );
@@ -363,20 +361,20 @@ export default function InterviewPage() {
   // hasn't muted it themselves, and the capture gate (server-driven) is open.
   const micActuallyCapturing = candidateSpeaking && !micMuted && captureSending;
   const listeningLabel = micMuted
-    ? "Muted by you"
+    ? m.interview.muted()
     : candidateSpeaking
       ? micActuallyCapturing
-        ? "Listening..."
+        ? m.interview.listening()
         : awaitingResponse
-          ? "Submitting your answer..."
-          : "Connecting mic..."
-      : "Waiting for your turn";
+          ? m.interview.submitting()
+          : m.interview.connecting_mic()
+      : m.interview.waiting_turn();
 
   return (
     <main className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
-        <span className="text-sm font-medium">AI Interview</span>
+        <span className="text-sm font-medium">{m.interview.title()}</span>
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
@@ -422,11 +420,11 @@ export default function InterviewPage() {
       {/* Voice indicator */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
         {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
+          <div className="text-sm text-muted-foreground animate-pulse">{m.interview.connecting()}</div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
             <VoiceBars active={true} label="AI speaking" variant="ai" levels={aiLevels} />
-            <p className="text-xs text-muted-foreground">Wrapping up...</p>
+            <p className="text-xs text-muted-foreground">{m.interview.wrapping_up()}</p>
           </div>
         ) : (
           <>
@@ -487,7 +485,7 @@ export default function InterviewPage() {
             ) : (
               <>
                 <Mic className="h-3.5 w-3.5 mr-1.5" />
-                {micActuallyCapturing ? "Mic On" : "Mic Paused"}
+                {micActuallyCapturing ? m.interview.mic_on() : m.interview.mic_paused()}
               </>
             )}
           </Button>
@@ -500,26 +498,26 @@ export default function InterviewPage() {
               disabled={!micActuallyCapturing}
             >
               <Check className="h-3.5 w-3.5 mr-1.5" />
-              I'm done
+              {m.interview.im_done()}
             </Button>
           )}
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm">
-                End Interview
+                {m.interview.end_interview()}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>End interview?</AlertDialogTitle>
+                <AlertDialogTitle>{m.interview.end_confirm()}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to end the interview early?
+                  {m.interview.end_confirm_desc()}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
+                <AlertDialogAction onClick={endInterview}>{m.interview.end_interview()}</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

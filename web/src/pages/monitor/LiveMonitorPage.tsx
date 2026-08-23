@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn, Session } from "@/types";
 import { cn } from "@/lib/utils";
+import { m } from "@/(paraglide)/messages.js";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -156,7 +157,7 @@ export default function LiveMonitorPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-xl font-semibold tracking-tight">Live Monitor</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.monitor.title()}</h1>
           </div>
           {assessmentName && <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>}
         </div>
@@ -177,7 +178,7 @@ export default function LiveMonitorPage() {
           >
             <Radio className="h-3 w-3" />
             {sessionEnded || !sessionActive
-              ? "Ended"
+              ? m.monitor.ended()
               : connectionStatus === "connected"
                 ? "Live"
                 : connectionStatus === "reconnecting"
@@ -192,7 +193,7 @@ export default function LiveMonitorPage() {
         <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
           <div>
-            <span className="font-medium">Session ended</span>
+            <span className="font-medium">{m.monitor.session_ended()}</span>
             {(sessionEndReason ?? initialEndReason) && (
               <span className="text-muted-foreground ml-1.5">
                 —{" "}
@@ -207,7 +208,7 @@ export default function LiveMonitorPage() {
             className="ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            {m.monitor.view_portfolio()}
           </Button>
         </div>
       )}
@@ -215,11 +216,11 @@ export default function LiveMonitorPage() {
       {/* Coverage map */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Coverage Status</CardTitle>
+          <CardTitle className="text-sm">{m.monitor.coverage_status()}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {configuredSkills.length === 0 && discoveredSkills.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Waiting for interview to begin...</p>
+            <p className="text-sm text-muted-foreground">{m.monitor.waiting_to_begin()}</p>
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
@@ -291,11 +292,11 @@ export default function LiveMonitorPage() {
       {/* Live transcript */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Live Transcript</CardTitle>
+          <CardTitle className="text-sm">{m.monitor.live_transcript()}</CardTitle>
         </CardHeader>
         <CardContent>
           {transcript.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No transcript yet.</p>
+            <p className="text-sm text-muted-foreground">{m.monitor.no_transcript()}</p>
           ) : (
             <div className="space-y-2">
               {transcript.map((turn) => (
@@ -318,19 +319,19 @@ export default function LiveMonitorPage() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" disabled={ending}>
-                {ending ? "Ending..." : "End Session"}
+                {ending ? "Ending..." : m.monitor.end_session()}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>End the session now?</AlertDialogTitle>
+                <AlertDialogTitle>{m.monitor.end_confirm()}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  The interview will stop and portfolio generation will begin.
+                  {m.monitor.end_confirm_desc()}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleEndSession}>End Session</AlertDialogAction>
+                <AlertDialogAction onClick={handleEndSession}>{m.monitor.end_session()}</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -339,7 +340,7 @@ export default function LiveMonitorPage() {
             variant="outline"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            {m.monitor.view_portfolio()}
           </Button>
         )}
       </div>
