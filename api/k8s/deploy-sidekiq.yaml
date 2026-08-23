@@ -50,8 +50,9 @@ spec:
                   app: ai-interview-sidekiq
               topologyKey: kubernetes.io/hostname
 
-      # Give in-flight jobs time to finish (timeout in sidekiq.yml = 300s)
-      terminationGracePeriodSeconds: 60
+      # Must exceed sidekiq.yml's 300s drain timeout so in-flight jobs
+      # (portfolio generation targets ~3min) finish before SIGKILL.
+      terminationGracePeriodSeconds: 330
 
       containers:
         - name: ai-interview-sidekiq

@@ -1,0 +1,25 @@
+# Both workloads run a single replica today, so these budgets permit one
+# voluntary disruption (node drains would otherwise block forever with
+# minAvailable: 1). They become true safety nets when replicas are scaled out.
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-interview-api-pdb
+  namespace: default
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ai-interview-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-interview-sidekiq-pdb
+  namespace: default
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ai-interview-sidekiq
