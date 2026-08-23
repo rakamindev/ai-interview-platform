@@ -42,6 +42,7 @@ gem 'prawn-table', '~> 0.2'
 gem 'bootsnap', require: false
 gem 'kaminari'
 gem 'listen', '~> 3.2'
+gem 'tzinfo-data'
 
 group :development, :test do
   gem 'byebug', platforms: %i[mri mingw x64_mingw]
@@ -60,4 +61,8 @@ end
 group :test do
   gem 'database_cleaner'
   gem 'timecop'
+end
+
+platforms :mswin, :mingw, :x64_mingw do
+  gem 'wdm', '>= 0.1.0'
 end

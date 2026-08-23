@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
-import type { Assessment } from "@/types";
+import { Plus, Clock, Search } from "lucide-react";
+import type { Assessment, PaginationMeta } from "@/types";
+import { DataTable } from "@/components/ui/data-table";
+import { Pagination } from "@/components/ui/pagination";
 
-function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
-  if (!session) return null;
+function SessionBadge({ session }: { session?: Assessment["latest_session"] }) {
+  if (!session) return <span className="text-muted-foreground">—</span>;
 
   if (session.status === "active")
     return (
@@ -19,27 +21,71 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     );
 
   if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
+    return <span className="text-xs text-destructive">Failed</span>;
 
   if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
+    return <span className="text-xs text-muted-foreground">Completed</span>;
 
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  return <span className="text-xs text-muted-foreground">Awaiting</span>;
 }
 
 export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const fetchAssessments = useCallback(() => {
+    setLoading(true);
+    setError(false);
     assessmentsApi
-      .list()
-      .then((res) => setAssessments(res.data.assessments))
+      .list(page, search || undefined)
+      .then((res) => {
+        setAssessments(res.data.assessments);
+        setMeta(res.data.meta);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, search]);
+
+  useEffect(() => {
+    fetchAssessments();
+  }, [fetchAssessments]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearch(searchInput);
+    setPage(1);
+  };
+
+  const columns = [
+    {
+      key: "name",
+      header: "Name",
+      render: (a: Assessment) => (
+        <span className="font-medium">{a.name}</span>
+      ),
+    },
+    {
+      key: "time_limit_min",
+      header: "Duration",
+      render: (a: Assessment) => (
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <Clock className="h-3 w-3" />
+          {a.time_limit_min} min
+        </span>
+      ),
+    },
+    {
+      key: "latest_session",
+      header: "Last Session",
+      render: (a: Assessment) => <SessionBadge session={a.latest_session} />,
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -50,6 +96,25 @@ export default function AssessmentListPage() {
         </Button>
       </div>
 
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search by title..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit" variant="secondary">Search</Button>
+        {search && (
+          <Button type="button" variant="ghost" onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>
+            Clear
+          </Button>
+        )}
+      </form>
+
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
           Failed to load assessments. Please refresh the page.
@@ -58,44 +123,26 @@ export default function AssessmentListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
-        </div>
-      ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
         </div>
       ) : (
-        <div className="space-y-2">
-          {assessments.map((a) => (
-            <Card
-              key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/assessments/${a.id}/invite`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {a.time_limit_min} min
-                    </span>
-                    {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          <DataTable
+            columns={columns}
+            data={assessments}
+            onRowClick={(a) => navigate(`/assessments/${a.id}/invite`)}
+            emptyMessage={search ? "No assessments found matching your search." : "No assessments yet."}
+          />
+          {meta && (
+            <Pagination
+              currentPage={meta.current_page}
+              totalPages={meta.total_pages}
+              totalCount={meta.total_count}
+              perPage={meta.per_page}
+              onPageChange={setPage}
+            />
+          )}
+        </>
       )}
     </div>
   );

@@ -1,24 +1,68 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
-import { Plus, Briefcase, ChevronRight } from "lucide-react";
-import type { Vacancy } from "@/types";
+import { Plus, Briefcase, Search } from "lucide-react";
+import type { Vacancy, PaginationMeta } from "@/types";
+import { DataTable } from "@/components/ui/data-table";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function VacancyListPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    vacanciesApi.list()
-      .then((res) => setVacancies(res.data.vacancies))
+  const fetchVacancies = useCallback(() => {
+    setLoading(true);
+    setError(false);
+    vacanciesApi
+      .list(page, search || undefined)
+      .then((res) => {
+        setVacancies(res.data.vacancies);
+        setMeta(res.data.meta);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, search]);
+
+  useEffect(() => {
+    fetchVacancies();
+  }, [fetchVacancies]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearch(searchInput);
+    setPage(1);
+  };
+
+  const columns = [
+    {
+      key: "role_title",
+      header: "Role Title",
+      render: (v: Vacancy) => (
+        <span className="flex items-center gap-2">
+          <Briefcase className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{v.role_title}</span>
+        </span>
+      ),
+    },
+    {
+      key: "skills",
+      header: "Skills",
+      render: (v: Vacancy) => (
+        <span className="text-muted-foreground">
+          {v.skills?.length ?? 0} skills
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -29,6 +73,25 @@ export default function VacancyListPage() {
         </Button>
       </div>
 
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search by title..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit" variant="secondary">Search</Button>
+        {search && (
+          <Button type="button" variant="ghost" onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}>
+            Clear
+          </Button>
+        )}
+      </form>
+
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
           Failed to load vacancies. Please refresh the page.
@@ -37,33 +100,26 @@ export default function VacancyListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
-        </div>
-      ) : vacancies.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No vacancies yet.</p>
-          <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy
-          </Button>
+          {[1, 2].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
         </div>
       ) : (
-        <div className="space-y-2">
-          {vacancies.map((v) => (
-            <Card
-              key={v.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/vacancies/${v.id}/edit`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium text-sm">{v.role_title}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          <DataTable
+            columns={columns}
+            data={vacancies}
+            onRowClick={(v) => navigate(`/vacancies/${v.id}/edit`)}
+            emptyMessage={search ? "No vacancies found matching your search." : "No vacancies yet."}
+          />
+          {meta && (
+            <Pagination
+              currentPage={meta.current_page}
+              totalPages={meta.total_pages}
+              totalCount={meta.total_count}
+              perPage={meta.per_page}
+              onPageChange={setPage}
+            />
+          )}
+        </>
       )}
     </div>
   );
