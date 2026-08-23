@@ -183,9 +183,11 @@ module Portfolios
       configured = validator.call(data["configured_skills"], is_discovered: false)
       discovered = validator.call(data["discovered_skills"], is_discovered: true)
       all_skills = configured + discovered
+      ai_labels = all_skills.map { |s| s.skill_label }.to_set
 
       ActiveRecord::Base.transaction do
         all_skills.each { |skill| upsert_skill(portfolio, skill) }
+        mark_stale_and_restored(portfolio, ai_labels)
       end
     end
 
@@ -202,6 +204,34 @@ module Portfolios
         tenant_id: portfolio.tenant_id
       )
       row.save!
+    end
+
+    def mark_stale_and_restored(portfolio, ai_labels)
+      portfolio.portfolio_skills.find_each do |skill|
+        if ai_labels.include?(skill.skill_label)
+          if skill.ai_presence == "stale" && skill.assessor_override.present?
+            skill.update!(ai_presence: "current")
+            PortfolioSkillGenerationEvent.create!(
+              portfolio_skill_id: skill.id,
+              tenant_id: skill.tenant_id,
+              event_type: "restored",
+              reason: "AI returned this skill again after previously omitting it",
+              created_at: Time.current
+            )
+          end
+        else
+          if skill.assessor_override.present? && skill.ai_presence != "stale"
+            skill.update!(ai_presence: "stale")
+            PortfolioSkillGenerationEvent.create!(
+              portfolio_skill_id: skill.id,
+              tenant_id: skill.tenant_id,
+              event_type: "stale_marked",
+              reason: "AI no longer returns this skill label",
+              created_at: Time.current
+            )
+          end
+        end
+      end
     end
   end
 end
