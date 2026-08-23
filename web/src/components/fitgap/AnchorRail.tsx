@@ -3,11 +3,16 @@ import { m } from "@/paraglide/messages.js";
 
 type Confidence = "high" | "medium" | "low";
 
+type ResultType = "match" | "gap" | "exceed" | "insufficient_evidence" | "not_assessed";
+
 interface AnchorRailProps {
   skillLabel: string;
   requiredLevel: number;
   candidateLevel?: number;
   confidence?: Confidence;
+  result?: ResultType;
+  isOverride?: boolean;
+  compact?: boolean;
   className?: string;
 }
 
@@ -39,10 +44,13 @@ function ariaDescription(
   skillLabel: string,
   requiredLevel: number,
   candidateLevel: number | undefined,
-  confidence: Confidence
+  confidence: Confidence,
+  compact: boolean
 ): string {
   if (candidateLevel == null) {
-    return `${skillLabel}: ${m.fitgap_not_assessed()}. Requirement at L${requiredLevel}.`;
+    return compact
+      ? `Requirement L${requiredLevel}. Not assessed.`
+      : `${skillLabel}: ${m.fitgap_not_assessed()}. Requirement at L${requiredLevel}.`;
   }
   const diff = candidateLevel - requiredLevel;
   let relation: string;
@@ -51,10 +59,13 @@ function ariaDescription(
   else relation = `${Math.abs(diff)} ${m.fitgap_below()}`;
   const confidenceNote =
     confidence === "high"
-        ? ""
-        : confidence === "medium"
-          ? m.fitgap_moderate_confidence()
-          : m.fitgap_low_confidence_aria();
+      ? ""
+      : confidence === "medium"
+        ? m.fitgap_moderate_confidence()
+        : m.fitgap_low_confidence_aria();
+  if (compact) {
+    return `Requirement L${requiredLevel}. Candidate L${candidateLevel} ${relation}${confidenceNote}.`;
+  }
   return `${skillLabel}: candidate L${candidateLevel} ${relation} requirement L${requiredLevel}${confidenceNote}.`;
 }
 
@@ -63,6 +74,9 @@ export default function AnchorRail({
   requiredLevel,
   candidateLevel,
   confidence = "high",
+  result,
+  isOverride,
+  compact = false,
   className
 }: AnchorRailProps) {
   const hasCandidate = candidateLevel != null;
@@ -70,26 +84,27 @@ export default function AnchorRail({
 
   return (
     <div
-      className={cn("flex flex-col gap-1.5", className)}
+      className={cn(compact ? "flex items-center gap-1" : "flex flex-col gap-1.5", className)}
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="img"
-      aria-label={ariaDescription(skillLabel, requiredLevel, candidateLevel, confidence)}
+      aria-label={ariaDescription(skillLabel, requiredLevel, candidateLevel, confidence, compact)}
     >
-      {/* Skill label */}
-      <span className="text-sm font-medium truncate">{skillLabel}</span>
+      {/* Skill label — hidden in compact mode */}
+      {!compact && <span className="text-sm font-medium truncate">{skillLabel}</span>}
 
       {/* Rail */}
       <div className="relative h-5 bg-rail-track rounded-sm">
-        {/* Level tick labels */}
-        {LEVELS.map((lvl) => (
-          <span
-            key={lvl}
-            className="absolute top-full mt-0.5 text-[10px] text-muted-foreground -translate-x-1/2 select-none"
-            style={{ left: `${positionPercent(lvl)}%` }}
-          >
-            L{lvl}
-          </span>
-        ))}
+        {/* Level tick labels — hidden in compact mode */}
+        {!compact &&
+          LEVELS.map((lvl) => (
+            <span
+              key={lvl}
+              className="absolute top-full mt-0.5 text-[10px] text-muted-foreground -translate-x-1/2 select-none"
+              style={{ left: `${positionPercent(lvl)}%` }}
+            >
+              L{lvl}
+            </span>
+          ))}
 
         {/* Requirement mark — triangle always visible */}
         {hasCandidate && candidateLevel === requiredLevel ? (
@@ -128,13 +143,28 @@ export default function AnchorRail({
                 "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full",
                 CONFIDENCE_SIZE[confidence],
                 verdictColor(candidateLevel, requiredLevel),
-                confidence === "high" ? "opacity-100" : "opacity-75"
+                confidence === "high" ? "opacity-100" : "opacity-75",
+                result === "insufficient_evidence" && "ring-2 ring-dashed ring-verdict-unknown"
               )}
               style={{ left: `${positionPercent(candidateLevel)}%` }}
             />
           </>
         )}
       </div>
+
+      {/* not_assessed dash label */}
+      {compact && !hasCandidate && <span className="text-xs text-muted-foreground">—</span>}
+
+      {/* Override indicator */}
+      {compact && isOverride && (
+        <span
+          className="inline-flex items-center text-[10px] text-muted-foreground"
+          data-override
+          aria-label="override applied"
+        >
+          ✎
+        </span>
+      )}
     </div>
   );
 }
