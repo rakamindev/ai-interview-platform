@@ -274,6 +274,17 @@ export default function FitGapReportPage() {
       {/* Report ready */}
       {report && (
         <>
+          {report.narrative_source === "fallback" && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="py-3 px-4 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <p className="text-sm text-amber-700">
+                  AI narrative unavailable — showing a summary only
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
