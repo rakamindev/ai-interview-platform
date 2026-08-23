@@ -90,10 +90,10 @@ module Coverage
     end
 
     def time_remaining_minutes
-      return nil unless @session.started_at && @session.assessment.time_limit_min
+      return nil unless @session.started_at && @session.rubric.time_limit_min
 
       elapsed_seconds = (Time.current - @session.started_at).to_i
-      limit_seconds   = @session.assessment.time_limit_min * 60
+      limit_seconds   = @session.rubric.time_limit_min * 60
       remaining       = limit_seconds - elapsed_seconds
 
       [(remaining / 60.0).ceil, 0].max

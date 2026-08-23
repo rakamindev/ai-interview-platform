@@ -20,7 +20,7 @@ module Exports
       @portfolio   = portfolio
       @vacancy     = vacancy
       @session     = portfolio.session
-      @assessment  = @session.assessment
+      @rubric      = @session.rubric
       @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
     end
 
@@ -37,7 +37,7 @@ module Exports
     private
 
     def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
+      pdf.font_size(22) { pdf.text @rubric.name, style: :bold }
       pdf.move_down 4
       pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
       pdf.move_down 4

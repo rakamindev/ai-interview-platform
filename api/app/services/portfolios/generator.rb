@@ -39,8 +39,8 @@ module Portfolios
     private
 
     def build_prompt
-      assessment       = @session.assessment
-      configured_skills = assessment.assessment_skills.order(:display_order)
+      rubric           = @session.rubric
+      configured_skills = rubric.rubric_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
       turns             = @session.transcript_turns.ordered
 
@@ -56,7 +56,7 @@ module Portfolios
       <<~PROMPT
         You are evaluating a completed skills assessment interview to produce a structured skill portfolio.
 
-        ROLE BEING ASSESSED: #{assessment.name}
+        ROLE BEING ASSESSED: #{rubric.name}
 
         SKILL DEFINITIONS AND BEHAVIORAL ANCHORS:
         #{skills_text}

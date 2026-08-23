@@ -5,9 +5,9 @@ module Assessments
   # This is pure string interpolation — no LLM call needed.
   # Template follows PRD 01 Section 2 exactly.
   class SystemPromptCompiler
-    def initialize(assessment)
-      @assessment = assessment
-      @skills = assessment.assessment_skills.order(:display_order)
+    def initialize(rubric)
+      @rubric = rubric
+      @skills = rubric.rubric_skills.order(:display_order)
     end
 
     def call
@@ -25,7 +25,7 @@ module Assessments
     private
 
     def intro_section
-      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
+      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@rubric.language.presence || 'en', 'English')
 
       <<~TEXT.strip
         You are an expert skills assessor conducting a live audio interview.

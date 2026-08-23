@@ -39,12 +39,17 @@ module Api
 
       # PUT /api/v1/assessments/:id
       def update
-        if @assessment.update(assessment_params)
-          SystemPromptGeneratorWorker.perform_async(@assessment.id)
-          json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
-        else
-          json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
+        @assessment.with_lock do
+          @assessment.update!(assessment_params)
+          @assessment.increment!(:rubric_version)
         end
+
+        # Queue only after the locked transaction has committed. This prompt is a
+        # mutable-template cache; candidate sessions use their published version.
+        SystemPromptGeneratorWorker.perform_async(@assessment.id)
+        json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.record.errors.full_messages.first, :unprocessable_entity)
       end
 
       # DELETE /api/v1/assessments/:id

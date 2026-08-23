@@ -22,35 +22,42 @@ module Api
       def create
         assessment = Assessment.find(params[:assessment_id])
 
-        session = assessment.sessions.new(
-          candidate_id:   params.dig(:session, :candidate_id),
-          candidate_name: params.dig(:session, :candidate_name).presence,
-          tenant_id:      current_tenant_id
-        )
-
-        if session.save
-          json_response(
-            {
-              session:    session_json(session),
-              invite_url: session.invite_url
-            },
-            :created
+        session = nil
+        assessment.with_lock do
+          version = Assessments::VersionPublisher.new(assessment).call
+          session = assessment.sessions.create!(
+            candidate_id:       params.dig(:session, :candidate_id),
+            candidate_name:     params.dig(:session, :candidate_name).presence,
+            tenant_id:          current_tenant_id,
+            assessment_version: version
           )
-        else
-          json_error(session.errors.full_messages.first, :unprocessable_entity)
         end
+
+        json_response(
+          {
+            session:    session_json(session),
+            invite_url: session.invite_url
+          },
+          :created
+        )
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
+      rescue Assessments::VersionPublisher::InvalidRubric => e
+        json_error(e.message, :unprocessable_entity)
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.record.errors.full_messages.first, :unprocessable_entity)
       end
 
       # GET /api/v1/sessions/:id
       def show
+        rubric = @session.rubric
+
         json_response(
           session: session_json(@session).merge(
             assessment: {
               id:             @session.assessment.id,
-              name:           @session.assessment.name,
-              time_limit_min: @session.assessment.time_limit_min
+              name:           rubric.name,
+              time_limit_min: rubric.time_limit_min
             }
           )
         )
@@ -136,19 +143,12 @@ module Api
           return json_error("Invalid or expired invite token", :not_found)
         end
 
-        # Resolve tenant from the session's own tenant_id so we can load the assessment
-        assessment = Assessment.unscoped
-                               .where(tenant_id: session.tenant_id)
-                               .find_by(id: session.assessment_id)
-
-        unless assessment
-          return json_error("Assessment not found", :not_found)
-        end
+        rubric = session.rubric
 
         json_response(
           session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
+          role_title:      rubric.name,
+          time_limit_min:  rubric.time_limit_min,
           session_status:  session.status
         )
       end
@@ -175,7 +175,11 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          created_at:       session.created_at,
+          rubric: {
+            status:  session.rubric_status,
+            version: session.assessment_version&.rubric_version
+          }
         }
       end
 

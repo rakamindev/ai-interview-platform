@@ -34,7 +34,7 @@ module Sessions
       # Only initialize if no coverage maps exist yet (idempotent)
       return if @session.coverage_maps.exists?
 
-      skills = @session.assessment.assessment_skills.order(:display_order)
+      skills = @session.rubric.rubric_skills.order(:display_order)
 
       skills.each do |skill|
         @session.coverage_maps.create!(
