@@ -21,13 +21,13 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center p-8">
           <div className="text-center space-y-3">
-            <p className="font-medium">{m.error.unexpected()}</p>
-            <p className="text-sm text-muted-foreground">{m.error.refresh()}</p>
+            <p className="font-medium">{m.error_unexpected()}</p>
+            <p className="text-sm text-muted-foreground">{m.error_refresh()}</p>
             <button
               className="text-sm text-primary underline"
               onClick={() => window.location.reload()}
             >
-              {m.error.refresh_button()}
+              {m.error_refresh_button()}
             </button>
           </div>
         </div>

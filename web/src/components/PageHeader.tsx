@@ -18,7 +18,7 @@ export default function PageHeader({
   description,
   eyebrow,
   backTo,
-  backLabel = m.common.back(),
+  backLabel = m.common_back(),
   actions,
   className
 }: PageHeaderProps) {

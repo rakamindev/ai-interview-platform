@@ -24,7 +24,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
 
   const skill = useWatch({ control: form.control, name: `skills.${index}` });
   const isCustom = skill?.is_custom;
-  const skillLabel = skill?.skill_label || m.skill_card.new_skill();
+  const skillLabel = skill?.skill_label || m.skill_card_new_skill();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -55,7 +55,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">{skillLabel}</span>
             <span className="text-xs text-muted-foreground shrink-0">
-              {isCustom ? m.skill_card.custom() : (skill?.skill_id ?? "")}
+              {isCustom ? m.skill_card_custom() : (skill?.skill_id ?? "")}
             </span>
           </div>
         </div>
@@ -83,7 +83,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
               className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
               {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {anchorsOpen ? m.skill_card.hide_anchors() : m.skill_card.show_anchors()}
+              {anchorsOpen ? m.skill_card_hide_anchors() : m.skill_card_show_anchors()}
             </button>
 
             {anchorsOpen && (
@@ -100,7 +100,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             )}
 
             <div className="space-y-1.5">
-              <span className="text-xs text-muted-foreground">{m.skill_card.expected_level()}</span>
+              <span className="text-xs text-muted-foreground">{m.skill_card_expected_level()}</span>
               <LevelRadio
                 value={skill?.expected_level ?? 3}
                 onChange={(v) => form.setValue(`skills.${index}.expected_level`, v)}

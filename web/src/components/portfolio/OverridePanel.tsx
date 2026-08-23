@@ -67,11 +67,11 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       {hasOverride ? (
         <Button variant="ghost" size="sm" onClick={handleOpen}>
           <ShieldCheck className="h-3.5 w-3.5 mr-1 text-verdict-match" />{" "}
-          {m.override.override_applied()}
+          {m.override_override_applied()}
         </Button>
       ) : (
         <Button variant="outline" size="sm" onClick={handleOpen}>
-          <ArrowDownCircle className="h-3.5 w-3.5 mr-1" /> {m.override.override_rating()}
+          <ArrowDownCircle className="h-3.5 w-3.5 mr-1" /> {m.override_override_rating()}
         </Button>
       )}
 
@@ -79,16 +79,16 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {hasOverride ? m.override.edit_override() : m.override.dialog_title()}
+              {hasOverride ? m.override_edit_override() : m.override_dialog_title()}
             </DialogTitle>
             <DialogDescription>
-              {hasOverride ? m.override.adjust_level() : m.override.select_level()}
+              {hasOverride ? m.override_adjust_level() : m.override_select_level()}
             </DialogDescription>
           </DialogHeader>
 
           {hasOverride && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">{m.override.current()}</span>
+              <span className="text-muted-foreground">{m.override_current()}</span>
               <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
@@ -96,32 +96,32 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
           )}
 
           <div className="space-y-1.5">
-            <Label className="text-sm">{m.override.your_rating()}</Label>
+            <Label className="text-sm">{m.override_your_rating()}</Label>
             <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor={`notes-${skill.id}`} className="text-sm">
-              {m.override.reason()} <span className="text-destructive">*</span>
+              {m.override_reason()} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id={`notes-${skill.id}`}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder={m.override.explain()}
+              placeholder={m.override_explain()}
             />
           </div>
 
-          {saveError && <p className="text-xs text-destructive">{m.override.failed_to_save()}</p>}
+          {saveError && <p className="text-xs text-destructive">{m.override_failed_to_save()}</p>}
 
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-              {m.override.cancel()}
+              {m.override_cancel()}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={!canSave}>
               {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-              {m.override.save()}
+              {m.override_save()}
             </Button>
           </DialogFooter>
 
