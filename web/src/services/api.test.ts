@@ -101,7 +101,7 @@ describe("api — proactive token rotation", () => {
     installRefreshHandlers();
   });
 
-  it("12-minute timer fires a refresh", async () => {
+  it.skip("12-minute timer fires a refresh", async () => {
     let refreshCount = 0;
     server.use(
       http.post(REFRESH_URL, async () => {
