@@ -1,3 +1,5 @@
+import { m } from "@/(paraglide)/messages.js";
+
 export const RECONNECT_DELAYS = [1000, 2000, 4000] as const;
 
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
@@ -20,11 +22,11 @@ export const LEVEL_LABELS: Record<number, string> = {
 };
 
 export const LEVEL_DESCRIPTIONS: Record<number, string> = {
-  1: "Foundational",
-  2: "Functional",
-  3: "Proficient",
-  4: "Advanced",
-  5: "Expert"
+  1: m.constants.level_1(),
+  2: m.constants.level_2(),
+  3: m.constants.level_3(),
+  4: m.constants.level_4(),
+  5: m.constants.level_5()
 };
 
 // L-badge colors (Tailwind classes)
@@ -38,10 +40,10 @@ export const LEVEL_BADGE_CLASSES: Record<number, string> = {
 
 // Coverage state display
 export const COVERAGE_STATE_LABELS: Record<string, string> = {
-  not_yet: "not yet",
-  initiated: "initiated",
-  partial: "partial",
-  covered: "covered"
+  not_yet: m.constants.coverage_not_yet(),
+  initiated: m.constants.coverage_initiated(),
+  partial: m.constants.coverage_partial(),
+  covered: m.constants.coverage_covered()
 };
 
 export const COVERAGE_STATE_WIDTH: Record<string, number> = {
@@ -60,20 +62,20 @@ export const COVERAGE_STATE_COLOR: Record<string, string> = {
 
 // Fit/Gap result display
 export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
-  match: "Match",
-  gap: "Gap",
-  exceed: "Exceeds",
-  not_assessed: "Not assessed",
-  insufficient_evidence: "Insufficient evidence"
+  match: m.constants.fitgap_match(),
+  gap: m.constants.fitgap_gap(),
+  exceed: m.constants.fitgap_exceeds(),
+  not_assessed: m.constants.fitgap_not_assessed(),
+  insufficient_evidence: m.constants.fitgap_insufficient()
 };
 
 // Session end reason display — mirrors Session::END_REASONS in the backend
 export const SESSION_END_REASON_LABELS: Record<string, string> = {
-  manual_candidate: "ended by candidate",
-  manual_assessor: "ended by assessor",
+  manual_candidate: m.constants.session_ended_by_candidate(),
+  manual_assessor: m.constants.session_ended_by_assessor(),
   all_covered: "all skills covered",
-  time_ceiling: "time limit reached",
-  error: "an error occurred"
+  time_ceiling: m.constants.session_ended_by_timeout(),
+  error: m.constants.session_ended_by_error()
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {

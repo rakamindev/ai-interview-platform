@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 
 interface ConnectionStatusProps {
   state: "connected" | "reconnecting" | "lost";
@@ -9,7 +10,7 @@ export default function ConnectionStatus({ state }: ConnectionStatusProps) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-green-600">
         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-        Connected
+        {m.connection.connected()}
       </div>
     );
   }
@@ -17,14 +18,14 @@ export default function ConnectionStatus({ state }: ConnectionStatusProps) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-amber-600">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Reconnecting...
+        {m.connection.reconnecting()}
       </div>
     );
   }
   return (
     <div className="flex items-center gap-1.5 text-xs text-destructive">
       <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-      Connection lost
+      {m.connection.lost()}
     </div>
   );
 }

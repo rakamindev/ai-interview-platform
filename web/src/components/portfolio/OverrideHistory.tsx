@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { portfoliosApi } from "@/services/portfolios";
 import LevelBadge from "./LevelBadge";
 import { Loader2 } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import type { AssessorOverride } from "@/types";
 
 interface OverrideHistoryProps {
@@ -39,13 +40,13 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-        <Loader2 className="h-3 w-3 animate-spin" /> Loading history…
+        <Loader2 className="h-3 w-3 animate-spin" /> {m.override_history.loading()}
       </div>
     );
   }
 
   if (error) {
-    return <p className="text-xs text-muted-foreground py-2">Could not load override history.</p>;
+    return <p className="text-xs text-muted-foreground py-2">{m.override_history.load_error()}</p>;
   }
 
   if (events.length === 0) return null;
@@ -53,7 +54,7 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
   return (
     <div className="space-y-2 pt-2 border-t">
       <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Override history
+        {m.override_history.title()}
       </span>
       <ul className="space-y-2">
         {events.map((ev) => (
@@ -66,7 +67,7 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
             <div className="min-w-0">
               {ev.assessor_notes && <p className="text-sm break-words">{ev.assessor_notes}</p>}
               <time className="text-xs text-muted-foreground">
-                {ev.overridden_at ? new Date(ev.overridden_at).toLocaleString() : "unknown date"}
+                {ev.overridden_at ? new Date(ev.overridden_at).toLocaleString() : m.override_history.unknown_date()}
               </time>
             </div>
           </li>

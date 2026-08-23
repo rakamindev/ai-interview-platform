@@ -15,6 +15,7 @@ import LevelBadge from "./LevelBadge";
 import OverrideHistory from "./OverrideHistory";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, ShieldCheck, ArrowDownCircle } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -65,28 +66,28 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
     <>
       {hasOverride ? (
         <Button variant="ghost" size="sm" onClick={handleOpen}>
-          <ShieldCheck className="h-3.5 w-3.5 mr-1 text-verdict-match" /> Override applied
+          <ShieldCheck className="h-3.5 w-3.5 mr-1 text-verdict-match" /> {m.override.override_applied()}
         </Button>
       ) : (
         <Button variant="outline" size="sm" onClick={handleOpen}>
-          <ArrowDownCircle className="h-3.5 w-3.5 mr-1" /> Override rating
+          <ArrowDownCircle className="h-3.5 w-3.5 mr-1" /> {m.override.override_rating()}
         </Button>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{hasOverride ? "Edit override" : "Override rating"}</DialogTitle>
+            <DialogTitle>{hasOverride ? m.override.edit_override() : m.override.dialog_title()}</DialogTitle>
             <DialogDescription>
               {hasOverride
-                ? "Adjust the level and update your reasoning."
-                : "Select a level and explain your reasoning. This replaces the AI rating for this skill."}
+                ? m.override.adjust_level()
+                : m.override.select_level()}
             </DialogDescription>
           </DialogHeader>
 
           {hasOverride && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Current:</span>
+              <span className="text-muted-foreground">{m.override.current()}</span>
               <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
@@ -94,34 +95,34 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
           )}
 
           <div className="space-y-1.5">
-            <Label className="text-sm">Your rating</Label>
+            <Label className="text-sm">{m.override.your_rating()}</Label>
             <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor={`notes-${skill.id}`} className="text-sm">
-              Reason <span className="text-destructive">*</span>
+              {m.override.reason()} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id={`notes-${skill.id}`}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="Explain why you are overriding the AI rating…"
+              placeholder={m.override.explain()}
             />
           </div>
 
           {saveError && (
-            <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
+            <p className="text-xs text-destructive">{m.override.failed_to_save()}</p>
           )}
 
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-              Cancel
+              {m.override.cancel()}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={!canSave}>
               {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-              Save override
+              {m.override.save()}
             </Button>
           </DialogFooter>
 

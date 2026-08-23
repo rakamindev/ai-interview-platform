@@ -14,6 +14,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Copy, Check } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import { authApi } from "@/services/auth";
 
 const InviteFormSchema = z.object({
@@ -46,7 +47,7 @@ export default function InviteAdminPage() {
       const res = await authApi.createInvite(data);
       setInviteUrl(res.data.invite_url);
     } catch {
-      setError("Failed to create invite. Please try again.");
+      setError(m.admin.failed_to_create());
     } finally {
       setSubmitting(false);
     }
@@ -67,20 +68,20 @@ export default function InviteAdminPage() {
         </Link>
         <span className="text-sm text-muted-foreground">Admin</span>
         <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Invite User</span>
+        <span className="text-sm font-medium">{m.admin.invite_title()}</span>
       </div>
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Invite Admin or Assessor</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{m.admin.invite_subtitle()}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Generate an invite link for a new team member. The link expires after 3 days.
+            {m.admin.generate_invite()}.
           </p>
         </div>
 
         {inviteUrl ? (
           <div className="border rounded-lg p-6 space-y-4">
-            <h2 className="font-medium">Invite Link Generated</h2>
+            <h2 className="font-medium">{m.admin.invite_generated()}</h2>
             <div className="flex items-center gap-2">
               <Input readOnly value={inviteUrl} className="flex-1 font-mono text-sm" />
               <Button variant="outline" size="icon" onClick={copyToClipboard} aria-label="Copy invite link">
@@ -92,18 +93,17 @@ export default function InviteAdminPage() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Share this link with the person you want to invite. They will be prompted to create a
-              password.
+              {m.admin.share_link()}.
             </p>
             <Button variant="outline" onClick={() => setInviteUrl(null)}>
-              Invite Another
+              {m.admin.invite_another()}
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">
-                Email <span className="text-destructive">*</span>
+                {m.admin.email()} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
@@ -115,7 +115,7 @@ export default function InviteAdminPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Role</Label>
+              <Label>{m.admin.role()}</Label>
               <Select
                 defaultValue="assessor"
                 onValueChange={(v) => setValue("role", v as "admin" | "assessor")}
@@ -124,8 +124,8 @@ export default function InviteAdminPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="assessor">Assessor</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="assessor">{m.admin.assessor()}</SelectItem>
+                  <SelectItem value="admin">{m.admin.admin()}</SelectItem>
                 </SelectContent>
               </Select>
               {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
@@ -135,11 +135,11 @@ export default function InviteAdminPage() {
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => history.back()}>
-                Cancel
+                {m.admin.cancel()}
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Generate Invite Link
+                {m.admin.generate_link()}
               </Button>
             </div>
           </form>

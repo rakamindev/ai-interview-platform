@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Compass } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 
 export default function NotFoundPage() {
   return (
@@ -11,13 +12,13 @@ export default function NotFoundPage() {
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium text-primary">404</p>
-          <h1 className="text-xl font-semibold tracking-tight">Page not found</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{m.not_found.title()}</h1>
           <p className="text-sm text-muted-foreground">
-            The page you're looking for doesn't exist or may have been moved.
+            {m.not_found.description()}
           </p>
         </div>
         <Button asChild>
-          <Link to="/">Go to home</Link>
+          <Link to="/">{m.not_found.go_home()}</Link>
         </Button>
       </div>
     </main>
