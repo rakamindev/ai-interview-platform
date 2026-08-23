@@ -68,7 +68,7 @@ module Api
       private
 
       def invite_params
-        params.require(:invite).permit(:email, :role)
+        params.expect(invite: %i[email role])
       rescue ActionController::ParameterMissing
         {}
       end

@@ -232,7 +232,8 @@ export default function LiveMonitorPage() {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {skill.probe_count > 0 && (
                       <span>
-                        {skill.probe_count} {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
+                        {skill.probe_count}{" "}
+                        {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
                       </span>
                     )}
                     <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
@@ -268,7 +269,8 @@ export default function LiveMonitorPage() {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {skill.probe_count > 0 && (
                           <span>
-                            {skill.probe_count} {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
+                            {skill.probe_count}{" "}
+                            {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
                           </span>
                         )}
                         <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>

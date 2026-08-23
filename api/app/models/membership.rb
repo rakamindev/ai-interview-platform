@@ -7,7 +7,7 @@ class Membership < ApplicationRecord
   ROLES = %w[admin assessor user].freeze
 
   validates :role, inclusion: { in: ROLES }
-  validates :user_id, uniqueness: { scope: :organization_id, message: "already has a membership in this organization" }
+  validates :user_id, uniqueness: { scope: :organization_id, message: "already has a membership in this organization" } # rubocop:disable Rails/I18nLocaleTexts
 
   # Effective role for `user_id` within the org matching `scheme`, falling
   # back to `fallback_role` (the account-wide User#role) when no membership

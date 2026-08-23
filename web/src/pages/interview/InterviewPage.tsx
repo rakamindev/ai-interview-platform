@@ -374,7 +374,10 @@ export default function InterviewPage() {
     interviewState === "network_error"
   ) {
     type ErrorState = "invite_invalid" | "invite_expired" | "invite_error" | "network_error";
-    const configs: Record<ErrorState, { icon: React.ReactNode; title: string; description: string; retry: boolean }> = {
+    const configs: Record<
+      ErrorState,
+      { icon: React.ReactNode; title: string; description: string; retry: boolean }
+    > = {
       invite_invalid: {
         icon: <AlertTriangle className="h-10 w-10 text-amber-500" />,
         title: "Invalid Interview Link",
@@ -392,8 +395,7 @@ export default function InterviewPage() {
       invite_error: {
         icon: <AlertTriangle className="h-10 w-10 text-amber-500" />,
         title: "Interview Unavailable",
-        description:
-          "We couldn't load your interview. Please try again or contact support.",
+        description: "We couldn't load your interview. Please try again or contact support.",
         retry: true
       },
       network_error: {

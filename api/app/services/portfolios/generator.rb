@@ -24,13 +24,13 @@ module Portfolios
       portfolio.update!(generation_status: "generating")
 
       if @session.transcript_turns.where(speaker: "candidate").none?
-        non_overridden = portfolio.portfolio_skills.left_joins(:assessor_override)
-                                .where(assessor_overrides: { id: nil })
+        non_overridden = portfolio.portfolio_skills.where.missing(:assessor_override)
+
         overridden_count = portfolio.portfolio_skills.count - non_overridden.count
         non_overridden.destroy_all
 
         if overridden_count.positive?
-          portfolio.portfolio_skills.where.not(id: nil).update_all(ai_presence: "stale")
+          portfolio.portfolio_skills.where.not(id: nil).update_all(ai_presence: "stale") # rubocop:disable Rails/SkipsModelValidations
           portfolio.portfolio_skills.stale.find_each do |skill|
             PortfolioSkillGenerationEvent.create!(
               portfolio_skill_id: skill.id,
@@ -43,7 +43,9 @@ module Portfolios
         end
 
         portfolio.update!(generation_status: "complete", generated_at: Time.current)
-        Rails.logger.info("[N10] Skipping generation for session #{@session.id} — no candidate turns (#{overridden_count} overrides preserved as stale)")
+        msg = "[N10] Skipping generation for session #{@session.id} — " \
+              "no candidate turns (#{overridden_count} overrides preserved as stale)"
+        Rails.logger.info(msg)
         return portfolio
       end
 
@@ -183,7 +185,7 @@ module Portfolios
       configured = validator.call(data["configured_skills"], is_discovered: false)
       discovered = validator.call(data["discovered_skills"], is_discovered: true)
       all_skills = configured + discovered
-      ai_labels = all_skills.map { |s| s.skill_label }.to_set
+      ai_labels = all_skills.to_set(&:skill_label)
 
       ActiveRecord::Base.transaction do
         all_skills.each { |skill| upsert_skill(portfolio, skill) }
@@ -219,17 +221,15 @@ module Portfolios
               created_at: Time.current
             )
           end
-        else
-          if skill.assessor_override.present? && skill.ai_presence != "stale"
-            skill.update!(ai_presence: "stale")
-            PortfolioSkillGenerationEvent.create!(
-              portfolio_skill_id: skill.id,
-              tenant_id: skill.tenant_id,
-              event_type: "stale_marked",
-              reason: "AI no longer returns this skill label",
-              created_at: Time.current
-            )
-          end
+        elsif skill.assessor_override.present? && skill.ai_presence != "stale"
+          skill.update!(ai_presence: "stale")
+          PortfolioSkillGenerationEvent.create!(
+            portfolio_skill_id: skill.id,
+            tenant_id: skill.tenant_id,
+            event_type: "stale_marked",
+            reason: "AI no longer returns this skill label",
+            created_at: Time.current
+          )
         end
       end
     end

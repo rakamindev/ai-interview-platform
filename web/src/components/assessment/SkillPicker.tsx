@@ -1,16 +1,10 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
 import { m } from "@/paraglide/messages.js";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
-
 
 interface SkillPickerProps {
   open: boolean;
@@ -29,13 +23,14 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     skillTaxonomiesApi
       .list()
       .then((res) => setSkills(res.data.skill_taxonomies ?? []))
-      .catch((err) => { console.error("skill_taxonomies fetch failed:", err); setSkills([]); })
+      .catch((err) => {
+        console.error("skill_taxonomies fetch failed:", err);
+        setSkills([]);
+      })
       .finally(() => setLoading(false));
   }, [open]);
 
-  const filtered = skills.filter((s) =>
-    s.skill_label.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = skills.filter((s) => s.skill_label.toLowerCase().includes(query.toLowerCase()));
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({
@@ -48,7 +43,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
       l2_anchor: s.l2_anchor,
       l3_anchor: s.l3_anchor,
       l4_anchor: s.l4_anchor,
-      l5_anchor: s.l5_anchor,
+      l5_anchor: s.l5_anchor
     });
     onOpenChange(false);
     setQuery("");
@@ -78,7 +73,9 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">{m.skill_picker_no_results()}</p>
+            <p className="text-sm text-muted-foreground text-center py-6">
+              {m.skill_picker_no_results()}
+            </p>
           ) : (
             filtered.map((s) => (
               <button

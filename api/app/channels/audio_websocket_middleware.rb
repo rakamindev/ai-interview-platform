@@ -4,7 +4,7 @@ require "faye/websocket"
 
 # Rack middleware that proxies a WebSocket at /ws/sessions/:id/audio between the browser (16kHz PCM)
 # and Gemini Live (24kHz PCM). Audio is buffered in a ring buffer for reconnection replay.
-class AudioWebSocketMiddleware
+class AudioWebSocketMiddleware # rubocop:disable Metrics/ClassLength
   AUDIO_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/audio\z}
 
   MAX_RECONNECT_ATTEMPTS = 3
@@ -858,4 +858,4 @@ class AudioWebSocketMiddleware
       @turn_counter += 1
     end
   end
-end
+end # rubocop:enable Metrics/ClassLength

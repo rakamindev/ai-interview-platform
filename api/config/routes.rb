@@ -7,7 +7,7 @@ Rails.application.routes.draw do
 
   get "/health/live", to: HEALTH_LIVE
 
-  get "/health/ready", to: proc { |env|
+  get "/health/ready", to: proc { |_env|
     checks = {}
     begin
       ActiveRecord::Base.connection.execute("SELECT 1")

@@ -97,11 +97,7 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
                   {scope && <span className="ml-1 text-xs text-muted-foreground">({scope})</span>}
                 </td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  <AnchorRail
-                    compact
-                    skillLabel=""
-                    requiredLevel={c.expected_level}
-                  />
+                  <AnchorRail compact skillLabel="" requiredLevel={c.expected_level} />
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
@@ -111,7 +107,9 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
                         skillLabel=""
                         requiredLevel={c.expected_level}
                         candidateLevel={c.candidate_level}
-                        confidence={(c.confidence?.toLowerCase() as "high" | "medium" | "low") ?? "high"}
+                        confidence={
+                          (c.confidence?.toLowerCase() as "high" | "medium" | "low") ?? "high"
+                        }
                         result={c.result}
                         isOverride={c.is_override}
                       />

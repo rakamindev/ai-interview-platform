@@ -227,7 +227,7 @@ export default function AssessmentInvitePage() {
         title={assessment?.name ?? "—"}
         backTo="/assessments"
         backLabel={m.common_back_to_assessments()}
-        description={        `${assessment?.time_limit_min ?? 0}${m.assessment_minutes_suffix()} · ${assessment?.skills?.length ?? 0} skills`}
+        description={`${assessment?.time_limit_min ?? 0}${m.assessment_minutes_suffix()} · ${assessment?.skills?.length ?? 0} skills`}
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
@@ -274,11 +274,9 @@ export default function AssessmentInvitePage() {
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="pt-4 space-y-2">
               <p className="text-sm font-medium">
-                {newSession.candidate_name ? (
-                  m.assessment_link_ready_named({ name: newSession.candidate_name })
-                ) : (
-                  m.assessment_link_ready()
-                )}
+                {newSession.candidate_name
+                  ? m.assessment_link_ready_named({ name: newSession.candidate_name })
+                  : m.assessment_link_ready()}
               </p>
               <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-background">
                 <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
@@ -358,7 +356,9 @@ export default function AssessmentInvitePage() {
                   >
                     <span>•</span>
                     <span>{s.skill_label}</span>
-                    <span className="text-xs">({m.assessment_expected()} {LEVEL_LABELS[s.expected_level]})</span>
+                    <span className="text-xs">
+                      ({m.assessment_expected()} {LEVEL_LABELS[s.expected_level]})
+                    </span>
                   </li>
                 ))}
               </ul>

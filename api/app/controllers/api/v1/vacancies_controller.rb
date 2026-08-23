@@ -54,19 +54,21 @@ module Api
       private
 
       def set_vacancy
-        @vacancy = Vacancy.find(params[:id])
+        @vacancy = Vacancy.find(params.expect(:id))
       rescue ActiveRecord::RecordNotFound
         json_error("Vacancy not found", :not_found, code: "vacancy_not_found")
       end
 
       def vacancy_params
-        params.require(:vacancy).permit(
-          :role_title,
-          :culture_dimensions,
-          :competency_expectations,
-          vacancy_skills_attributes: %i[
-            id skill_id skill_label expected_level _destroy
-          ]
+        params.expect(
+          vacancy: [:role_title,
+                    :culture_dimensions,
+                    :competency_expectations,
+                    {
+                      vacancy_skills_attributes: %i[
+                        id skill_id skill_label expected_level _destroy
+                      ]
+                    }]
         )
       end
 

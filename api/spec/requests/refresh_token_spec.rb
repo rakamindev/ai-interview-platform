@@ -40,21 +40,21 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
   def refresh_with_csrf(csrf: csrf_token_value, rt: refresh_token_value)
     cookie_header = "refresh_token=#{rt}; csrf_secret=#{csrf}"
     post "/api/v1/auth/refresh",
-      headers: {
-        "X-CSRF-Token" => csrf || "",
-        "Cookie" => cookie_header,
-        "Referer" => "http://test-corp.localhost/"
-      }
+         headers: {
+           "X-CSRF-Token" => csrf || "",
+           "Cookie" => cookie_header,
+           "Referer" => "http://test-corp.localhost/"
+         }
     response
   end
 
   def logout_with_csrf(csrf: csrf_token_value, rt: refresh_token_value)
     cookie_header = "refresh_token=#{rt}; csrf_secret=#{csrf}"
     delete "/api/v1/auth/logout",
-      headers: {
-        "X-CSRF-Token" => csrf || "",
-        "Cookie" => cookie_header
-      }
+           headers: {
+             "X-CSRF-Token" => csrf || "",
+             "Cookie" => cookie_header
+           }
     response
   end
 
@@ -139,7 +139,7 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     it "rejects /refresh without X-CSRF-Token header" do
       cookie_header = "refresh_token=#{refresh_token_value}; csrf_secret=#{csrf_token_value}"
       post "/api/v1/auth/refresh",
-        headers: { "Cookie" => cookie_header }
+           headers: { "Cookie" => cookie_header }
 
       expect(response).to have_http_status(:unauthorized)
       expect(response.parsed_body.dig("errors", 0, "message")).to eq("CSRF token mismatch")
@@ -149,10 +149,10 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
       # Send the real cookie value but a forged header — they won't match
       cookie_header = "refresh_token=#{refresh_token_value}; csrf_secret=#{csrf_token_value}"
       post "/api/v1/auth/refresh",
-        headers: {
-          "X-CSRF-Token" => "forged_value",
-          "Cookie" => cookie_header
-        }
+           headers: {
+             "X-CSRF-Token" => "forged_value",
+             "Cookie" => cookie_header
+           }
       expect(response).to have_http_status(:unauthorized)
       expect(response.parsed_body.dig("errors", 0, "message")).to eq("CSRF token mismatch")
     end
@@ -160,7 +160,7 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     it "rejects /logout without X-CSRF-Token header" do
       cookie_header = "refresh_token=#{refresh_token_value}; csrf_secret=#{csrf_token_value}"
       delete "/api/v1/auth/logout",
-        headers: { "Cookie" => cookie_header }
+             headers: { "Cookie" => cookie_header }
 
       expect(response).to have_http_status(:unauthorized)
     end
@@ -258,10 +258,10 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
 
     it "rejects /refresh when no refresh_token cookie is present" do
       post "/api/v1/auth/refresh",
-        headers: {
-          "X-CSRF-Token" => csrf_token_value,
-          "Cookie" => "csrf_secret=#{csrf_token_value}"
-        }
+           headers: {
+             "X-CSRF-Token" => csrf_token_value,
+             "Cookie" => "csrf_secret=#{csrf_token_value}"
+           }
       expect(response).to have_http_status(:unauthorized)
       expect(response.parsed_body.dig("errors", 0, "detail")).to eq("missing_refresh_token")
     end
@@ -269,10 +269,10 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     it "rejects /refresh with a token hash that doesn't exist" do
       cookie_header = "refresh_token=deadbeef; csrf_secret=#{csrf_token_value}"
       post "/api/v1/auth/refresh",
-        headers: {
-          "X-CSRF-Token" => csrf_token_value,
-          "Cookie" => cookie_header
-        }
+           headers: {
+             "X-CSRF-Token" => csrf_token_value,
+             "Cookie" => cookie_header
+           }
       expect(response).to have_http_status(:unauthorized)
       expect(response.parsed_body.dig("errors", 0, "detail")).to eq("invalid_refresh_token")
     end
@@ -284,20 +284,20 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
 
       cookie_header = "refresh_token=#{rt}; csrf_secret=#{csrf_token_value}"
       post "/api/v1/auth/refresh",
-        headers: {
-          "X-CSRF-Token" => csrf_token_value,
-          "Cookie" => cookie_header
-        }
+           headers: {
+             "X-CSRF-Token" => csrf_token_value,
+             "Cookie" => cookie_header
+           }
       expect(response).to have_http_status(:unauthorized)
       expect(response.parsed_body.dig("errors", 0, "detail")).to eq("invalid_refresh_token")
     end
 
     it "rejects /logout when no refresh_token cookie is present" do
       delete "/api/v1/auth/logout",
-        headers: {
-          "X-CSRF-Token" => csrf_token_value,
-          "Cookie" => "csrf_secret=#{csrf_token_value}"
-        }
+             headers: {
+               "X-CSRF-Token" => csrf_token_value,
+               "Cookie" => "csrf_secret=#{csrf_token_value}"
+             }
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["message"]).to eq("Logged out successfully")
     end
@@ -311,7 +311,7 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     it "allows a used token within the 5-second grace period" do
       rt = refresh_token_value
       csrf = csrf_token_value
-      rt_hash = RefreshToken.hash_token(rt)
+      RefreshToken.hash_token(rt)
 
       Timecop.freeze(Time.current) do
         # Use the token
@@ -330,7 +330,7 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     it "rejects a used token past the 5-second grace period with family revocation" do
       rt = refresh_token_value
       csrf = csrf_token_value
-      rt_hash = RefreshToken.hash_token(rt)
+      RefreshToken.hash_token(rt)
 
       # Create an active sibling token before replaying
       sibling_rt = SecureRandom.hex(32)

@@ -28,9 +28,10 @@ RSpec.describe CoverageAnalyzerWorker do
         analyzer = instance_double(Coverage::Analyzer)
         allow(Coverage::Analyzer).to receive(:new).and_return(analyzer)
         allow(analyzer).to receive(:call).and_return({
-          skill_updates: [{ coverage_map_id: map.id, new_state: "partial", new_probe_count: 2, last_signal: "discussed" }],
-          discovered_skills: []
-        })
+                                                       skill_updates: [{ coverage_map_id: map.id, new_state: "partial", new_probe_count: 2,
+                                                                         last_signal: "discussed" }],
+                                                       discovered_skills: []
+                                                     })
 
         described_class.new.perform(session.id, 1)
 
@@ -44,9 +45,9 @@ RSpec.describe CoverageAnalyzerWorker do
         analyzer = instance_double(Coverage::Analyzer)
         allow(Coverage::Analyzer).to receive(:new).and_return(analyzer)
         allow(analyzer).to receive(:call).and_return({
-          skill_updates: [],
-          discovered_skills: [{ label: "Docker", first_mention: "Candidate mentioned Docker" }]
-        })
+                                                       skill_updates: [],
+                                                       discovered_skills: [{ label: "Docker", first_mention: "Candidate mentioned Docker" }]
+                                                     })
 
         expect do
           described_class.new.perform(session.id, 1)
@@ -74,9 +75,10 @@ RSpec.describe CoverageAnalyzerWorker do
         analyzer = instance_double(Coverage::Analyzer)
         allow(Coverage::Analyzer).to receive(:new).and_return(analyzer)
         allow(analyzer).to receive(:call).and_return({
-          skill_updates: [{ coverage_map_id: map.id, new_state: "partial", new_probe_count: 6, last_signal: "still discussing" }],
-          discovered_skills: []
-        })
+                                                       skill_updates: [{ coverage_map_id: map.id, new_state: "partial", new_probe_count: 6,
+                                                                         last_signal: "still discussing" }],
+                                                       discovered_skills: []
+                                                     })
 
         described_class.new.perform(session.id, 1)
 

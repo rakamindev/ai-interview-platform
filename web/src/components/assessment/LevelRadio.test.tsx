@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import LevelRadio from "./LevelRadio";
 
 vi.mock("@/utils/constants", () => ({
-  LEVEL_LABELS: { 1: "Novice", 2: "Beginner", 3: "Intermediate", 4: "Advanced", 5: "Expert" },
+  LEVEL_LABELS: { 1: "Novice", 2: "Beginner", 3: "Intermediate", 4: "Advanced", 5: "Expert" }
 }));
 
 describe("LevelRadio", () => {
@@ -22,9 +22,7 @@ describe("LevelRadio", () => {
   });
 
   it("uses idPrefix to scope ids", () => {
-    const { container } = render(
-      <LevelRadio value={1} onChange={vi.fn()} idPrefix="my-skill" />
-    );
+    const { container } = render(<LevelRadio value={1} onChange={vi.fn()} idPrefix="my-skill" />);
 
     expect(container.querySelector("#level-my-skill-1")).toBeTruthy();
     expect(container.querySelector("#level-my-skill-3")).toBeTruthy();

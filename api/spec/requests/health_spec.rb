@@ -21,7 +21,7 @@ RSpec.describe "Health check", type: :request do
 
   describe "GET /health/ready" do
     it "returns ok with db and redis checks" do
-      allow(ActiveRecord::Base).to receive_message_chain(:connection, :execute)
+      allow(ActiveRecord::Base).to receive_message_chain(:connection, :execute) # rubocop:disable RSpec/MessageChain
       allow_any_instance_of(Redis).to receive(:ping).and_return("PONG")
 
       get "/health/ready"
@@ -33,7 +33,7 @@ RSpec.describe "Health check", type: :request do
     end
 
     it "returns degraded when db is unreachable" do
-      allow(ActiveRecord::Base).to receive_message_chain(:connection, :execute).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(ActiveRecord::Base).to receive_message_chain(:connection, :execute).and_raise(ActiveRecord::ConnectionNotEstablished) # rubocop:disable RSpec/MessageChain
       allow_any_instance_of(Redis).to receive(:ping).and_return("PONG")
 
       get "/health/ready"

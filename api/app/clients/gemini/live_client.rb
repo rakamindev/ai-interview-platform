@@ -27,7 +27,7 @@ module Gemini
 
     attr_reader :resumption_token, :connected, :connected_at, :inactivity_close
 
-    def initialize(
+    def initialize( # rubocop:disable Metrics/ParameterLists
       system_prompt:,
       api_key: nil,
       model: nil,
@@ -44,7 +44,7 @@ module Gemini
       on_error: nil,
       on_ready: nil,
       on_resumption_token_update: nil
-    )
+    ) # rubocop:enable Metrics/ParameterLists
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch("GEMINI_API_KEY")
       @model = model || ENV.fetch("GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview")
@@ -403,7 +403,7 @@ module Gemini
       @on_input_transcription_partial&.call(@input_text_buffer)
     end
 
-    ANOMALOUS_TRANSCRIPTION_PATTERN = /\[\s*\d+m\d+s\d+ms\s*-\s*\d+m\d+s\d+ms\s*\]/
+    ANOMALOUS_TRANSCRIPTION_PATTERN = /\[\s*\d+m\d+s\d+ms\s*-\s*\d+m\d+s\d+ms\s*\]/ # rubocop:disable Lint/UselessConstantScoping
 
     def handle_output_transcription(data)
       output_tx = data.dig("serverContent", "outputTranscription")

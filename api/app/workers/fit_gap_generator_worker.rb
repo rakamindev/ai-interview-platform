@@ -5,7 +5,7 @@ class FitGapGeneratorWorker
 
   sidekiq_options queue: :default, retry: 2
 
-  def perform(portfolio_id, vacancy_id, opts = {})
+  def perform(portfolio_id, vacancy_id, _opts = {})
     Rails.logger.info("[N13] correlation_id=#{Current.correlation_id { nil }} portfolio=#{portfolio_id} vacancy=#{vacancy_id}")
     lock_key = Zlib.crc32("fitgap:#{portfolio_id}:#{vacancy_id}")
 

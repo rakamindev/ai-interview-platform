@@ -10,7 +10,7 @@ module Api
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
-        assessment = Assessment.find(params[:assessment_id])
+        assessment = Assessment.find(params.expect(:assessment_id))
         sessions = assessment.sessions.order(created_at: :desc)
 
         json_response(sessions: sessions.map { |s| SessionSerializer.render(s) })
@@ -33,7 +33,7 @@ module Api
 
       # POST /api/v1/assessments/:assessment_id/sessions
       def create
-        assessment = Assessment.find(params[:assessment_id])
+        assessment = Assessment.find(params.expect(:assessment_id))
 
         session = assessment.sessions.new(
           candidate_id: params.dig(:session, :candidate_id),
@@ -58,16 +58,14 @@ module Api
 
       # POST /api/v1/assessments/:assessment_id/sessions/bulk_create
       def bulk_create
-        assessment = Assessment.find(params[:assessment_id])
+        assessment = Assessment.find(params.expect(:assessment_id))
         candidates = params.require(:candidates)
 
         unless candidates.is_a?(Array) && candidates.present?
           return json_error("candidates must be a non-empty array", :unprocessable_entity, code: "candidates_required")
         end
 
-        if candidates.size > 100
-          return json_error("Maximum 100 candidates per request", :unprocessable_entity, code: "candidates_too_many")
-        end
+        return json_error("Maximum 100 candidates per request", :unprocessable_entity, code: "candidates_too_many") if candidates.size > 100
 
         results = Sessions::BulkInviter.new(
           assessment: assessment,
@@ -104,7 +102,9 @@ module Api
 
         reason = params.dig(:session, :reason) || "manual_assessor"
 
-        return json_error("Invalid end reason", :unprocessable_entity, code: "invalid_end_reason") unless Session::END_REASONS.include?(reason)
+        unless Session::END_REASONS.include?(reason)
+          return json_error("Invalid end reason", :unprocessable_entity, code: "invalid_end_reason")
+        end
 
         result = Sessions::EndHandler.new(@session).call(reason: reason)
 
@@ -193,7 +193,7 @@ module Api
       private
 
       def set_session
-        @session = Session.find(params[:id])
+        @session = Session.find(params.expect(:id))
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found, code: "not_found")
       end

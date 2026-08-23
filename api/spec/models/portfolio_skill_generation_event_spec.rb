@@ -74,13 +74,13 @@ RSpec.describe PortfolioSkillGenerationEvent do
         reason: "original reason"
       )
 
-      expect {
+      expect do
         described_class.connection.execute(<<~SQL.squish)
           UPDATE ai_interview.portfolio_skill_generation_events
           SET reason = 'hacked'
           WHERE id = #{event.id}
         SQL
-      }.to raise_error(ActiveRecord::StatementInvalid, /append-only/)
+      end.to raise_error(ActiveRecord::StatementInvalid, /append-only/)
     end
 
     it "prevents DELETE via Postgres trigger" do
@@ -91,12 +91,12 @@ RSpec.describe PortfolioSkillGenerationEvent do
         reason: "to be deleted"
       )
 
-      expect {
+      expect do
         described_class.connection.execute(<<~SQL.squish)
           DELETE FROM ai_interview.portfolio_skill_generation_events
           WHERE id = #{event.id}
         SQL
-      }.to raise_error(ActiveRecord::StatementInvalid, /append-only/)
+      end.to raise_error(ActiveRecord::StatementInvalid, /append-only/)
     end
   end
 end

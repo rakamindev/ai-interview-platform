@@ -58,17 +58,13 @@ describe("AnchorRail — compact mode", () => {
   });
 
   it("still renders the rail in compact mode", () => {
-    const { container } = render(
-      <AnchorRail skillLabel="React" requiredLevel={3} compact />
-    );
+    const { container } = render(<AnchorRail skillLabel="React" requiredLevel={3} compact />);
     const rail = container.querySelector('[role="img"]');
     expect(rail).toBeInTheDocument();
   });
 
   it("renders required mark in compact mode", () => {
-    const { container } = render(
-      <AnchorRail skillLabel="React" requiredLevel={3} compact />
-    );
+    const { container } = render(<AnchorRail skillLabel="React" requiredLevel={3} compact />);
     const rail = container.querySelector('[role="img"]');
     // Required mark is a triangle (border-based CSS shape)
     const marks = rail!.querySelectorAll("span");
@@ -140,7 +136,9 @@ describe("AnchorRail — compact mode", () => {
     );
     const rail = container.querySelector('[role="img"]');
     // Should contain an override indicator element
-    const overrideIndicator = rail!.querySelector('[aria-label*="override"], [title*="override"], [data-override]');
+    const overrideIndicator = rail!.querySelector(
+      '[aria-label*="override"], [title*="override"], [data-override]'
+    );
     expect(overrideIndicator).toBeInTheDocument();
   });
 

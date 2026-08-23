@@ -256,9 +256,7 @@ export default function FitGapReportPage() {
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
-            <p className="text-sm text-muted-foreground">
-              {m.fitgap_generating_slow()}
-            </p>
+            <p className="text-sm text-muted-foreground">{m.fitgap_generating_slow()}</p>
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>
               {regenerating ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

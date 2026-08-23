@@ -16,11 +16,15 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
   2: m.custom_skill_anchor_placeholder_l2(),
   3: m.custom_skill_anchor_placeholder_l3(),
   4: m.custom_skill_anchor_placeholder_l4(),
-  5: m.custom_skill_anchor_placeholder_l5(),
+  5: m.custom_skill_anchor_placeholder_l5()
 };
 
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
-  const { register, setValue, formState: { errors } } = form;
+  const {
+    register,
+    setValue,
+    formState: { errors }
+  } = form;
   const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
 
   return (
@@ -49,19 +53,22 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
       </div>
 
       <div className="space-y-2">
-        {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map((key, i) => (
-          <div key={key} className="space-y-1">
-            <Label htmlFor={`skills.${index}.${key}`}>
-              {m.custom_skill_anchor({ i: String(i + 1) })} <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id={`skills.${index}.${key}`}
-              placeholder={LEVEL_PLACEHOLDERS[i + 1]}
-              rows={2}
-              {...register(`skills.${index}.${key}`, { required: true })}
-            />
-          </div>
-        ))}
+        {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map(
+          (key, i) => (
+            <div key={key} className="space-y-1">
+              <Label htmlFor={`skills.${index}.${key}`}>
+                {m.custom_skill_anchor({ i: String(i + 1) })}{" "}
+                <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id={`skills.${index}.${key}`}
+                placeholder={LEVEL_PLACEHOLDERS[i + 1]}
+                rows={2}
+                {...register(`skills.${index}.${key}`, { required: true })}
+              />
+            </div>
+          )
+        )}
       </div>
 
       <div className="space-y-1.5">

@@ -102,9 +102,7 @@ RSpec.describe Coverage::Analyzer do
       result = analyzer.call
 
       update = result[:skill_updates].find { |u| u[:coverage_map_id] == map.id }
-      if update
-        expect(update[:new_state]).not_to eq("covered")
-      end
+      expect(update[:new_state]).not_to eq("covered") if update
     end
   end
 end

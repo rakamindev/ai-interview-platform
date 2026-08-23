@@ -28,7 +28,10 @@ module Api
 
         return json_error("No portfolio found for this session", :not_found, code: "portfolio_not_found") if portfolio.nil?
 
-        return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity, code: "portfolio_regenerate_invalid_status") unless portfolio.failed?
+        unless portfolio.failed?
+          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity,
+                            code: "portfolio_regenerate_invalid_status")
+        end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
         PortfolioGeneratorWorker.perform_async(@session.id)
@@ -43,7 +46,8 @@ module Api
       def export
         format = params.fetch(:format, "json")
 
-        return json_error("Format must be 'pdf' or 'json'", :unprocessable_entity, code: "format_invalid") unless %w[pdf json].include?(format)
+        return json_error("Format must be 'pdf' or 'json'", :unprocessable_entity, code: "format_invalid") unless %w[pdf
+                                                                                                                     json].include?(format)
 
         unless @portfolio.complete?
           return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})",
@@ -72,7 +76,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.find(params.expect(:id))
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity, code: "vacancy_id_required") if vacancy_id.blank?
@@ -81,7 +85,8 @@ module Api
         return json_error("Vacancy not found", :not_found, code: "vacancy_not_found") unless vacancy
 
         unless portfolio.complete?
-          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity, code: "portfolio_not_ready")
+          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity,
+                            code: "portfolio_not_ready")
         end
 
         FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
@@ -94,7 +99,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.find(params.expect(:id))
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity, code: "vacancy_id_required") if vacancy_id.blank?
@@ -103,7 +108,8 @@ module Api
         return json_error("Vacancy not found", :not_found, code: "vacancy_not_found") unless vacancy
 
         unless portfolio.complete?
-          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity, code: "portfolio_not_ready")
+          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity,
+                            code: "portfolio_not_ready")
         end
 
         # Return cached report if it exists and portfolio has no new overrides
@@ -122,7 +128,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.find(params.expect(:id))
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -141,7 +147,7 @@ module Api
       private
 
       def set_session
-        @session = Session.find(params[:id])
+        @session = Session.find(params.expect(:id))
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found, code: "not_found")
       end
@@ -152,7 +158,7 @@ module Api
         @portfolio = if @session
                        @session.portfolio
                      else
-                       Portfolio.find(params[:id])
+                       Portfolio.find(params.expect(:id))
                      end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found, code: "portfolio_not_found")

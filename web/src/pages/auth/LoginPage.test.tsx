@@ -40,7 +40,11 @@ describe("LoginPage", () => {
     const user = userEvent.setup();
     vi.mocked(authApi.login).mockRejectedValue({
       response: {
-        data: { errors: [{ status: 422, message: "Unable to determine organization", code: "tenant_unresolved" }] }
+        data: {
+          errors: [
+            { status: 422, message: "Unable to determine organization", code: "tenant_unresolved" }
+          ]
+        }
       }
     });
 
@@ -59,7 +63,11 @@ describe("LoginPage", () => {
     const user = userEvent.setup();
     vi.mocked(authApi.login).mockRejectedValue({
       response: {
-        data: { errors: [{ status: 401, message: "Invalid email or password", code: "invalid_credentials" }] }
+        data: {
+          errors: [
+            { status: 401, message: "Invalid email or password", code: "invalid_credentials" }
+          ]
+        }
       }
     });
 

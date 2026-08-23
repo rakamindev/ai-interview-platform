@@ -166,7 +166,9 @@ describe("ComparisonTable — anchor rail integration", () => {
   });
 
   it("renders a rail in the Candidate column with both marks", () => {
-    const comparisons = [makeComparison({ expected_level: 3, candidate_level: 4, confidence: "high" })];
+    const comparisons = [
+      makeComparison({ expected_level: 3, candidate_level: 4, confidence: "high" })
+    ];
     const { container } = render(<ComparisonTable comparisons={comparisons} />);
     const cells = screen.getAllByRole("cell");
     const candidateCell = cells[2];

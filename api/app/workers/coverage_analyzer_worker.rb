@@ -5,7 +5,7 @@ class CoverageAnalyzerWorker
 
   sidekiq_options queue: :coverage, retry: 0 # non-critical — no retry
 
-  def perform(session_id, turn_number, opts = {})
+  def perform(session_id, turn_number, _opts = {})
     session = Session.find(session_id)
 
     return if session.ended?

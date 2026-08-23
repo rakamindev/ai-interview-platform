@@ -18,7 +18,7 @@ class CreatePortfolioSkillGenerationEvents < ActiveRecord::Migration[8.0]
       t.bigint   :tenant_id,          null: false
       t.enum     :event_type,         null: false, enum_type: "ai_interview.generation_event_type"
       t.text     :reason
-      t.datetime :created_at,         precision: 6, null: false, default: -> { "NOW()" }
+      t.datetime :created_at, precision: 6, null: false, default: -> { "NOW()" }
     end
 
     add_index :portfolio_skill_generation_events, :tenant_id

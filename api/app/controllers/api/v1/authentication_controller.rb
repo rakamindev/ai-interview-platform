@@ -11,13 +11,19 @@ module Api
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
-        return json_error("Invalid email or password", :unauthorized, code: "invalid_credentials") unless user&.authenticate(params[:password])
+        unless user&.authenticate(params[:password])
+          return json_error("Invalid email or password", :unauthorized,
+                            code: "invalid_credentials")
+        end
 
         # API-FIX-01: User::ROLES allows "admin" and "user" — both may log in.
         # Per-endpoint authorization (authorize_auth_token!) enforces the actual
         # role gating; login itself only verifies credentials.
         scheme = resolve_scheme
-        return json_error("Unable to determine organization. Please access via your organization's URL.", :unprocessable_entity, code: "tenant_unresolved") unless scheme.present?
+        if scheme.blank?
+          return json_error("Unable to determine organization. Please access via your organization's URL.", :unprocessable_entity,
+                            code: "tenant_unresolved")
+        end
 
         json_response(issue_session_for(user, scheme: scheme))
       end
@@ -26,10 +32,16 @@ module Api
       def refresh
         verify_csrf!
         refresh_token_value = extract_refresh_token
-        return json_error("Missing refresh token", :unauthorized, details: "missing_refresh_token", code: "refresh_token_missing") unless refresh_token_value
+        unless refresh_token_value
+          return json_error("Missing refresh token", :unauthorized, details: "missing_refresh_token",
+                                                                    code: "refresh_token_missing")
+        end
 
         token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
-        return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token", code: "refresh_token_invalid") unless token_record
+        unless token_record
+          return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token",
+                                                                    code: "refresh_token_invalid")
+        end
 
         if token_record.used_at.present? && token_record.grace_period_expired?
           # Same rotated-away token replayed after the grace window: treat as theft, kill the whole session family.
@@ -40,7 +52,10 @@ module Api
           return json_error("Refresh token reuse detected", :unauthorized, details: "refresh_token_reused", code: "refresh_token_reuse")
         end
 
-        return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token", code: "refresh_token_invalid") unless token_record.valid_token?
+        unless token_record.valid_token?
+          return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token",
+                                                                    code: "refresh_token_invalid")
+        end
 
         new_token = issue_refresh_token(token_record.user_id)
         store_refresh_cookie(new_token)
@@ -50,7 +65,7 @@ module Api
 
         user = User.find(token_record.user_id)
         scheme = resolve_scheme
-        return json_error("Unable to determine organization", :unprocessable_entity, code: "tenant_unresolved") unless scheme.present?
+        return json_error("Unable to determine organization", :unprocessable_entity, code: "tenant_unresolved") if scheme.blank?
 
         new_access_token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
 

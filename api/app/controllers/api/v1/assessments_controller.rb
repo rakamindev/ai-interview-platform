@@ -64,22 +64,24 @@ module Api
       private
 
       def set_assessment
-        @assessment = Assessment.find(params[:id])
+        @assessment = Assessment.find(params.expect(:id))
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found, code: "assessment_not_found")
       end
 
       def assessment_params
-        params.require(:assessment).permit(
-          :name,
-          :time_limit_min,
-          :language,
-          assessment_skills_attributes: %i[
-            id skill_id skill_label is_custom
-            scope_include scope_exclude
-            l1_anchor l2_anchor l3_anchor l4_anchor l5_anchor
-            expected_level display_order _destroy
-          ]
+        params.expect(
+          assessment: [:name,
+                       :time_limit_min,
+                       :language,
+                       {
+                         assessment_skills_attributes: %i[
+                           id skill_id skill_label is_custom
+                           scope_include scope_exclude
+                           l1_anchor l2_anchor l3_anchor l4_anchor l5_anchor
+                           expected_level display_order _destroy
+                         ]
+                       }]
         )
       end
 

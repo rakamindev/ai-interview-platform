@@ -65,7 +65,7 @@ module Rack
     ActiveSupport::Notifications.subscribe("rack.attack") do |_name, _start, _finish, _id, payload|
       req = payload[:request]
       Rails.logger.warn(
-        "[RackAttack] throttle_hit key=#{req.env["rack.attack.matched"]} " \
+        "[RackAttack] throttle_hit key=#{req.env['rack.attack.matched']} " \
         "ip=#{req.ip} path=#{req.path} method=#{req.request_method}"
       )
     end

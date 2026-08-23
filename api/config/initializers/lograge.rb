@@ -6,7 +6,11 @@ Rails.application.configure do
 
   config.lograge.custom_options = lambda do |event|
     # Pull correlation ID from Current if set, fall back to event payload
-    correlation_id = Current.correlation_id rescue nil
+    correlation_id = begin
+      Current.correlation_id
+    rescue StandardError
+      nil
+    end
 
     {
       time: Time.now.utc.iso8601(3),

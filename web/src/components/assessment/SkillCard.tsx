@@ -19,8 +19,9 @@ interface SkillCardProps {
 
 export default function SkillCard({ index, id, form, onRemove }: SkillCardProps) {
   const [anchorsOpen, setAnchorsOpen] = useState(false);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id
+  });
 
   const skill = useWatch({ control: form.control, name: `skills.${index}` });
   const isCustom = skill?.is_custom;
@@ -28,17 +29,14 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        "border rounded-lg bg-card",
-        isDragging && "opacity-50 shadow-lg"
-      )}
+      className={cn("border rounded-lg bg-card", isDragging && "opacity-50 shadow-lg")}
     >
       {/* Card header */}
       <div className="flex items-center gap-2 px-3 py-2.5">
@@ -82,7 +80,11 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
               onClick={() => setAnchorsOpen((o) => !o)}
               className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {anchorsOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
               {anchorsOpen ? m.skill_card_hide_anchors() : m.skill_card_show_anchors()}
             </button>
 

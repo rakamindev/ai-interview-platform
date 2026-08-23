@@ -69,10 +69,10 @@ RSpec.describe "Authentication", type: :request do
       # Refresh WITHOUT a referer — should fail with 422
       cookie_header = "refresh_token=#{rt}; csrf_secret=#{csrf}"
       post "/api/v1/auth/refresh",
-        headers: {
-          "X-CSRF-Token" => csrf,
-          "Cookie" => cookie_header
-        }
+           headers: {
+             "X-CSRF-Token" => csrf,
+             "Cookie" => cookie_header
+           }
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body["errors"][0]["code"]).to eq("tenant_unresolved")

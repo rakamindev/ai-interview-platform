@@ -151,7 +151,8 @@ export default function AssessmentNewPage() {
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>
-                   {min}{m.assessment_minutes_suffix()}
+                  {min}
+                  {m.assessment_minutes_suffix()}
                 </SelectItem>
               ))}
             </SelectContent>

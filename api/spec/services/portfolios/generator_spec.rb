@@ -371,7 +371,7 @@ RSpec.describe Portfolios::Generator do
       # Generate initial portfolio with skills (candidate turns exist from outer before)
       portfolio = generator.call
       react_skill = portfolio.portfolio_skills.find_by(skill_label: "React / Frontend Development Core")
-      node_skill = portfolio.portfolio_skills.find_by(skill_label: "Node.js / Backend Development")
+      portfolio.portfolio_skills.find_by(skill_label: "Node.js / Backend Development")
       expect(react_skill).to be_present
 
       # Create override on React skill

@@ -218,7 +218,9 @@ export default function BulkInvitePage() {
       );
     } catch {
       setError(m.bulk_invite_batch_error());
-      setRows((prev) => prev.map((r) => ({ ...r, status: "error", message: m.bulk_invite_request_error() })));
+      setRows((prev) =>
+        prev.map((r) => ({ ...r, status: "error", message: m.bulk_invite_request_error() }))
+      );
     } finally {
       setSubmitting(false);
     }

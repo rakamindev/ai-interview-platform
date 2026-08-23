@@ -11,7 +11,13 @@ interface LevelRadioProps {
   idPrefix?: string;
 }
 
-export default function LevelRadio({ value, onChange, disabled, className, idPrefix = "default" }: LevelRadioProps) {
+export default function LevelRadio({
+  value,
+  onChange,
+  disabled,
+  className,
+  idPrefix = "default"
+}: LevelRadioProps) {
   return (
     <RadioGroup
       value={String(value)}
