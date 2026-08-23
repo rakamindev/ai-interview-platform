@@ -1,37 +1,36 @@
 # frozen_string_literal: true
 
 module Portfolios
-  # N10: Generates a structured skill portfolio from the full transcript
-  # and final coverage map using Gemini Pro.
-  # Runs post-session as a background job.
   class Generator
+    class ConcurrentGenerationError < StandardError; end
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.1-pro-preview'),
+        timeout: 180
       )
     end
 
-    # Returns the Portfolio record with skills populated.
     def call
-      portfolio = @session.portfolio || @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
-      )
-
-      portfolio.update!(generation_status: 'generating')
+      portfolio = find_or_create_portfolio
+      claim_for_generation!(portfolio)
+      backfill_coverage_if_stale!
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      ActiveRecord::Base.transaction(requires_new: true) do
+        save_skills(portfolio, response)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
+    rescue ConcurrentGenerationError
+      raise
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      portfolio&.reload&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -149,32 +148,98 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      configured_skills = Array(data['configured_skills'])
 
-      # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      @session.assessment.assessment_skills.each do |assessment_skill|
+        skill_data = find_skill_data(configured_skills, assessment_skill)
+        create_configured_skill(portfolio, assessment_skill, skill_data)
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      Array(data['discovered_skills']).each { |skill_data| create_discovered_skill(portfolio, skill_data) }
+    end
+
+    def find_skill_data(configured_skills, assessment_skill)
+      if assessment_skill.skill_id.present?
+        configured_skills.find { |d| d['skill_id'] == assessment_skill.skill_id }
+      else
+        label = assessment_skill.skill_label.to_s.downcase.strip
+        configured_skills.find { |d| d['skill_label'].to_s.downcase.strip == label }
+      end
+    end
+
+    def create_configured_skill(portfolio, assessment_skill, skill_data)
+      level = skill_data && valid_level(skill_data['level'])
+
+      portfolio.portfolio_skills.create!(
+        skill_id:      assessment_skill.skill_id,
+        skill_label:   assessment_skill.skill_label,
+        is_discovered: false,
+        **rating_attributes(level, skill_data)
+      )
+    end
+
+    def create_discovered_skill(portfolio, skill_data)
+      level = valid_level(skill_data['level'])
+
+      unless level
+        Rails.logger.warn("[N10] Discarding discovered skill with no valid level: #{skill_data['skill_label'].inspect}")
+        return
+      end
+
+      portfolio.portfolio_skills.create!(
+        skill_id:      nil,
+        skill_label:   skill_data['skill_label'],
+        is_discovered: true,
+        **rating_attributes(level, skill_data)
+      )
+    end
+
+    def rating_attributes(level, skill_data)
+      return { status: 'not_assessed' } unless level
+
+      {
+        status:             'rated',
+        ai_level:           level,
+        ai_confidence:      skill_data['confidence'],
+        evidence:           Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary']
+      }
+    end
+
+    def valid_level(raw)
+      level = case raw
+              when Integer then raw
+              when Float   then raw.to_i
+              when String  then Integer(raw, exception: false)
+              end
+
+      level if level && (1..5).cover?(level)
+    end
+
+    def backfill_coverage_if_stale!
+      return if @session.coverage_maps.empty?
+      return unless @session.coverage_maps.sum(:probe_count).zero?
+      return if @session.transcript_turns.empty?
+
+      @session.transcript_turns.where(speaker: "candidate").order(:turn_number).each do |turn|
+        CoverageAnalyzerWorker.new.perform(@session.id, turn.turn_number, force: true)
+      end
+    end
+
+    def find_or_create_portfolio
+      @session.portfolio || @session.create_portfolio!(
+        candidate_id:      @session.candidate_id,
+        generation_status: 'pending'
+      )
+    end
+
+    def claim_for_generation!(portfolio)
+      portfolio.with_lock do
+        raise ConcurrentGenerationError, "Portfolio #{portfolio.id} is already generating" if portfolio.generating?
+
+        portfolio.update!(generation_status: 'generating')
       end
     end
   end

@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -75,7 +75,7 @@ module Gemini
     def parse_response(response)
       unless response.success?
         raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
+        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}")
         raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
       end
 

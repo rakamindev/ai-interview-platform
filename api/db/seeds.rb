@@ -6,7 +6,9 @@
 # Usage:
 #   bundle exec rails db:seed
 #
-# After seeding, use the Rails console to mint a JWT for testing:
+# This creates a real assessor account you can log in with at /login
+# (see ASSESSOR_USER below for the email/password). For testing endpoints
+# directly (curl, WebSocket), you can still mint a JWT by hand instead:
 #   bundle exec rails console
 #   > token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' })
 #   > puts token
@@ -75,6 +77,30 @@ else
   SQL
 
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+end
+
+# ── Assessor user ─────────────────────────────────────────────────────────────
+#
+# A real `users` row with a real password, so you can log in through the web
+# app's /login form instead of minting a JWT by hand every time. `role` must
+# be 'admin' — that's the only role the login endpoint accepts (see
+# AuthenticationController#authenticate).
+
+ASSESSOR_USER = {
+  email:    "assessor@test-corp.dev",
+  password: "password123",
+  role:     "admin"
+}.freeze
+
+assessor = User.find_or_initialize_by(email: ASSESSOR_USER[:email])
+assessor.password = ASSESSOR_USER[:password]
+assessor.role      = ASSESSOR_USER[:role]
+
+if assessor.save
+  action = assessor.previously_new_record? ? "Created" : "Updated"
+  puts "  #{action} assessor user: #{assessor.email} (id=#{assessor.id})"
+else
+  puts "  ERROR seeding assessor user: #{assessor.errors.full_messages.join(', ')}"
 end
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
@@ -382,7 +408,11 @@ puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
+puts "Log in to the web app at /login with:"
+puts "  email    : #{ASSESSOR_USER[:email]}"
+puts "  password : #{ASSESSOR_USER[:password]}"
+puts ""
+puts "To mint a JWT by hand instead (curl, WebSocket testing), open the Rails console:"
 puts ""
 puts "  bundle exec rails console"
 puts ""

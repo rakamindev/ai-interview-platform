@@ -22,6 +22,7 @@ class AudioWebSocketMiddleware
 
   def initialize(app)
     @app = app
+    @connection_registry = ConnectionRegistry.new
   end
 
   def call(env)
@@ -56,6 +57,8 @@ class AudioWebSocketMiddleware
     end
 
     state.session = session
+    supersede_prior_connection(session.id, browser_ws)
+    state.external_end_sub = subscribe_to_external_end(browser_ws, state)
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
@@ -94,9 +97,53 @@ class AudioWebSocketMiddleware
     Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code}")
     state.browser_disconnected_at = Time.current
     state.proactive_reconnect_timer&.cancel
+    if state.session
+      @connection_registry.release(state.session.id, browser_ws)
+      Thread.new { state.external_end_sub&.unsubscribe }
+    end
 
     # Keep Gemini alive during grace period in case candidate reconnects via page refresh.
     schedule_graceful_end(browser_ws, state)
+  end
+
+  # Closes any previous connection for this session — a new tab/device always wins.
+  def supersede_prior_connection(session_id, browser_ws)
+    old_ws = @connection_registry.take_over(session_id, browser_ws)
+    return unless old_ws
+
+    old_ws.send({ type: 'error', code: 'superseded', message: 'Connected from another tab or device.', recoverable: false }.to_json)
+    old_ws.close
+  end
+
+  # Assessors end sessions from a separate HTTP request with no reference to this
+  # connection — listen on the same channel their dashboard uses so we find out too.
+  def subscribe_to_external_end(browser_ws, state)
+    channel = "coverage:#{state.session.id}"
+    redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
+
+    Thread.new do
+      redis.subscribe(channel) do |on|
+        on.message do |_channel, message|
+          EM.schedule { handle_external_status_message(browser_ws, state, message) }
+        end
+      end
+    rescue StandardError => e
+      Rails.logger.error("[AudioWS] External-end subscription error for #{channel}: #{e.message}")
+    ensure
+      redis.disconnect!
+    end
+
+    redis
+  end
+
+  def handle_external_status_message(browser_ws, state, raw_message)
+    return if state.ending_scheduled
+
+    reason = ExternalEndSignal.parse(raw_message)
+    return unless reason
+
+    state.ending_scheduled = true
+    close_session_after_end(browser_ws, state, reason: reason)
   end
 
   def connect_to_gemini(browser_ws, state)
@@ -431,6 +478,7 @@ class AudioWebSocketMiddleware
       state.graceful_end_timer&.cancel
       state.time_ceiling_timer&.cancel
       state.coverage_end_timer&.cancel
+      state.ending_scheduled = true
       Sessions::EndHandler.new(state.session).call(reason: 'manual_candidate')
       send_json(browser_ws, type: 'session_ended', reason: 'manual_candidate')
       state.gemini_client&.close
@@ -783,7 +831,7 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response, :external_end_sub
 
     def initialize
       @turn_counter = 0
@@ -798,6 +846,35 @@ class AudioWebSocketMiddleware
 
     def increment_turn!
       @turn_counter += 1
+    end
+  end
+
+  # Tracks the one live connection allowed per session (e.g. a refreshed tab
+  # replaces the old one instead of running two connections side by side).
+  class ConnectionRegistry
+    def initialize
+      @connections = {}
+    end
+
+    def take_over(session_id, connection)
+      @connections[session_id].tap { @connections[session_id] = connection }
+    end
+
+    def release(session_id, connection)
+      @connections.delete(session_id) if @connections[session_id] == connection
+    end
+  end
+
+  # Reads the same pub/sub message the assessor's coverage WS gets, and decides
+  # whether it means "an assessor ended this session elsewhere — close up".
+  class ExternalEndSignal
+    def self.parse(raw_message)
+      data = JSON.parse(raw_message)
+      return nil unless data['type'] == 'session_status' && data['status'] == 'ended'
+
+      data['end_reason'] || 'manual_assessor'
+    rescue JSON::ParserError
+      nil
     end
   end
 end

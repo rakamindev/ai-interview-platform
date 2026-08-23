@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_24_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -22,6 +22,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
   create_enum "generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "portfolio_skill_status", ["rated", "not_assessed"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
 
@@ -52,6 +53,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.bigint "updated_by"
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
@@ -112,12 +114,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
-    t.text "competency_summary", null: false
+    t.text "competency_summary"
+    t.enum "status", default: "rated", null: false, enum_type: "portfolio_skill_status"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -128,6 +131,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "generation_error"
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+  end
+
+  create_table "session_snapshots", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.datetime "captured_at", null: false
+    t.text "image_data", null: false
+    t.index ["session_id"], name: "index_session_snapshots_on_session_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -143,6 +153,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "proctoring_consented_at"
+    t.datetime "invite_expires_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true

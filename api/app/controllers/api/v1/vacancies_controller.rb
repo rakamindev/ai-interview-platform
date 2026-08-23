@@ -9,11 +9,19 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        scope = Vacancy.includes(:vacancy_skills).order(created_at: :desc)
+        scope = scope.where("role_title ILIKE ?", "%#{params[:q]}%") if params[:q].present?
+        vacancies = paginate(scope)
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
-          meta: pagination_meta(vacancies)
+          meta: pagination_meta(vacancies),
+          stats: {
+            # VacancySkill has no tenant_id of its own — scope through Vacancy's
+            # own tenant-scoped default_scope instead of joining (avoids relying
+            # on default_scope propagating through a join).
+            total_skills_tracked: VacancySkill.where(vacancy_id: Vacancy.select(:id)).count
+          }
         )
       end
 
@@ -76,7 +84,8 @@ module Api
           competency_expectations:  vacancy.competency_expectations,
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
+          updated_at:               vacancy.updated_at,
+          skill_labels:             vacancy.vacancy_skills.map(&:skill_label)
         }
       end
 
@@ -103,15 +112,6 @@ module Api
           l3_anchor:      taxonomy&.l3_anchor,
           l4_anchor:      taxonomy&.l4_anchor,
           l5_anchor:      taxonomy&.l5_anchor
-        }
-      end
-
-      def pagination_meta(collection)
-        {
-          current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
         }
       end
     end

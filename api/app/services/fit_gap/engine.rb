@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.5-flash'),
         timeout: 30
       )
     end
@@ -43,7 +43,7 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
+        if portfolio_skill && portfolio_skill[:effective_level]
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level

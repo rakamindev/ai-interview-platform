@@ -77,3 +77,10 @@
         @apply bg-background text-foreground;
     }
 }
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-voice-bar {
+        animation: none;
+        height: 8px;
+    }
+}
