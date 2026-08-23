@@ -45,147 +45,147 @@ export default function App() {
     <>
       <Toaster />
       <Routes>
-      {/* Auth routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/accept-invite" element={<AcceptInvitePage />} />
-      {/* Deprecated: SignupPage — replaced by admin-invite flow (WEB-NEW-01).
+        {/* Auth routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/accept-invite" element={<AcceptInvitePage />} />
+        {/* Deprecated: SignupPage — replaced by admin-invite flow (WEB-NEW-01).
           Remove once no external links reference /signup. */}
 
-      {/* Assessor routes (protected) */}
-      <Route element={<ProtectedRoute isAuthReady={isAuthReady} requiredRole="assessor" />}>
-        <Route element={<AssessorLayout />}>
-          <Route path="/" element={<Navigate to="/assessments" replace />} />
-          <Route element={<ProtectedRoute isAuthReady={isAuthReady} requiredRole="admin" />}>
+        {/* Assessor routes (protected) */}
+        <Route element={<ProtectedRoute isAuthReady={isAuthReady} requiredRole="assessor" />}>
+          <Route element={<AssessorLayout />}>
+            <Route path="/" element={<Navigate to="/assessments" replace />} />
+            <Route element={<ProtectedRoute isAuthReady={isAuthReady} requiredRole="admin" />}>
+              <Route
+                path="/admin/invite"
+                element={
+                  <RouteErrorBoundary routeName="admin-invite">
+                    <InviteAdminPage />
+                  </RouteErrorBoundary>
+                }
+              />
+            </Route>
             <Route
-              path="/admin/invite"
+              path="/audit/overrides"
               element={
-                <RouteErrorBoundary routeName="admin-invite">
-                  <InviteAdminPage />
+                <RouteErrorBoundary routeName="audit-overrides">
+                  <OverrideHistoryPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments"
+              element={
+                <RouteErrorBoundary routeName="assessments">
+                  <AssessmentListPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/new"
+              element={
+                <RouteErrorBoundary routeName="assessment-new">
+                  <AssessmentNewPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/:id/edit"
+              element={
+                <RouteErrorBoundary routeName="assessment-edit">
+                  <AssessmentEditPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/:id/invite"
+              element={
+                <RouteErrorBoundary routeName="assessment-invite">
+                  <AssessmentInvitePage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/:id/bulk-invite"
+              element={
+                <RouteErrorBoundary routeName="bulk-invite">
+                  <BulkInvitePage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/:id/sessions/:sessionId/monitor"
+              element={
+                <RouteErrorBoundary routeName="monitor">
+                  <LiveMonitorPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/:id/sessions/:sessionId/portfolio"
+              element={
+                <RouteErrorBoundary routeName="portfolio">
+                  <PortfolioPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/:id/sessions/:sessionId/transcript"
+              element={
+                <RouteErrorBoundary routeName="transcript">
+                  <TranscriptPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
+              element={
+                <RouteErrorBoundary routeName="fitgap">
+                  <FitGapReportPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/vacancies"
+              element={
+                <RouteErrorBoundary routeName="vacancies">
+                  <VacancyListPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/vacancies/new"
+              element={
+                <RouteErrorBoundary routeName="vacancy-new">
+                  <VacancyNewPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/vacancies/:id/edit"
+              element={
+                <RouteErrorBoundary routeName="vacancy-edit">
+                  <VacancyEditPage />
                 </RouteErrorBoundary>
               }
             />
           </Route>
+        </Route>
+
+        {/* Candidate route (public) */}
+        <Route element={<CandidateLayout />}>
           <Route
-            path="/audit/overrides"
+            path="/interview/:token"
             element={
-              <RouteErrorBoundary routeName="audit-overrides">
-                <OverrideHistoryPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments"
-            element={
-              <RouteErrorBoundary routeName="assessments">
-                <AssessmentListPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/new"
-            element={
-              <RouteErrorBoundary routeName="assessment-new">
-                <AssessmentNewPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/:id/edit"
-            element={
-              <RouteErrorBoundary routeName="assessment-edit">
-                <AssessmentEditPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/:id/invite"
-            element={
-              <RouteErrorBoundary routeName="assessment-invite">
-                <AssessmentInvitePage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/:id/bulk-invite"
-            element={
-              <RouteErrorBoundary routeName="bulk-invite">
-                <BulkInvitePage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/:id/sessions/:sessionId/monitor"
-            element={
-              <RouteErrorBoundary routeName="monitor">
-                <LiveMonitorPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/:id/sessions/:sessionId/portfolio"
-            element={
-              <RouteErrorBoundary routeName="portfolio">
-                <PortfolioPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/:id/sessions/:sessionId/transcript"
-            element={
-              <RouteErrorBoundary routeName="transcript">
-                <TranscriptPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
-            element={
-              <RouteErrorBoundary routeName="fitgap">
-                <FitGapReportPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/vacancies"
-            element={
-              <RouteErrorBoundary routeName="vacancies">
-                <VacancyListPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/vacancies/new"
-            element={
-              <RouteErrorBoundary routeName="vacancy-new">
-                <VacancyNewPage />
-              </RouteErrorBoundary>
-            }
-          />
-          <Route
-            path="/vacancies/:id/edit"
-            element={
-              <RouteErrorBoundary routeName="vacancy-edit">
-                <VacancyEditPage />
+              <RouteErrorBoundary routeName="interview" showSessionRecovery>
+                <InterviewPage />
               </RouteErrorBoundary>
             }
           />
         </Route>
-      </Route>
 
-      {/* Candidate route (public) */}
-      <Route element={<CandidateLayout />}>
-        <Route
-          path="/interview/:token"
-          element={
-            <RouteErrorBoundary routeName="interview" showSessionRecovery>
-              <InterviewPage />
-            </RouteErrorBoundary>
-          }
-        />
-      </Route>
-
-      {/* Catch-all: no route matched */}
-      <Route path="*" element={<NotFoundPage />} />
+        {/* Catch-all: no route matched */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );

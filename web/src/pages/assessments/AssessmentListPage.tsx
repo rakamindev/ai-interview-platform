@@ -14,7 +14,7 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
 
   if (session.status === "active")
     return (
-        <span className="flex items-center gap-1 text-xs text-primary">
+      <span className="flex items-center gap-1 text-xs text-primary">
         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
         {m.assessment.live_now()}
       </span>

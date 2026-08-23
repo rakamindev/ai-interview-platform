@@ -80,7 +80,10 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     Promise.all([sessionsApi.get(Number(sessionId)), sessionsApi.getTranscript(Number(sessionId))])
       .then(([sRes, tRes]) => {
-        const s = sRes.data.session as Session & { assessment?: { name?: string }; end_reason?: string | null };
+        const s = sRes.data.session as Session & {
+          assessment?: { name?: string };
+          end_reason?: string | null;
+        };
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
         if (s.status !== "active") {
@@ -325,13 +328,13 @@ export default function LiveMonitorPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{m.monitor.end_confirm()}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {m.monitor.end_confirm_desc()}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{m.monitor.end_confirm_desc()}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleEndSession}>{m.monitor.end_session()}</AlertDialogAction>
+                <AlertDialogAction onClick={handleEndSession}>
+                  {m.monitor.end_session()}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

@@ -91,7 +91,10 @@ async function measureDownloadSpeed(): Promise<number> {
   // Rough fallback
   try {
     const start = performance.now();
-    await fetchWithTimeout("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
+    await fetchWithTimeout("https://www.google.com/favicon.ico", {
+      mode: "no-cors",
+      cache: "no-cache"
+    });
     const duration = (performance.now() - start) / 1000;
     return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
   } catch {

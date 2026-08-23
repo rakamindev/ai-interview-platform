@@ -66,7 +66,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
     <>
       {hasOverride ? (
         <Button variant="ghost" size="sm" onClick={handleOpen}>
-          <ShieldCheck className="h-3.5 w-3.5 mr-1 text-verdict-match" /> {m.override.override_applied()}
+          <ShieldCheck className="h-3.5 w-3.5 mr-1 text-verdict-match" />{" "}
+          {m.override.override_applied()}
         </Button>
       ) : (
         <Button variant="outline" size="sm" onClick={handleOpen}>
@@ -77,11 +78,11 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{hasOverride ? m.override.edit_override() : m.override.dialog_title()}</DialogTitle>
+            <DialogTitle>
+              {hasOverride ? m.override.edit_override() : m.override.dialog_title()}
+            </DialogTitle>
             <DialogDescription>
-              {hasOverride
-                ? m.override.adjust_level()
-                : m.override.select_level()}
+              {hasOverride ? m.override.adjust_level() : m.override.select_level()}
             </DialogDescription>
           </DialogHeader>
 
@@ -112,9 +113,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
             />
           </div>
 
-          {saveError && (
-            <p className="text-xs text-destructive">{m.override.failed_to_save()}</p>
-          )}
+          {saveError && <p className="text-xs text-destructive">{m.override.failed_to_save()}</p>}
 
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>

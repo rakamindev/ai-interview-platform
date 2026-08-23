@@ -230,11 +230,7 @@ export default function AssessmentInvitePage() {
         description={`${assessment?.time_limit_min ?? 0} min · ${assessment?.skills?.length ?? 0} skills`}
         actions={
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/assessments/${id}/edit`)}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
               <Pencil className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.edit_link()}
             </Button>
             <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
@@ -245,132 +241,133 @@ export default function AssessmentInvitePage() {
         }
       />
       <div className="space-y-6">
-
-      {/* Invite candidate dialog */}
-      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{m.assessment.invite_candidate()}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="candidate-name">{m.assessment.candidate_name()}</Label>
-            <Input
-              id="candidate-name"
-              placeholder="e.g. Budi Santoso"
-              value={candidateNameInput}
-              onChange={(e) => setCandidateNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
-            />
-            <p className="text-xs text-muted-foreground">
-              Optional — helps you identify this session later.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
-              {m.assessment.cancel()}
-            </Button>
-            <Button onClick={handleInviteCandidate}>{m.assessment.create_link()}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Newly created session invite link */}
-      {newSession && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="pt-4 space-y-2">
-            <p className="text-sm font-medium">
-              {newSession.candidate_name ? (
-                <>
-                  Link for <span className="font-semibold">{newSession.candidate_name}</span> ready
-                  — share with your candidate:
-                </>
-              ) : (
-                <>New invite link ready — share with your candidate:</>
-              )}
-            </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-background">
-              <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
-                {newSession.invite_url}
-              </span>
+        {/* Invite candidate dialog */}
+        <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{m.assessment.invite_candidate()}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              <Label htmlFor="candidate-name">{m.assessment.candidate_name()}</Label>
+              <Input
+                id="candidate-name"
+                placeholder="e.g. Budi Santoso"
+                value={candidateNameInput}
+                onChange={(e) => setCandidateNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional — helps you identify this session later.
+              </p>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
-              {newSessionCopied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.copied()}
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.copy_link()}
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+                {m.assessment.cancel()}
+              </Button>
+              <Button onClick={handleInviteCandidate}>{m.assessment.create_link()}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <Separator />
-
-      {/* Sessions list */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            {m.assessment.candidates()}
-            {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
-            )}
-          </h2>
-        </div>
-
-        {sessions.length === 0 ? (
-          <EmptyState
-            icon={UserRound}
-            title={m.assessment.no_candidates()}
-            description='Click "Invite Candidate" to generate an interview link.'
-            actionLabel={m.assessment.invite_candidate()}
-            onAction={openInviteDialog}
-          />
-        ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
-              {sessions.map((session, i) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  index={sessions.length - i}
-                  assessmentId={id!}
-                  onCopy={(sid) => {
-                    const s = sessions.find((x) => x.id === sid);
-                    if (s) copyLink(s, sid);
-                  }}
-                  copiedId={copiedId}
-                />
-              ))}
+        {/* Newly created session invite link */}
+        {newSession && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-4 space-y-2">
+              <p className="text-sm font-medium">
+                {newSession.candidate_name ? (
+                  <>
+                    Link for <span className="font-semibold">{newSession.candidate_name}</span>{" "}
+                    ready — share with your candidate:
+                  </>
+                ) : (
+                  <>New invite link ready — share with your candidate:</>
+                )}
+              </p>
+              <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-background">
+                <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
+                  {newSession.invite_url}
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
+                {newSessionCopied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.copied()}
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5 mr-1.5" /> {m.assessment.copy_link()}
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
         )}
-      </div>
 
-      {/* Assessment skills detail */}
-      {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">{m.assessment.skills_assessed()}</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li
-                  key={s.id ?? s.skill_label}
-                  className="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
+        <Separator />
+
+        {/* Sessions list */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">
+              {m.assessment.candidates()}
+              {sessions.length > 0 && (
+                <span className="ml-1.5 text-muted-foreground font-normal">
+                  ({sessions.length})
+                </span>
+              )}
+            </h2>
           </div>
-        </>
-      )}
+
+          {sessions.length === 0 ? (
+            <EmptyState
+              icon={UserRound}
+              title={m.assessment.no_candidates()}
+              description='Click "Invite Candidate" to generate an interview link.'
+              actionLabel={m.assessment.invite_candidate()}
+              onAction={openInviteDialog}
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-0 divide-y">
+                {sessions.map((session, i) => (
+                  <SessionRow
+                    key={session.id}
+                    session={session}
+                    index={sessions.length - i}
+                    assessmentId={id!}
+                    onCopy={(sid) => {
+                      const s = sessions.find((x) => x.id === sid);
+                      if (s) copyLink(s, sid);
+                    }}
+                    copiedId={copiedId}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Assessment skills detail */}
+        {assessment?.skills && assessment.skills.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold">{m.assessment.skills_assessed()}</h2>
+              <ul className="space-y-1">
+                {assessment.skills.map((s) => (
+                  <li
+                    key={s.id ?? s.skill_label}
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                  >
+                    <span>•</span>
+                    <span>{s.skill_label}</span>
+                    <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

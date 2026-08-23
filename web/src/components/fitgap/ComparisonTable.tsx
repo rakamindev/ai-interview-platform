@@ -128,10 +128,26 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
 
       {/* Summary */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>{m.fitgap.match()} {matchCount}</span>}
-        {gapCount > 0 && <span>{m.fitgap.gap()} {gapCount}</span>}
-        {exceedCount > 0 && <span>{m.fitgap.exceeds()} {exceedCount}</span>}
-        {insufficientCount > 0 && <span>{m.fitgap.insufficient_evidence()} {insufficientCount}</span>}
+        {matchCount > 0 && (
+          <span>
+            {m.fitgap.match()} {matchCount}
+          </span>
+        )}
+        {gapCount > 0 && (
+          <span>
+            {m.fitgap.gap()} {gapCount}
+          </span>
+        )}
+        {exceedCount > 0 && (
+          <span>
+            {m.fitgap.exceeds()} {exceedCount}
+          </span>
+        )}
+        {insufficientCount > 0 && (
+          <span>
+            {m.fitgap.insufficient_evidence()} {insufficientCount}
+          </span>
+        )}
       </div>
     </div>
   );

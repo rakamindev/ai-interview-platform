@@ -188,7 +188,7 @@ export default function FitGapReportPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-          <h1 className="text-xl font-semibold tracking-tight">{m.fitgap.title()}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.fitgap.title()}</h1>
           </div>
         </div>
 
@@ -246,9 +246,7 @@ export default function FitGapReportPage() {
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">
-              {m.fitgap.generating()}
-            </p>
+            <p className="text-sm text-muted-foreground">{m.fitgap.generating()}</p>
           </CardContent>
         </Card>
       )}

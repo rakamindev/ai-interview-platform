@@ -1,5 +1,10 @@
 import { locales, setLocale, getLocale } from "@/paraglide/runtime.js";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
 import { Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

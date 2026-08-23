@@ -67,7 +67,9 @@ export default function OverrideHistory({ portfolioSkillId }: OverrideHistoryPro
             <div className="min-w-0">
               {ev.assessor_notes && <p className="text-sm break-words">{ev.assessor_notes}</p>}
               <time className="text-xs text-muted-foreground">
-                {ev.overridden_at ? new Date(ev.overridden_at).toLocaleString() : m.override_history.unknown_date()}
+                {ev.overridden_at
+                  ? new Date(ev.overridden_at).toLocaleString()
+                  : m.override_history.unknown_date()}
               </time>
             </div>
           </li>

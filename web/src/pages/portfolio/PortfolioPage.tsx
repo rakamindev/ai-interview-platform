@@ -246,9 +246,7 @@ export default function PortfolioPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
             <p className="font-medium">{m.portfolio.generating()}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {m.portfolio.analyzing()}
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">{m.portfolio.analyzing()}</p>
           </div>
         </div>
       )}
@@ -257,9 +255,7 @@ export default function PortfolioPage() {
       {!error && timedOut && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
-          <p className="text-sm text-muted-foreground">
-            {m.portfolio.taking_longer()}
-          </p>
+          <p className="text-sm text-muted-foreground">{m.portfolio.taking_longer()}</p>
           <Button
             variant="outline"
             size="sm"

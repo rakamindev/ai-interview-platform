@@ -44,9 +44,7 @@ export default function AcceptInvitePage() {
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
           <h1 className="text-2xl font-bold">{m.auth.invalid_invite_link()}</h1>
-          <p className="text-sm text-muted-foreground">
-            {m.auth.invalid_invite()}
-          </p>
+          <p className="text-sm text-muted-foreground">{m.auth.invalid_invite()}</p>
           <Button variant="outline" onClick={() => navigate("/login")}>
             {m.auth.go_to_login()}
           </Button>

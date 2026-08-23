@@ -30,9 +30,7 @@ export default function EmptyState({
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
       <p className="text-sm font-medium">{title}</p>
-      {description && (
-        <p className="text-sm text-muted-foreground mt-1 max-w-sm">{description}</p>
-      )}
+      {description && <p className="text-sm text-muted-foreground mt-1 max-w-sm">{description}</p>}
       {actionLabel && onAction && (
         <Button size="sm" className="mt-4" onClick={onAction}>
           {actionLabel}

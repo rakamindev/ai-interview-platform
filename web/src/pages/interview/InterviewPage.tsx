@@ -149,10 +149,13 @@ export default function InterviewPage() {
     else if (turn.speaker === "assessor") setInterimAiTranscript("");
   }, []);
 
-  const handleTranscriptPartial = useCallback((partial: { speaker: "candidate" | "ai"; text: string }) => {
-    if (partial.speaker === "candidate") setInterimTranscript(partial.text);
-    else setInterimAiTranscript(partial.text);
-  }, []);
+  const handleTranscriptPartial = useCallback(
+    (partial: { speaker: "candidate" | "ai"; text: string }) => {
+      if (partial.speaker === "candidate") setInterimTranscript(partial.text);
+      else setInterimAiTranscript(partial.text);
+    },
+    []
+  );
 
   const handleSpeakerChange = useCallback(
     (newSpeaker: InterviewSpeaker) => {
@@ -299,7 +302,9 @@ export default function InterviewPage() {
     return (
       <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? m.interview.title()}</h1>
+          <h1 className="text-xl font-semibold">
+            {candidateInfo?.role_title ?? m.interview.title()}
+          </h1>
           {candidateInfo && (
             <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} minutes</p>
           )}
@@ -329,7 +334,7 @@ export default function InterviewPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
               <CheckCircle className="h-4 w-4 shrink-0" />
-                <span>Hardware checks passed. You're ready to start.</span>
+              <span>Hardware checks passed. You're ready to start.</span>
             </div>
             <Button className="w-full" size="lg" onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
@@ -347,9 +352,7 @@ export default function InterviewPage() {
       <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
         <CheckCircle className="h-10 w-10 text-green-500" />
         <h2 className="text-xl font-semibold">{m.interview.complete()}</h2>
-        <p className="text-sm text-muted-foreground">
-          {m.interview.complete_thank()}
-        </p>
+        <p className="text-sm text-muted-foreground">{m.interview.complete_thank()}</p>
       </main>
     );
   }
@@ -420,7 +423,9 @@ export default function InterviewPage() {
       {/* Voice indicator */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
         {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">{m.interview.connecting()}</div>
+          <div className="text-sm text-muted-foreground animate-pulse">
+            {m.interview.connecting()}
+          </div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
             <VoiceBars active={true} label="AI speaking" variant="ai" levels={aiLevels} />
@@ -511,13 +516,13 @@ export default function InterviewPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{m.interview.end_confirm()}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {m.interview.end_confirm_desc()}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{m.interview.end_confirm_desc()}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={endInterview}>{m.interview.end_interview()}</AlertDialogAction>
+                <AlertDialogAction onClick={endInterview}>
+                  {m.interview.end_interview()}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

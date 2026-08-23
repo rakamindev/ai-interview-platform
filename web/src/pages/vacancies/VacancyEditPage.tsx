@@ -131,7 +131,8 @@ export default function VacancyEditPage() {
             {m.vacancy.cancel()}
           </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{m.vacancy.save_changes()}
+            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {m.vacancy.save_changes()}
           </Button>
         </div>
       </form>

@@ -51,9 +51,7 @@ class RouteErrorBoundaryInner extends Component<
               </>
             ) : (
               <>
-                <p className="text-sm text-muted-foreground">
-                  {m.error.refresh()}
-                </p>
+                <p className="text-sm text-muted-foreground">{m.error.refresh()}</p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     className="text-sm text-primary underline"

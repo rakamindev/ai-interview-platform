@@ -230,7 +230,11 @@ export default function BulkInvitePage() {
   return (
     <main className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
+        <Link
+          to="/assessments"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Back to assessments"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">{m.nav.assessments()}</span>
@@ -241,10 +245,10 @@ export default function BulkInvitePage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">{m.assessment.invite_candidate()}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {m.assessment.bulk_invite_desc()}
-            </p>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {m.assessment.invite_candidate()}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">{m.assessment.bulk_invite_desc()}</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4 mr-1" />
@@ -286,9 +290,17 @@ export default function BulkInvitePage() {
         {/* Summary */}
         {(successCount > 0 || errorCount > 0) && (
           <div className="text-sm text-muted-foreground">
-            {successCount > 0 && <span className="text-green-600">{successCount} {m.assessment.sent()}</span>}
+            {successCount > 0 && (
+              <span className="text-green-600">
+                {successCount} {m.assessment.sent()}
+              </span>
+            )}
             {successCount > 0 && errorCount > 0 && <span> · </span>}
-            {errorCount > 0 && <span className="text-destructive">{errorCount} {m.assessment.bulk_failed()}</span>}
+            {errorCount > 0 && (
+              <span className="text-destructive">
+                {errorCount} {m.assessment.bulk_failed()}
+              </span>
+            )}
           </div>
         )}
 

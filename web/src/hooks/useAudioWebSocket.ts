@@ -88,7 +88,8 @@ export function useAudioWebSocket({
               }
               break;
             case "transcript_partial":
-              if (msg.speaker && msg.text) onTranscriptPartial?.({ speaker: msg.speaker, text: msg.text });
+              if (msg.speaker && msg.text)
+                onTranscriptPartial?.({ speaker: msg.speaker, text: msg.text });
               break;
             case "speaker_changed":
               // Backend sends speaker_changed:candidate 800ms after AI finishes

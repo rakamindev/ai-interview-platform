@@ -63,7 +63,11 @@ export default function InviteAdminPage() {
   return (
     <main className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
+        <Link
+          to="/assessments"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Back to assessments"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Admin</span>
@@ -74,9 +78,7 @@ export default function InviteAdminPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">{m.admin.invite_subtitle()}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {m.admin.generate_invite()}.
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{m.admin.generate_invite()}.</p>
         </div>
 
         {inviteUrl ? (
@@ -84,7 +86,12 @@ export default function InviteAdminPage() {
             <h2 className="font-medium">{m.admin.invite_generated()}</h2>
             <div className="flex items-center gap-2">
               <Input readOnly value={inviteUrl} className="flex-1 font-mono text-sm" />
-              <Button variant="outline" size="icon" onClick={copyToClipboard} aria-label="Copy invite link">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={copyToClipboard}
+                aria-label="Copy invite link"
+              >
                 {copied ? (
                   <Check className="h-4 w-4 text-green-600" />
                 ) : (
@@ -92,9 +99,7 @@ export default function InviteAdminPage() {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {m.admin.share_link()}.
-            </p>
+            <p className="text-xs text-muted-foreground">{m.admin.share_link()}.</p>
             <Button variant="outline" onClick={() => setInviteUrl(null)}>
               {m.admin.invite_another()}
             </Button>

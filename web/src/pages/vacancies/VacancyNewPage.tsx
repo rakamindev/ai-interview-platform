@@ -133,9 +133,7 @@ export default function VacancyNewPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="competency_expectations">
-            {m.vacancy.competency_expectations()}
-          </Label>
+          <Label htmlFor="competency_expectations">{m.vacancy.competency_expectations()}</Label>
           <Textarea
             id="competency_expectations"
             placeholder="Strong communicator who can align cross-functional teams..."
