@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import RubricRevisionNotice from "@/components/assessment/RubricRevisionNotice";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
@@ -108,6 +109,8 @@ export default function AssessmentEditPage() {
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">Edit Assessment</span>
       </div>
+
+      <RubricRevisionNotice />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">

@@ -45,6 +45,10 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  rubric?: {
+    status: "captured" | "legacy";
+    version: number | null;
+  };
 }
 
 export interface CoverageSkill {
