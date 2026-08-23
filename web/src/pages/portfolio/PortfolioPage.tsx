@@ -10,7 +10,8 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import type { Portfolio, AssessorOverride, Vacancy, AssessmentSkill } from "@/types";
+import { assessmentsApi } from "@/services/assessments";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -23,6 +24,8 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [configuredSkill, setConfiguredSkill] = useState<AssessmentSkill[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -42,12 +45,18 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
+    setError(null);
+
+    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId)), assessmentsApi.get(Number(id))])
+      .then(([, vRes, sRes, aRes ]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setConfiguredSkill(aRes.data.assessment.skills ?? []);
       })
-      .catch(() => {})
+      .catch((error) => {
+        console.error("Failed to load portfolio page", error);
+        setError("Failed to load portfolio data. Please try again.");
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -94,12 +103,34 @@ export default function PortfolioPage() {
     }
   };
 
+  const assessedSkillKeys = new Set(
+    (portfolio?.skills ?? [])
+    .filter(skill => !skill.is_discovered)
+    .map(skill => skill.skill_id ? String(skill.skill_id) : skill.skill_label.trim().toLowerCase())
+  ); 
+
+  const missingSkill = configuredSkill.filter((skill) => {
+      const key = skill.skill_id ? String(skill.skill_id) : skill.skill_label.trim().toLowerCase();
+
+      return !assessedSkillKeys.has(key);
+  });
+
+  const incompleteSkill = missingSkill.length > 0;
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md bg-red-50 p-4 text-red-700">
+        {error}
       </div>
     );
   }
@@ -186,6 +217,17 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          {/* Not Configured skills */}   
+          {incompleteSkill && (<div className="p-4 rounded-lg bg-red-500">
+            <p className="text-amber-500 font-medium">
+                Incomplete Asessment Result 
+            </p>
+            <p>
+                {missingSkill.length} configured skill
+            </p>
+          </div>) }
+
+      
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>
