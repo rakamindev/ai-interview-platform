@@ -141,7 +141,7 @@ module Api
       private
 
       def set_session
-        @session = Session.unscoped.find(params[:id])
+        @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found, code: "not_found")
       end
