@@ -27,44 +27,44 @@ class RouteErrorBoundaryInner extends Component<
       return (
         <div className="min-h-[50vh] flex items-center justify-center p-8">
           <div className="text-center space-y-4 max-w-md">
-            <p className="font-medium text-lg">{m.error.unexpected()}</p>
+            <p className="font-medium text-lg">{m.error_unexpected()}</p>
             {this.props.showSessionRecovery ? (
               <>
                 <p className="text-sm text-muted-foreground">
-                  {m.error.session_saved()} {m.error.refresh()}
+                  {m.error_session_saved()} {m.error_refresh()}
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     className="text-sm text-primary underline"
                     onClick={() => window.location.reload()}
                   >
-                    {m.error.reconnect()}
+                    {m.error_reconnect()}
                   </button>
                   <span className="text-muted-foreground">·</span>
                   <button
                     className="text-sm text-muted-foreground underline"
                     onClick={() => this.props.navigate("/")}
                   >
-                    {m.error.go_home()}
+                    {m.error_go_home()}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <p className="text-sm text-muted-foreground">{m.error.refresh()}</p>
+                <p className="text-sm text-muted-foreground">{m.error_refresh()}</p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     className="text-sm text-primary underline"
                     onClick={() => window.location.reload()}
                   >
-                    {m.error.refresh_button()}
+                    {m.error_refresh_button()}
                   </button>
                   <span className="text-muted-foreground">·</span>
                   <button
                     className="text-sm text-muted-foreground underline"
                     onClick={() => this.props.navigate("/")}
                   >
-                    {m.error.go_home()}
+                    {m.error_go_home()}
                   </button>
                 </div>
               </>

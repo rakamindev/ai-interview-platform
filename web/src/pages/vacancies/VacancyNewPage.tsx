@@ -56,17 +56,17 @@ export default function VacancyNewPage() {
   return (
     <main className="max-w-2xl mx-auto">
       <PageHeader
-        title={m.vacancy.new()}
-        description={m.vacancy.subtitle()}
-        eyebrow={m.vacancy.title_label()}
+        title={m.vacancy_new()}
+        description={m.vacancy_subtitle()}
+        eyebrow={m.vacancy_title_label()}
         backTo="/vacancies"
-        backLabel={m.common.back()}
+        backLabel={m.common_back()}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">
-            {m.vacancy.role_title()} <span className="text-destructive">*</span>
+            {m.vacancy_role_title()} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="role_title"
@@ -79,11 +79,11 @@ export default function VacancyNewPage() {
 
         {/* Expected skills */}
         <div className="space-y-3">
-          <Label>{m.vacancy.expected_skills()}</Label>
+          <Label>{m.vacancy_expected_skills()}</Label>
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
-              {m.vacancy.no_skills()}
+              {m.vacancy_no_skills()}
             </div>
           ) : (
             <div className="space-y-2">
@@ -116,14 +116,14 @@ export default function VacancyNewPage() {
           )}
 
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> {m.vacancy.add_skill()}
+            <Plus className="h-3.5 w-3.5 mr-1" /> {m.vacancy_add_skill()}
           </Button>
         </div>
 
         <Separator />
 
         <div className="space-y-1.5">
-          <Label htmlFor="culture_dimensions">{m.vacancy.company_culture()}</Label>
+          <Label htmlFor="culture_dimensions">{m.vacancy_company_culture()}</Label>
           <Textarea
             id="culture_dimensions"
             placeholder="Ownership-driven, async-first, direct feedback culture..."
@@ -133,7 +133,7 @@ export default function VacancyNewPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="competency_expectations">{m.vacancy.competency_expectations()}</Label>
+          <Label htmlFor="competency_expectations">{m.vacancy_competency_expectations()}</Label>
           <Textarea
             id="competency_expectations"
             placeholder="Strong communicator who can align cross-functional teams..."
@@ -146,11 +146,11 @@ export default function VacancyNewPage() {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>
-            {m.vacancy.cancel()}
+            {m.vacancy_cancel()}
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {m.vacancy.save()}
+            {m.vacancy_save()}
           </Button>
         </div>
       </form>

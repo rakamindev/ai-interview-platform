@@ -169,7 +169,7 @@ export default function PortfolioPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">{m.portfolio.title()}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.portfolio_title()}</h1>
             {candidateName && <p className="text-sm text-muted-foreground">{candidateName}</p>}
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function PortfolioPage() {
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
           >
             <FileText className="h-3.5 w-3.5" />
-            {m.portfolio.transcript()}
+            {m.portfolio_transcript()}
           </Link>
           {!generating && portfolio && (
             <>
@@ -195,7 +195,7 @@ export default function PortfolioPage() {
                 ) : (
                   <Download className="h-3.5 w-3.5 mr-1" />
                 )}
-                {m.portfolio.export_pdf()}
+                {m.portfolio_export_pdf()}
               </Button>
               <Button
                 variant="outline"
@@ -208,7 +208,7 @@ export default function PortfolioPage() {
                 ) : (
                   <Download className="h-3.5 w-3.5 mr-1" />
                 )}
-                {m.portfolio.export_json()}
+                {m.portfolio_export_json()}
               </Button>
             </>
           )}
@@ -235,7 +235,7 @@ export default function PortfolioPage() {
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
           <p className="text-sm text-destructive">{error}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            {m.portfolio.retry()}
+            {m.portfolio_retry()}
           </Button>
         </div>
       )}
@@ -245,8 +245,8 @@ export default function PortfolioPage() {
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
-            <p className="font-medium">{m.portfolio.generating()}</p>
-            <p className="text-sm text-muted-foreground mt-1">{m.portfolio.analyzing()}</p>
+            <p className="font-medium">{m.portfolio_generating()}</p>
+            <p className="text-sm text-muted-foreground mt-1">{m.portfolio_analyzing()}</p>
           </div>
         </div>
       )}
@@ -255,7 +255,7 @@ export default function PortfolioPage() {
       {!error && timedOut && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
-          <p className="text-sm text-muted-foreground">{m.portfolio.taking_longer()}</p>
+          <p className="text-sm text-muted-foreground">{m.portfolio_taking_longer()}</p>
           <Button
             variant="outline"
             size="sm"
@@ -265,7 +265,7 @@ export default function PortfolioPage() {
               setGenerating(true);
             }}
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {m.portfolio.retry()}
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {m.portfolio_retry()}
           </Button>
         </div>
       )}
@@ -273,7 +273,7 @@ export default function PortfolioPage() {
       {/* Failed state */}
       {!generating && !timedOut && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">{m.portfolio.generation_failed()}</p>
+          <p className="text-sm text-destructive">{m.portfolio_generation_failed()}</p>
           <Button
             variant="outline"
             size="sm"
@@ -283,7 +283,7 @@ export default function PortfolioPage() {
               setGenerating(true);
             }}
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {m.portfolio.retry()}
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {m.portfolio_retry()}
           </Button>
         </div>
       )}
@@ -293,7 +293,7 @@ export default function PortfolioPage() {
         <>
           {/* Configured skills */}
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold">{m.portfolio.configured_skills()}</h2>
+            <h2 className="text-sm font-semibold">{m.portfolio_configured_skills()}</h2>
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
@@ -314,7 +314,7 @@ export default function PortfolioPage() {
                 <div>
                   <h2 className="text-sm font-semibold flex items-center gap-1.5">
                     <Zap className="h-4 w-4 text-amber-500" />
-                    {m.portfolio.discovered_skills()}
+                    {m.portfolio_discovered_skills()}
                   </h2>
                   <p className="text-xs text-muted-foreground">
                     Skills the AI probed that were not in the original assessment
@@ -340,7 +340,7 @@ export default function PortfolioPage() {
           <div className="flex items-center gap-3">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
               <SelectTrigger className="w-56">
-                <SelectValue placeholder={m.portfolio.choose_vacancy()} />
+                <SelectValue placeholder={m.portfolio_choose_vacancy()} />
               </SelectTrigger>
               <SelectContent>
                 {vacancies.map((v) => (
@@ -351,7 +351,7 @@ export default function PortfolioPage() {
               </SelectContent>
             </Select>
             <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              {m.portfolio.run_fitgap()} →
+              {m.portfolio_run_fitgap()} →
             </Button>
           </div>
         </>

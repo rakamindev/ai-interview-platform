@@ -59,7 +59,7 @@ export default function OverrideHistoryPage() {
       setEvents(res.data.override_events ?? []);
       setTotalPages(res.data.meta?.total_pages ?? 1);
     } catch {
-      setError(m.audit.no_events());
+      setError(m.audit_no_events());
     } finally {
       setLoading(false);
     }
@@ -72,18 +72,18 @@ export default function OverrideHistoryPage() {
   return (
     <main className="max-w-4xl mx-auto">
       <PageHeader
-        title={m.audit.title()}
-        description={m.audit.description()}
-        eyebrow={m.audit.nav_label()}
+        title={m.audit_title()}
+        description={m.audit_description()}
+        eyebrow={m.audit_nav_label()}
         backTo="/assessments"
-        backLabel={m.common.back()}
+        backLabel={m.common_back()}
       />
 
       {/* Filters */}
       <div className="border rounded-lg p-4 mb-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="assessor">{m.audit.assessor_email()}</Label>
+            <Label htmlFor="assessor">{m.audit_assessor_email()}</Label>
             <Input
               id="assessor"
               placeholder="filter@example.com"
@@ -92,7 +92,7 @@ export default function OverrideHistoryPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="dateFrom">{m.audit.from_date()}</Label>
+            <Label htmlFor="dateFrom">{m.audit_from_date()}</Label>
             <Input
               id="dateFrom"
               type="date"
@@ -101,7 +101,7 @@ export default function OverrideHistoryPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="dateTo">{m.audit.to_date()}</Label>
+            <Label htmlFor="dateTo">{m.audit_to_date()}</Label>
             <Input
               id="dateTo"
               type="date"
@@ -110,7 +110,7 @@ export default function OverrideHistoryPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="skill">{m.audit.skill_name()}</Label>
+            <Label htmlFor="skill">{m.audit_skill_name()}</Label>
             <Input
               id="skill"
               placeholder="React, Python..."
@@ -131,7 +131,7 @@ export default function OverrideHistoryPage() {
               setPage(1);
             }}
           >
-            {m.audit.clear_filters()}
+            {m.audit_clear_filters()}
           </Button>
         </div>
       </div>
@@ -145,8 +145,8 @@ export default function OverrideHistoryPage() {
       ) : events.length === 0 ? (
         <EmptyState
           icon={History}
-          title={m.audit.no_events()}
-          description={m.audit.description()}
+          title={m.audit_no_events()}
+          description={m.audit_description()}
         />
       ) : (
         <>
@@ -154,13 +154,13 @@ export default function OverrideHistoryPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-3 font-medium">{m.audit.column_candidate()}</th>
-                  <th className="text-left p-3 font-medium">{m.audit.column_skill()}</th>
-                  <th className="text-center p-3 font-medium">{m.audit.column_ai_level()}</th>
-                  <th className="text-center p-3 font-medium">{m.audit.column_override()}</th>
-                  <th className="text-left p-3 font-medium">{m.audit.column_assessor()}</th>
-                  <th className="text-left p-3 font-medium">{m.audit.column_date()}</th>
-                  <th className="text-left p-3 font-medium">{m.audit.column_notes()}</th>
+                  <th className="text-left p-3 font-medium">{m.audit_column_candidate()}</th>
+                  <th className="text-left p-3 font-medium">{m.audit_column_skill()}</th>
+                  <th className="text-center p-3 font-medium">{m.audit_column_ai_level()}</th>
+                  <th className="text-center p-3 font-medium">{m.audit_column_override()}</th>
+                  <th className="text-left p-3 font-medium">{m.audit_column_assessor()}</th>
+                  <th className="text-left p-3 font-medium">{m.audit_column_date()}</th>
+                  <th className="text-left p-3 font-medium">{m.audit_column_notes()}</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,10 +208,10 @@ export default function OverrideHistoryPage() {
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
-                {m.audit.previous()}
+                {m.audit_previous()}
               </Button>
               <span className="text-sm text-muted-foreground">
-                {m.audit.page_of({ current: String(page), total: String(totalPages) })}
+                {m.audit_page_of({ current: String(page), total: String(totalPages) })}
               </span>
               <Button
                 variant="outline"
@@ -219,7 +219,7 @@ export default function OverrideHistoryPage() {
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
-                {m.audit.next()}
+                {m.audit_next()}
               </Button>
             </div>
           )}

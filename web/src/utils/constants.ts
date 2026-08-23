@@ -22,11 +22,11 @@ export const LEVEL_LABELS: Record<number, string> = {
 };
 
 export const LEVEL_DESCRIPTIONS: Record<number, string> = {
-  1: m.constants.level_1(),
-  2: m.constants.level_2(),
-  3: m.constants.level_3(),
-  4: m.constants.level_4(),
-  5: m.constants.level_5()
+  1: m.constants_level_1(),
+  2: m.constants_level_2(),
+  3: m.constants_level_3(),
+  4: m.constants_level_4(),
+  5: m.constants_level_5()
 };
 
 // L-badge colors (Tailwind classes)
@@ -40,10 +40,10 @@ export const LEVEL_BADGE_CLASSES: Record<number, string> = {
 
 // Coverage state display
 export const COVERAGE_STATE_LABELS: Record<string, string> = {
-  not_yet: m.constants.coverage_not_yet(),
-  initiated: m.constants.coverage_initiated(),
-  partial: m.constants.coverage_partial(),
-  covered: m.constants.coverage_covered()
+  not_yet: m.constants_coverage_not_yet(),
+  initiated: m.constants_coverage_initiated(),
+  partial: m.constants_coverage_partial(),
+  covered: m.constants_coverage_covered()
 };
 
 export const COVERAGE_STATE_WIDTH: Record<string, number> = {
@@ -62,20 +62,20 @@ export const COVERAGE_STATE_COLOR: Record<string, string> = {
 
 // Fit/Gap result display
 export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
-  match: m.constants.fitgap_match(),
-  gap: m.constants.fitgap_gap(),
-  exceed: m.constants.fitgap_exceeds(),
-  not_assessed: m.constants.fitgap_not_assessed(),
-  insufficient_evidence: m.constants.fitgap_insufficient()
+  match: m.constants_fitgap_match(),
+  gap: m.constants_fitgap_gap(),
+  exceed: m.constants_fitgap_exceeds(),
+  not_assessed: m.constants_fitgap_not_assessed(),
+  insufficient_evidence: m.constants_fitgap_insufficient()
 };
 
 // Session end reason display — mirrors Session::END_REASONS in the backend
 export const SESSION_END_REASON_LABELS: Record<string, string> = {
-  manual_candidate: m.constants.session_ended_by_candidate(),
-  manual_assessor: m.constants.session_ended_by_assessor(),
+  manual_candidate: m.constants_session_ended_by_candidate(),
+  manual_assessor: m.constants_session_ended_by_assessor(),
   all_covered: "all skills covered",
-  time_ceiling: m.constants.session_ended_by_timeout(),
-  error: m.constants.session_ended_by_error()
+  time_ceiling: m.constants_session_ended_by_timeout(),
+  error: m.constants_session_ended_by_error()
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {

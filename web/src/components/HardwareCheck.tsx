@@ -30,10 +30,10 @@ function StateIcon({ state }: { state: ProctoringState }) {
 }
 
 function stateLabel(state: ProctoringState) {
-  if (state === ProctoringState.LOADING) return m.hardware.checking();
-  if (state === ProctoringState.PASSED) return m.hardware.passed();
-  if (state === ProctoringState.ERROR) return m.hardware.failed();
-  return m.hardware.waiting();
+  if (state === ProctoringState.LOADING) return m.hardware_checking();
+  if (state === ProctoringState.PASSED) return m.hardware_passed();
+  if (state === ProctoringState.ERROR) return m.hardware_failed();
+  return m.hardware_waiting();
 }
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
@@ -218,11 +218,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   const thresholds = DEFAULT_THRESHOLDS;
 
   const rows: { key: keyof HardwareCheckingProgress; label: string }[] = [
-    { key: "osAndBrowser", label: m.hardware.os_browser() },
-    { key: "internet", label: m.hardware.internet() },
-    ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: m.hardware.camera() }] : []),
-    { key: "microphone", label: m.hardware.microphone() },
-    { key: "audio", label: m.hardware.audio_output() }
+    { key: "osAndBrowser", label: m.hardware_os_browser() },
+    { key: "internet", label: m.hardware_internet() },
+    ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: m.hardware_camera() }] : []),
+    { key: "microphone", label: m.hardware_microphone() },
+    { key: "audio", label: m.hardware_audio_output() }
   ];
 
   const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
@@ -249,13 +249,13 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                   clipRule="evenodd"
                 />
               </svg>
-              <p className="text-xs">{m.hardware.camera_not_active()}</p>
+              <p className="text-xs">{m.hardware_camera_not_active()}</p>
             </div>
           )}
           {progress.camera === ProctoringState.PASSED && videoStream && (
             <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              {m.hardware.live()}
+              {m.hardware_live()}
             </span>
           )}
         </div>
@@ -344,11 +344,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         {hasError && (
           <Button variant="outline" size="sm" onClick={retryAll}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            {m.hardware.retry()}
+            {m.hardware_retry()}
           </Button>
         )}
         <Button size="sm" className="ml-auto" disabled={!allPassed} onClick={onStart}>
-          {m.hardware.start_interview()}
+          {m.hardware_start_interview()}
         </Button>
       </div>
     </div>
