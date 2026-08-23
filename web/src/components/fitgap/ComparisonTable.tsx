@@ -1,7 +1,7 @@
 import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
 import { cn } from "@/lib/utils";
 import { CheckCircle, AlertTriangle, TrendingUp, Minus, HelpCircle } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import type { SkillComparison, SkillComparisonResult } from "@/types";
 import OverrideProvenance from "./OverrideProvenance";
 

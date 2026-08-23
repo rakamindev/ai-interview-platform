@@ -15,7 +15,7 @@ import LevelBadge from "./LevelBadge";
 import OverrideHistory from "./OverrideHistory";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, ShieldCheck, ArrowDownCircle } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 

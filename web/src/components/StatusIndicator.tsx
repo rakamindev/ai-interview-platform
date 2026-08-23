@@ -1,6 +1,6 @@
 import React from "react";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import { ProctoringState } from "@/utils/hardwareUtils";
 
 interface StatusIndicatorProps {

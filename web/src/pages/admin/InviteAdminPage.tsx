@@ -14,7 +14,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Copy, Check } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import { authApi } from "@/services/auth";
 
 const InviteFormSchema = z.object({

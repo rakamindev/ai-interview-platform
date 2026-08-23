@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 interface Props {
   children: ReactNode;

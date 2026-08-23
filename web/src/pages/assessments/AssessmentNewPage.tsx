@@ -34,7 +34,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import { AssessmentFormSchema } from "@/schemas/forms";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import type { AssessmentFormValues } from "@/schemas/forms";
 import type { AssessmentSkill } from "@/types";
 

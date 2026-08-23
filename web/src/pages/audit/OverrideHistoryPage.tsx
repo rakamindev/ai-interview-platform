@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { Loader2, History } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import { api } from "@/services/api";
 import { LEVEL_LABELS } from "@/utils/constants";
 
