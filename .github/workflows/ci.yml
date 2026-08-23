@@ -55,9 +55,7 @@ jobs:
           working-directory: api
       - name: Prepare database
         working-directory: api
-        run: |
-          bundle exec rails db:create
-          bundle exec rails db:force_migrate
+        run: bundle exec rails db:create db:force_migrate
       - name: Run RSpec
         working-directory: api
         run: bundle exec rspec --format documentation
@@ -93,7 +91,7 @@ jobs:
         run: npm ci
       - name: Compile Paraglide messages
         working-directory: web
-        run: npx paraglide-js compile --project ./project.inlang --outdir ./src/paraglide
+        run: npx paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations
       - name: Type check
         working-directory: web
         run: npx tsc --noEmit
