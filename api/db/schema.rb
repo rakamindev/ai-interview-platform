@@ -10,26 +10,27 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_23_000002) do
   create_schema "ai_interview"
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
-  enable_extension "public.pgcrypto"
+  enable_extension "pgcrypto"
 
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
-  create_enum "public.confidence_level", ["high", "medium", "low"]
-  create_enum "public.coverage_state", ["not_yet", "initiated", "partial", "covered"]
-  create_enum "public.end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
-  create_enum "public.fit_result", ["match", "gap", "exceed", "not_assessed"]
-  create_enum "public.generation_status", ["pending", "generating", "complete", "failed"]
-  create_enum "public.rating_state", ["rated", "unrated"]
-  create_enum "public.session_status", ["pending", "active", "ended", "failed"]
-  create_enum "public.speaker_type", ["ai", "candidate"]
+  create_enum "ai_interview.ai_presence", ["current", "stale"]
+  create_enum "ai_interview.confidence_level", ["high", "medium", "low"]
+  create_enum "ai_interview.coverage_state", ["not_yet", "initiated", "partial", "covered"]
+  create_enum "ai_interview.end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
+  create_enum "ai_interview.fit_result", ["match", "gap", "exceed", "not_assessed"]
+  create_enum "ai_interview.generation_event_type", ["stale_marked", "restored"]
+  create_enum "ai_interview.generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "ai_interview.rating_state", ["rated", "unrated"]
+  create_enum "ai_interview.session_status", ["pending", "active", "ended", "failed"]
+  create_enum "ai_interview.speaker_type", ["ai", "candidate"]
 
-
-  create_table "public.assessment_skills", force: :cascade do |t|
+  create_table "ai_interview.assessment_skills", force: :cascade do |t|
     t.bigint "assessment_id", null: false
     t.integer "display_order", default: 0, null: false
     t.integer "expected_level"
@@ -47,7 +48,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_assessment_skills_expected_level"
   end
 
-  create_table "public.assessments", force: :cascade do |t|
+  create_table "ai_interview.assessments", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "created_by", null: false
     t.string "language", default: "en"
@@ -60,7 +61,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
 
-  create_table "public.assessor_override_events", force: :cascade do |t|
+  create_table "ai_interview.assessor_override_events", force: :cascade do |t|
     t.integer "ai_level", null: false
     t.text "assessor_notes"
     t.datetime "created_at", default: -> { "now()" }, null: false
@@ -73,7 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["tenant_id"], name: "index_assessor_override_events_on_tenant_id"
   end
 
-  create_table "public.assessor_overrides", force: :cascade do |t|
+  create_table "ai_interview.assessor_overrides", force: :cascade do |t|
     t.integer "ai_level", null: false
     t.text "assessor_notes"
     t.datetime "overridden_at", default: -> { "now()" }
@@ -87,7 +88,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
   end
 
-  create_table "public.coverage_maps", force: :cascade do |t|
+  create_table "ai_interview.coverage_maps", force: :cascade do |t|
     t.boolean "is_discovered", default: false, null: false
     t.text "last_signal"
     t.integer "probe_count", default: 0, null: false
@@ -101,7 +102,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["session_id"], name: "index_coverage_maps_on_session_id"
   end
 
-  create_table "public.fit_gap_reports", force: :cascade do |t|
+  create_table "ai_interview.fit_gap_reports", force: :cascade do |t|
     t.jsonb "additional_strengths", default: [], null: false
     t.text "culture_narrative"
     t.datetime "generated_at", default: -> { "now()" }
@@ -118,7 +119,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
   end
 
-  create_table "public.memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "ai_interview.memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "organization_id", null: false
     t.string "role", default: "user", null: false
@@ -129,22 +130,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["user_id"], name: "index_memberships_on_user_id"
   end
 
-  create_table "public.organizations", force: :cascade do |t|
-    t.string "alias_hosts", default: [], null: false, array: true
-    t.jsonb "config", default: {}, null: false
-    t.timestamptz "created_at", default: -> { "now()" }, null: false
-    t.string "host", limit: 255, null: false
-    t.string "identifier", limit: 255, null: false
-    t.string "name", limit: 255, null: false
-    t.string "scheme", limit: 255, null: false
-    t.timestamptz "updated_at", default: -> { "now()" }, null: false
-    t.index ["host"], name: "index_organizations_on_host"
-    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
+  create_table "ai_interview.portfolio_skill_generation_events", force: :cascade do |t|
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.enum "event_type", null: false, enum_type: "generation_event_type"
+    t.bigint "portfolio_skill_id", null: false
+    t.text "reason"
+    t.bigint "tenant_id", null: false
+    t.index ["portfolio_skill_id"], name: "index_portfolio_skill_generation_events_on_portfolio_skill_id"
+    t.index ["tenant_id"], name: "index_portfolio_skill_generation_events_on_tenant_id"
   end
 
-  create_table "public.portfolio_skills", force: :cascade do |t|
+  create_table "ai_interview.portfolio_skills", force: :cascade do |t|
     t.enum "ai_confidence", enum_type: "confidence_level"
     t.integer "ai_level"
+    t.enum "ai_presence", default: "current", null: false, enum_type: "ai_presence"
     t.text "competency_summary", null: false
     t.jsonb "evidence", default: [], null: false
     t.boolean "is_discovered", default: false, null: false
@@ -159,7 +158,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
-  create_table "public.portfolios", force: :cascade do |t|
+  create_table "ai_interview.portfolios", force: :cascade do |t|
     t.bigint "candidate_id"
     t.datetime "generated_at"
     t.text "generation_error"
@@ -171,7 +170,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
   end
 
-  create_table "public.refresh_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "ai_interview.refresh_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "expires_at", null: false
     t.datetime "revoked_at"
@@ -184,7 +183,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["user_id"], name: "index_refresh_tokens_on_user_id"
   end
 
-  create_table "public.sessions", force: :cascade do |t|
+  create_table "ai_interview.sessions", force: :cascade do |t|
     t.bigint "assessment_id", null: false
     t.bigint "candidate_id"
     t.string "candidate_name", limit: 255
@@ -205,7 +204,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["tenant_id", "status"], name: "idx_sessions_tenant_status"
   end
 
-  create_table "public.skill_taxonomies", force: :cascade do |t|
+  create_table "ai_interview.skill_taxonomies", force: :cascade do |t|
     t.string "category", limit: 50, null: false
     t.text "l1_anchor", null: false
     t.text "l2_anchor", null: false
@@ -220,7 +219,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["skill_id"], name: "idx_skill_taxonomies_skill_id", unique: true
   end
 
-  create_table "public.transcript_turns", force: :cascade do |t|
+  create_table "ai_interview.transcript_turns", force: :cascade do |t|
     t.integer "audio_end_ms"
     t.integer "audio_start_ms"
     t.datetime "created_at", default: -> { "now()" }, null: false
@@ -232,7 +231,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["session_id"], name: "index_transcript_turns_on_session_id"
   end
 
-  create_table "public.users", force: :cascade do |t|
+  create_table "ai_interview.users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", limit: 255, null: false
     t.string "password_digest", null: false
@@ -241,7 +240,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
   end
 
-  create_table "public.vacancies", force: :cascade do |t|
+  create_table "ai_interview.vacancies", force: :cascade do |t|
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.bigint "created_by", null: false
@@ -252,7 +251,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
   end
 
-  create_table "public.vacancy_skills", force: :cascade do |t|
+  create_table "ai_interview.vacancy_skills", force: :cascade do |t|
     t.integer "expected_level", null: false
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
@@ -262,27 +261,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_000020) do
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
 
-  add_foreign_key "public.assessment_skills", "public.assessments"
-  add_foreign_key "public.assessments", "public.organizations", column: "tenant_id"
-  add_foreign_key "public.assessments", "public.users", column: "created_by"
-  add_foreign_key "public.assessor_override_events", "public.organizations", column: "tenant_id"
-  add_foreign_key "public.assessor_override_events", "public.portfolio_skills"
-  add_foreign_key "public.assessor_overrides", "public.portfolio_skills"
-  add_foreign_key "public.coverage_maps", "public.sessions"
-  add_foreign_key "public.fit_gap_reports", "public.organizations", column: "tenant_id"
-  add_foreign_key "public.fit_gap_reports", "public.portfolios"
-  add_foreign_key "public.fit_gap_reports", "public.vacancies"
-  add_foreign_key "public.memberships", "public.organizations"
-  add_foreign_key "public.memberships", "public.users"
-  add_foreign_key "public.portfolio_skills", "public.organizations", column: "tenant_id"
-  add_foreign_key "public.portfolio_skills", "public.portfolios"
-  add_foreign_key "public.portfolios", "public.organizations", column: "tenant_id"
-  add_foreign_key "public.portfolios", "public.sessions"
-  add_foreign_key "public.refresh_tokens", "public.users"
-  add_foreign_key "public.sessions", "public.assessments"
-  add_foreign_key "public.sessions", "public.organizations", column: "tenant_id"
-  add_foreign_key "public.transcript_turns", "public.sessions"
-  add_foreign_key "public.vacancies", "public.organizations", column: "tenant_id"
-  add_foreign_key "public.vacancies", "public.users", column: "created_by"
-  add_foreign_key "public.vacancy_skills", "public.vacancies"
+  add_foreign_key "ai_interview.assessment_skills", "ai_interview.assessments"
+  add_foreign_key "ai_interview.assessments", "ai_interview.users", column: "created_by"
+  add_foreign_key "ai_interview.assessments", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.assessor_override_events", "ai_interview.portfolio_skills"
+  add_foreign_key "ai_interview.assessor_override_events", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.assessor_overrides", "ai_interview.portfolio_skills"
+  add_foreign_key "ai_interview.assessor_overrides", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.coverage_maps", "ai_interview.sessions"
+  add_foreign_key "ai_interview.fit_gap_reports", "ai_interview.portfolios"
+  add_foreign_key "ai_interview.fit_gap_reports", "ai_interview.vacancies"
+  add_foreign_key "ai_interview.fit_gap_reports", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.memberships", "ai_interview.users"
+  add_foreign_key "ai_interview.memberships", "public.organizations"
+  add_foreign_key "ai_interview.portfolio_skills", "ai_interview.portfolios"
+  add_foreign_key "ai_interview.portfolio_skills", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.portfolios", "ai_interview.sessions"
+  add_foreign_key "ai_interview.portfolios", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.refresh_tokens", "ai_interview.users"
+  add_foreign_key "ai_interview.sessions", "ai_interview.assessments"
+  add_foreign_key "ai_interview.sessions", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.transcript_turns", "ai_interview.sessions"
+  add_foreign_key "ai_interview.vacancies", "ai_interview.users", column: "created_by"
+  add_foreign_key "ai_interview.vacancies", "public.organizations", column: "tenant_id"
+  add_foreign_key "ai_interview.vacancy_skills", "ai_interview.vacancies"
+
+  create_table "public.organizations", force: :cascade do |t|
+    t.string "alias_hosts", default: [], null: false, array: true
+    t.jsonb "config", default: {}, null: false
+    t.timestamptz "created_at", default: -> { "now()" }, null: false
+    t.string "host", limit: 255, null: false
+    t.string "identifier", limit: 255, null: false
+    t.string "name", limit: 255, null: false
+    t.string "scheme", limit: 255, null: false
+    t.timestamptz "updated_at", default: -> { "now()" }, null: false
+    t.index ["host"], name: "index_organizations_on_host"
+    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
+  end
 end

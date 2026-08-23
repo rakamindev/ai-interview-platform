@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
-import { Zap } from "lucide-react";
+import { Zap, AlertTriangle } from "lucide-react";
 import { m } from "@/paraglide/messages.js";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
@@ -64,6 +65,14 @@ export default function SkillPortfolioCard({
           <div className="text-xs text-muted-foreground bg-verdict-gap/10 border border-verdict-gap/20 rounded px-3 py-2">
             {m.portfolio_low_confidence_note()}
           </div>
+        )}
+
+        {/* Stale skill warning — override preserved but AI no longer reports */}
+        {skill.ai_presence === "stale" && override && (
+          <Badge variant="secondary" className="gap-1 text-amber-700 bg-amber-50 border-amber-200">
+            <AlertTriangle className="h-3 w-3" />
+            AI no longer reports this skill — override preserved
+          </Badge>
         )}
 
         {/* Competency summary */}

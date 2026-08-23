@@ -108,4 +108,19 @@ describe("OverridePanel", () => {
     // Dialog should have role="dialog"
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  // Stale skill shows AI no longer reports message
+  it("shows AI no longer reports message for stale skills with override", () => {
+    render(
+      <OverridePanel
+        skill={makeSkill({ ai_presence: "stale" })}
+        existingOverride={makeOverride()}
+        onSaved={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /override applied/i }));
+
+    expect(screen.getByText(/AI no longer reports this skill/)).toBeInTheDocument();
+  });
 });

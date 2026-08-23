@@ -24,9 +24,26 @@ module Portfolios
       portfolio.update!(generation_status: "generating")
 
       if @session.transcript_turns.where(speaker: "candidate").none?
-        portfolio.portfolio_skills.destroy_all
+        non_overridden = portfolio.portfolio_skills.left_joins(:assessor_override)
+                                .where(assessor_overrides: { id: nil })
+        overridden_count = portfolio.portfolio_skills.count - non_overridden.count
+        non_overridden.destroy_all
+
+        if overridden_count.positive?
+          portfolio.portfolio_skills.where.not(id: nil).update_all(ai_presence: "stale")
+          portfolio.portfolio_skills.stale.find_each do |skill|
+            PortfolioSkillGenerationEvent.create!(
+              portfolio_skill_id: skill.id,
+              tenant_id: skill.tenant_id,
+              event_type: "stale_marked",
+              reason: "Empty transcript — AI cannot re-evaluate; override preserved",
+              created_at: Time.current
+            )
+          end
+        end
+
         portfolio.update!(generation_status: "complete", generated_at: Time.current)
-        Rails.logger.info("[N10] Skipping generation for session #{@session.id} — no candidate turns")
+        Rails.logger.info("[N10] Skipping generation for session #{@session.id} — no candidate turns (#{overridden_count} overrides preserved as stale)")
         return portfolio
       end
 
@@ -166,9 +183,11 @@ module Portfolios
       configured = validator.call(data["configured_skills"], is_discovered: false)
       discovered = validator.call(data["discovered_skills"], is_discovered: true)
       all_skills = configured + discovered
+      ai_labels = all_skills.map { |s| s.skill_label }.to_set
 
       ActiveRecord::Base.transaction do
         all_skills.each { |skill| upsert_skill(portfolio, skill) }
+        mark_stale_and_restored(portfolio, ai_labels)
       end
     end
 
@@ -185,6 +204,34 @@ module Portfolios
         tenant_id: portfolio.tenant_id
       )
       row.save!
+    end
+
+    def mark_stale_and_restored(portfolio, ai_labels)
+      portfolio.portfolio_skills.find_each do |skill|
+        if ai_labels.include?(skill.skill_label)
+          if skill.ai_presence == "stale" && skill.assessor_override.present?
+            skill.update!(ai_presence: "current")
+            PortfolioSkillGenerationEvent.create!(
+              portfolio_skill_id: skill.id,
+              tenant_id: skill.tenant_id,
+              event_type: "restored",
+              reason: "AI returned this skill again after previously omitting it",
+              created_at: Time.current
+            )
+          end
+        else
+          if skill.assessor_override.present? && skill.ai_presence != "stale"
+            skill.update!(ai_presence: "stale")
+            PortfolioSkillGenerationEvent.create!(
+              portfolio_skill_id: skill.id,
+              tenant_id: skill.tenant_id,
+              event_type: "stale_marked",
+              reason: "AI no longer returns this skill label",
+              created_at: Time.current
+            )
+          end
+        end
+      end
     end
   end
 end

@@ -13,12 +13,16 @@ class PortfolioSkill < ApplicationRecord
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }, allow_nil: true
   validates :competency_summary, presence: true, allow_nil: true
   validates :rating_state, inclusion: { in: %w[rated unrated] }
+  validates :ai_presence, inclusion: { in: %w[current stale] }
 
   scope :rated,   -> { where(rating_state: "rated") }
   scope :unrated, -> { where(rating_state: "unrated") }
+  scope :stale,   -> { where(ai_presence: "stale") }
 
-  def rated?   = rating_state == "rated"
-  def unrated? = rating_state == "unrated"
+  def rated?    = rating_state == "rated"
+  def unrated?  = rating_state == "unrated"
+  def current?  = ai_presence == "current"
+  def stale?    = ai_presence == "stale"
 
   # evidence is stored as JSONB array of quote strings
   def evidence_quotes

@@ -8,7 +8,8 @@ export const PortfolioSkillSchema = z.object({
   ai_level: z.number(),
   ai_confidence: z.string(),
   evidence: z.array(z.string()),
-  competency_summary: z.string()
+  competency_summary: z.string(),
+  ai_presence: z.enum(["current", "stale"]).optional()
 });
 
 export const AssessorOverrideSchema = z.object({

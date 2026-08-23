@@ -218,4 +218,64 @@ describe("PortfolioPage", () => {
       expect(screen.getByText("Export failed. Please try again.")).toBeInTheDocument();
     });
   });
+
+  it("renders stale badge for overridden and stale skills", async () => {
+    mockSessionsApi.getPortfolio.mockResolvedValue({
+      data: {
+        portfolio: {
+          id: 5,
+          session_id: 1,
+          generation_status: "complete",
+          skills: [
+            {
+              id: 10,
+              skill_id: "react",
+              skill_label: "React",
+              is_discovered: false,
+              ai_level: 3,
+              ai_confidence: "high",
+              evidence: [],
+              competency_summary: "Strong",
+              ai_presence: "stale"
+            }
+          ],
+          overrides: [
+            {
+              id: 20,
+              portfolio_skill_id: 10,
+              ai_level: 3,
+              override_level: 4,
+              assessor_notes: "Manual fix",
+              overridden_by: 1,
+              overridden_at: "2025-01-15T10:30:00Z"
+            }
+          ],
+          session_id: 1
+        },
+        status: "done"
+      }
+    } as any);
+    mockVacanciesApi.list.mockResolvedValue({ data: { vacancies: [], meta: {} } } as any);
+    mockSessionsApi.get.mockResolvedValue({
+      data: {
+        session: {
+          id: 10,
+          assessment_id: 1,
+          candidate_name: "Eve",
+          invite_token: "tok",
+          invite_url: "http://x",
+          status: "active"
+        },
+        assessment: { id: 1, name: "Test", time_limit_min: 30 }
+      }
+    } as any);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("React")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/AI no longer reports this skill/)).toBeInTheDocument();
+  });
 });

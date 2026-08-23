@@ -33,7 +33,8 @@ class PortfolioSerializer
       ai_level: skill.ai_level,
       ai_confidence: skill.ai_confidence,
       evidence: skill.evidence_quotes,
-      competency_summary: skill.competency_summary
+      competency_summary: skill.competency_summary,
+      ai_presence: skill.ai_presence || "current"
     }
   end
 

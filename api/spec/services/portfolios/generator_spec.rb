@@ -364,4 +364,122 @@ RSpec.describe Portfolios::Generator do
       expect(new_skill).to be_present
     end
   end
+
+  # Empty transcript regen preserves overridden skills as stale (not destroyed)
+  describe "empty transcript regen preserves overridden skills as stale" do
+    it "marks overridden skills stale instead of destroying them" do
+      # Generate initial portfolio with skills (candidate turns exist from outer before)
+      portfolio = generator.call
+      react_skill = portfolio.portfolio_skills.find_by(skill_label: "React / Frontend Development Core")
+      node_skill = portfolio.portfolio_skills.find_by(skill_label: "Node.js / Backend Development")
+      expect(react_skill).to be_present
+
+      # Create override on React skill
+      create(:assessor_override, portfolio_skill: react_skill, override_level: 4, assessor_notes: "Manual")
+
+      # Now remove candidate turns to simulate empty transcript
+      TranscriptTurn.where(session: session, speaker: "candidate").delete_all
+
+      # Regenerate with empty transcript
+      portfolio = generator.call
+
+      # React skill preserved as stale (has override)
+      react_skill.reload
+      expect(react_skill).to be_present
+      expect(react_skill.ai_presence).to eq("stale")
+      expect(react_skill.assessor_override).to be_present
+
+      # Node.js skill destroyed (no override)
+      expect(portfolio.portfolio_skills.find_by(skill_label: "Node.js / Backend Development")).to be_nil
+
+      # Audit event logged
+      event = PortfolioSkillGenerationEvent.find_by(portfolio_skill_id: react_skill.id)
+      expect(event).to be_present
+      expect(event.event_type).to eq("stale_marked")
+      expect(event.reason).to include("Empty transcript")
+    end
+  end
+
+  # Empty transcript regen still destroys non-overridden skills (regression guard)
+  describe "empty transcript regen destroys non-overridden skills" do
+    it "destroys skills without overrides" do
+      # Generate initial portfolio with skills
+      portfolio = generator.call
+      expect(portfolio.portfolio_skills.count).to eq(3)
+
+      # Remove candidate turns
+      TranscriptTurn.where(session: session, speaker: "candidate").delete_all
+
+      # Regenerate with empty transcript
+      portfolio = generator.call
+      expect(portfolio.portfolio_skills.count).to eq(0)
+    end
+  end
+
+  # Normal regen marks overridden skill stale when AI stops returning it
+  describe "normal regen marks overridden skill stale when AI stops returning it" do
+    it "marks skill stale and logs event" do
+      portfolio = generator.call
+      react_skill = portfolio.portfolio_skills.find_by(skill_label: "React / Frontend Development Core")
+      create(:assessor_override, portfolio_skill: react_skill, override_level: 4, assessor_notes: "Manual")
+
+      # Re-generate without React in AI response
+      partial_response = {
+        "configured_skills" => [
+          { "skill_id" => "SK-ENG-002", "skill_label" => "Node.js / Backend Development",
+            "level" => 2, "confidence" => "medium", "evidence" => ["quote"],
+            "competency_summary" => "summary" }
+        ],
+        "discovered_skills" => []
+      }
+      partial_client = instance_double(Gemini::HttpClient)
+      allow(partial_client).to receive(:generate_content).and_return(partial_response)
+
+      described_class.new(session: session, gemini_client: partial_client).call
+
+      react_skill.reload
+      expect(react_skill.ai_presence).to eq("stale")
+      expect(react_skill.assessor_override).to be_present
+
+      event = PortfolioSkillGenerationEvent.find_by(portfolio_skill_id: react_skill.id)
+      expect(event).to be_present
+      expect(event.event_type).to eq("stale_marked")
+    end
+  end
+
+  # Skill reappearing restores it from stale to current
+  describe "skill reappearing restores it from stale to current" do
+    it "restores stale skill when AI returns it again" do
+      portfolio = generator.call
+      react_skill = portfolio.portfolio_skills.find_by(skill_label: "React / Frontend Development Core")
+      create(:assessor_override, portfolio_skill: react_skill, override_level: 4, assessor_notes: "Manual")
+
+      # First regen: omit React → marks stale
+      partial_response = {
+        "configured_skills" => [
+          { "skill_id" => "SK-ENG-002", "skill_label" => "Node.js / Backend Development",
+            "level" => 2, "confidence" => "medium", "evidence" => ["quote"],
+            "competency_summary" => "summary" }
+        ],
+        "discovered_skills" => []
+      }
+      partial_client = instance_double(Gemini::HttpClient)
+      allow(partial_client).to receive(:generate_content).and_return(partial_response)
+      described_class.new(session: session, gemini_client: partial_client).call
+
+      react_skill.reload
+      expect(react_skill.ai_presence).to eq("stale")
+
+      # Second regen: React returns → restores to current
+      full_client = Gemini::StubClient.new(mode: :valid)
+      described_class.new(session: session, gemini_client: full_client).call
+
+      react_skill.reload
+      expect(react_skill.ai_presence).to eq("current")
+
+      events = PortfolioSkillGenerationEvent.where(portfolio_skill_id: react_skill.id)
+      expect(events.find_by(event_type: "stale_marked")).to be_present
+      expect(events.find_by(event_type: "restored")).to be_present
+    end
+  end
 end
