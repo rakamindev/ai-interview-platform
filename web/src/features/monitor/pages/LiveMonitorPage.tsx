@@ -62,8 +62,9 @@ export default function LiveMonitorPage() {
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
+  const { coverageMap, sessionEnded, sessionEndReason, isConnected, reconnectExhausted, reconnect } =
     useCoverageWebSocket(Number(sessionId));
+  const [transcriptPollFailing, setTranscriptPollFailing] = useState(false);
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {
@@ -101,12 +102,13 @@ export default function LiveMonitorPage() {
         Number(sessionId),
         lastTurnRef.current + 1
       );
+      setTranscriptPollFailing(false);
       if (res.data.turns.length > 0) {
         setTranscript((prev) => [...prev, ...res.data.turns].slice(-10));
         lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
       }
     } catch {
-      // transient poll failure — silently skip, retry on next interval
+      setTranscriptPollFailing(true);
     }
   }, [sessionId]);
 
@@ -163,8 +165,11 @@ export default function LiveMonitorPage() {
             isConnected ? "text-green-600" : "text-muted-foreground"
           )}>
             <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
+            {isConnected ? "Live" : reconnectExhausted ? "Disconnected" : "Reconnecting..."}
           </span>
+          {reconnectExhausted && !sessionEnded && (
+            <Button size="sm" variant="outline" onClick={reconnect}>Reconnect</Button>
+          )}
         </div>
       </div>
 
@@ -268,7 +273,12 @@ export default function LiveMonitorPage() {
       {/* Live transcript */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Live Transcript</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-1.5">
+            Live Transcript
+            {transcriptPollFailing && sessionActive && (
+              <span className="text-xs font-normal text-amber-600">— having trouble updating</span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {transcript.length === 0 ? (

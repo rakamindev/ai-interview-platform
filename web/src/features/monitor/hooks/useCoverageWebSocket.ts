@@ -10,6 +10,8 @@ interface UseCoverageWebSocketResult {
   sessionEnded: boolean;
   sessionEndReason: string | null;
   isConnected: boolean;
+  reconnectExhausted: boolean;
+  reconnect: () => void;
 }
 
 export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketResult {
@@ -17,6 +19,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [reconnectExhausted, setReconnectExhausted] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,6 +35,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
 
     ws.onopen = () => {
       setIsConnected(true);
+      setReconnectExhausted(false);
       reconnectAttemptsRef.current = 0;
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
     };
@@ -63,6 +67,8 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
           reconnectAttemptsRef.current += 1;
           connect();
         }, RECONNECT_DELAYS[attempt]);
+      } else {
+        setReconnectExhausted(true);
       }
     };
 
@@ -81,5 +87,12 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     };
   }, [connect]);
 
-  return { coverageMap, sessionEnded, sessionEndReason, isConnected };
+  const reconnect = useCallback(() => {
+    reconnectAttemptsRef.current = 0;
+    setReconnectExhausted(false);
+    activeRef.current = true;
+    connect();
+  }, [connect]);
+
+  return { coverageMap, sessionEnded, sessionEndReason, isConnected, reconnectExhausted, reconnect };
 }
