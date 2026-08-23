@@ -5,7 +5,13 @@ export interface AssessmentPayload {
   name: string;
   time_limit_min: number;
   language?: "en" | "id";
+  vacancy_id?: number | null;
   assessment_skills_attributes: Partial<AssessmentSkill>[];
+}
+
+export interface BulkSessionPayload {
+  candidate_name?: string;
+  candidate_id?: number;
 }
 
 export const assessmentsApi = {
@@ -38,5 +44,11 @@ export const assessmentsApi = {
     api.post<{ session: Session; invite_url: string }>(
       `/assessments/${assessmentId}/sessions`,
       { session: { candidate_name: candidateName, candidate_id: candidateId } }
+    ),
+
+  bulkCreateSessions: (assessmentId: number, candidates: BulkSessionPayload[]) =>
+    api.post<{ created: Session[]; failed: { candidate_name?: string; errors: string[] }[] }>(
+      `/assessments/${assessmentId}/sessions/bulk`,
+      { sessions: candidates }
     ),
 };

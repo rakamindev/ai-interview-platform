@@ -52,7 +52,7 @@ export default function VacancyListPage() {
             <Card
               key={v.id}
               className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/vacancies/${v.id}/edit`)}
+              onClick={() => navigate(`/vacancies/${v.id}`)}
             >
               <CardContent className="py-3 px-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">

@@ -35,13 +35,13 @@ export default function VacancyNewPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await vacanciesApi.create({
+      const res = await vacanciesApi.create({
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
-      navigate("/vacancies");
+      navigate(`/vacancies/${res.data.vacancy.id}`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
     } finally {

@@ -8,6 +8,9 @@ module Api
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
+      # POST /api/v1/assessments/:assessment_id/sessions/bulk
+      # (action name matches the Rails route helper: bulk_assessment_sessions)
+
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
@@ -39,6 +42,31 @@ module Api
         else
           json_error(session.errors.full_messages.first, :unprocessable_entity)
         end
+      rescue ActiveRecord::RecordNotFound
+        json_error("Assessment not found", :not_found)
+      end
+
+      # POST /api/v1/assessments/:assessment_id/sessions/bulk
+      def bulk_create
+        assessment = Assessment.find(params[:assessment_id])
+
+        candidates = Array(params[:sessions]).first(50) # ponytail: cap at 50; paginate if needed
+        created, failed = [], []
+
+        candidates.each do |c|
+          session = assessment.sessions.create(
+            candidate_name: c[:candidate_name].presence,
+            candidate_id:   c[:candidate_id],
+            tenant_id:      current_tenant_id
+          )
+          if session.persisted?
+            created << session_json(session)
+          else
+            failed << { candidate_name: c[:candidate_name], errors: session.errors.full_messages }
+          end
+        end
+
+        json_response({ created:, failed: }, :created)
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end

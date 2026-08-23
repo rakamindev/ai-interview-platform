@@ -7,9 +7,11 @@
 #   Current.tenant_id     → organization.id (used to scope all AI interview queries)
 #
 # Resolution order:
-#   1. JWT Bearer token → decode → use `scheme` claim
-#   2. X-Tenant-Scheme request header (for non-JWT requests / candidate flows)
-#   3. Referer host (fallback, same as rakamin-api HostService approach)
+#   With a Bearer token: the `scheme` claim of the VERIFIED token only.
+#     (Header/referer are client-controlled and must never override it.)
+#   Without credentials:
+#   1. X-Tenant-Scheme request header (non-JWT flows, e.g. login)
+#   2. Referer host (fallback, same as rakamin-api HostService approach)
 #
 # If no tenant can be resolved, the request continues with no tenant set.
 # Individual controllers can enforce tenant presence via before_action.
@@ -31,20 +33,24 @@ class TenantResolverMiddleware < ApplicationMiddleware
   private
 
   def resolve_scheme(request)
-    # 1. Try JWT bearer token first
-    scheme_from_jwt(request) ||
-      # 2. Try explicit header
-      request.headers['X-Tenant-Scheme'].presence ||
-      # 3. Fall back to referer host
-      scheme_from_referer(request)
+    if bearer_token(request)
+      # A Bearer token is authoritative: only its VERIFIED claims may pick the
+      # tenant. Header/referer fallbacks are client-controlled and would let an
+      # authenticated user (or a token without a scheme claim) target any tenant.
+      scheme_from_verified_jwt(request)
+    else
+      # No credentials at all: legacy fallbacks for non-JWT flows.
+      request.headers['X-Tenant-Scheme'].presence || scheme_from_referer(request)
+    end
   end
 
-  def scheme_from_jwt(request)
+  def bearer_token(request)
     auth_header = request.headers['Authorization'].to_s
-    return unless auth_header.start_with?('Bearer ', 'bearer ')
+    auth_header.match(/\ABearer\s+(\S+)\z/i)&.[](1)
+  end
 
-    token = auth_header.split(' ').last
-    claims = JsonWebToken.decode_without_verification(token)
+  def scheme_from_verified_jwt(request)
+    claims = JsonWebToken.decode(bearer_token(request))
     claims[:scheme].presence
   rescue StandardError
     nil

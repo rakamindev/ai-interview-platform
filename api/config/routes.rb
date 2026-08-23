@@ -9,6 +9,8 @@ Rails.application.routes.draw do
       post 'auth/login', to: 'authentication#authenticate'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+      # Deep readiness — DB + Redis + EventMachine reactor (k8s readinessProbe)
+      get  'health/ready', to: 'readiness#show'
 
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
@@ -18,7 +20,9 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
-        resources :sessions, only: %i[index create]
+        resources :sessions, only: %i[index create] do
+          collection { post :bulk }
+        end
       end
 
       # Sessions
@@ -48,7 +52,12 @@ Rails.application.routes.draw do
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
       # Vacancies
-      resources :vacancies
+      resources :vacancies do
+        member do
+          get :candidates
+          get :assessments
+        end
+      end
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do

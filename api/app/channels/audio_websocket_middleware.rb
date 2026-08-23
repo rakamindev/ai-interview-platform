@@ -82,12 +82,30 @@ class AudioWebSocketMiddleware
       state.logged_gate_suppressed = false
       state.gemini_client.send_audio(data)
     else
+      # Buffer for replay when Gemini becomes ready again (reconnect gap).
+      state.audio_buffer.push(data)
       # Log once per gap to avoid spam (~33 chunks/s during reconnection).
       unless state.logged_not_ready
         Rails.logger.warn("[AudioWS] Audio received but Gemini not ready — buffering (accepting=#{state.gemini_client&.accepting_audio?} connected=#{state.gemini_client&.connected})")
         state.logged_not_ready = true
       end
     end
+  end
+
+  # Replays audio buffered during a Gemini reconnect gap, oldest first.
+  # Runs inside the EM reactor thread (same thread that pushes to the buffer).
+  def replay_buffered_audio(state)
+    return if state.audio_buffer.count.zero?
+
+    Rails.logger.info("[AudioWS] Replaying #{state.audio_buffer.count} buffered audio chunk(s)")
+    state.audio_buffer.since(0.0).each do |chunk|
+      begin
+        state.gemini_client&.send_audio(chunk.data)
+      rescue StandardError => e
+        Rails.logger.error("[AudioWS] Failed to replay buffered audio chunk: #{e.class}: #{e.message}")
+      end
+    end
+    state.audio_buffer.clear
   end
 
   def handle_browser_close(event, browser_ws, state, session_id)
@@ -330,6 +348,7 @@ class AudioWebSocketMiddleware
         state.reconnect_attempts = 0
         send_json(browser_ws, type: 'reconnected')
         send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
+        replay_buffered_audio(state)
       else
         Rails.logger.info("[AudioWS] Gemini ready — sending session_started for session #{session.id}")
         unless session.gemini_resumption_token.present?
@@ -783,7 +802,7 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response, :audio_buffer
 
     def initialize
       @turn_counter = 0
@@ -794,6 +813,7 @@ class AudioWebSocketMiddleware
       @last_ai_turn_ends_with_question = false
       @waiting_for_candidate_response = false
       @sent_time_warnings = Set.new
+      @audio_buffer = AudioRingBuffer.new
     end
 
     def increment_turn!
