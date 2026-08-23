@@ -9,10 +9,14 @@ export interface VacancyPayload {
   vacancy_skills_attributes: Partial<VacancySkill>[];
 }
 
+export interface VacancyStats {
+  total_skills_tracked: number;
+}
+
 export const vacanciesApi = {
-  list: (page = 1) =>
-    api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
+  list: (page = 1, q?: string) =>
+    api.get<{ vacancies: Vacancy[]; meta: PaginationMeta; stats: VacancyStats }>("/vacancies", {
+      params: { page, q },
     }),
 
   get: (id: number) =>

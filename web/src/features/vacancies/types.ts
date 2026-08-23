@@ -7,6 +7,7 @@ export interface Vacancy {
   created_at?: string;
   updated_at?: string;
   skills: VacancySkill[];
+  skill_labels?: string[];
 }
 
 export interface VacancySkill {
