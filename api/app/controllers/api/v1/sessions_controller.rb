@@ -3,8 +3,6 @@
 module Api
   module V1
     class SessionsController < ApiController
-      # NOTE: :assessor is currently admin-only — 'assessor' role doesn't exist in User::ROLES.
-      # Resolved when membership model lands (API-NEW-01).
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 

@@ -3,8 +3,6 @@
 module Api
   module V1
     class PortfoliosController < ApiController
-      # NOTE: :assessor is currently admin-only — 'assessor' role doesn't exist in User::ROLES.
-      # Resolved when membership model lands (API-NEW-01).
       authorize_auth_token! :assessor
 
       before_action :set_session,   only: %i[show regenerate]
