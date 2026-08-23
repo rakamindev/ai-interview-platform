@@ -101,7 +101,7 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <output className="max-w-2xl mx-auto space-y-4 block" role="status" aria-label="Loading assessment">
+      <output className="max-w-2xl mx-auto space-y-4 block" aria-label="Loading assessment">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />

@@ -263,6 +263,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_145839) do
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
 
+  create_table "public.organizations", force: :cascade do |t|
+    t.string "alias_hosts", default: [], null: false, array: true
+    t.jsonb "config", default: {}, null: false
+    t.timestamptz "created_at", default: -> { "now()" }, null: false
+    t.string "host", limit: 255, null: false
+    t.string "identifier", limit: 255, null: false
+    t.string "name", limit: 255, null: false
+    t.string "scheme", limit: 255, null: false
+    t.timestamptz "updated_at", default: -> { "now()" }, null: false
+    t.index ["host"], name: "index_organizations_on_host"
+    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
+  end
+
   add_foreign_key "ai_interview.assessment_skills", "ai_interview.assessments"
   add_foreign_key "ai_interview.assessments", "ai_interview.users", column: "created_by"
   add_foreign_key "ai_interview.assessments", "public.organizations", column: "tenant_id"
@@ -287,17 +300,4 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_145839) do
   add_foreign_key "ai_interview.vacancies", "ai_interview.users", column: "created_by"
   add_foreign_key "ai_interview.vacancies", "public.organizations", column: "tenant_id"
   add_foreign_key "ai_interview.vacancy_skills", "ai_interview.vacancies"
-
-  create_table "public.organizations", force: :cascade do |t|
-    t.string "alias_hosts", default: [], null: false, array: true
-    t.jsonb "config", default: {}, null: false
-    t.timestamptz "created_at", default: -> { "now()" }, null: false
-    t.string "host", limit: 255, null: false
-    t.string "identifier", limit: 255, null: false
-    t.string "name", limit: 255, null: false
-    t.string "scheme", limit: 255, null: false
-    t.timestamptz "updated_at", default: -> { "now()" }, null: false
-    t.index ["host"], name: "index_organizations_on_host"
-    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
-  end
 end
