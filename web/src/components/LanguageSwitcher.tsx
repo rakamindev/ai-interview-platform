@@ -8,8 +8,9 @@ import {
 import { CheckIcon, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages.js";
 
-const localeLabels: Record<string, string> = { en: "English", id: "Indonesian" };
+const localeLabels: Record<string, string> = { en: m.lang_english(), id: m.lang_indonesian() };
 
 export default function LanguageSwitcher() {
   const currentLocale = getLocale();

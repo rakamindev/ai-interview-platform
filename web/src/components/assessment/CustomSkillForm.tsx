@@ -12,11 +12,11 @@ interface CustomSkillFormProps {
 }
 
 const LEVEL_PLACEHOLDERS: Record<number, string> = {
-  1: "What does L1 look like for this skill?",
-  2: "What does L2 look like for this skill?",
-  3: "What does L3 look like for this skill?",
-  4: "What does L4 look like for this skill?",
-  5: "What does L5 look like for this skill?",
+  1: m.custom_skill_anchor_placeholder_l1(),
+  2: m.custom_skill_anchor_placeholder_l2(),
+  3: m.custom_skill_anchor_placeholder_l3(),
+  4: m.custom_skill_anchor_placeholder_l4(),
+  5: m.custom_skill_anchor_placeholder_l5(),
 };
 
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
@@ -31,7 +31,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
         </Label>
         <Input
           id={`skills.${index}.skill_label`}
-          placeholder="e.g. Communication"
+          placeholder={m.custom_skill_name_placeholder()}
           {...register(`skills.${index}.skill_label`, { required: true })}
         />
       </div>
@@ -42,7 +42,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
         </Label>
         <Textarea
           id={`skills.${index}.scope_include`}
-          placeholder="Clear technical explanation, stakeholder alignment, async written communication..."
+          placeholder={m.custom_skill_scope_placeholder()}
           rows={2}
           {...register(`skills.${index}.scope_include`, { required: true })}
         />
