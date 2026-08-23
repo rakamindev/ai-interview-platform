@@ -23,7 +23,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
   const {
     register,
     setValue,
-    formState: { errors }
+    formState: { errors: _errors }
   } = form;
   const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
 

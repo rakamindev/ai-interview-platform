@@ -46,6 +46,8 @@ jobs:
       GEMINI_LIVE_MODEL: stub
       GEMINI_FLASH_MODEL: stub
       GEMINI_PRO_MODEL: stub
+      DISABLE_SPRING: "1"
+      CI: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
@@ -55,7 +57,7 @@ jobs:
           working-directory: api
       - name: Prepare database
         working-directory: api
-        run: bundle exec rails db:create db:force_migrate
+        run: bundle exec rails db:create db:schema:load
       - name: Run RSpec
         working-directory: api
         run: bundle exec rspec --format documentation

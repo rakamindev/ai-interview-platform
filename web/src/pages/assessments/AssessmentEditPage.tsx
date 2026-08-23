@@ -101,12 +101,12 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4" role="status" aria-label="Loading assessment">
+      <output className="max-w-2xl mx-auto space-y-4 block" role="status" aria-label="Loading assessment">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
         <Skeleton className="h-24 w-full" />
-      </div>
+      </output>
     );
   }
 
