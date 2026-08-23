@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { vacanciesApi } from "@/services/vacancies";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import type { Vacancy } from "@/types";
 
 export default function VacancyListPage() {
@@ -25,18 +26,18 @@ export default function VacancyListPage() {
   return (
     <main>
       <PageHeader
-        title="Vacancies"
-        description="Roles used to generate fit/gap reports against candidate portfolios."
+        title={m.vacancy.title_label()}
+        description={m.vacancy.title_subtitle()}
         actions={
           <Button onClick={() => navigate("/vacancies/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
+            <Plus className="h-4 w-4 mr-1.5" /> {m.vacancy.new()}
           </Button>
         }
       />
 
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive mb-4">
-          Failed to load vacancies. Please refresh the page.
+          {m.vacancy.failed_to_load()}
         </div>
       )}
 
@@ -49,9 +50,9 @@ export default function VacancyListPage() {
       ) : vacancies.length === 0 ? (
         <EmptyState
           icon={Briefcase}
-          title="No vacancies yet"
-          description="Create a vacancy to compare candidate portfolios against required skills."
-          actionLabel="Create your first vacancy"
+          title={m.vacancy.no_vacancies()}
+          description={m.vacancy.create_to_compare()}
+          actionLabel={m.vacancy.create_first()}
           onAction={() => navigate("/vacancies/new")}
         />
       ) : (

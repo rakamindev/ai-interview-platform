@@ -53,7 +53,7 @@ module Api
         @portfolio_skill = PortfolioSkill.joins(:portfolio)
           .find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio skill not found", :not_found)
+        json_error("Portfolio skill not found", :not_found, code: "portfolio_skill_not_found")
       end
 
       def override_params

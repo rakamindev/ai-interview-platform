@@ -14,6 +14,7 @@ import {
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ArrowDown, ArrowUp } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import { cn } from "@/lib/utils";
 
 interface HardwareCheckProps {
@@ -29,10 +30,10 @@ function StateIcon({ state }: { state: ProctoringState }) {
 }
 
 function stateLabel(state: ProctoringState) {
-  if (state === ProctoringState.LOADING) return "Checking...";
-  if (state === ProctoringState.PASSED) return "Passed";
-  if (state === ProctoringState.ERROR) return "Failed";
-  return "Waiting";
+  if (state === ProctoringState.LOADING) return m.hardware.checking();
+  if (state === ProctoringState.PASSED) return m.hardware.passed();
+  if (state === ProctoringState.ERROR) return m.hardware.failed();
+  return m.hardware.waiting();
 }
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
@@ -217,11 +218,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   const thresholds = DEFAULT_THRESHOLDS;
 
   const rows: { key: keyof HardwareCheckingProgress; label: string }[] = [
-    { key: "osAndBrowser", label: "OS & browser" },
-    { key: "internet", label: "Internet" },
-    ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: "Camera" }] : []),
-    { key: "microphone", label: "Microphone" },
-    { key: "audio", label: "Audio output" }
+    { key: "osAndBrowser", label: m.hardware.os_browser() },
+    { key: "internet", label: m.hardware.internet() },
+    ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: m.hardware.camera() }] : []),
+    { key: "microphone", label: m.hardware.microphone() },
+    { key: "audio", label: m.hardware.audio_output() }
   ];
 
   const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
@@ -248,13 +249,13 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                   clipRule="evenodd"
                 />
               </svg>
-              <p className="text-xs">Camera not active</p>
+              <p className="text-xs">{m.hardware.camera_not_active()}</p>
             </div>
           )}
           {progress.camera === ProctoringState.PASSED && videoStream && (
             <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              LIVE
+              {m.hardware.live()}
             </span>
           )}
         </div>
@@ -343,11 +344,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         {hasError && (
           <Button variant="outline" size="sm" onClick={retryAll}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Retry
+            {m.hardware.retry()}
           </Button>
         )}
         <Button size="sm" className="ml-auto" disabled={!allPassed} onClick={onStart}>
-          Start Interview
+          {m.hardware.start_interview()}
         </Button>
       </div>
     </div>

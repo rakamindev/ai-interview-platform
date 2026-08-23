@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setAuth } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
+import { m } from "@/paraglide/messages.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -24,7 +25,7 @@ export default function LoginPage() {
       setAuth(res.data.access_token, res.data.user);
       navigate("/assessments");
     } catch {
-      setError("Invalid email or password.");
+      setError(m.auth.invalid_credentials());
     } finally {
       setLoading(false);
     }
@@ -34,13 +35,13 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
+          <h1 className="text-2xl font-bold">{m.auth.login_title()}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{m.auth.signin_subtitle()}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{m.auth.email()}</Label>
             <Input
               id="email"
               type="email"
@@ -52,7 +53,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{m.auth.password()}</Label>
             <PasswordInput
               id="password"
               autoComplete="current-password"
@@ -66,7 +67,7 @@ export default function LoginPage() {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign in
+            {m.auth.sign_in()}
           </Button>
         </form>
       </div>

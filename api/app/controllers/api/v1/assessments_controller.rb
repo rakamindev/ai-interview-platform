@@ -66,7 +66,7 @@ module Api
       def set_assessment
         @assessment = Assessment.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        json_error("Assessment not found", :not_found, code: "assessment_not_found")
       end
 
       def assessment_params

@@ -3,34 +3,34 @@
 # Extracted from rakamin-api with AI interview additions.
 class Message
   def self.not_found(record = "record")
-    "Sorry, #{record} not found."
+    { message: "Sorry, #{record} not found.", code: "not_found" }
   end
 
   def self.invalid_credentials
-    "Invalid credentials"
+    { message: "Invalid credentials", code: "invalid_credentials" }
   end
 
   def self.invalid_token
-    "Invalid token"
+    { message: "Invalid token", code: "invalid_token" }
   end
 
   def self.missing_token
-    "Missing token"
+    { message: "Missing token", code: "missing_token" }
   end
 
   def self.unauthorized
-    "Unauthorized request"
+    { message: "Unauthorized request", code: "unauthorized" }
   end
 
   def self.tenant_not_found
-    "Tenant not found. Ensure the JWT scheme claim is valid."
+    { message: "Tenant not found. Ensure the JWT scheme claim is valid.", code: "tenant_not_found" }
   end
 
   def self.assessment_error
-    "Assessment not found or does not belong to your organization."
+    { message: "Assessment not found or does not belong to your organization.", code: "assessment_not_found" }
   end
 
   def self.session_not_active
-    "Session is not active."
+    { message: "Session is not active.", code: "session_not_active" }
   end
 end

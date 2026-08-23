@@ -1,6 +1,6 @@
+import { m } from "@/(paraglide)/messages.js";
+
 interface ConfidenceIndicatorProps {
-  confidence: string | undefined; // "high" | "medium" | "low" from API
-}
 
 function getLabel(c: string | undefined): "high" | "medium" | "low" | null {
   if (c == null || c === "") return null;
@@ -18,7 +18,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
     return (
       <span className="flex items-center gap-1 text-xs text-verdict-match">
         <span className="h-2 w-2 rounded-full bg-verdict-match" />
-        High confidence
+        {m.confidence.high()}
       </span>
     );
   }
@@ -26,7 +26,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
     return (
       <span className="flex items-center gap-1 text-xs text-verdict-gap">
         <span className="h-2 w-2 rounded-full bg-verdict-gap" />
-        Medium confidence
+        {m.confidence.medium()}
       </span>
     );
   }
@@ -34,7 +34,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
     return (
       <span className="flex items-center gap-1 text-xs text-verdict-unknown">
         <span className="h-2 w-2 rounded-full bg-verdict-unknown" />
-        Low confidence
+        {m.confidence.low()}
       </span>
     );
   }

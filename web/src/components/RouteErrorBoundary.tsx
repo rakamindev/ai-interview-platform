@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { m } from "@/(paraglide)/messages.js";
 
 interface Props {
   children: ReactNode;
@@ -26,47 +27,46 @@ class RouteErrorBoundaryInner extends Component<
       return (
         <div className="min-h-[50vh] flex items-center justify-center p-8">
           <div className="text-center space-y-4 max-w-md">
-            <p className="font-medium text-lg">Something went wrong.</p>
+            <p className="font-medium text-lg">{m.error.unexpected()}</p>
             {this.props.showSessionRecovery ? (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Your interview progress has been saved. You can try refreshing to reconnect, or
-                  contact the interviewer if the problem persists.
+                  {m.error.session_saved()} {m.error.refresh()}
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     className="text-sm text-primary underline"
                     onClick={() => window.location.reload()}
                   >
-                    Reconnect
+                    {m.error.reconnect()}
                   </button>
                   <span className="text-muted-foreground">·</span>
                   <button
                     className="text-sm text-muted-foreground underline"
                     onClick={() => this.props.navigate("/")}
                   >
-                    Go to home
+                    {m.error.go_home()}
                   </button>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Please refresh the page. If the problem persists, contact support.
+                  {m.error.refresh()}
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     className="text-sm text-primary underline"
                     onClick={() => window.location.reload()}
                   >
-                    Refresh
+                    {m.error.refresh_button()}
                   </button>
                   <span className="text-muted-foreground">·</span>
                   <button
                     className="text-sm text-muted-foreground underline"
                     onClick={() => this.props.navigate("/")}
                   >
-                    Go to home
+                    {m.error.go_home()}
                   </button>
                 </div>
               </>

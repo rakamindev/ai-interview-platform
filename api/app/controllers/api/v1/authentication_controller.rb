@@ -11,7 +11,7 @@ module Api
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
-        return json_error("Invalid email or password", :unauthorized) unless user&.authenticate(params[:password])
+        return json_error("Invalid email or password", :unauthorized, code: "invalid_credentials") unless user&.authenticate(params[:password])
 
         # API-FIX-01: User::ROLES allows "admin" and "user" — both may log in.
         # Per-endpoint authorization (authorize_auth_token!) enforces the actual
@@ -25,10 +25,10 @@ module Api
       def refresh
         verify_csrf!
         refresh_token_value = extract_refresh_token
-        return json_error("Missing refresh token", :unauthorized, details: "missing_refresh_token") unless refresh_token_value
+        return json_error("Missing refresh token", :unauthorized, details: "missing_refresh_token", code: "refresh_token_missing") unless refresh_token_value
 
         token_record = RefreshToken.find_by(token_hash: token_hash(refresh_token_value))
-        return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token") unless token_record
+        return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token", code: "refresh_token_invalid") unless token_record
 
         if token_record.used_at.present? && token_record.grace_period_expired?
           # Same rotated-away token replayed after the grace window: treat as theft, kill the whole session family.
@@ -36,10 +36,10 @@ module Api
           # reused token is also !valid_token?, which would otherwise mask
           # this as a generic "invalid_refresh_token" and skip revocation.
           RefreshToken.revoke_all_for_user(token_record.user_id)
-          return json_error("Refresh token reuse detected", :unauthorized, details: "refresh_token_reused")
+          return json_error("Refresh token reuse detected", :unauthorized, details: "refresh_token_reused", code: "refresh_token_reuse")
         end
 
-        return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token") unless token_record.valid_token?
+        return json_error("Invalid refresh token", :unauthorized, details: "invalid_refresh_token", code: "refresh_token_invalid") unless token_record.valid_token?
 
         new_token = issue_refresh_token(token_record.user_id)
         store_refresh_cookie(new_token)

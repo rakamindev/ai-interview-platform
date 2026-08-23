@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
 import { ArrowLeft, Download } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
+import { m } from "@/(paraglide)/messages.js";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -50,14 +51,14 @@ export default function TranscriptPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Interview Transcript</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.transcript.title()}</h1>
             {candidateName && <p className="text-sm text-muted-foreground">{candidateName}</p>}
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
           <Button variant="outline" size="sm" onClick={handleDownload}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
-            Download .txt
+            {m.transcript.download_txt()}
           </Button>
         )}
       </div>
@@ -72,13 +73,13 @@ export default function TranscriptPage() {
 
       {!loading && error && (
         <div className="border rounded-lg p-6 text-center text-sm text-destructive">
-          Failed to load transcript. Please refresh.
+          {m.transcript.failed_to_load()}
         </div>
       )}
 
       {!loading && !error && turns.length === 0 && (
         <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-          No transcript available for this session.
+          {m.transcript.no_transcript()}
         </div>
       )}
 
@@ -98,7 +99,7 @@ export default function TranscriptPage() {
                     isAI ? "text-muted-foreground" : "text-primary"
                   }`}
                 >
-                  {isAI ? "AI Interviewer" : "Candidate"}
+                  {isAI ? m.transcript.ai_interviewer() : m.transcript.candidate()}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
               </div>

@@ -9,14 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { authApi } from "@/services/auth";
 import { setAuth } from "@/stores/authAtom";
+import { m } from "@/paraglide/messages.js";
 
 const AcceptInviteSchema = z
   .object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z.string().min(8, m.auth.password_min()),
     password_confirmation: z.string()
   })
   .refine((data) => data.password === data.password_confirmation, {
-    message: "Passwords do not match",
+    message: m.auth.passwords_dont_match(),
     path: ["password_confirmation"]
   });
 
@@ -42,13 +43,12 @@ export default function AcceptInvitePage() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
-          <h1 className="text-2xl font-bold">Invalid Invite Link</h1>
+          <h1 className="text-2xl font-bold">{m.auth.invalid_invite_link()}</h1>
           <p className="text-sm text-muted-foreground">
-            This invite link is invalid or missing a token. Please contact your administrator for a
-            new invite.
+            {m.auth.invalid_invite()}
           </p>
           <Button variant="outline" onClick={() => navigate("/login")}>
-            Go to Login
+            {m.auth.go_to_login()}
           </Button>
         </div>
       </main>
@@ -67,7 +67,7 @@ export default function AcceptInvitePage() {
       setSuccess(true);
       setTimeout(() => navigate("/assessments"), 1500);
     } catch {
-      setError("Invalid or expired invite link. Please request a new one.");
+      setError(m.auth.invalid_invite());
     } finally {
       setLoading(false);
     }
@@ -77,8 +77,8 @@ export default function AcceptInvitePage() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-sm text-center space-y-4">
-          <h1 className="text-2xl font-bold">Account Created</h1>
-          <p className="text-sm text-muted-foreground">Redirecting you to the dashboard...</p>
+          <h1 className="text-2xl font-bold">{m.auth.account_created()}</h1>
+          <p className="text-sm text-muted-foreground">{m.auth.redirecting()}</p>
         </div>
       </main>
     );
@@ -88,13 +88,13 @@ export default function AcceptInvitePage() {
     <main className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Accept Invite</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create your account to get started</p>
+          <h1 className="text-2xl font-bold">{m.auth.accept_invite_title()}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{m.auth.create_account_subtitle()}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{m.auth.password()}</Label>
             <Input
               id="password"
               type="password"
@@ -107,7 +107,7 @@ export default function AcceptInvitePage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password_confirmation">Confirm password</Label>
+            <Label htmlFor="password_confirmation">{m.auth.confirm_password()}</Label>
             <Input
               id="password_confirmation"
               type="password"
@@ -123,7 +123,7 @@ export default function AcceptInvitePage() {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Create Account
+            {m.auth.create_account()}
           </Button>
         </form>
       </div>
