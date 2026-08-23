@@ -44,17 +44,17 @@ module Api
       # Body: { token:, password: }
       def accept
         claims = JsonWebToken.decode(params[:token].to_s)
-        return json_error("Invalid invite", :unauthorized) unless claims[:purpose] == "invite"
+        return json_error("Invalid invite", :unauthorized, code: "invite_invalid") unless claims[:purpose] == "invite"
 
         organization = Organization.find_by(id: claims[:organization_id])
-        return json_error("Invite organization no longer exists", :unprocessable_entity) unless organization
+        return json_error("Invite organization no longer exists", :unprocessable_entity, code: "invite_org_missing") unless organization
 
         user = User.find_by(email: claims[:email])
         if user
           # Existing account — grant membership only, don't touch their credentials.
           Membership.find_or_create_by!(user: user, organization: organization) { |m| m.role = claims[:role] }
         else
-          return json_error("password is required", :unprocessable_entity) if params[:password].blank?
+          return json_error("password is required", :unprocessable_entity, code: "password_required") if params[:password].blank?
 
           user = User.create!(email: claims[:email], role: "user", password: params[:password])
           Membership.create!(user: user, organization: organization, role: claims[:role])
@@ -62,7 +62,7 @@ module Api
 
         json_response(issue_session_for(user, scheme: organization.scheme))
       rescue ExceptionHandler::InvalidToken
-        json_error("Invite is invalid or has expired", :unauthorized)
+        json_error("Invite is invalid or has expired", :unauthorized, code: "invite_expired")
       end
 
       private

@@ -18,7 +18,7 @@ module Api
         skill = SkillTaxonomy.find_by!(skill_id: params[:skill_id])
         json_response(skill: skill_json(skill))
       rescue ActiveRecord::RecordNotFound
-        json_error("Skill not found", :not_found)
+        json_error("Skill not found", :not_found, code: "skill_not_found")
       end
 
       private

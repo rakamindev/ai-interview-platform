@@ -15,7 +15,7 @@ module Api
 
         json_response(sessions: sessions.map { |s| SessionSerializer.render(s) })
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        json_error("Assessment not found", :not_found, code: "assessment_not_found")
       end
 
       # GET /api/v1/sessions/:id
@@ -53,7 +53,7 @@ module Api
           json_error(session.errors.full_messages.first, :unprocessable_entity)
         end
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        json_error("Assessment not found", :not_found, code: "assessment_not_found")
       end
 
       # POST /api/v1/assessments/:assessment_id/sessions/bulk_create
@@ -62,11 +62,11 @@ module Api
         candidates = params.require(:candidates)
 
         unless candidates.is_a?(Array) && candidates.present?
-          return json_error("candidates must be a non-empty array", :unprocessable_entity)
+          return json_error("candidates must be a non-empty array", :unprocessable_entity, code: "candidates_required")
         end
 
         if candidates.size > 100
-          return json_error("Maximum 100 candidates per request", :unprocessable_entity)
+          return json_error("Maximum 100 candidates per request", :unprocessable_entity, code: "candidates_too_many")
         end
 
         results = Sessions::BulkInviter.new(
@@ -95,23 +95,23 @@ module Api
           :ok
         )
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        json_error("Assessment not found", :not_found, code: "assessment_not_found")
       end
 
       # POST /api/v1/sessions/:id/end
       def end_session
-        return json_error("Session is already ended", :unprocessable_entity) if @session.ended?
+        return json_error("Session is already ended", :unprocessable_entity, code: "session_already_ended") if @session.ended?
 
         reason = params.dig(:session, :reason) || "manual_assessor"
 
-        return json_error("Invalid end reason", :unprocessable_entity) unless Session::END_REASONS.include?(reason)
+        return json_error("Invalid end reason", :unprocessable_entity, code: "invalid_end_reason") unless Session::END_REASONS.include?(reason)
 
         result = Sessions::EndHandler.new(@session).call(reason: reason)
 
         if result
           json_response(session: SessionSerializer.render(@session.reload))
         else
-          json_error("Failed to end session", :unprocessable_entity)
+          json_error("Failed to end session", :unprocessable_entity, code: "session_end_failed")
         end
       end
 
@@ -155,8 +155,8 @@ module Api
       # Ends the session if all coverage is complete; idempotent if already ended.
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
-        return json_error("Invalid or expired invite token", :not_found) unless session
-        return json_error("Invite token has expired", :unauthorized) unless session.invite_valid?
+        return json_error("Invalid or expired invite token", :not_found, code: "invite_invalid") unless session
+        return json_error("Invite token has expired", :unauthorized, code: "invite_expired") unless session.invite_valid?
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
@@ -171,16 +171,16 @@ module Api
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
 
-        return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Invalid or expired invite token", :not_found, code: "invite_invalid") unless session
 
-        return json_error("Invite token has expired", :unauthorized) unless session.invite_valid?
+        return json_error("Invite token has expired", :unauthorized, code: "invite_expired") unless session.invite_valid?
 
         # Resolve tenant from the session's own tenant_id so we can load the assessment
         assessment = Assessment.unscoped
           .where(tenant_id: session.tenant_id)
           .find_by(id: session.assessment_id)
 
-        return json_error("Assessment not found", :not_found) unless assessment
+        return json_error("Assessment not found", :not_found, code: "assessment_not_found") unless assessment
 
         json_response(
           session_id: session.id,
@@ -195,7 +195,7 @@ module Api
       def set_session
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Session not found", :not_found)
+        json_error("Session not found", :not_found, code: "not_found")
       end
 
       def coverage_map_json(map)

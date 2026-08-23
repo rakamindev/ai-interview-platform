@@ -19,20 +19,27 @@ module ExceptionHandler
     end
 
     rescue_from ActiveRecord::RecordNotFound do |e|
-      render json: { errors: [{ status: 404, message: e.message }] }, status: :not_found
+      json_error(e.message, :not_found, code: "not_found")
     end
 
     rescue_from ExceptionHandler::Unauthorized do |e|
-      render json: { errors: [{ status: 403, message: e.message }] }, status: :forbidden
+      json_error(e.message, :forbidden, code: "unauthorized")
     end
 
     rescue_from ExceptionHandler::MissingToken,
                 ExceptionHandler::InvalidToken do |e|
-      render json: { errors: [{ status: 401, message: e.message }] }, status: :unauthorized
+      code = if e.message.include?("CSRF")
+               "csrf_mismatch"
+             elsif e.message.include?("Missing")
+               "missing_token"
+             else
+               "invalid_token"
+             end
+      json_error(e.message, :unauthorized, code: code)
     end
 
     rescue_from ExceptionHandler::TenantNotFound do |e|
-      render json: { errors: [{ status: 403, message: e.message }] }, status: :forbidden
+      json_error(e.message, :forbidden, code: "tenant_not_found")
     end
   end
 
@@ -41,11 +48,20 @@ module ExceptionHandler
   def render_exception(e)
     status = exception_status(e)
     message = Rails.env.production? ? human_message(e) : e.message
+    code = case e
+           when ActiveRecord::RecordInvalid, ActiveModel::StrictValidationFailed
+             "validation_error"
+           when ActionController::ParameterMissing
+             "parameter_missing"
+           else
+             "internal_error"
+           end
 
     render json: {
       errors: [{
         status:,
         message:,
+        code:,
         backtrace: (Rails.env.development? ? e.backtrace&.first(10) : nil)
       }.compact]
     }, status: status
