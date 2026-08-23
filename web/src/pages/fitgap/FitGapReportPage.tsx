@@ -11,6 +11,7 @@ import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, AlertTriangle } from "lucide-react";
 import { POLL_DEADLINE_MS } from "@/utils/constants";
 import type { FitGapReport, Portfolio } from "@/types";
+import { m } from "@/(paraglide)/messages.js";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -151,7 +152,7 @@ export default function FitGapReportPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <h1 className="text-xl font-semibold tracking-tight">Fit/Gap Report</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{m.fitgap.title()}</h1>
         </div>
         <Card>
           <CardContent className="py-12 text-center space-y-3">
@@ -166,7 +167,7 @@ export default function FitGapReportPage() {
                 fetchReport();
               }}
             >
-              Retry
+              {m.fitgap.retry()}
             </Button>
           </CardContent>
         </Card>
@@ -187,7 +188,7 @@ export default function FitGapReportPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-xl font-semibold tracking-tight">Fit/Gap Report</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{m.fitgap.title()}</h1>
           </div>
         </div>
 
@@ -204,7 +205,7 @@ export default function FitGapReportPage() {
               ) : (
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />
               )}
-              Regenerate
+              {m.fitgap.regenerate()}
             </Button>
             {report && (
               <>
@@ -219,7 +220,7 @@ export default function FitGapReportPage() {
                   ) : (
                     <Download className="h-3.5 w-3.5 mr-1" />
                   )}
-                  PDF
+                  {m.fitgap.export_pdf()}
                 </Button>
                 <Button
                   variant="outline"
@@ -232,7 +233,7 @@ export default function FitGapReportPage() {
                   ) : (
                     <Download className="h-3.5 w-3.5 mr-1" />
                   )}
-                  JSON
+                  {m.fitgap.export_json()}
                 </Button>
               </>
             )}
@@ -246,7 +247,7 @@ export default function FitGapReportPage() {
           <CardContent className="py-12 text-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
             <p className="text-sm text-muted-foreground">
-              Generating fit/gap report... This typically takes about 2 minutes.
+              {m.fitgap.generating()}
             </p>
           </CardContent>
         </Card>
@@ -266,7 +267,7 @@ export default function FitGapReportPage() {
               ) : (
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />
               )}
-              Retry
+              {m.fitgap.retry()}
             </Button>
           </CardContent>
         </Card>
@@ -278,7 +279,7 @@ export default function FitGapReportPage() {
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
+              <CardTitle className="text-sm">{m.fitgap.skill_comparison()}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <ComparisonTable comparisons={report.skill_comparisons} />
@@ -291,7 +292,7 @@ export default function FitGapReportPage() {
           {report.culture_narrative && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+                <CardTitle className="text-sm">{m.fitgap.culture_fit()}</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
@@ -305,7 +306,7 @@ export default function FitGapReportPage() {
           {report.overall_narrative && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Hiring Recommendation</CardTitle>
+                <CardTitle className="text-sm">{m.fitgap.hiring_recommendation()}</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
