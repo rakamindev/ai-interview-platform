@@ -321,5 +321,35 @@ RSpec.describe FitGap::Engine do
       second = engine.call
       expect(first.id).to eq(second.id)
     end
+
+    it "sets narrative_source to 'ai' when Gemini call succeeds" do
+      allow(gemini_stub).to receive(:generate_content).and_return(
+        "culture_narrative" => "Strong cultural alignment.",
+        "overall_narrative" => "Recommended hire."
+      )
+
+      report = engine.call
+      expect(report.narrative_source).to eq("ai")
+      expect(report.generation_error).to be_nil
+    end
+
+    it "sets narrative_source to 'fallback' and populates generation_error when Gemini call raises" do
+      allow(gemini_stub).to receive(:generate_content).and_raise(StandardError, "quota exceeded")
+
+      report = engine.call
+      expect(report.narrative_source).to eq("fallback")
+      expect(report.generation_error).to eq("quota exceeded")
+      expect(report.overall_narrative).to be_present
+    end
+
+    it "sets status to 'complete' on success" do
+      allow(gemini_stub).to receive(:generate_content).and_return(
+        "culture_narrative" => "Culture fit.",
+        "overall_narrative" => "Hire."
+      )
+
+      report = engine.call
+      expect(report.status).to eq("complete")
+    end
   end
 end

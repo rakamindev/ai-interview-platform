@@ -22,6 +22,7 @@ export const FitGapReportSchema = z.object({
   // rescue path), in which case the backend persists nil rather than "".
   culture_narrative: z.string().nullable().optional(),
   overall_narrative: z.string().nullable().optional(),
+  narrative_source: z.enum(["ai", "fallback"]).nullable().optional(),
   generated_at: z.string(),
   schema_version: z.number().nullable().optional()
 });
