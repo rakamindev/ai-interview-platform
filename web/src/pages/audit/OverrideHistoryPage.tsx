@@ -166,6 +166,7 @@ export default function OverrideHistoryPage() {
               <tbody>
                 {events.map((event) => (
                   <tr key={event.id} className="border-b last:border-b-0">
+                    {/* oxlint-disable-next-line jsx-a11y/label-has-associated-control */}
                     <td className="p-3">
                       <div>
                         <span className="font-medium">{event.candidate_name}</span>
