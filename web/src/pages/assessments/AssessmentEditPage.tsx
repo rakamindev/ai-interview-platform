@@ -93,7 +93,7 @@ export default function AssessmentEditPage() {
       navigate(`/assessments/${id}/invite`);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { errors?: { message?: string }[] } } };
-      setError(err?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
+      setError(err?.response?.data?.errors?.[0]?.message ?? m.assessment_save_error_generic());
     } finally {
       setSubmitting(false);
     }
@@ -115,7 +115,7 @@ export default function AssessmentEditPage() {
       <PageHeader
         title={m.assessment_edit()}
         backTo="/assessments"
-        backLabel="Back to assessments"
+        backLabel={m.common_back_to_assessments()}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -140,7 +140,7 @@ export default function AssessmentEditPage() {
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>
-                  {min} min
+                   {min}{m.assessment_minutes_suffix()}
                 </SelectItem>
               ))}
             </SelectContent>

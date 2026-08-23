@@ -114,7 +114,7 @@ export default function AssessmentNewPage() {
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { errors?: { message?: string }[] } } };
-      setError(err?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+      setError(err?.response?.data?.errors?.[0]?.message ?? m.assessment_save_error());
     } finally {
       setSubmitting(false);
     }
@@ -126,7 +126,7 @@ export default function AssessmentNewPage() {
         title={m.assessment_new()}
         description={m.assessment_subtitle()}
         backTo="/assessments"
-        backLabel="Back to assessments"
+        backLabel={m.common_back_to_assessments()}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -135,7 +135,7 @@ export default function AssessmentNewPage() {
           <Label htmlFor="name">
             {m.assessment_role_title()} <span className="text-destructive">*</span>
           </Label>
-          <Input id="name" placeholder="Senior Frontend Engineer" {...register("name")} />
+          <Input id="name" placeholder={m.assessment_role_placeholder()} {...register("name")} />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
@@ -151,7 +151,7 @@ export default function AssessmentNewPage() {
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>
-                  {min} min
+                   {min}{m.assessment_minutes_suffix()}
                 </SelectItem>
               ))}
             </SelectContent>

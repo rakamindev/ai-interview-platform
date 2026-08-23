@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages.js";
 
 type Confidence = "high" | "medium" | "low";
 
@@ -41,19 +42,19 @@ function ariaDescription(
   confidence: Confidence
 ): string {
   if (candidateLevel == null) {
-    return `${skillLabel}: not assessed. Requirement at L${requiredLevel}.`;
+    return `${skillLabel}: ${m.fitgap_not_assessed()}. Requirement at L${requiredLevel}.`;
   }
   const diff = candidateLevel - requiredLevel;
   let relation: string;
-  if (diff === 0) relation = "meets";
-  else if (diff > 0) relation = `exceeds by ${diff}`;
-  else relation = `${Math.abs(diff)} below`;
+  if (diff === 0) relation = m.fitgap_meets();
+  else if (diff > 0) relation = `${m.fitgap_exceeds_by()} ${diff}`;
+  else relation = `${Math.abs(diff)} ${m.fitgap_below()}`;
   const confidenceNote =
     confidence === "high"
-      ? ""
-      : confidence === "medium"
-        ? " — moderate confidence"
-        : " — low confidence, asked once";
+        ? ""
+        : confidence === "medium"
+          ? m.fitgap_moderate_confidence()
+          : m.fitgap_low_confidence_aria();
   return `${skillLabel}: candidate L${candidateLevel} ${relation} requirement L${requiredLevel}${confidenceNote}.`;
 }
 

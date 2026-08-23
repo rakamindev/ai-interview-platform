@@ -270,7 +270,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
               <div className="flex items-center gap-2">
                 <StateIcon state={progress[key]} />
                 <span
-                  className={`text-xs w-16 text-right ${
+                  className={`text-xs ${
                     progress[key] === ProctoringState.PASSED
                       ? "text-green-600"
                       : progress[key] === ProctoringState.ERROR

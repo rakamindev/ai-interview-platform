@@ -217,8 +217,8 @@ export default function BulkInvitePage() {
         })
       );
     } catch {
-      setError("Batch request failed. All candidates marked as errored.");
-      setRows((prev) => prev.map((r) => ({ ...r, status: "error", message: "Request failed" })));
+      setError(m.bulk_invite_batch_error());
+      setRows((prev) => prev.map((r) => ({ ...r, status: "error", message: m.bulk_invite_request_error() })));
     } finally {
       setSubmitting(false);
     }
@@ -233,7 +233,7 @@ export default function BulkInvitePage() {
         <Link
           to="/assessments"
           className="text-muted-foreground hover:text-foreground"
-          aria-label="Back to assessments"
+          aria-label={m.common_back_to_assessments()}
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>

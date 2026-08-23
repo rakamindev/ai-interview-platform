@@ -47,7 +47,7 @@ export default function AssessmentListPage() {
     <main>
       <PageHeader
         title={m.nav_assessments()}
-        description="Skill-based interview templates and their candidate sessions."
+        description={m.assessment_list_description()}
         actions={
           <Button onClick={() => navigate("/assessments/new")}>
             <Plus className="h-4 w-4 mr-1.5" /> {m.assessment_new()}
@@ -71,7 +71,7 @@ export default function AssessmentListPage() {
         <EmptyState
           icon={ClipboardList}
           title={m.assessment_no_assessments()}
-          description="Create an assessment to start inviting candidates to AI-led interviews."
+           description={m.assessment_empty_description()}
           actionLabel={m.assessment_create_first()}
           onAction={() => navigate("/assessments/new")}
         />

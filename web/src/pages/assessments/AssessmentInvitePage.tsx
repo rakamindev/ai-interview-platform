@@ -188,8 +188,8 @@ export default function AssessmentInvitePage() {
       setSessions((prev) => [created, ...prev]);
       toast.success(
         created.candidate_name
-          ? `Invite link created for ${created.candidate_name}`
-          : "Invite link created"
+          ? m.assessment_invite_created_for({ name: created.candidate_name })
+          : m.assessment_invite_created()
       );
     } finally {
       setCreatingSession(false);
@@ -199,7 +199,7 @@ export default function AssessmentInvitePage() {
   const copyLink = (session: Session, copyId: number) => {
     navigator.clipboard.writeText(session.invite_url);
     setCopiedId(copyId);
-    toast.success("Link copied to clipboard");
+    toast.success(m.common_link_copied());
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -207,7 +207,7 @@ export default function AssessmentInvitePage() {
     if (!newSession?.invite_url) return;
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
-    toast.success("Link copied to clipboard");
+    toast.success(m.common_link_copied());
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 
@@ -226,8 +226,8 @@ export default function AssessmentInvitePage() {
       <PageHeader
         title={assessment?.name ?? "—"}
         backTo="/assessments"
-        backLabel="Back to assessments"
-        description={`${assessment?.time_limit_min ?? 0} min · ${assessment?.skills?.length ?? 0} skills`}
+        backLabel={m.common_back_to_assessments()}
+        description={        `${assessment?.time_limit_min ?? 0}${m.assessment_minutes_suffix()} · ${assessment?.skills?.length ?? 0} skills`}
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
@@ -235,7 +235,7 @@ export default function AssessmentInvitePage() {
             </Button>
             <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              {creatingSession ? "Creating..." : m.assessment_invite_candidate()}
+              {creatingSession ? m.assessment_creating() : m.assessment_invite_candidate()}
             </Button>
           </>
         }
@@ -251,13 +251,13 @@ export default function AssessmentInvitePage() {
               <Label htmlFor="candidate-name">{m.assessment_candidate_name()}</Label>
               <Input
                 id="candidate-name"
-                placeholder="e.g. Budi Santoso"
+                placeholder={m.assessment_candidate_name_placeholder()}
                 value={candidateNameInput}
                 onChange={(e) => setCandidateNameInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               />
               <p className="text-xs text-muted-foreground">
-                Optional — helps you identify this session later.
+                {m.assessment_candidate_name_hint_long()}
               </p>
             </div>
             <DialogFooter>
@@ -275,12 +275,9 @@ export default function AssessmentInvitePage() {
             <CardContent className="pt-4 space-y-2">
               <p className="text-sm font-medium">
                 {newSession.candidate_name ? (
-                  <>
-                    Link for <span className="font-semibold">{newSession.candidate_name}</span>{" "}
-                    ready — share with your candidate:
-                  </>
+                  m.assessment_link_ready_named({ name: newSession.candidate_name })
                 ) : (
-                  <>New invite link ready — share with your candidate:</>
+                  m.assessment_link_ready()
                 )}
               </p>
               <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-background">
@@ -322,7 +319,7 @@ export default function AssessmentInvitePage() {
             <EmptyState
               icon={UserRound}
               title={m.assessment_no_candidates()}
-              description='Click "Invite Candidate" to generate an interview link.'
+              description={m.assessment_no_candidates_description()}
               actionLabel={m.assessment_invite_candidate()}
               onAction={openInviteDialog}
             />
@@ -361,7 +358,7 @@ export default function AssessmentInvitePage() {
                   >
                     <span>•</span>
                     <span>{s.skill_label}</span>
-                    <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                    <span className="text-xs">({m.assessment_expected()} {LEVEL_LABELS[s.expected_level]})</span>
                   </li>
                 ))}
               </ul>
