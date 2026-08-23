@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 interface ConnectionStatusProps {
   state: "connected" | "reconnecting" | "lost";

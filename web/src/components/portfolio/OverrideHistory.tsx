@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { portfoliosApi } from "@/services/portfolios";
 import LevelBadge from "./LevelBadge";
 import { Loader2 } from "lucide-react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import type { AssessorOverride } from "@/types";
 
 interface OverrideHistoryProps {

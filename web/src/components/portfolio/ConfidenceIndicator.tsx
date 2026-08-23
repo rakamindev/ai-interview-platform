@@ -1,6 +1,8 @@
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 interface ConfidenceIndicatorProps {
+  confidence: string | undefined;
+}
 
 function getLabel(c: string | undefined): "high" | "medium" | "low" | null {
   if (c == null || c === "") return null;

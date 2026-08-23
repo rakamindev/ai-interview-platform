@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from "react";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 
 interface Props {
   children: ReactNode;
