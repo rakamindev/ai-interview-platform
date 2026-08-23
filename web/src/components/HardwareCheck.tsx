@@ -13,7 +13,8 @@ import {
   getCurrentTime
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ArrowDown, ArrowUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface HardwareCheckProps {
   onStart?: () => void;
@@ -69,6 +70,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -155,27 +157,34 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     const getStream = REQUIRE_CAMERA
       ? checkCamera()
-      : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+      : navigator.mediaDevices.getUserMedia({ audio: true });
 
-    getStream.then((stream) => {
-      if (stream) {
+    getStream
+      .then((stream) => {
+        setPermissionError(null);
         if (REQUIRE_CAMERA) setVideoStream(stream);
-        startAudioLevelMonitoring(stream);
+        if (stream) startAudioLevelMonitoring(stream);
         setProgress((p) => ({
           ...p,
           ...(REQUIRE_CAMERA ? { camera: ProctoringState.PASSED } : {}),
           microphone: ProctoringState.PASSED,
           audio: ProctoringState.LOADING
         }));
-      } else {
+        return;
+      })
+      .catch((err: unknown) => {
+        const denied = err instanceof DOMException && err.name === "NotAllowedError";
+        setPermissionError(
+          denied
+            ? "Microphone access was blocked. Enable it in your browser's site settings for this page, then reload."
+            : "Couldn't access your microphone. Check that it's connected and not in use by another app."
+        );
         setProgress((p) => ({
           ...p,
           ...(REQUIRE_CAMERA ? { camera: ProctoringState.ERROR } : {}),
           microphone: ProctoringState.ERROR
         }));
-      }
-      return;
-    });
+      });
     // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [progress.camera, progress.microphone]);
 
@@ -195,6 +204,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     videoStream?.getTracks().forEach((t) => t.stop());
     setVideoStream(null);
     setInternetResult(null);
+    setPermissionError(null);
     setProgress({
       osAndBrowser: ProctoringState.LOADING,
       internet: ProctoringState.WAITING,
@@ -276,22 +286,24 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             {key === "internet" && internetResult && (
               <div className="mt-2 flex gap-3 text-xs">
                 <span
-                  className={
+                  className={cn(
+                    "flex items-center gap-0.5",
                     internetResult.download >= thresholds.minDownloadMbps
                       ? "text-green-600"
                       : "text-destructive"
-                  }
+                  )}
                 >
-                  ↓ {internetResult.download} Mbps
+                  <ArrowDown className="h-4 w-4" /> {internetResult.download} Mbps
                 </span>
                 <span
-                  className={
+                  className={cn(
+                    "flex items-center gap-0.5",
                     internetResult.upload >= thresholds.minUploadMbps
                       ? "text-green-600"
                       : "text-destructive"
-                  }
+                  )}
                 >
-                  ↑ {internetResult.upload} Mbps
+                  <ArrowUp className="h-4 w-4" /> {internetResult.upload} Mbps
                 </span>
                 <span
                   className={
@@ -304,6 +316,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 </span>
               </div>
             )}
+
+            {/* Mic permission error */}
+            {key === "microphone" &&
+              progress.microphone === ProctoringState.ERROR &&
+              permissionError && <p className="mt-2 text-xs text-destructive">{permissionError}</p>}
 
             {/* Mic level bar */}
             {key === "microphone" && progress.microphone === ProctoringState.PASSED && (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Timer } from "lucide-react";
 
 interface InterviewTimerProps {
   totalSeconds: number;
@@ -41,7 +42,7 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
         isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground"
       )}
     >
-      ⏱ {formatTime(remaining)}
+      <Timer className="h-4 w-4" /> {formatTime(remaining)}
     </span>
   );
 }

@@ -17,12 +17,20 @@ import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useAudioCapture } from "@/hooks/useAudioCapture";
+import { useAudioLevels } from "@/hooks/useAudioLevels";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff, X } from "lucide-react";
+import { CheckCircle, Check, Mic, MicOff, X, Zap } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+
+// Mirrors Gemini::LiveClient::CANDIDATE_SILENCE_BUFFER_MS (api/app/clients/gemini/live_client.rb) —
+// no shared config between frontend/backend today, keep these in sync by hand.
+const SILENCE_BUFFER_SECONDS = 25;
+const SILENCE_WARNING_AT_SECONDS = 10;
+// Any candidate frequency-bar level above this counts as "still speaking" for the silence timer.
+const SPEECH_LEVEL_THRESHOLD = 0.05;
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -31,6 +39,8 @@ export default function InterviewPage() {
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const [interimAiTranscript, setInterimAiTranscript] = useState("");
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
@@ -38,6 +48,10 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [audioCaptureError, setAudioCaptureError] = useState<string | null>(null);
+  // True right after "I'm done" is clicked, until the AI actually takes the turn — distinguishes
+  // "answer submitted, waiting on AI" from the genuine mic-still-initializing state at turn start.
+  const [awaitingResponse, setAwaitingResponse] = useState(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -61,7 +75,8 @@ export default function InterviewPage() {
     stop: stopPlayback,
     scheduleAfterPlayback,
     waitForDrain,
-    cancelDrain
+    cancelDrain,
+    analyserRef: playbackAnalyserRef
   } = useAudioPlayback();
   const audioCompleteCalledRef = useRef(false);
   const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,6 +108,7 @@ export default function InterviewPage() {
       if (state === "draining_audio") {
         // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
         muteRef.current?.();
+        setAwaitingResponse(false);
         audioCompleteCalledRef.current = false;
         // Safety timeout: call audio_complete after 10s even if drain never fires
         audioCompleteSafetyTimerRef.current = setTimeout(() => {
@@ -104,6 +120,7 @@ export default function InterviewPage() {
 
       if (state === "reconnecting") {
         muteRef.current?.();
+        setAwaitingResponse(false);
         connectionLostTimerRef.current = setTimeout(() => {
           setConnectionLostLong(true);
         }, 60_000);
@@ -127,14 +144,24 @@ export default function InterviewPage() {
 
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
+    if (turn.speaker === "candidate") setInterimTranscript("");
+    else if (turn.speaker === "assessor") setInterimAiTranscript("");
+  }, []);
+
+  const handleTranscriptPartial = useCallback((partial: { speaker: "candidate" | "ai"; text: string }) => {
+    if (partial.speaker === "candidate") setInterimTranscript(partial.text);
+    else setInterimAiTranscript(partial.text);
   }, []);
 
   const handleSpeakerChange = useCallback(
     (newSpeaker: InterviewSpeaker) => {
       if (newSpeaker === "ai") {
         setSpeaker("ai");
+        setAwaitingResponse(false);
         muteRef.current?.();
+        setInterimTranscript("");
       } else if (newSpeaker === "candidate") {
+        setInterimAiTranscript("");
         scheduleAfterPlayback(() => {
           setSpeaker("candidate");
           if (!micMutedRef.current) unmuteRef.current?.();
@@ -149,6 +176,7 @@ export default function InterviewPage() {
     token,
     onAudioChunk: playChunk,
     onTranscript: handleTranscript,
+    onTranscriptPartial: handleTranscriptPartial,
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected
@@ -158,13 +186,63 @@ export default function InterviewPage() {
     start: startCapture,
     stop: stopCapture,
     mute,
-    unmute
+    unmute,
+    isSending: captureSending,
+    analyserRef: captureAnalyserRef
   } = useAudioCapture({
-    onFrame: send
+    onFrame: send,
+    onError: (error) => {
+      const denied = error.name === "NotAllowedError";
+      setAudioCaptureError(
+        denied
+          ? "Microphone access was blocked. Enable it in your browser's site settings for this page, then reload."
+          : "Couldn't access your microphone. Check that it's connected and not in use by another app."
+      );
+      disconnect();
+      setHardwareCheckDone(false);
+      setInterviewState("idle");
+    }
   });
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+
+  const aiLevels = useAudioLevels(playbackAnalyserRef.current, speaker === "ai");
+  const micIsCapturingNow = speaker === "candidate" && !micMuted && captureSending;
+  const candidateLevels = useAudioLevels(captureAnalyserRef.current, micIsCapturingNow);
+
+  // Mirrors Gemini's own silence-buffer VAD (see SILENCE_BUFFER_SECONDS) purely for UI feedback —
+  // doesn't drive turn completion itself, Gemini's realtimeInputConfig does that server-side.
+  const [silenceCountdown, setSilenceCountdown] = useState<number | null>(null);
+  const lastCandidateSoundAtRef = useRef<number>(Date.now());
+  const candidateLevelsRef = useRef<number[]>(candidateLevels);
+  candidateLevelsRef.current = candidateLevels;
+
+  useEffect(() => {
+    if (!micIsCapturingNow) {
+      setSilenceCountdown(null);
+      return;
+    }
+
+    lastCandidateSoundAtRef.current = Date.now();
+
+    const interval = setInterval(() => {
+      const speaking = candidateLevelsRef.current.some((level) => level > SPEECH_LEVEL_THRESHOLD);
+      if (speaking) {
+        lastCandidateSoundAtRef.current = Date.now();
+      }
+
+      const silenceSeconds = (Date.now() - lastCandidateSoundAtRef.current) / 1000;
+      if (silenceSeconds >= SILENCE_WARNING_AT_SECONDS) {
+        setSilenceCountdown(Math.max(0, Math.ceil(SILENCE_BUFFER_SECONDS - silenceSeconds)));
+      } else {
+        setSilenceCountdown(null);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [micIsCapturingNow]);
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
@@ -180,6 +258,7 @@ export default function InterviewPage() {
 
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
+    setAudioCaptureError(null);
     setInterviewState("connecting");
     connect();
     await startCapture();
@@ -188,6 +267,12 @@ export default function InterviewPage() {
     // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
   }, [sessionId, connect, startCapture]);
+
+  const submitAnswer = useCallback(() => {
+    setAwaitingResponse(true);
+    sendJson({ type: "end_turn" });
+    muteRef.current?.();
+  }, [sendJson]);
 
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
@@ -218,6 +303,12 @@ export default function InterviewPage() {
             <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} minutes</p>
           )}
         </div>
+
+        {audioCaptureError && (
+          <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-2.5">
+            <span>{audioCaptureError}</span>
+          </div>
+        )}
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
@@ -253,8 +344,8 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
+      <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
+        <CheckCircle className="h-10 w-10 text-green-500" />
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
@@ -268,11 +359,23 @@ export default function InterviewPage() {
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
+  // Mic is only truly streaming audio when: it's the candidate's turn, the user
+  // hasn't muted it themselves, and the capture gate (server-driven) is open.
+  const micActuallyCapturing = candidateSpeaking && !micMuted && captureSending;
+  const listeningLabel = micMuted
+    ? "Muted by you"
+    : candidateSpeaking
+      ? micActuallyCapturing
+        ? "Listening..."
+        : awaitingResponse
+          ? "Submitting your answer..."
+          : "Connecting mic..."
+      : "Waiting for your turn";
 
   return (
     <main className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -322,23 +425,35 @@ export default function InterviewPage() {
           <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
+            <VoiceBars active={true} label="AI speaking" variant="ai" levels={aiLevels} />
             <p className="text-xs text-muted-foreground">Wrapping up...</p>
           </div>
         ) : (
           <>
             <VoiceBars
               active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
+              label={aiSpeaking ? "AI speaking" : listeningLabel}
               variant="ai"
+              levels={aiLevels}
             />
 
             {candidateSpeaking && (
-              <VoiceBars active={true} label="You're speaking" variant="candidate" />
+              <VoiceBars
+                active={micActuallyCapturing}
+                label={micActuallyCapturing ? "You're speaking" : listeningLabel}
+                variant="candidate"
+                levels={candidateLevels}
+              />
+            )}
+
+            {silenceCountdown !== null && (
+              <p className="text-xs text-muted-foreground animate-pulse">
+                Submitting your answer in {silenceCountdown}s — keep talking to continue.
+              </p>
             )}
 
             {/* Transcript */}
-            {transcript.length > 0 && (
+            {(transcript.length > 0 || interimTranscript || interimAiTranscript) && (
               <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
                 {transcript.map((turn) => (
                   <TranscriptBubble
@@ -347,6 +462,12 @@ export default function InterviewPage() {
                     text={turn.text}
                   />
                 ))}
+                {interimTranscript && (
+                  <TranscriptBubble speaker="candidate" text={interimTranscript} interim />
+                )}
+                {interimAiTranscript && (
+                  <TranscriptBubble speaker="ai" text={interimAiTranscript} interim />
+                )}
               </div>
             )}
           </>
@@ -354,7 +475,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
@@ -365,10 +486,23 @@ export default function InterviewPage() {
               </>
             ) : (
               <>
-                <Mic className="h-3.5 w-3.5 mr-1.5" /> Mic On
+                <Mic className="h-3.5 w-3.5 mr-1.5" />
+                {micActuallyCapturing ? "Mic On" : "Mic Paused"}
               </>
             )}
           </Button>
+
+          {candidateSpeaking && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={submitAnswer}
+              disabled={!micActuallyCapturing}
+            >
+              <Check className="h-3.5 w-3.5 mr-1.5" />
+              I'm done
+            </Button>
+          )}
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -396,7 +530,7 @@ export default function InterviewPage() {
               className="text-xs opacity-50"
               onClick={() => sendJson({ type: "debug_force_reconnect" })}
             >
-              ⚡ Force reconnect
+              <Zap className="h-4 w-4" /> Force reconnect
             </Button>
           )}
         </div>

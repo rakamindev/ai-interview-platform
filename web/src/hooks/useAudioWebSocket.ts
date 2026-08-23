@@ -8,6 +8,7 @@ interface UseAudioWebSocketOptions {
   token?: string;
   onAudioChunk: (buffer: ArrayBuffer) => void;
   onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text">) => void;
+  onTranscriptPartial?: (partial: { speaker: "candidate" | "ai"; text: string }) => void;
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
@@ -18,6 +19,7 @@ export function useAudioWebSocket({
   token,
   onAudioChunk,
   onTranscript,
+  onTranscriptPartial,
   onStateChange,
   onSpeakerChange,
   onReconnected
@@ -84,6 +86,9 @@ export function useAudioWebSocket({
                   text: msg.text
                 });
               }
+              break;
+            case "transcript_partial":
+              if (msg.speaker && msg.text) onTranscriptPartial?.({ speaker: msg.speaker, text: msg.text });
               break;
             case "speaker_changed":
               // Backend sends speaker_changed:candidate 800ms after AI finishes
@@ -152,7 +157,16 @@ export function useAudioWebSocket({
     };
     onCloseRef.current = handleClose;
     ws.addEventListener("close", handleClose);
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onReconnected]);
+  }, [
+    sessionId,
+    token,
+    onAudioChunk,
+    onTranscript,
+    onTranscriptPartial,
+    onStateChange,
+    onSpeakerChange,
+    onReconnected
+  ]);
 
   // Keep connectRef in sync outside the callback to avoid self-reference in deps
   connectRef.current = connect;
