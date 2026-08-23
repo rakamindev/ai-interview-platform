@@ -15,6 +15,45 @@ export type HardwareCheckingProgress = {
     microphone: ProctoringState;
 };
 
+const REQUIRED_HARDWARE_CHECKS: Array<keyof HardwareCheckingProgress> = [
+    "osAndBrowser",
+    "microphone",
+    "audio",
+];
+
+/**
+ * A speed test must finish before an interview starts, but a below-threshold
+ * connection is a candidate warning rather than a device-permission blocker.
+ */
+export function canStartInterviewAfterChecks(
+    progress: HardwareCheckingProgress,
+    requireCamera: boolean
+): boolean {
+    if (
+        progress.internet === ProctoringState.WAITING ||
+        progress.internet === ProctoringState.LOADING
+    ) {
+        return false;
+    }
+
+    const requiredChecks = requireCamera
+        ? [...REQUIRED_HARDWARE_CHECKS, "camera" as const]
+        : REQUIRED_HARDWARE_CHECKS;
+
+    return requiredChecks.every((check) => progress[check] === ProctoringState.PASSED);
+}
+
+export function hasBlockingHardwareError(
+    progress: HardwareCheckingProgress,
+    requireCamera: boolean
+): boolean {
+    const requiredChecks = requireCamera
+        ? [...REQUIRED_HARDWARE_CHECKS, "camera" as const]
+        : REQUIRED_HARDWARE_CHECKS;
+
+    return requiredChecks.some((check) => progress[check] === ProctoringState.ERROR);
+}
+
 export function getBrowserInfo() {
     const userAgent = navigator.userAgent;
     let browser = "Unknown";
