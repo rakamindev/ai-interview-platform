@@ -12,11 +12,11 @@ export default function NotFoundPage() {
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium text-primary">404</p>
-          <h1 className="text-xl font-semibold tracking-tight">{m.not_found.title()}</h1>
-          <p className="text-sm text-muted-foreground">{m.not_found.description()}</p>
+          <h1 className="text-xl font-semibold tracking-tight">{m.not_found_title()}</h1>
+          <p className="text-sm text-muted-foreground">{m.not_found_description()}</p>
         </div>
         <Button asChild>
-          <Link to="/">{m.not_found.go_home()}</Link>
+          <Link to="/">{m.not_found_go_home()}</Link>
         </Button>
       </div>
     </main>

@@ -26,18 +26,18 @@ export default function VacancyListPage() {
   return (
     <main>
       <PageHeader
-        title={m.vacancy.title_label()}
-        description={m.vacancy.title_subtitle()}
+        title={m.vacancy_title_label()}
+        description={m.vacancy_title_subtitle()}
         actions={
           <Button onClick={() => navigate("/vacancies/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> {m.vacancy.new()}
+            <Plus className="h-4 w-4 mr-1.5" /> {m.vacancy_new()}
           </Button>
         }
       />
 
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive mb-4">
-          {m.vacancy.failed_to_load()}
+          {m.vacancy_failed_to_load()}
         </div>
       )}
 
@@ -50,9 +50,9 @@ export default function VacancyListPage() {
       ) : vacancies.length === 0 ? (
         <EmptyState
           icon={Briefcase}
-          title={m.vacancy.no_vacancies()}
-          description={m.vacancy.create_to_compare()}
-          actionLabel={m.vacancy.create_first()}
+          title={m.vacancy_no_vacancies()}
+          description={m.vacancy_create_to_compare()}
+          actionLabel={m.vacancy_create_first()}
           onAction={() => navigate("/vacancies/new")}
         />
       ) : (

@@ -152,7 +152,7 @@ export default function FitGapReportPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <h1 className="text-xl font-semibold tracking-tight">{m.fitgap.title()}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{m.fitgap_title()}</h1>
         </div>
         <Card>
           <CardContent className="py-12 text-center space-y-3">
@@ -167,7 +167,7 @@ export default function FitGapReportPage() {
                 fetchReport();
               }}
             >
-              {m.fitgap.retry()}
+              {m.fitgap_retry()}
             </Button>
           </CardContent>
         </Card>
@@ -188,7 +188,7 @@ export default function FitGapReportPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-xl font-semibold tracking-tight">{m.fitgap.title()}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.fitgap_title()}</h1>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ export default function FitGapReportPage() {
               ) : (
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />
               )}
-              {m.fitgap.regenerate()}
+              {m.fitgap_regenerate()}
             </Button>
             {report && (
               <>
@@ -220,7 +220,7 @@ export default function FitGapReportPage() {
                   ) : (
                     <Download className="h-3.5 w-3.5 mr-1" />
                   )}
-                  {m.fitgap.export_pdf()}
+                  {m.fitgap_export_pdf()}
                 </Button>
                 <Button
                   variant="outline"
@@ -233,7 +233,7 @@ export default function FitGapReportPage() {
                   ) : (
                     <Download className="h-3.5 w-3.5 mr-1" />
                   )}
-                  {m.fitgap.export_json()}
+                  {m.fitgap_export_json()}
                 </Button>
               </>
             )}
@@ -246,7 +246,7 @@ export default function FitGapReportPage() {
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">{m.fitgap.generating()}</p>
+            <p className="text-sm text-muted-foreground">{m.fitgap_generating()}</p>
           </CardContent>
         </Card>
       )}
@@ -265,7 +265,7 @@ export default function FitGapReportPage() {
               ) : (
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />
               )}
-              {m.fitgap.retry()}
+              {m.fitgap_retry()}
             </Button>
           </CardContent>
         </Card>
@@ -277,7 +277,7 @@ export default function FitGapReportPage() {
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">{m.fitgap.skill_comparison()}</CardTitle>
+              <CardTitle className="text-sm">{m.fitgap_skill_comparison()}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <ComparisonTable comparisons={report.skill_comparisons} />
@@ -290,7 +290,7 @@ export default function FitGapReportPage() {
           {report.culture_narrative && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">{m.fitgap.culture_fit()}</CardTitle>
+                <CardTitle className="text-sm">{m.fitgap_culture_fit()}</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
@@ -304,7 +304,7 @@ export default function FitGapReportPage() {
           {report.overall_narrative && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">{m.fitgap.hiring_recommendation()}</CardTitle>
+                <CardTitle className="text-sm">{m.fitgap_hiring_recommendation()}</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
