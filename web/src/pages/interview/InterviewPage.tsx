@@ -319,9 +319,9 @@ export default function InterviewPage() {
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• {m.interview.tip_1()}</p>
-              <p>• {m.interview.tip_2()}</p>
-              <p>• {m.interview.tip_3()}</p>
+              <p>• {m.interview_tip_1()}</p>
+              <p>• {m.interview_tip_2()}</p>
+              <p>• {m.interview_tip_3()}</p>
             </div>
             <HardwareCheck
               onStart={() => {
