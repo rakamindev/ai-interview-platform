@@ -489,11 +489,11 @@ export default function InterviewPage() {
         <Button variant={micMuted ? "destructive" : "outline"} size="sm" onClick={toggleMic}>
           {micMuted ? (
             <>
-              <MicOff className="h-3.5 w-3.5" /> Muted
+              <MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted
             </>
           ) : (
             <>
-              <Mic className="h-3.5 w-3.5" />
+              <Mic className="h-3.5 w-3.5 mr-1.5" />
               {micActuallyCapturing ? m.interview_mic_on() : m.interview_mic_paused()}
             </>
           )}
@@ -506,7 +506,7 @@ export default function InterviewPage() {
             onClick={submitAnswer}
             disabled={!micActuallyCapturing}
           >
-            <Check className="h-3.5 w-3.5" />
+            <Check className="h-3.5 w-3.5 mr-1.5" />
             {m.interview_im_done()}
           </Button>
         )}
@@ -514,7 +514,7 @@ export default function InterviewPage() {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" size="sm">
-              <UnplugIcon className="h-3.5 w-3.5" />
+              <UnplugIcon className="h-3.5 w-3.5 mr-1.5" />
               {m.interview_end_interview()}
             </Button>
           </AlertDialogTrigger>
