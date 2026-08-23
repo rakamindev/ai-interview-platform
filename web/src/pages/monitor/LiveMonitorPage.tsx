@@ -183,10 +183,10 @@ export default function LiveMonitorPage() {
             {sessionEnded || !sessionActive
               ? m.monitor_ended()
               : connectionStatus === "connected"
-                ? "Live"
+                ? m.monitor_status_live()
                 : connectionStatus === "reconnecting"
-                  ? "Reconnecting..."
-                  : "Disconnected"}
+                  ? m.monitor_status_reconnecting()
+                  : m.monitor_status_disconnected()}
           </span>
         </div>
       </div>
@@ -232,7 +232,7 @@ export default function LiveMonitorPage() {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {skill.probe_count > 0 && (
                       <span>
-                        {skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}
+                        {skill.probe_count} {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
                       </span>
                     )}
                     <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
@@ -256,7 +256,7 @@ export default function LiveMonitorPage() {
               {configuredSkills.length > 0 && <Separator />}
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Discovered
+                  {m.monitor_discovered()}
                 </p>
                 {discoveredSkills.map((skill) => (
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
@@ -268,7 +268,7 @@ export default function LiveMonitorPage() {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {skill.probe_count > 0 && (
                           <span>
-                            {skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}
+                            {skill.probe_count} {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
                           </span>
                         )}
                         <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
@@ -312,7 +312,7 @@ export default function LiveMonitorPage() {
 
       {endError && (
         <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
-          Failed to end session. Please try again.
+          {m.monitor_end_session_error()}
         </div>
       )}
 
@@ -322,7 +322,7 @@ export default function LiveMonitorPage() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" disabled={ending}>
-                {ending ? "Ending..." : m.monitor_end_session()}
+                {ending ? m.monitor_ending() : m.monitor_end_session()}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -331,7 +331,7 @@ export default function LiveMonitorPage() {
                 <AlertDialogDescription>{m.monitor_end_confirm_desc()}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleEndSession}>
                   {m.monitor_end_session()}
                 </AlertDialogAction>
