@@ -65,8 +65,13 @@ export default function LiveMonitorPage() {
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { coverageMap, sessionEnded, sessionEndReason, isConnected: _isConnected, connectionStatus } =
-    useCoverageWebSocket(Number(sessionId));
+  const {
+    coverageMap,
+    sessionEnded,
+    sessionEndReason,
+    isConnected: _isConnected,
+    connectionStatus
+  } = useCoverageWebSocket(Number(sessionId));
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {

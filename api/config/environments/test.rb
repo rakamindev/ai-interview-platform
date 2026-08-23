@@ -10,7 +10,7 @@ Rails.application.configure do
 
   # Eager loading loads your whole application. When running a single test locally,
   # this might not be necessary. It's recommended that you set this to true in CI though.
-  config.eager_load = ENV["CI"].present?
+  config.eager_load = false
 
   # Configure public file server for tests with Cache-Control for performance.
   config.public_file_server.enabled = true
