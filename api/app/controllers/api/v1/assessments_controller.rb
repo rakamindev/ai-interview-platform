@@ -66,6 +66,7 @@ module Api
           :name,
           :time_limit_min,
           :language,
+          :vacancy_id,
           assessment_skills_attributes: %i[
             id skill_id skill_label is_custom
             scope_include scope_exclude
@@ -84,6 +85,7 @@ module Api
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
           system_prompt:  assessment.system_prompt,
+          vacancy_id:     assessment.vacancy_id,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
