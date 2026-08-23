@@ -44,7 +44,7 @@ export default function AssessmentListPage() {
   }, []);
 
   return (
-    <main>
+    <main className="max-w-2xl mx-auto">
       <PageHeader
         title={m.nav_assessments()}
         description={m.assessment_list_description()}
@@ -71,7 +71,7 @@ export default function AssessmentListPage() {
         <EmptyState
           icon={ClipboardList}
           title={m.assessment_no_assessments()}
-           description={m.assessment_empty_description()}
+          description={m.assessment_empty_description()}
           actionLabel={m.assessment_create_first()}
           onAction={() => navigate("/assessments/new")}
         />

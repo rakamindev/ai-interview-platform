@@ -24,7 +24,7 @@ export default function VacancyListPage() {
   }, []);
 
   return (
-    <main>
+    <main className="max-w-2xl mx-auto">
       <PageHeader
         title={m.vacancy_title_label()}
         description={m.vacancy_title_subtitle()}
