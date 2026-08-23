@@ -60,8 +60,10 @@ module FitGap
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          required_level:  expected_level,
           result:          result,
           delta:           delta,
+          is_override:     portfolio_skill&.dig(:overridden) || false,
           confidence:      portfolio_skill&.dig(:confidence)
         }
       end
@@ -101,10 +103,16 @@ module FitGap
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        {
+          culture: data['culture_narrative'] || generate_fallback_culture_narrative,
+          overall: data['overall_narrative'] || generate_fallback_overall_narrative(skill_comparisons)
+        }
       rescue => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        {
+          culture: generate_fallback_culture_narrative,
+          overall: generate_fallback_overall_narrative(skill_comparisons)
+        }
       end
     end
 
@@ -138,12 +146,23 @@ module FitGap
       PROMPT
     end
 
-    def generate_fallback_narrative(comparisons)
+    def generate_fallback_culture_narrative
+      if @vacancy.culture_dimensions.present?
+        "Evaluation evaluated against culture dimensions: #{@vacancy.culture_dimensions.truncate(150)}"
+      else
+        "Candidate demonstrates baseline alignment across core collaborative technical expectations."
+      end
+    end
+
+    def generate_fallback_overall_narrative(comparisons)
       gaps    = comparisons.count { |c| c[:result] == 'gap' }
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      unassessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      summary = "Candidate shows #{matches} skill match#{'es' if matches != 1}, #{exceeds} exceed#{'s' if exceeds != 1}, and #{gaps} gap#{'s' if gaps != 1} against role requirements."
+      summary += " (#{unassessed} skill#{'s' if unassessed != 1} not assessed in this session.)" if unassessed > 0
+      summary
     end
   end
 end

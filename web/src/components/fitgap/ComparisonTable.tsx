@@ -29,6 +29,8 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+  const totalAssessed = matchCount + gapCount + exceedCount;
+  const fitScore = totalAssessed > 0 ? Math.round(((matchCount + exceedCount) / totalAssessed) * 100) : 0;
 
   return (
     <div className="space-y-3">
@@ -43,33 +45,37 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
-              </tr>
-            ))}
+            {comparisons.map((c, i) => {
+              const req = (c.required_level ?? c.expected_level) as number;
+              return (
+                <tr key={i} className="border-b last:border-0">
+                  <td className="px-4 py-2.5 font-medium">{c.skill_label}</td>
+                  <td className="px-4 py-2.5 text-center text-muted-foreground">
+                    {LEVEL_LABELS[req] ?? "—"}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    {c.candidate_level != null ? (
+                      <span>
+                        {LEVEL_LABELS[c.candidate_level]}
+                        {c.is_override && <span className="text-xs text-muted-foreground ml-1" title="Assessor override applied">✏</span>}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <ResultBadge comparison={c} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">Fit Score: {fitScore}%</span>
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}

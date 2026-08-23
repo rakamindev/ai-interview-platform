@@ -33,7 +33,7 @@ function ElapsedTimer({ startedAt }: { startedAt: string }) {
 
   useEffect(() => {
     const start = new Date(startedAt).getTime();
-    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
@@ -275,8 +275,8 @@ export default function LiveMonitorPage() {
             <p className="text-sm text-muted-foreground">No transcript yet.</p>
           ) : (
             <div className="space-y-2">
-              {transcript.map((turn) => (
-                <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
+              {transcript.map((turn, i) => (
+                <TranscriptBubble key={turn.id ?? turn.turn_number ?? i} speaker={turn.speaker} text={turn.text} />
               ))}
             </div>
           )}

@@ -35,6 +35,7 @@ export default function AssessmentEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
@@ -48,10 +49,16 @@ export default function AssessmentEditPage() {
     assessmentsApi
       .get(Number(id))
       .then((res) => {
-        const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        const a = res.data?.assessment;
+        if (a) {
+          reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        } else {
+          setLoadError("Assessment not found or has been deleted.");
+        }
       })
-      .catch(() => {})
+      .catch((err) => {
+        setLoadError(err?.response?.status === 404 ? "Assessment not found or has been deleted." : "Failed to load assessment details.");
+      })
       .finally(() => setLoading(false));
   }, [id, reset]);
 
@@ -94,6 +101,25 @@ export default function AssessmentEditPage() {
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
         <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-2">
+          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <span className="text-sm font-medium">Edit Assessment</span>
+        </div>
+        <div className="border rounded-lg p-8 text-center space-y-4 bg-muted/20">
+          <p className="font-medium text-foreground">{loadError}</p>
+          <Button variant="outline" size="sm" onClick={() => navigate("/assessments")}>
+            Back to Assessments
+          </Button>
+        </div>
       </div>
     );
   }

@@ -150,32 +150,39 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      ActiveRecord::Base.transaction(requires_new: true) do
+        # Destroy existing skills (idempotent regeneration)
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+        (data['configured_skills'] || []).each do |skill_data|
+          lvl = skill_data['level'].present? ? skill_data['level'].to_i.clamp(1, 5) : 1
+          portfolio.portfolio_skills.create!(
+            skill_id:           skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      false,
+            ai_level:           lvl,
+            ai_confidence:      skill_data['confidence'] || 'medium',
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary'] || 'No summary provided.'
+          )
+        end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        (data['discovered_skills'] || []).each do |skill_data|
+          lvl = skill_data['level'].present? ? skill_data['level'].to_i.clamp(1, 5) : 1
+          portfolio.portfolio_skills.create!(
+            skill_id:           nil,
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      true,
+            ai_level:           lvl,
+            ai_confidence:      skill_data['confidence'] || 'medium',
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary'] || 'Discovered competency.'
+          )
+        end
       end
+    rescue => e
+      portfolio.portfolio_skills.reset
+      raise e
     end
   end
 end

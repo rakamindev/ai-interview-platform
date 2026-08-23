@@ -43,6 +43,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         microphone: ProctoringState.WAITING,
     });
     const [allPassed, setAllPassed] = useState(false);
+    const [pdpConsent, setPdpConsent] = useState(true);
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
@@ -270,6 +271,21 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 ))}
             </div>
 
+            {/* UU PDP Consent Notice */}
+            <div className="px-4 py-3 border-t bg-muted/10">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={pdpConsent}
+                        onChange={(e) => setPdpConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-xs text-muted-foreground leading-relaxed">
+                        I consent to the recording and AI-assisted analysis of my interview audio in accordance with Indonesian Personal Data Protection regulations (UU PDP No. 27/2022).
+                    </span>
+                </label>
+            </div>
+
             {/* Footer */}
             <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
                 {hasError && (
@@ -281,7 +297,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!allPassed || !pdpConsent}
                     onClick={onStart}
                 >
                     Start Interview

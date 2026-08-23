@@ -36,7 +36,7 @@ export default function AssessmentListPage() {
   useEffect(() => {
     assessmentsApi
       .list()
-      .then((res) => setAssessments(res.data.assessments))
+      .then((res) => setAssessments(res.data?.assessments ?? []))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);

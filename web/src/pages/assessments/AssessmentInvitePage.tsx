@@ -135,7 +135,7 @@ export default function AssessmentInvitePage() {
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
+    setSessions(res.data?.sessions ?? []);
   }, [id]);
 
   useEffect(() => {
@@ -143,14 +143,14 @@ export default function AssessmentInvitePage() {
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
     ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
+      setAssessment(aRes.data?.assessment ?? null);
+      setSessions(sRes.data?.sessions ?? []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
+    const hasActive = (sessions || []).some((s) => s.status !== "ended");
     if (!hasActive) return;
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);
@@ -169,7 +169,7 @@ export default function AssessmentInvitePage() {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
-      setSessions((prev) => [created, ...prev]);
+      setSessions((prev) => [created, ...(prev || [])]);
     } finally {
       setCreatingSession(false);
     }

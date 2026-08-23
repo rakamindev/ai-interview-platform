@@ -24,6 +24,7 @@ export default function VacancyEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -33,10 +34,25 @@ export default function VacancyEditPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
-    vacanciesApi.get(Number(id)).then((res) => {
-      const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
+    vacanciesApi
+      .get(Number(id))
+      .then((res) => {
+        const v = res.data?.vacancy;
+        if (v) {
+          reset({
+            role_title: v.role_title,
+            culture_dimensions: v.culture_dimensions,
+            competency_expectations: v.competency_expectations,
+            skills: v.skills,
+          });
+        } else {
+          setLoadError("Vacancy not found or has been deleted.");
+        }
+      })
+      .catch((err) => {
+        setLoadError(err?.response?.status === 404 ? "Vacancy not found or has been deleted." : "Failed to load vacancy.");
+      })
+      .finally(() => setLoading(false));
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
@@ -55,6 +71,25 @@ export default function VacancyEditPage() {
   };
 
   if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-2">
+          <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <span className="text-sm font-medium">Edit Vacancy</span>
+        </div>
+        <div className="border rounded-lg p-8 text-center space-y-4 bg-muted/20">
+          <p className="font-medium text-foreground">{loadError}</p>
+          <Button variant="outline" size="sm" onClick={() => navigate("/vacancies")}>
+            Back to Vacancies
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">

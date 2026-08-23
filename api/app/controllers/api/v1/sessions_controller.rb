@@ -148,6 +148,8 @@ module Api
         json_response(
           session_id:      session.id,
           role_title:      assessment.name,
+          assessment_name: assessment.name,
+          candidate_name:  session.candidate_name,
           time_limit_min:  assessment.time_limit_min,
           session_status:  session.status
         )
