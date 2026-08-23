@@ -32,8 +32,6 @@ function stateLabel(state: ProctoringState) {
     return "Waiting";
 }
 
-const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
-
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
         osAndBrowser: ProctoringState.WAITING,
@@ -125,44 +123,34 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             setProgress((p) => ({
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                ...(result.passed ? { camera: ProctoringState.LOADING } : {}),
             }));
         });
     }, [progress.internet]);
 
-    // Step 3: Camera + microphone (or microphone-only when camera disabled)
+    // Step 3: Camera + microphone (one combined getUserMedia call)
     useEffect(() => {
-        const cameraLoading = progress.camera === ProctoringState.LOADING;
-        const micLoading = !REQUIRE_CAMERA && progress.microphone === ProctoringState.LOADING;
-        if (!cameraLoading && !micLoading) return;
+        if (progress.camera !== ProctoringState.LOADING) return;
 
-        const getStream = REQUIRE_CAMERA
-            ? checkCamera()
-            : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
-
-        getStream.then((stream) => {
+        checkCamera().then((stream) => {
             if (stream) {
-                if (REQUIRE_CAMERA) setVideoStream(stream);
+                setVideoStream(stream);
                 startAudioLevelMonitoring(stream);
                 setProgress((p) => ({
                     ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.PASSED } : {}),
+                    camera: ProctoringState.PASSED,
                     microphone: ProctoringState.PASSED,
                     audio: ProctoringState.LOADING,
                 }));
             } else {
                 setProgress((p) => ({
                     ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.ERROR } : {}),
+                    camera: ProctoringState.ERROR,
                     microphone: ProctoringState.ERROR,
                 }));
             }
         });
-    }, [progress.camera, progress.microphone]);
+    }, [progress.camera]);
 
     // Step 4: Audio output
     useEffect(() => {
@@ -193,7 +181,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const rows: { key: keyof HardwareCheckingProgress; label: string }[] = [
         { key: "osAndBrowser", label: "OS & browser" },
         { key: "internet", label: "Internet" },
-        ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: "Camera" }] : []),
+        { key: "camera", label: "Camera" },
         { key: "microphone", label: "Microphone" },
         { key: "audio", label: "Audio output" },
     ];
@@ -203,7 +191,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
             {/* Camera preview */}
-            {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
+            <div className="relative bg-black aspect-video">
                 {videoStream ? (
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 ) : (
@@ -220,7 +208,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         LIVE
                     </span>
                 )}
-            </div>}
+            </div>
 
             {/* Checklist */}
             <div className="divide-y">

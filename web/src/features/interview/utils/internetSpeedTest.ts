@@ -102,7 +102,7 @@ async function measureUploadSpeed(): Promise<number> {
             continue;
         }
     }
-    return 0.5; // conservative fallback
+    throw new Error("upload speed test failed");
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {
