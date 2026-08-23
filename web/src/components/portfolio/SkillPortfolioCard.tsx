@@ -3,6 +3,7 @@ import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
 import { Zap } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -27,7 +28,7 @@ export default function SkillPortfolioCard({
         {skill.evidence.length > 0 && (
           <div className="space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Evidence from interview
+              {m.portfolio.evidence_from_interview()}
             </span>
             <ul className="space-y-1">
               {skill.evidence.map((quote) => (
@@ -48,7 +49,7 @@ export default function SkillPortfolioCard({
                 <span className="font-semibold">{skill.skill_label}</span>
                 {skill.is_discovered && (
                   <span className="flex items-center gap-0.5 text-xs text-verdict-gap">
-                    <Zap className="h-3 w-3" /> Discovered
+                    <Zap className="h-3 w-3" /> {m.portfolio.discovered()}
                   </span>
                 )}
               </div>
@@ -61,8 +62,7 @@ export default function SkillPortfolioCard({
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
           <div className="text-xs text-muted-foreground bg-verdict-gap/10 border border-verdict-gap/20 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill
-            matters.
+            {m.portfolio.low_confidence_note()}
           </div>
         )}
 
@@ -70,7 +70,7 @@ export default function SkillPortfolioCard({
         {skill.competency_summary && (
           <div className="space-y-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Competency summary
+              {m.portfolio.competency_summary()}
             </span>
             <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
               {skill.competency_summary}

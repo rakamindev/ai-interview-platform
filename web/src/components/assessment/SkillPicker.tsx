@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
 
@@ -57,13 +58,13 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add from B7 taxonomy</DialogTitle>
+          <DialogTitle>{m.skill_picker.add_taxonomy()}</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search skills..."
+            placeholder={m.skill_picker.search()}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
@@ -77,7 +78,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">{m.skill_picker.no_results()}</p>
           ) : (
             filtered.map((s) => (
               <button

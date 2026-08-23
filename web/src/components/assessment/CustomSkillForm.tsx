@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import LevelRadio from "./LevelRadio";
+import { m } from "@/(paraglide)/messages.js";
 import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
 
 interface CustomSkillFormProps {
@@ -26,7 +27,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
     <div className="space-y-3 pt-1">
       <div className="space-y-1.5">
         <Label htmlFor={`skills.${index}.skill_label`}>
-          Name <span className="text-destructive">*</span>
+          {m.custom_skill.name()} <span className="text-destructive">*</span>
         </Label>
         <Input
           id={`skills.${index}.skill_label`}
@@ -37,7 +38,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor={`skills.${index}.scope_include`}>
-          What counts (scope include) <span className="text-destructive">*</span>
+          {m.custom_skill.scope_include()} <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id={`skills.${index}.scope_include`}
@@ -51,7 +52,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
         {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map((key, i) => (
           <div key={key} className="space-y-1">
             <Label htmlFor={`skills.${index}.${key}`}>
-              L{i + 1} anchor <span className="text-destructive">*</span>
+              {m.custom_skill.anchor({ i: String(i + 1) })} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id={`skills.${index}.${key}`}
@@ -64,7 +65,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label>Expected level</Label>
+        <Label>{m.custom_skill.expected_level()}</Label>
         <LevelRadio
           value={expectedLevel ?? 3}
           onChange={(v) => setValue(`skills.${index}.expected_level`, v)}

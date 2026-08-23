@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { m } from "@/(paraglide)/messages.js";
 
 interface TranscriptBubbleProps {
   speaker: "candidate" | "assessor" | "system" | "ai";
@@ -19,8 +20,8 @@ export default function TranscriptBubble({ speaker, text, interim }: TranscriptB
         )}
       >
         <span className="block text-xs font-medium mb-0.5 text-muted-foreground">
-          {isCandidate ? "You" : "AI"}
-          {interim && " · listening..."}
+          {isCandidate ? m.transcript_bubble.you() : m.transcript_bubble.ai()}
+          {interim && ` · ${m.transcript_bubble.listening()}`}
         </span>
         {text}
       </div>

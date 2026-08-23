@@ -12,6 +12,7 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import PageHeader from "@/components/PageHeader";
 import { vacanciesApi } from "@/services/vacancies";
 import { Plus, X, Loader2 } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import { VacancyFormSchema } from "@/schemas/forms";
 import type { VacancyFormValues } from "@/schemas/forms";
 
@@ -55,17 +56,17 @@ export default function VacancyNewPage() {
   return (
     <main className="max-w-2xl mx-auto">
       <PageHeader
-        title="New Vacancy"
-        description="Define the skills and culture fit a candidate's portfolio will be compared against."
-        eyebrow="Vacancies"
+        title={m.vacancy.new()}
+        description={m.vacancy.subtitle()}
+        eyebrow={m.vacancy.title_label()}
         backTo="/vacancies"
-        backLabel="Back to vacancies"
+        backLabel={m.common.back()}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">
-            Role title <span className="text-destructive">*</span>
+            {m.vacancy.role_title()} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="role_title"
@@ -78,11 +79,11 @@ export default function VacancyNewPage() {
 
         {/* Expected skills */}
         <div className="space-y-3">
-          <Label>Expected skills</Label>
+          <Label>{m.vacancy.expected_skills()}</Label>
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
-              No skills added yet.
+              {m.vacancy.no_skills()}
             </div>
           ) : (
             <div className="space-y-2">
@@ -115,14 +116,14 @@ export default function VacancyNewPage() {
           )}
 
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add skill expectation
+            <Plus className="h-3.5 w-3.5 mr-1" /> {m.vacancy.add_skill()}
           </Button>
         </div>
 
         <Separator />
 
         <div className="space-y-1.5">
-          <Label htmlFor="culture_dimensions">Company culture (used in AI narrative)</Label>
+          <Label htmlFor="culture_dimensions">{m.vacancy.company_culture()}</Label>
           <Textarea
             id="culture_dimensions"
             placeholder="Ownership-driven, async-first, direct feedback culture..."
@@ -133,7 +134,7 @@ export default function VacancyNewPage() {
 
         <div className="space-y-1.5">
           <Label htmlFor="competency_expectations">
-            Competency expectations (used in AI narrative)
+            {m.vacancy.competency_expectations()}
           </Label>
           <Textarea
             id="competency_expectations"
@@ -147,11 +148,11 @@ export default function VacancyNewPage() {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>
-            Cancel
+            {m.vacancy.cancel()}
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Vacancy
+            {m.vacancy.save()}
           </Button>
         </div>
       </form>

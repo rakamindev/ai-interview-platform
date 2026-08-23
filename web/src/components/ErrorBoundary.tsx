@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { m } from "@/(paraglide)/messages.js";
 
 interface Props {
   children: ReactNode;
@@ -20,15 +21,15 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center p-8">
           <div className="text-center space-y-3">
-            <p className="font-medium">Something went wrong.</p>
+            <p className="font-medium">{m.error.unexpected()}</p>
             <p className="text-sm text-muted-foreground">
-              Please refresh the page. If the problem persists, contact support.
+              {m.error.refresh()}
             </p>
             <button
               className="text-sm text-primary underline"
               onClick={() => window.location.reload()}
             >
-              Refresh
+              {m.error.refresh_button()}
             </button>
           </div>
         </div>
