@@ -73,4 +73,25 @@ RSpec.describe 'Candidate sessions', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to include('role_title' => 'Original Role', 'time_limit_min' => 45)
   end
+
+  it 'returns the published rubric details needed to compare candidate sessions' do
+    post "/api/v1/assessments/#{assessment.id}/sessions", params: { session: {} }, headers: headers
+
+    assessment.with_lock do
+      assessment.update!(name: 'Updated Role', time_limit_min: 60)
+      assessment.assessment_skills.first.update!(l3_anchor: 'Updated L3 anchor', expected_level: 4)
+      assessment.increment!(:rubric_version)
+    end
+    post "/api/v1/assessments/#{assessment.id}/sessions", params: { session: {} }, headers: headers
+
+    get "/api/v1/assessments/#{assessment.id}/versions", headers: headers
+
+    expect(response).to have_http_status(:ok)
+    versions = response.parsed_body.fetch('versions')
+    expect(versions.map { |version| version.fetch('rubric_version') }).to eq([2, 1])
+    expect(versions.first).to include('name' => 'Updated Role', 'time_limit_min' => 60)
+    expect(versions.first.fetch('skills').first).to include('l3_anchor' => 'Updated L3 anchor', 'expected_level' => 4)
+    expect(versions.last).to include('name' => 'Original Role', 'time_limit_min' => 45)
+    expect(versions.last.fetch('skills').first).to include('l3_anchor' => 'Handles complex work', 'expected_level' => 3)
+  end
 end

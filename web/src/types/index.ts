@@ -51,6 +51,31 @@ export interface Session {
   };
 }
 
+export interface AssessmentRubricVersionSkill {
+  skill_id?: string | number;
+  skill_label: string;
+  is_custom: boolean;
+  expected_level: number;
+  display_order: number;
+  scope_include?: string;
+  scope_exclude?: string;
+  l1_anchor?: string;
+  l2_anchor?: string;
+  l3_anchor?: string;
+  l4_anchor?: string;
+  l5_anchor?: string;
+}
+
+export interface AssessmentRubricVersion {
+  id: number;
+  rubric_version: number;
+  name: string;
+  time_limit_min: number;
+  language: "en" | "id";
+  created_at: string;
+  skills: AssessmentRubricVersionSkill[];
+}
+
 export interface CoverageSkill {
   id: number;
   skill_id: number;

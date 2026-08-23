@@ -16,20 +16,23 @@ import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
 import RubricStatusBadge from "@/components/assessment/RubricStatusBadge";
+import RubricVersionComparisonDialog from "@/components/assessment/RubricVersionComparisonDialog";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
-import type { Assessment, Session } from "@/types";
+import type { Assessment, AssessmentRubricVersion, Session } from "@/types";
 
 function SessionRow({
   session,
   index,
   assessmentId,
   onCopy,
+  onViewRubric,
   copiedId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onViewRubric: (version: number) => void;
   copiedId: number | null;
 }) {
   const navigate = useNavigate();
@@ -51,7 +54,7 @@ function SessionRow({
               {new Date(session.started_at).toLocaleDateString()}
             </div>
           )}
-          <RubricStatusBadge rubric={session.rubric} />
+          <RubricStatusBadge rubric={session.rubric} onView={onViewRubric} />
         </div>
       </div>
 
@@ -135,6 +138,11 @@ export default function AssessmentInvitePage() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [showRubricComparison, setShowRubricComparison] = useState(false);
+  const [rubricVersions, setRubricVersions] = useState<AssessmentRubricVersion[]>([]);
+  const [rubricVersionsLoading, setRubricVersionsLoading] = useState(false);
+  const [rubricVersionsError, setRubricVersionsError] = useState<string | null>(null);
+  const [comparisonTargetVersion, setComparisonTargetVersion] = useState<number | undefined>();
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -163,6 +171,21 @@ export default function AssessmentInvitePage() {
     setCandidateNameInput("");
     setInviteError(null);
     setShowInviteDialog(true);
+  };
+
+  const openRubricComparison = async (version?: number) => {
+    setComparisonTargetVersion(version);
+    setRubricVersionsError(null);
+    setShowRubricComparison(true);
+    setRubricVersionsLoading(true);
+    try {
+      const res = await assessmentsApi.getVersions(Number(id));
+      setRubricVersions(res.data.versions);
+    } catch {
+      setRubricVersionsError("Unable to load captured rubrics. Please try again.");
+    } finally {
+      setRubricVersionsLoading(false);
+    }
   };
 
   const handleInviteCandidate = async () => {
@@ -223,6 +246,9 @@ export default function AssessmentInvitePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => openRubricComparison()}>
+            Compare rubrics
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
@@ -265,6 +291,15 @@ export default function AssessmentInvitePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RubricVersionComparisonDialog
+        open={showRubricComparison}
+        onOpenChange={setShowRubricComparison}
+        versions={rubricVersions}
+        initialVersion={comparisonTargetVersion}
+        loading={rubricVersionsLoading}
+        error={rubricVersionsError}
+      />
 
       {/* Newly created session invite link */}
       {newSession && (
@@ -327,6 +362,7 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onViewRubric={openRubricComparison}
                   copiedId={copiedId}
                 />
               ))}

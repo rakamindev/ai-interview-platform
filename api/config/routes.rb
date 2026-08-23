@@ -18,6 +18,9 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
+        member do
+          get :versions
+        end
         resources :sessions, only: %i[index create]
       end
 
