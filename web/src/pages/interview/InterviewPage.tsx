@@ -411,7 +411,7 @@ export default function InterviewPage() {
         <h2 className="text-xl font-semibold">{cfg.title}</h2>
         <p className="text-sm text-muted-foreground max-w-md">{cfg.description}</p>
         {cfg.retry && (
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <Button onClick={() => window.location.reload()}>{m.interview_retry()}</Button>
         )}
       </main>
     );

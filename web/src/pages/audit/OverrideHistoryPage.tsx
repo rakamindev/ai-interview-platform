@@ -86,7 +86,7 @@ export default function OverrideHistoryPage() {
             <Label htmlFor="assessor">{m.audit_assessor_email()}</Label>
             <Input
               id="assessor"
-              placeholder="filter@example.com"
+              placeholder={m.audit_filter_placeholder()}
               value={assessorFilter}
               onChange={(e) => setAssessorFilter(e.target.value)}
             />
@@ -113,7 +113,7 @@ export default function OverrideHistoryPage() {
             <Label htmlFor="skill">{m.audit_skill_name()}</Label>
             <Input
               id="skill"
-              placeholder="React, Python..."
+              placeholder={m.audit_skill_placeholder()}
               value={skillFilter}
               onChange={(e) => setSkillFilter(e.target.value)}
             />

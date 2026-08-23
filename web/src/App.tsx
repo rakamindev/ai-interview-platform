@@ -48,8 +48,6 @@ export default function App() {
         {/* Auth routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
-        {/* Deprecated: SignupPage — replaced by admin-invite flow (WEB-NEW-01).
-          Remove once no external links reference /signup. */}
 
         {/* Assessor routes (protected) */}
         <Route element={<ProtectedRoute isAuthReady={isAuthReady} requiredRole="assessor" />}>
