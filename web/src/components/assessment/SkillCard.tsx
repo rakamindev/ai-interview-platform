@@ -6,7 +6,7 @@ import { GripVertical, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LevelRadio from "./LevelRadio";
 import CustomSkillForm from "./CustomSkillForm";
-import { m } from "@/(paraglide)/messages.js";
+import { m } from "@/paraglide/messages.js";
 import { cn } from "@/lib/utils";
 import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
 
