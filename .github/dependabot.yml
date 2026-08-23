@@ -1,0 +1,68 @@
+# Dependabot configuration
+# See https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+
+updates:
+  # Web — npm
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Jakarta
+    target-branch: development
+    open-pull-requests-limit: 15
+    versioning-strategy: auto
+    labels: [dependencies]
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      radix-ui:
+        patterns: ["@radix-ui/*"]
+      dnd-kit:
+        patterns: ["@dnd-kit/*"]
+      react:
+        patterns: ["react", "react-dom", "react-hook-form", "react-router-dom", "@types/react", "@types/react-dom"]
+      tooling:
+        patterns: ["vite", "vitest", "jsdom", "msw", "@vitejs/plugin-react"]
+      styling:
+        patterns: ["tailwindcss", "tailwindcss-animate", "tailwind-merge", "autoprefixer", "postcss"]
+
+  # API — Bundler
+  - package-ecosystem: bundler
+    directory: /api
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Jakarta
+    target-branch: development
+    open-pull-requests-limit: 10
+    labels: [dependencies]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      rails:
+        patterns: ["rails", "activerecord", "activesupport", "action*", "railties"]
+      rubocop:
+        patterns: ["rubocop", "rubocop-*"]
+      rspec:
+        patterns: ["rspec*", "factory_bot_rails"]
+      sidekiq:
+        patterns: ["sidekiq", "redis"]
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Jakarta
+    target-branch: development
+    labels: [dependencies]
+    commit-message:
+      prefix: "chore(deps)"

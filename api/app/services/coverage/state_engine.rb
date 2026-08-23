@@ -7,10 +7,10 @@ module Coverage
     STATES = %w[not_yet initiated partial covered].freeze
 
     VALID_TRANSITIONS = {
-      'not_yet'   => %w[initiated],
-      'initiated' => %w[partial],
-      'partial'   => %w[covered],
-      'covered'   => []
+      "not_yet" => %w[initiated],
+      "initiated" => %w[partial],
+      "partial" => %w[covered],
+      "covered" => []
     }.freeze
 
     # Returns true if a transition from `from` to `to` is valid given probe_count.
@@ -18,9 +18,7 @@ module Coverage
       return false unless VALID_TRANSITIONS[from]&.include?(to)
 
       # HARD RULE: cannot advance past initiated without at least 2 probes
-      if to == 'partial' || to == 'covered'
-        return false if probe_count < 2
-      end
+      return false if %w[partial covered].include?(to) && (probe_count < 2)
 
       true
     end

@@ -1,0 +1,1928 @@
+openapi: "3.0.3"
+info:
+  title: AI Interview Platform API
+  version: "1.0.0"
+  description: |
+    Multi-tenant AI hiring-interview platform API.
+    Handles assessments, sessions, portfolios, fit-gap analysis, and vacancies.
+    Bearer JWT authentication required for admin endpoints.
+    Candidate-facing endpoints use invite tokens only (no JWT).
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+
+tags:
+  - name: Health
+    description: Health checks
+  - name: Auth
+    description: Authentication and token management
+  - name: Assessments
+    description: Interview assessments CRUD
+  - name: Sessions
+    description: Interview sessions management
+  - name: Portfolios
+    description: Candidate skill portfolios and fit-gap analysis
+  - name: PortfolioSkills
+    description: Portfolio skill overrides
+  - name: OverrideEvents
+    description: Assessor override audit trail
+  - name: SkillTaxonomies
+    description: Skill taxonomy reference data
+  - name: Vacancies
+    description: Job vacancy management
+  - name: FitGap
+    description: Fit/gap report generation and retrieval
+
+paths:
+  # ── Health ──────────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check (top-level)
+      operationId: healthRoot
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      operationId: healthLive
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness check (DB + Redis)
+      operationId: healthReady
+      responses:
+        "200":
+          description: All dependencies healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessStatus"
+        "503":
+          description: One or more dependencies degraded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessStatus"
+
+  /speed_test:
+    post:
+      tags: [Health]
+      summary: Upload speed test (accepts any payload, returns byte count)
+      operationId: speedTest
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Bytes received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received_bytes:
+                    type: integer
+
+  # ── Auth ────────────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate user (admin only)
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials or non-admin user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: authRefresh
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid/expired refresh token or CSRF mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    delete:
+      tags: [Auth]
+      summary: Logout and revoke refresh token
+      operationId: authLogout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  # ── Assessments ─────────────────────────────────────────
+  /assessments:
+    get:
+      tags: [Assessments]
+      summary: List assessments (paginated)
+      operationId: listAssessments
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+      responses:
+        "200":
+          description: Paginated list of assessments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assessments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Assessment"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+    post:
+      tags: [Assessments]
+      summary: Create assessment
+      operationId: createAssessment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentInput"
+      responses:
+        "201":
+          description: Assessment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assessment:
+                    $ref: "#/components/schemas/Assessment"
+                  system_prompt_generated:
+                    type: boolean
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /assessments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Assessments]
+      summary: Get assessment with skills
+      operationId: getAssessment
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Assessment details with skills
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assessment:
+                    $ref: "#/components/schemas/AssessmentDetail"
+        "404":
+          description: Assessment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags: [Assessments]
+      summary: Update assessment
+      operationId: updateAssessment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentInput"
+      responses:
+        "200":
+          description: Assessment updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assessment:
+                    $ref: "#/components/schemas/AssessmentDetail"
+                  system_prompt_generated:
+                    type: boolean
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [Assessments]
+      summary: Delete assessment
+      operationId: deleteAssessment
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Assessment deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Assessment deleted"
+        "422":
+          description: Cannot delete (has dependent sessions)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Sessions (nested under assessments) ──────────────────
+  /assessments/{assessment_id}/sessions:
+    parameters:
+      - name: assessment_id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Sessions]
+      summary: List sessions for assessment
+      operationId: listAssessmentSessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Session"
+        "404":
+          description: Assessment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags: [Sessions]
+      summary: Create session (single candidate)
+      operationId: createSession
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session]
+              properties:
+                session:
+                  type: object
+                  properties:
+                    candidate_id:
+                      type: string
+                      example: "cand_abc123"
+                    candidate_name:
+                      type: string
+                      example: "John Doe"
+      responses:
+        "201":
+          description: Session created with invite URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session:
+                    $ref: "#/components/schemas/Session"
+                  invite_url:
+                    type: string
+                    format: uri
+        "404":
+          description: Assessment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /assessments/{assessment_id}/sessions/bulk_create:
+    post:
+      tags: [Sessions]
+      summary: Bulk create sessions for multiple candidates
+      operationId: bulkCreateSessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assessment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [candidates]
+              properties:
+                candidates:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    properties:
+                      candidate_id:
+                        type: string
+                      candidate_name:
+                        type: string
+      responses:
+        "200":
+          description: Per-row success/failure summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BulkCreateResult"
+                  summary:
+                    $ref: "#/components/schemas/BulkCreateSummary"
+        "404":
+          description: Assessment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Sessions (standalone) ───────────────────────────────
+  /sessions/{id}:
+    get:
+      tags: [Sessions]
+      summary: Get session details (with assessment info)
+      operationId: getSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session:
+                    allOf:
+                      - $ref: "#/components/schemas/Session"
+                      - type: object
+                        properties:
+                          assessment:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                              time_limit_min:
+                                type: integer
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions/{id}/end_session:
+    post:
+      tags: [Sessions]
+      summary: End a session manually
+      operationId: endSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session:
+                  type: object
+                  properties:
+                    reason:
+                      type: string
+                      enum:
+                        - manual_candidate
+                        - manual_assessor
+                        - all_covered
+                        - time_ceiling
+                        - error
+                      default: manual_assessor
+      responses:
+        "200":
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session:
+                    $ref: "#/components/schemas/Session"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Already ended or invalid reason
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions/{id}/coverage:
+    get:
+      tags: [Sessions]
+      summary: Get coverage maps for session
+      operationId: getSessionCoverage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Coverage maps
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CoverageMap"
+                  discovered:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CoverageMap"
+                  updated_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions/{id}/transcript:
+    get:
+      tags: [Sessions]
+      summary: Get transcript turns
+      operationId: getSessionTranscript
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: from_turn
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: Return turns starting from this turn number
+      responses:
+        "200":
+          description: Transcript turns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  turns:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TranscriptTurn"
+                  total:
+                    type: integer
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Candidate-facing (no JWT) ───────────────────────────
+  /sessions/{token}/candidate:
+    get:
+      tags: [Sessions]
+      summary: Get candidate session info (invite token only, no JWT)
+      operationId: getCandidateInfo
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Invite token from URL
+      responses:
+        "200":
+          description: Candidate session info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: integer
+                  role_title:
+                    type: string
+                  time_limit_min:
+                    type: integer
+                  session_status:
+                    type: string
+                    enum: [pending, active, ended, failed]
+        "401":
+          description: Invite token expired
+          content:
+            application/json:
+              schema:
+                $ref: #/components/schemas/ErrorResponse
+        "404":
+          description: Invalid invite token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions/{token}/audio_complete:
+    post:
+      tags: [Sessions]
+      summary: Signal audio complete (invite token only, no JWT)
+      operationId: audioComplete
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Invite token from URL
+      responses:
+        "200":
+          description: Session ended or already ended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ended:
+                    type: boolean
+                  message:
+                    type: string
+        "401":
+          description: Invite token expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invalid invite token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Portfolios (session-based) ──────────────────────────
+  /sessions/{id}/portfolio:
+    get:
+      tags: [Portfolios]
+      summary: Get portfolio for session
+      operationId: getSessionPortfolio
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Portfolio details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portfolio:
+                    $ref: "#/components/schemas/Portfolio"
+        "202":
+          description: Portfolio still generating
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: generating
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions/{id}/portfolio/regenerate:
+    post:
+      tags: [Portfolios]
+      summary: Regenerate failed portfolio
+      operationId: regeneratePortfolio
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Regeneration queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Portfolio generation queued"
+                  portfolio:
+                    $ref: "#/components/schemas/Portfolio"
+        "404":
+          description: No portfolio found for this session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Portfolio not in failed state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Portfolios (direct) ─────────────────────────────────
+  /portfolios/{id}/fitgap:
+    post:
+      tags: [FitGap]
+      summary: Generate or retrieve fit/gap report
+      operationId: generateFitGap
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Portfolio ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vacancy_id]
+              properties:
+                vacancy_id:
+                  type: integer
+      responses:
+        "200":
+          description: Cached report returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report:
+                    $ref: "#/components/schemas/FitGapReport"
+        "202":
+          description: Report generation queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: generating
+                  message:
+                    type: string
+        "404":
+          description: Portfolio not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Portfolio not ready or vacancy_id missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /portfolios/{id}/regenerate_fitgap:
+    post:
+      tags: [FitGap]
+      summary: Force regenerate fit/gap report
+      operationId: regenerateFitGap
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Portfolio ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vacancy_id]
+              properties:
+                vacancy_id:
+                  type: integer
+      responses:
+        "202":
+          description: Regeneration queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: generating
+                  message:
+                    type: string
+        "404":
+          description: Portfolio or vacancy not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Portfolio not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /portfolios/{id}/fitgap/{vacancy_id}:
+    get:
+      tags: [FitGap]
+      summary: Get fit/gap report for portfolio + vacancy
+      operationId: showFitGap
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Portfolio ID
+        - name: vacancy_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Fit/gap report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report:
+                    $ref: "#/components/schemas/FitGapReport"
+        "202":
+          description: Report still generating
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: generating
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /portfolios/{id}/export:
+    get:
+      tags: [Portfolios]
+      summary: Export portfolio as PDF or JSON
+      operationId: exportPortfolio
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Portfolio ID
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [pdf, json]
+            default: json
+        - name: vacancy_id
+          in: query
+          schema:
+            type: integer
+          description: Include fit/gap report for this vacancy in JSON export
+      responses:
+        "200":
+          description: Exported file (PDF binary or JSON)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exported_at:
+                    type: string
+                    format: date-time
+                  portfolio:
+                    $ref: "#/components/schemas/Portfolio"
+                  fit_gap_report:
+                    $ref: "#/components/schemas/FitGapReport"
+                    nullable: true
+        "404":
+          description: Portfolio not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Portfolio not ready for export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Portfolio Skills ────────────────────────────────────
+  /portfolio-skills/{id}/override:
+    post:
+      tags: [PortfolioSkills]
+      summary: Override AI level for a portfolio skill
+      operationId: overridePortfolioSkill
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Portfolio skill ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OverrideInput"
+      responses:
+        "200":
+          description: Override updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  override:
+                    $ref: "#/components/schemas/AssessorOverride"
+        "201":
+          description: Override created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  override:
+                    $ref: "#/components/schemas/AssessorOverride"
+        "404":
+          description: Portfolio skill not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Override Events ─────────────────────────────────────
+  /portfolio-skills/{portfolio_skill_id}/override_events:
+    get:
+      tags: [OverrideEvents]
+      summary: List override events for a portfolio skill
+      operationId: listOverrideEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: portfolio_skill_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Override events (chronological)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssessorOverrideEvent"
+
+  # ── Skill Taxonomies ────────────────────────────────────
+  /skill_taxonomies:
+    get:
+      tags: [SkillTaxonomies]
+      summary: List skill taxonomies
+      operationId: listSkillTaxonomies
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [engineering, soft_skills, product_process]
+          description: Filter by category
+      responses:
+        "200":
+          description: Skill taxonomies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skill_taxonomies:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SkillTaxonomy"
+
+  /skill_taxonomies/{skill_id}:
+    get:
+      tags: [SkillTaxonomies]
+      summary: Get skill taxonomy by skill_id
+      operationId: getSkillTaxonomy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique skill identifier
+      responses:
+        "200":
+          description: Skill taxonomy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skill:
+                    $ref: "#/components/schemas/SkillTaxonomy"
+        "404":
+          description: Skill not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Vacancies ───────────────────────────────────────────
+  /vacancies:
+    get:
+      tags: [Vacancies]
+      summary: List vacancies (paginated)
+      operationId: listVacancies
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+      responses:
+        "200":
+          description: Paginated list of vacancies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vacancies:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Vacancy"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+    post:
+      tags: [Vacancies]
+      summary: Create vacancy
+      operationId: createVacancy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VacancyInput"
+      responses:
+        "201":
+          description: Vacancy created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vacancy:
+                    $ref: "#/components/schemas/VacancyDetail"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /vacancies/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Vacancies]
+      summary: Get vacancy with skills
+      operationId: getVacancy
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Vacancy details with skills
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vacancy:
+                    $ref: "#/components/schemas/VacancyDetail"
+        "404":
+          description: Vacancy not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags: [Vacancies]
+      summary: Update vacancy
+      operationId: updateVacancy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VacancyInput"
+      responses:
+        "200":
+          description: Vacancy updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vacancy:
+                    $ref: "#/components/schemas/VacancyDetail"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [Vacancies]
+      summary: Delete vacancy
+      operationId: deleteVacancy
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Vacancy deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Vacancy deleted"
+
+# ──────────────────────────────────────────────────────────
+# Reusable components
+# ──────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPageParam:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+
+  schemas:
+    # ── Common ──────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_count:
+          type: integer
+        per_page:
+          type: integer
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    ReadinessStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        checks:
+          type: object
+          properties:
+            db:
+              type: string
+            redis:
+              type: string
+
+    # ── Auth ────────────────────────────────────────────
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@example.com
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+              enum: [admin, user]
+        refresh:
+          type: boolean
+          example: true
+
+    # ── Assessment ──────────────────────────────────────
+    Assessment:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: "Senior Backend Engineer"
+        time_limit_min:
+          type: integer
+          enum: [10, 30, 45, 60, 90]
+        language:
+          type: string
+          enum: [en, id]
+          default: en
+        system_prompt:
+          type: string
+          description: Generated system prompt
+          nullable: true
+        created_by:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        latest_session:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            status:
+              type: string
+              enum: [pending, active, ended, failed]
+            end_reason:
+              type: string
+              nullable: true
+
+    AssessmentDetail:
+      allOf:
+        - $ref: "#/components/schemas/Assessment"
+        - type: object
+          properties:
+            skills:
+              type: array
+              items:
+                $ref: "#/components/schemas/AssessmentSkill"
+
+    AssessmentSkill:
+      type: object
+      properties:
+        id:
+          type: integer
+        skill_id:
+          type: string
+          example: "ruby"
+        skill_label:
+          type: string
+          example: "Ruby"
+        is_custom:
+          type: boolean
+        scope_include:
+          type: string
+          nullable: true
+        scope_exclude:
+          type: string
+          nullable: true
+        l1_anchor:
+          type: string
+        l2_anchor:
+          type: string
+        l3_anchor:
+          type: string
+        l4_anchor:
+          type: string
+        l5_anchor:
+          type: string
+        expected_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        display_order:
+          type: integer
+
+    AssessmentInput:
+      type: object
+      required: [name, time_limit_min]
+      properties:
+        name:
+          type: string
+          example: "Senior Backend Engineer"
+        time_limit_min:
+          type: integer
+          enum: [10, 30, 45, 60, 90]
+        language:
+          type: string
+          enum: [en, id]
+        assessment_skills_attributes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: Existing skill ID for updates
+              skill_id:
+                type: string
+              skill_label:
+                type: string
+              is_custom:
+                type: boolean
+              scope_include:
+                type: string
+              scope_exclude:
+                type: string
+              l1_anchor:
+                type: string
+              l2_anchor:
+                type: string
+              l3_anchor:
+                type: string
+              l4_anchor:
+                type: string
+              l5_anchor:
+                type: string
+              expected_level:
+                type: integer
+                minimum: 1
+                maximum: 5
+              display_order:
+                type: integer
+              _destroy:
+                type: boolean
+                description: Set true to remove skill from assessment
+
+    # ── Session ─────────────────────────────────────────
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        assessment_id:
+          type: integer
+        tenant_id:
+          type: integer
+        candidate_id:
+          type: string
+          nullable: true
+        candidate_name:
+          type: string
+          nullable: true
+        invite_token:
+          type: string
+          description: Unique invite token for candidate access
+        invite_url:
+          type: string
+          format: uri
+          description: Full candidate invite URL
+        status:
+          type: string
+          enum: [pending, active, ended, failed]
+        end_reason:
+          type: string
+          nullable: true
+          enum: [manual_candidate, manual_assessor, all_covered, time_ceiling, error]
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    BulkCreateResult:
+      type: object
+      properties:
+        identifier:
+          type: string
+        success:
+          type: boolean
+        session_id:
+          type: integer
+          nullable: true
+        invite_url:
+          type: string
+          format: uri
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
+    BulkCreateSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        successful:
+          type: integer
+        failed:
+          type: integer
+
+    TranscriptTurn:
+      type: object
+      properties:
+        id:
+          type: integer
+        turn_number:
+          type: integer
+        speaker:
+          type: string
+          enum: [ai, candidate]
+        text:
+          type: string
+        audio_start_ms:
+          type: integer
+          nullable: true
+        audio_end_ms:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CoverageMap:
+      type: object
+      properties:
+        id:
+          type: integer
+        skill_id:
+          type: string
+        skill_label:
+          type: string
+        is_discovered:
+          type: boolean
+        state:
+          type: string
+          enum: [not_yet, initiated, partial, covered]
+        probe_count:
+          type: integer
+          minimum: 0
+        last_signal:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+
+    # ── Portfolio ───────────────────────────────────────
+    Portfolio:
+      type: object
+      properties:
+        id:
+          type: integer
+        session_id:
+          type: integer
+        candidate_id:
+          type: string
+          nullable: true
+        generation_status:
+          type: string
+          enum: [pending, generating, complete, failed]
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+        generation_error:
+          type: string
+          nullable: true
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioSkill"
+        overrides:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssessorOverride"
+
+    PortfolioSkill:
+      type: object
+      properties:
+        id:
+          type: integer
+        skill_id:
+          type: string
+        skill_label:
+          type: string
+        is_discovered:
+          type: boolean
+        ai_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        ai_confidence:
+          type: string
+          enum: [high, medium, low]
+          nullable: true
+        evidence:
+          type: array
+          items:
+            type: string
+          description: Evidence quotes from transcript
+        competency_summary:
+          type: string
+          nullable: true
+
+    # ── Overrides ───────────────────────────────────────
+    AssessorOverride:
+      type: object
+      properties:
+        id:
+          type: integer
+        portfolio_skill_id:
+          type: integer
+        ai_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        override_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        assessor_notes:
+          type: string
+        overridden_by:
+          type: integer
+        overridden_at:
+          type: string
+          format: date-time
+
+    AssessorOverrideEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        portfolio_skill_id:
+          type: integer
+        ai_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        override_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        assessor_notes:
+          type: string
+          nullable: true
+        overridden_by:
+          type: integer
+        overridden_at:
+          type: string
+          format: date-time
+
+    OverrideInput:
+      type: object
+      required: [override_level, assessor_notes]
+      properties:
+        override_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        assessor_notes:
+          type: string
+
+    # ── Fit/Gap ─────────────────────────────────────────
+    FitGapReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        portfolio_id:
+          type: integer
+        vacancy_id:
+          type: integer
+        skill_comparisons:
+          type: array
+          items:
+            type: object
+            properties:
+              skill_id:
+                type: string
+              skill_label:
+                type: string
+              ai_level:
+                type: integer
+              expected_level:
+                type: integer
+              result:
+                type: string
+                enum: [match, gap, exceed, not_assessed, insufficient_evidence]
+              narrative:
+                type: string
+          description: Per-skill comparison between AI assessment and vacancy expectations
+        additional_strengths:
+          type: array
+          items:
+            type: string
+        culture_narrative:
+          type: string
+          nullable: true
+        overall_narrative:
+          type: string
+          nullable: true
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+        schema_version:
+          type: string
+          nullable: true
+
+    # ── Vacancy ─────────────────────────────────────────
+    Vacancy:
+      type: object
+      properties:
+        id:
+          type: integer
+        role_title:
+          type: string
+          example: "Senior Backend Engineer"
+        culture_dimensions:
+          type: string
+          nullable: true
+        competency_expectations:
+          type: string
+          nullable: true
+        created_by:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    VacancyDetail:
+      allOf:
+        - $ref: "#/components/schemas/Vacancy"
+        - type: object
+          properties:
+            skills:
+              type: array
+              items:
+                $ref: "#/components/schemas/VacancySkill"
+
+    VacancySkill:
+      type: object
+      properties:
+        id:
+          type: integer
+        skill_id:
+          type: string
+        skill_label:
+          type: string
+        expected_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        l1_anchor:
+          type: string
+          nullable: true
+        l2_anchor:
+          type: string
+          nullable: true
+        l3_anchor:
+          type: string
+          nullable: true
+        l4_anchor:
+          type: string
+          nullable: true
+        l5_anchor:
+          type: string
+          nullable: true
+
+    VacancyInput:
+      type: object
+      required: [role_title]
+      properties:
+        role_title:
+          type: string
+          example: "Senior Backend Engineer"
+        culture_dimensions:
+          type: string
+          description: Free-text culture fit dimensions
+        competency_expectations:
+          type: string
+          description: Free-text competency expectations
+        vacancy_skills_attributes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: Existing skill ID for updates
+              skill_id:
+                type: string
+              skill_label:
+                type: string
+              expected_level:
+                type: integer
+                minimum: 1
+                maximum: 5
+              _destroy:
+                type: boolean
+
+    # ── Skill Taxonomy ──────────────────────────────────
+    SkillTaxonomy:
+      type: object
+      properties:
+        skill_id:
+          type: string
+          example: "ruby"
+        skill_label:
+          type: string
+          example: "Ruby"
+        category:
+          type: string
+          enum: [engineering, soft_skills, product_process]
+        scope_include:
+          type: string
+        scope_exclude:
+          type: string
+        l1_anchor:
+          type: string
+        l2_anchor:
+          type: string
+        l3_anchor:
+          type: string
+        l4_anchor:
+          type: string
+        l5_anchor:
+          type: string

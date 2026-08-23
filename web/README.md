@@ -1,78 +1,59 @@
-# Local Development Setup
+# AI Interview Platform — Web
 
-## Prerequisites
+React 18 · TypeScript · Vite · Tailwind
 
-- **Node.js** (v18+ recommended)
-- **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
-
-## Quick Start
+## Quick start (Docker Compose)
 
 ```bash
-# 1. Install dependencies
+cd <repo root>
+docker compose -f web/docker-compose.yml up
+```
+
+Web serves on **http://localhost:5173** using Node 24.19.0 LTS. The compose file
+handles `npm ci` and environment variables automatically. Requires the API stack
+(`docker compose -f api/docker-compose.yml up` from the repo root) to be running first.
+
+## Optional fast path — native Node
+
+```bash
+cd web
 npm install
-
-# 2. Set up environment variables
 cp .env.example .env
-```
-
-Edit `.env` with your local values:
-
-```env
-# Backend API base URL
-VITE_API_BASE_URL=http://localhost:3001/api/v1
-
-# WebSocket base URL (no /api/v1)
-VITE_WS_BASE_URL=ws://localhost:3001
-
-# Dev auth token — replace with a real JWT from Rakamin platform
-VITE_DEV_TOKEN=<your-jwt-here>
-
-# Dev tenant context
-VITE_DEV_TENANT_ID=1
-VITE_DEV_TENANT_NAME=Demo Tenant
-```
-
-```bash
-# 3. Start the dev server
 npm run dev
 ```
 
-The app will be available at **http://localhost:5173**.
+### Environment variables
 
-## Available Scripts
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | Yes | Backend REST API, e.g. `http://localhost:3001/api/v1` |
+| `VITE_WS_BASE_URL` | Yes | WebSocket server, e.g. `ws://localhost:3001` |
+| `VITE_REQUIRE_CAMERA` | No | Require camera access before interview starts (`true`/`false`, default `false`) |
 
-| Command             | Description                          |
-| ------------------- | ------------------------------------ |
-| `npm run dev`       | Start Vite dev server with HMR       |
-| `npm run build`     | Type-check with `tsc` then build     |
-| `npm run preview`   | Preview the production build locally |
+All other variables are optional — remove or leave blank as needed.
 
-## Environment Variables
+## Available scripts
 
-| Variable                    | Required | Description                                         |
-| --------------------------- | -------- | --------------------------------------------------- |
-| `VITE_API_BASE_URL`        | Yes      | Backend REST API base URL                           |
-| `VITE_WS_BASE_URL`         | Yes      | WebSocket server URL (used for live audio streaming)|
-| `VITE_DEV_TOKEN`           | Yes      | JWT for authenticating in local development         |
-| `VITE_DEV_TENANT_ID`       | Yes      | Tenant ID for multi-tenant context                  |
-| `VITE_DEV_TENANT_NAME`     | Yes      | Tenant display name                                 |
-| `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint for hardware check speed test  |
-| `VITE_SPEED_TEST_UPLOAD_URL`| No      | Custom upload endpoint for speed test               |
-| `VITE_REQUIRE_CAMERA`      | No       | Set to `"true"` to enforce camera check (default: `"false"`) |
+| Command | Description |
+|---|---|
+| `npm run dev` | Vite dev server with HMR |
+| `npm run build` | Type-check (`tsc`) then production build |
+| `npm run preview` | Preview the production build locally |
+| `npm run test` | Vitest (requires deps installed) |
 
-## Tech Stack
+## Tech stack
 
 - **React 18** with TypeScript
-- **Vite 5** (build tool)
+- **Vite** (build tool)
 - **Tailwind CSS 3** (styling)
 - **Radix UI** (accessible UI primitives)
 - **Jotai** (state management)
 - **React Hook Form + Zod** (form validation)
 - **Axios** (HTTP client)
 - **React Router DOM 7** (routing)
+- **Vitest + React Testing Library + MSW** (testing)
 
-## Project Structure
+## Project structure
 
 ```
 src/
@@ -81,19 +62,28 @@ src/
 │   ├── interview/      # Interview session components
 │   ├── assessment/     # Assessment management components
 │   ├── portfolio/      # Candidate portfolio/results
+│   ├── fitgap/         # Fit/gap comparison
 │   └── layout/         # Layout wrappers
-├── hooks/              # Custom React hooks (audio capture, playback, WebSocket)
+├── hooks/              # Custom React hooks
 ├── pages/              # Route-level page components
 ├── services/           # API clients (Axios instance, endpoints)
 ├── stores/             # Jotai atoms (auth, tenant)
+├── schemas/            # Zod validation schemas
 ├── types/              # TypeScript type definitions
 └── utils/              # Utility functions
-public/
-└── audio-worklet-processor.js  # Audio worklet for real-time PCM processing
 ```
+
+## Authentication in development
+
+A seeded demo user is available for local development:
+
+- **Email:** `dev@test-corp.local`
+- **Password:** `password`
+
+Log in through the UI — no environment variable or manual JWT required.
 
 ## Notes
 
 - The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
-- Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
-- The backend must be running for authentication, session management, and real-time audio streaming to work.
+- Audio features (interview page) require microphone and speaker access.
+- The backend must be running for authentication, session management, and real-time audio to work.

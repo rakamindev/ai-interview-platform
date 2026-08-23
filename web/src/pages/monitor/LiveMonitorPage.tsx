@@ -13,7 +13,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
@@ -23,10 +23,12 @@ import {
   COVERAGE_STATE_LABELS,
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
+  SESSION_END_REASON_LABELS
 } from "@/utils/constants";
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
-import type { TranscriptTurn } from "@/types";
+import type { TranscriptTurn, Session } from "@/types";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages.js";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -59,11 +61,17 @@ export default function LiveMonitorPage() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
   const [sessionActive, setSessionActive] = useState(true);
+  const [initialEndReason, setInitialEndReason] = useState<string | null>(null);
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
-    useCoverageWebSocket(Number(sessionId));
+  const {
+    coverageMap,
+    sessionEnded,
+    sessionEndReason,
+    isConnected: _isConnected,
+    connectionStatus
+  } = useCoverageWebSocket(Number(sessionId));
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {
@@ -75,21 +83,25 @@ export default function LiveMonitorPage() {
 
   // Initial load
   useEffect(() => {
-    Promise.all([
-      sessionsApi.get(Number(sessionId)),
-      sessionsApi.getTranscript(Number(sessionId)),
-    ])
+    Promise.all([sessionsApi.get(Number(sessionId)), sessionsApi.getTranscript(Number(sessionId))])
       .then(([sRes, tRes]) => {
-        const s = sRes.data.session as any;
+        const s = sRes.data.session as Session & {
+          assessment?: { name?: string };
+          end_reason?: string | null;
+        };
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
-        if (s.status !== "active") setSessionActive(false);
+        if (s.status !== "active") {
+          setSessionActive(false);
+          setInitialEndReason(s.end_reason ?? null);
+        }
 
-        const turns = tRes.data.turns;
+        const turns = tRes.data.turns.filter((t): t is TranscriptTurn => t !== null);
         setTranscript(turns.slice(-10));
         if (turns.length > 0) {
           lastTurnRef.current = turns[turns.length - 1].turn_number;
         }
+        return;
       })
       .finally(() => setLoading(false));
   }, [sessionId]);
@@ -97,13 +109,11 @@ export default function LiveMonitorPage() {
   // Poll transcript every 3s while session is active
   const fetchNewTurns = useCallback(async () => {
     try {
-      const res = await sessionsApi.getTranscript(
-        Number(sessionId),
-        lastTurnRef.current + 1
-      );
+      const res = await sessionsApi.getTranscript(Number(sessionId), lastTurnRef.current + 1);
       if (res.data.turns.length > 0) {
-        setTranscript((prev) => [...prev, ...res.data.turns].slice(-10));
-        lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
+        const filtered = res.data.turns.filter((t): t is TranscriptTurn => t !== null);
+        setTranscript((prev) => [...prev, ...filtered].slice(-10));
+        lastTurnRef.current = filtered[filtered.length - 1].turn_number;
       }
     } catch {
       // transient poll failure — silently skip, retry on next interval
@@ -113,7 +123,9 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     if (!sessionActive || loading) return;
     pollTimerRef.current = setInterval(fetchNewTurns, 3000);
-    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
   }, [sessionActive, loading, fetchNewTurns]);
 
   const handleEndSession = async () => {
@@ -141,42 +153,60 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <main className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link
+              to={`/assessments/${id}/invite`}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Back to invite"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{m.monitor_title()}</h1>
           </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
+          {assessmentName && <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>}
         </div>
 
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
+          <span
+            className={cn(
+              "flex items-center gap-1 text-xs",
+              sessionEnded || !sessionActive
+                ? "text-muted-foreground"
+                : connectionStatus === "connected"
+                  ? "text-green-600"
+                  : connectionStatus === "reconnecting"
+                    ? "text-amber-600"
+                    : "text-muted-foreground"
+            )}
+          >
             <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
+            {sessionEnded || !sessionActive
+              ? m.monitor_ended()
+              : connectionStatus === "connected"
+                ? m.monitor_status_live()
+                : connectionStatus === "reconnecting"
+                  ? m.monitor_status_reconnecting()
+                  : m.monitor_status_disconnected()}
           </span>
         </div>
       </div>
 
       {/* Session ended banner */}
-      {sessionEnded && (
+      {(sessionEnded || !sessionActive) && (
         <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
           <div>
-            <span className="font-medium">Session ended</span>
-            {sessionEndReason && (
+            <span className="font-medium">{m.monitor_session_ended()}</span>
+            {(sessionEndReason ?? initialEndReason) && (
               <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
+                —{" "}
+                {SESSION_END_REASON_LABELS[(sessionEndReason ?? initialEndReason)!] ??
+                  (sessionEndReason ?? initialEndReason)!.replace(/_/g, " ")}
               </span>
             )}
           </div>
@@ -186,7 +216,7 @@ export default function LiveMonitorPage() {
             className="ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            {m.monitor_view_portfolio()}
           </Button>
         </div>
       )}
@@ -194,11 +224,11 @@ export default function LiveMonitorPage() {
       {/* Coverage map */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Coverage Status</CardTitle>
+          <CardTitle className="text-sm">{m.monitor_coverage_status()}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {configuredSkills.length === 0 && discoveredSkills.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Waiting for interview to begin...</p>
+            <p className="text-sm text-muted-foreground">{m.monitor_waiting_to_begin()}</p>
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
@@ -206,7 +236,10 @@ export default function LiveMonitorPage() {
                   <span className="font-medium">{skill.skill_label}</span>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {skill.probe_count > 0 && (
-                      <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                      <span>
+                        {skill.probe_count}{" "}
+                        {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
+                      </span>
                     )}
                     <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                   </div>
@@ -217,9 +250,7 @@ export default function LiveMonitorPage() {
                   className="h-2"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    "{skill.last_signal}"
-                  </p>
+                  <p className="text-xs text-muted-foreground truncate">"{skill.last_signal}"</p>
                 )}
               </div>
             ))
@@ -231,7 +262,7 @@ export default function LiveMonitorPage() {
               {configuredSkills.length > 0 && <Separator />}
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Discovered
+                  {m.monitor_discovered()}
                 </p>
                 {discoveredSkills.map((skill) => (
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
@@ -242,7 +273,10 @@ export default function LiveMonitorPage() {
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {skill.probe_count > 0 && (
-                          <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                          <span>
+                            {skill.probe_count}{" "}
+                            {skill.probe_count === 1 ? m.monitor_probe() : m.monitor_probes()}
+                          </span>
                         )}
                         <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                       </div>
@@ -268,11 +302,11 @@ export default function LiveMonitorPage() {
       {/* Live transcript */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Live Transcript</CardTitle>
+          <CardTitle className="text-sm">{m.monitor_live_transcript()}</CardTitle>
         </CardHeader>
         <CardContent>
           {transcript.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No transcript yet.</p>
+            <p className="text-sm text-muted-foreground">{m.monitor_no_transcript()}</p>
           ) : (
             <div className="space-y-2">
               {transcript.map((turn) => (
@@ -285,7 +319,7 @@ export default function LiveMonitorPage() {
 
       {endError && (
         <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
-          Failed to end session. Please try again.
+          {m.monitor_end_session_error()}
         </div>
       )}
 
@@ -295,19 +329,19 @@ export default function LiveMonitorPage() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" disabled={ending}>
-                {ending ? "Ending..." : "End Session"}
+                {ending ? m.monitor_ending() : m.monitor_end_session()}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>End the session now?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  The interview will stop and portfolio generation will begin.
-                </AlertDialogDescription>
+                <AlertDialogTitle>{m.monitor_end_confirm()}</AlertDialogTitle>
+                <AlertDialogDescription>{m.monitor_end_confirm_desc()}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleEndSession}>End Session</AlertDialogAction>
+                <AlertDialogCancel>{m.common_cancel()}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleEndSession}>
+                  {m.monitor_end_session()}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -316,10 +350,10 @@ export default function LiveMonitorPage() {
             variant="outline"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            {m.monitor_view_portfolio()}
           </Button>
         )}
       </div>
-    </div>
+    </main>
   );
 }

@@ -3,9 +3,9 @@ import { UseFormReturn, useWatch } from "react-hook-form";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import LevelRadio from "./LevelRadio";
 import CustomSkillForm from "./CustomSkillForm";
+import { m } from "@/paraglide/messages.js";
 import { cn } from "@/lib/utils";
 import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
 
@@ -18,26 +18,24 @@ interface SkillCardProps {
 
 export default function SkillCard({ index, id, form, onRemove }: SkillCardProps) {
   const [anchorsOpen, setAnchorsOpen] = useState(false);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id
+  });
 
   const skill = useWatch({ control: form.control, name: `skills.${index}` });
   const isCustom = skill?.is_custom;
-  const skillLabel = skill?.skill_label || "New Skill";
+  const skillLabel = skill?.skill_label || m.skill_card_new_skill();
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        "border rounded-lg bg-white",
-        isDragging && "opacity-50 shadow-lg"
-      )}
+      className={cn("border rounded-lg bg-card", isDragging && "opacity-50 shadow-lg")}
     >
       {/* Card header */}
       <div className="flex items-center gap-2 px-3 py-2.5">
@@ -54,7 +52,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">{skillLabel}</span>
             <span className="text-xs text-muted-foreground shrink-0">
-              {isCustom ? "Custom" : skill?.skill_id ? `SK-${String(skill.skill_id).padStart(3, "0")}` : ""}
+              {isCustom ? m.skill_card_custom() : (skill?.skill_id ?? "")}
             </span>
           </div>
         </div>
@@ -81,8 +79,12 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
               onClick={() => setAnchorsOpen((o) => !o)}
               className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {anchorsOpen ? "Hide L1–L5 anchors" : "Show L1–L5 anchors"}
+              {anchorsOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+              {anchorsOpen ? m.skill_card_hide_anchors() : m.skill_card_show_anchors()}
             </button>
 
             {anchorsOpen && (
@@ -99,10 +101,11 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             )}
 
             <div className="space-y-1.5">
-              <span className="text-xs text-muted-foreground">Expected level:</span>
+              <span className="text-xs text-muted-foreground">{m.skill_card_expected_level()}</span>
               <LevelRadio
                 value={skill?.expected_level ?? 3}
                 onChange={(v) => form.setValue(`skills.${index}.expected_level`, v)}
+                idPrefix={id}
               />
             </div>
           </div>

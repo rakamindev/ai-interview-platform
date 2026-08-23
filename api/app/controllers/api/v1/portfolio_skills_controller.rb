@@ -13,6 +13,7 @@ module Api
 
         if existing
           if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
+            write_override_event(existing)
             regenerate_stale_fitgap_reports
             json_response(override: override_json(existing))
           else
@@ -21,13 +22,14 @@ module Api
         else
           new_override = @portfolio_skill.build_assessor_override(
             override_params.merge(
-              ai_level:      @portfolio_skill.ai_level,
+              ai_level: @portfolio_skill.ai_level,
               overridden_by: current_user.id,
               overridden_at: Time.current
             )
           )
 
           if new_override.save
+            write_override_event(new_override)
             regenerate_stale_fitgap_reports
             json_response({ override: override_json(new_override) }, :created)
           else
@@ -40,7 +42,7 @@ module Api
 
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
+        FitGapReport.where(portfolio_id: portfolio.id).find_each do |report|
           vacancy_id = report.vacancy_id
           report.destroy
           FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
@@ -49,24 +51,35 @@ module Api
 
       def set_portfolio_skill
         @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+          .find(params.expect(:id))
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio skill not found", :not_found)
+        json_error("Portfolio skill not found", :not_found, code: "portfolio_skill_not_found")
       end
 
       def override_params
-        params.require(:override).permit(:override_level, :assessor_notes)
+        params.expect(override: %i[override_level assessor_notes])
+      end
+
+      def write_override_event(override)
+        AssessorOverrideEvent.create!(
+          portfolio_skill_id: override.portfolio_skill_id,
+          ai_level: override.ai_level,
+          override_level: override.override_level,
+          assessor_notes: override.assessor_notes,
+          overridden_by: override.overridden_by,
+          overridden_at: override.overridden_at
+        )
       end
 
       def override_json(override)
         {
-          id:                 override.id,
+          id: override.id,
           portfolio_skill_id: override.portfolio_skill_id,
-          ai_level:           override.ai_level,
-          override_level:     override.override_level,
-          assessor_notes:     override.assessor_notes,
-          overridden_by:      override.overridden_by,
-          overridden_at:      override.overridden_at
+          ai_level: override.ai_level,
+          override_level: override.override_level,
+          assessor_notes: override.assessor_notes,
+          overridden_by: override.overridden_by,
+          overridden_at: override.overridden_at
         }
       end
     end

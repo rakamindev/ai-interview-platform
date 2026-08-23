@@ -1,0 +1,13 @@
+<h2>Session Completed</h2>
+
+<p>A candidate has finished their interview session.</p>
+
+<table style="border-collapse: collapse; margin: 16px 0;">
+  <tr><td style="padding: 4px 12px; font-weight: bold;">Assessment</td><td style="padding: 4px 12px;"><%= @assessment.name %></td></tr>
+  <tr><td style="padding: 4px 12px; font-weight: bold;">Candidate</td><td style="padding: 4px 12px;"><%= @candidate %></td></tr>
+  <tr><td style="padding: 4px 12px; font-weight: bold;">Status</td><td style="padding: 4px 12px;"><%= @session.status %></td></tr>
+  <tr><td style="padding: 4px 12px; font-weight: bold;">End Reason</td><td style="padding: 4px 12px;"><%= @session.end_reason %></td></tr>
+  <tr><td style="padding: 4px 12px; font-weight: bold;">Duration</td><td style="padding: 4px 12px;"><%= @session.duration_seconds ? "#{@session.duration_seconds / 60}m #{@session.duration_seconds % 60}s" : "N/A" %></td></tr>
+</table>
+
+<p>Portfolio generation has been queued automatically.</p>

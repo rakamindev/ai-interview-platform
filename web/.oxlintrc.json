@@ -1,0 +1,69 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "react",
+    "import",
+    "unicorn",
+    "oxc",
+    "vitest",
+    "promise",
+    "jsx-a11y"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn",
+    "pedantic": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "react/jsx-key": "error",
+    "react/react-in-jsx-scope": "off",
+    "react/incompatible-library": "off",
+    "react/refs": "off",
+    "react/set-state-in-effect": "off",
+    "react/immutability": "off",
+    "react/no-deriving-state-in-effects": "warn",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "unicorn/prefer-optional-catch-binding": "error",
+    "unicorn/no-useless-undefined": "error",
+    "promise/no-return-wrap": "error",
+    "promise/param-names": "warn",
+    "jsx-a11y/no-autofocus": "warn",
+    "no-console": "warn"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "*.test.ts",
+    "*.test.tsx",
+    "src/test/**"
+  ],
+  "overrides": [
+    {
+      "files": ["src/test/**"],
+      "plugins": ["vitest"],
+      "rules": {
+        "vitest/no-focused-tests": "error",
+        "vitest/expect-expect": "warn",
+        "vitest/no-disabled-tests": "warn"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "plugins": ["vitest"],
+      "rules": {
+        "vitest/no-focused-tests": "error",
+        "vitest/expect-expect": "warn"
+      }
+    }
+  ]
+}

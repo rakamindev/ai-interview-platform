@@ -4,20 +4,22 @@ const PLAYBACK_SAMPLE_RATE = 24000; // Gemini outputs 24kHz
 
 export function useAudioPlayback() {
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
   const onDrainedRef = useRef<(() => void) | null>(null);
   const drainCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const getCtx = () => {
+  const playChunk = useCallback(async (raw: ArrayBuffer) => {
     if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
       audioCtxRef.current = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
       nextPlayTimeRef.current = 0;
-    }
-    return audioCtxRef.current;
-  };
 
-  const playChunk = useCallback(async (raw: ArrayBuffer) => {
-    const ctx = getCtx();
+      const analyser = audioCtxRef.current.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.connect(audioCtxRef.current.destination);
+      analyserRef.current = analyser;
+    }
+    const ctx = audioCtxRef.current;
     if (ctx.state === "suspended") await ctx.resume();
 
     // Raw PCM is Int16 from Gemini
@@ -32,7 +34,7 @@ export function useAudioPlayback() {
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.connect(ctx.destination);
+    source.connect(analyserRef.current ?? ctx.destination);
 
     const now = ctx.currentTime;
     const startTime = Math.max(now, nextPlayTimeRef.current);
@@ -71,9 +73,15 @@ export function useAudioPlayback() {
 
   const scheduleAfterPlayback = useCallback((fn: () => void) => {
     const ctx = audioCtxRef.current;
-    if (!ctx) { fn(); return; }
+    if (!ctx) {
+      fn();
+      return;
+    }
     const remaining = (nextPlayTimeRef.current - ctx.currentTime) * 1000;
-    if (remaining <= 0) { fn(); return; }
+    if (remaining <= 0) {
+      fn();
+      return;
+    }
     setTimeout(fn, remaining);
   }, []);
 
@@ -81,8 +89,9 @@ export function useAudioPlayback() {
     cancelDrain();
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
+    analyserRef.current = null;
     nextPlayTimeRef.current = 0;
   }, [cancelDrain]);
 
-  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain };
+  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain, analyserRef };
 }

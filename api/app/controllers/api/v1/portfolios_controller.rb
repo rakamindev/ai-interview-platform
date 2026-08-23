@@ -10,38 +10,35 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
-          return render json: { status: "generating" }, status: :accepted
-        end
+        return render json: { status: "generating" }, status: :accepted if @portfolio.nil? || @portfolio.generating?
 
         if @portfolio.failed?
           return json_response(
-            portfolio: portfolio_json(@portfolio),
+            portfolio: PortfolioSerializer.render(@portfolio),
             error: @portfolio.generation_error
           )
         end
 
-        json_response(portfolio: portfolio_json(@portfolio))
+        json_response(portfolio: PortfolioSerializer.render(@portfolio))
       end
 
       # POST /api/v1/sessions/:id/portfolio/regenerate
       def regenerate
         portfolio = @session.portfolio
 
-        if portfolio.nil?
-          return json_error("No portfolio found for this session", :not_found)
-        end
+        return json_error("No portfolio found for this session", :not_found, code: "portfolio_not_found") if portfolio.nil?
 
         unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity,
+                            code: "portfolio_regenerate_invalid_status")
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
         PortfolioGeneratorWorker.perform_async(@session.id)
 
         json_response(
-          message:   "Portfolio generation queued",
-          portfolio: portfolio_json(portfolio)
+          message: "Portfolio generation queued",
+          portfolio: PortfolioSerializer.render(portfolio)
         )
       end
 
@@ -49,12 +46,12 @@ module Api
       def export
         format = params.fetch(:format, "json")
 
-        unless %w[pdf json].include?(format)
-          return json_error("Format must be 'pdf' or 'json'", :unprocessable_entity)
-        end
+        return json_error("Format must be 'pdf' or 'json'", :unprocessable_entity, code: "format_invalid") unless %w[pdf
+                                                                                                                     json].include?(format)
 
         unless @portfolio.complete?
-          return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})", :unprocessable_entity)
+          return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})",
+                            :unprocessable_entity, code: "portfolio_not_ready")
         end
 
         if format == "pdf"
@@ -62,8 +59,8 @@ module Api
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
-                           filename:    "portfolio-#{@portfolio.id}.pdf",
-                           type:        "application/pdf",
+                           filename: "portfolio-#{@portfolio.id}.pdf",
+                           type: "application/pdf",
                            disposition: "attachment"
         end
 
@@ -72,23 +69,24 @@ module Api
         export_data = build_export_json(@portfolio, vacancy_id)
 
         send_data export_data.to_json,
-                  filename:    "portfolio-#{@portfolio.id}.json",
-                  type:        "application/json",
+                  filename: "portfolio-#{@portfolio.id}.json",
+                  type: "application/json",
                   disposition: "attachment"
       end
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.find(params.expect(:id))
         vacancy_id = params[:vacancy_id]
 
-        return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
+        return json_error("vacancy_id is required", :unprocessable_entity, code: "vacancy_id_required") if vacancy_id.blank?
 
         vacancy = Vacancy.find_by(id: vacancy_id)
-        return json_error("Vacancy not found", :not_found) unless vacancy
+        return json_error("Vacancy not found", :not_found, code: "vacancy_not_found") unless vacancy
 
         unless portfolio.complete?
-          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
+          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity,
+                            code: "portfolio_not_ready")
         end
 
         FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
@@ -96,123 +94,95 @@ module Api
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        json_error("Portfolio not found", :not_found, code: "portfolio_not_found")
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.find(params.expect(:id))
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
-        return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
+        return json_error("vacancy_id is required", :unprocessable_entity, code: "vacancy_id_required") if vacancy_id.blank?
 
         vacancy = Vacancy.find_by(id: vacancy_id)
-        return json_error("Vacancy not found", :not_found) unless vacancy
+        return json_error("Vacancy not found", :not_found, code: "vacancy_not_found") unless vacancy
 
         unless portfolio.complete?
-          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
+          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity,
+                            code: "portfolio_not_ready")
         end
 
         # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
+          return render json: { status: "generating" }, status: :accepted if existing.generating?
+
           return json_response(report: fit_gap_json(existing))
         end
 
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        json_error("Portfolio not found", :not_found, code: "portfolio_not_found")
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.find(params.expect(:id))
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
-          return json_error("Fit/gap report not found", :not_found)
+          return render json: { status: "generating" }, status: :accepted if portfolio.generating?
+
+          return json_error("Fit/gap report not found", :not_found, code: "fitgap_not_found")
         end
+
+        return render json: { status: "generating" }, status: :accepted if report.generating?
 
         json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        json_error("Portfolio not found", :not_found, code: "portfolio_not_found")
       end
 
       private
 
       def set_session
-        @session = Session.find(params[:id])
+        @session = Session.find(params.expect(:id))
       rescue ActiveRecord::RecordNotFound
-        json_error("Session not found", :not_found)
+        json_error("Session not found", :not_found, code: "not_found")
       end
 
       def set_portfolio
         # Routes use :id for both session-based and direct portfolio lookups
         # If called from session context, look up via session
-        if @session
-          @portfolio = @session.portfolio
-        else
-          @portfolio = Portfolio.find(params[:id])
-        end
+        @portfolio = if @session
+                       @session.portfolio
+                     else
+                       Portfolio.find(params.expect(:id))
+                     end
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
-      end
-
-      def portfolio_json(portfolio)
-        {
-          id:                portfolio.id,
-          session_id:        portfolio.session_id,
-          candidate_id:      portfolio.candidate_id,
-          generation_status: portfolio.generation_status,
-          generated_at:      portfolio.generated_at,
-          generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides:         portfolio.assessor_overrides.map(&method(:override_json))
-        }
-      end
-
-      def portfolio_skill_json(skill)
-        {
-          id:                skill.id,
-          skill_id:          skill.skill_id,
-          skill_label:       skill.skill_label,
-          is_discovered:     skill.is_discovered,
-          ai_level:          skill.ai_level,
-          ai_confidence:     skill.ai_confidence,
-          evidence:          skill.evidence_quotes,
-          competency_summary: skill.competency_summary
-        }
-      end
-
-      def override_json(override)
-        {
-          id:             override.id,
-          portfolio_skill_id: override.portfolio_skill_id,
-          ai_level:       override.ai_level,
-          override_level: override.override_level,
-          assessor_notes: override.assessor_notes,
-          overridden_by:  override.overridden_by,
-          overridden_at:  override.overridden_at
-        }
+        json_error("Portfolio not found", :not_found, code: "portfolio_not_found")
       end
 
       def fit_gap_json(report)
         {
-          id:                report.id,
-          portfolio_id:      report.portfolio_id,
-          vacancy_id:        report.vacancy_id,
+          id: report.id,
+          portfolio_id: report.portfolio_id,
+          vacancy_id: report.vacancy_id,
           skill_comparisons: report.skill_comparisons,
+          additional_strengths: report.additional_strengths,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          narrative_source: report.narrative_source,
+          generated_at: report.generated_at,
+          schema_version: report.skill_comparisons&.first&.dig(:schema_version)
         }
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
         data = {
           exported_at: Time.current.iso8601,
-          portfolio:   portfolio_json(portfolio)
+          portfolio: PortfolioSerializer.render(portfolio)
         }
 
         if vacancy_id.present?

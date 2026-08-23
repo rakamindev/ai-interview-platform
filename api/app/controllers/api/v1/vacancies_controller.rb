@@ -44,6 +44,8 @@ module Api
       end
 
       # DELETE /api/v1/vacancies/:id
+      # Vacancy depends on :destroy (not :restrict_with_error) for all associations,
+      # so destroy always succeeds. No return-value guard needed.
       def destroy
         @vacancy.destroy
         json_response(message: "Vacancy deleted")
@@ -52,31 +54,33 @@ module Api
       private
 
       def set_vacancy
-        @vacancy = Vacancy.find(params[:id])
+        @vacancy = Vacancy.find(params.expect(:id))
       rescue ActiveRecord::RecordNotFound
-        json_error("Vacancy not found", :not_found)
+        json_error("Vacancy not found", :not_found, code: "vacancy_not_found")
       end
 
       def vacancy_params
-        params.require(:vacancy).permit(
-          :role_title,
-          :culture_dimensions,
-          :competency_expectations,
-          vacancy_skills_attributes: %i[
-            id skill_id skill_label expected_level _destroy
-          ]
+        params.expect(
+          vacancy: [:role_title,
+                    :culture_dimensions,
+                    :competency_expectations,
+                    {
+                      vacancy_skills_attributes: %i[
+                        id skill_id skill_label expected_level _destroy
+                      ]
+                    }]
         )
       end
 
       def vacancy_json(vacancy)
         {
-          id:                       vacancy.id,
-          role_title:               vacancy.role_title,
-          culture_dimensions:       vacancy.culture_dimensions,
-          competency_expectations:  vacancy.competency_expectations,
-          created_by:               vacancy.created_by,
-          created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
+          id: vacancy.id,
+          role_title: vacancy.role_title,
+          culture_dimensions: vacancy.culture_dimensions,
+          competency_expectations: vacancy.competency_expectations,
+          created_by: vacancy.created_by,
+          created_at: vacancy.created_at,
+          updated_at: vacancy.updated_at
         }
       end
 
@@ -94,24 +98,24 @@ module Api
 
       def vacancy_skill_json(skill, taxonomy)
         {
-          id:             skill.id,
-          skill_id:       skill.skill_id,
-          skill_label:    skill.skill_label,
+          id: skill.id,
+          skill_id: skill.skill_id,
+          skill_label: skill.skill_label,
           expected_level: skill.expected_level,
-          l1_anchor:      taxonomy&.l1_anchor,
-          l2_anchor:      taxonomy&.l2_anchor,
-          l3_anchor:      taxonomy&.l3_anchor,
-          l4_anchor:      taxonomy&.l4_anchor,
-          l5_anchor:      taxonomy&.l5_anchor
+          l1_anchor: taxonomy&.l1_anchor,
+          l2_anchor: taxonomy&.l2_anchor,
+          l3_anchor: taxonomy&.l3_anchor,
+          l4_anchor: taxonomy&.l4_anchor,
+          l5_anchor: taxonomy&.l5_anchor
         }
       end
 
       def pagination_meta(collection)
         {
           current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
+          total_pages: collection.total_pages,
+          total_count: collection.total_count,
+          per_page: collection.limit_value
         }
       end
     end

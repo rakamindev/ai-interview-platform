@@ -1,38 +1,46 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
-import { useAtomValue, useSetAtom } from "jotai";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { useAtomValue } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
-import { authAtom, clearToken } from "@/stores/authAtom";
+import { clearAuth } from "@/stores/authAtom";
+import { stopRefreshTimer } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation } from "react-router-dom";
+import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { m } from "@/paraglide/messages.js";
+import { authApi } from "@/services/auth";
 
 const navItems = [
-  { href: "/assessments", label: "Assessments", icon: ClipboardList },
-  { href: "/vacancies", label: "Vacancies", icon: Briefcase },
+  { href: "/assessments", label: m.nav_assessments(), icon: ClipboardList },
+  { href: "/vacancies", label: m.nav_vacancies(), icon: Briefcase }
 ];
 
 export default function AssessorLayout() {
   const tenant = useAtomValue(tenantAtom);
-  const setAuth = useSetAtom(authAtom);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
-    clearToken();
-    setAuth({ token: null });
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Best-effort — clear local state regardless
+    }
+    stopRefreshTimer();
+    clearAuth();
     navigate("/login");
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
-      <header className="border-b bg-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <header className="border-b bg-background sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <span className="font-semibold text-sm">{m.nav_brand()}</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -52,15 +60,17 @@ export default function AssessorLayout() {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {tenant.name && (
               <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
-                Tenant: {tenant.name}
+                {m.nav_tenant({ name: tenant.name })}
               </span>
             )}
+            <ThemeToggle />
+            <LanguageSwitcher />
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+              {m.nav_logout()}
             </Button>
           </div>
         </div>

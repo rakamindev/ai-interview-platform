@@ -1,0 +1,14 @@
+<h2>Generation Failed</h2>
+
+<p>Portfolio or fit-gap generation has failed for a candidate session.</p>
+
+<table style="border-collapse: collapse; margin: 16px 0;">
+  <tr><td style="padding: 4px 12px; font-weight: bold;">Assessment</td><td style="padding: 4px 12px;"><%= @assessment.name %></td></tr>
+  <tr><td style="padding: 4px 12px; font-weight: bold;">Candidate</td><td style="padding: 4px 12px;"><%= @candidate %></td></tr>
+  <tr><td style="padding: 4px 12px; font-weight: bold;">Session ID</td><td style="padding: 4px 12px;"><%= @session.id %></td></tr>
+</table>
+
+<h3>Error Details</h3>
+<pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto;"><%= @error %></pre>
+
+<p>Please check the application logs for more details.</p>

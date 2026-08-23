@@ -29,10 +29,10 @@ if defined?(Rails) && Rails.env.development?
 
       # Auto-mint tokens for the first org
       first = orgs.first
-      scheme = first['scheme']
+      scheme = first["scheme"]
 
-      admin_token   = JsonWebToken.encode({ user_id: 1, role: 'admin',   scheme: scheme })
-      student_token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: scheme })
+      admin_token   = JsonWebToken.encode({ user_id: 1, role: "admin",   scheme: scheme })
+      student_token = JsonWebToken.encode({ user_id: 2, role: "student", scheme: scheme })
 
       puts "  Ready-to-use tokens for scheme='#{scheme}':"
       puts ""
@@ -49,7 +49,7 @@ if defined?(Rails) && Rails.env.development?
       puts "    header(role: 'admin', scheme: '#{scheme}')               → curl -H string"
       puts ""
     end
-  rescue => e
+  rescue StandardError => e
     puts "  ⚠  Could not load organizations: #{e.message}"
     puts "     Is the database running and migrated?"
   end
@@ -65,12 +65,12 @@ if defined?(Rails) && Rails.env.development?
   #   mint                                      # admin for first org
   #   mint(role: 'student', user_id: 99)
   #   mint(scheme: 'other-corp', role: 'admin')
-  def mint(user_id: 1, role: 'admin', scheme: nil, **extra)
+  def mint(user_id: 1, role: "admin", scheme: nil, **extra)
     scheme ||= begin
       ActiveRecord::Base.connection
         .select_value("SELECT scheme FROM public.organizations WHERE id != 0 AND discarded_at IS NULL ORDER BY id LIMIT 1")
-    rescue
-      'unknown'
+    rescue StandardError
+      "unknown"
     end
 
     payload = { user_id: user_id, role: role, scheme: scheme }.merge(extra)
@@ -97,8 +97,8 @@ if defined?(Rails) && Rails.env.development?
   # Examples:
   #   header
   #   header(role: 'student', user_id: 5)
-  def header(**opts)
-    token = mint(**opts)
+  def header(**)
+    token = mint(**)
     h = "Authorization: Bearer #{token}"
     puts ""
     puts "  curl -H '#{h}' http://localhost:3001/api/v1/assessments"

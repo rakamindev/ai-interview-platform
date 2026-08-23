@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Timer } from "lucide-react";
 
 interface InterviewTimerProps {
   totalSeconds: number;
@@ -17,12 +18,16 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
   const [remaining, setRemaining] = useState(totalSeconds);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/no-deriving-state-in-effects
     setRemaining(totalSeconds);
   }, [totalSeconds]);
 
   useEffect(() => {
     if (!running) return;
-    if (remaining <= 0) { onExpired?.(); return; }
+    if (remaining <= 0) {
+      onExpired?.();
+      return;
+    }
     const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
     return () => clearTimeout(id);
   }, [running, remaining, onExpired]);
@@ -33,11 +38,11 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
   return (
     <span
       className={cn(
-        "font-mono text-sm font-medium tabular-nums",
+        "font-mono text-sm font-medium tabular-nums flex items-center gap-2",
         isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground"
       )}
     >
-      ⏱ {formatTime(remaining)}
+      <Timer className="h-4 w-4" /> {formatTime(remaining)}
     </span>
   );
 }

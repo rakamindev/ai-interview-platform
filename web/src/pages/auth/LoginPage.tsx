@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
+import { setAuth } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
+import { getErrorCode } from "@/services/api";
+import { m } from "@/paraglide/messages.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const setAuth = useSetAtom(authAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,28 +23,33 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authApi.login({ email, password });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
+      setAuth(res.data.access_token, res.data.user);
       navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      const code = getErrorCode(err);
+      if (code === "tenant_unresolved") {
+        setError(m.login_tenant_unresolved());
+      } else if (code === "invalid_credentials") {
+        setError(m.auth_invalid_credentials());
+      } else {
+        setError(m.common_error());
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <main className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
+          <h1 className="text-2xl font-bold">{m.auth_login_title()}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{m.auth_signin_subtitle()}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{m.auth_email()}</Label>
             <Input
               id="email"
               type="email"
@@ -55,10 +61,9 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
+            <Label htmlFor="password">{m.auth_password()}</Label>
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -70,11 +75,10 @@ export default function LoginPage() {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign in
+            {m.auth_sign_in()}
           </Button>
         </form>
-
       </div>
-    </div>
+    </main>
   );
 }

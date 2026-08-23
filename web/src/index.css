@@ -1,79 +1,174 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Inter:wght@100..900&display=swap");
 
-@layer base {
-    :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
+@import "tailwindcss";
+@import "tw-animate-css";
 
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
 
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
 
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
 
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
 
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
 
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
 
-        --radius: 0.5rem;
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-verdict-exceed: hsl(var(--verdict-exceed));
+  --color-verdict-match: hsl(var(--verdict-match));
+  --color-verdict-gap: hsl(var(--verdict-gap));
+  --color-verdict-unknown: hsl(var(--verdict-unknown));
+  --color-verdict-absent: hsl(var(--verdict-absent));
+  --color-rail-track: hsl(var(--rail-track));
+  --color-mark-requirement: hsl(var(--mark-requirement));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-voice-bar: voice-bar 0.8s ease-in-out infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
     }
-
-    .dark {
-        --background: 222 47% 11%;
-        --foreground: 210 40% 98%;
-
-        --card: 222 47% 11%;
-        --card-foreground: 210 40% 98%;
-
-        --popover: 222 47% 11%;
-        --popover-foreground: 210 40% 98%;
-
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
-
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
-
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
-
-        --accent: 217 33% 17%;
-        --accent-foreground: 210 40% 98%;
-
-        --destructive: 0 63% 31%;
-        --destructive-foreground: 0 0% 98%;
-
-        --border: 217 33% 17%;
-        --input: 217 33% 17%;
-        --ring: 184 99% 31%;
+    to {
+      height: var(--radix-accordion-content-height);
     }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+
+  @keyframes voice-bar {
+    0%,
+    100% {
+      height: 4px;
+    }
+    50% {
+      height: 32px;
+    }
+  }
 }
 
 @layer base {
-    * {
-        @apply border-border;
-    }
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
-    body {
-        @apply bg-background text-foreground;
-    }
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
+    --primary: 184 99% 31%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
+    --secondary: 43 96% 60%;
+    --secondary-foreground: 26 47% 25%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 184 99% 31%;
+
+    --radius: 0.5rem;
+
+    /* Verdict tokens — light */
+    --verdict-exceed: 170 65% 34%; /* teal-600 */
+    --verdict-match: 172 67% 29%; /* teal-700 */
+    --verdict-gap: 38 92% 50%; /* amber-700 */
+    --verdict-unknown: 217 19% 46%; /* slate-500 */
+    --verdict-absent: 214 20% 80%; /* slate-300 */
+    --rail-track: 214 20% 90%; /* slate-200 */
+    --mark-requirement: 222 47% 11%; /* slate-900 */
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 184 99% 31%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 43 96% 60%;
+    --secondary-foreground: 26 47% 25%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 184 99% 31%;
+
+    /* Verdict tokens — dark */
+    --verdict-exceed: 170 55% 44%; /* teal-400 */
+    --verdict-match: 174 62% 44%; /* teal-300 */
+    --verdict-gap: 40 96% 53%; /* amber-400 */
+    --verdict-unknown: 215 20% 57%; /* slate-400 */
+    --verdict-absent: 217 33% 17%; /* slate-700 */
+    --rail-track: 217 33% 14%; /* slate-800 */
+    --mark-requirement: 210 40% 98%; /* slate-100 */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
 }

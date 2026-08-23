@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'digest'
+require "digest"
 
 module Coverage
   # Builds the coverage map JSON payload for injection into Gemini Live context.
@@ -14,7 +14,7 @@ module Coverage
     # a pure clock tick doesn't trigger a redundant re-injection).
     def coverage_fingerprint
       maps = @session.coverage_maps.order(:id)
-      Digest::MD5.hexdigest(maps.map { |m| "#{m.id}:#{m.state}:#{m.probe_count}" }.join(','))
+      Digest::MD5.hexdigest(maps.map { |m| "#{m.id}:#{m.state}:#{m.probe_count}" }.join(","))
     end
 
     # Returns the formatted injection string to send via realtimeInput.text.
@@ -28,16 +28,20 @@ module Coverage
       avg_min        = avg_minutes_per_remaining_skill(remaining_min, skills_left)
 
       payload = {
-        skills:                          configured.map { |m| skill_json(m) },
-        discovered:                      discovered.map { |m| skill_json(m) },
-        time_remaining_minutes:          remaining_min,
-        skills_remaining:                skills_left,
+        skills: configured.map { |m| skill_json(m) },
+        discovered: discovered.map { |m| skill_json(m) },
+        time_remaining_minutes: remaining_min,
+        skills_remaining: skills_left,
         avg_minutes_per_remaining_skill: avg_min,
-        pacing:                          pacing_bucket(avg_min),
-        priority_next:                   priority_next(configured)
+        pacing: pacing_bucket(avg_min),
+        priority_next: priority_next(configured)
       }
 
-      Rails.logger.info("[MapInjector] Coverage map: skills_remaining=#{skills_left} avg_min=#{avg_min} pacing=#{pacing_bucket(avg_min)} priority_next=#{payload[:priority_next]}")
+      Rails.logger.info(
+        "[MapInjector] Coverage map: skills_remaining=#{skills_left} " \
+        "avg_min=#{avg_min} pacing=#{pacing_bucket(avg_min)} " \
+        "priority_next=#{payload[:priority_next]}"
+      )
 
       "[COVERAGE_MAP]\n#{payload.to_json}\n[/COVERAGE_MAP]"
     end
@@ -51,8 +55,8 @@ module Coverage
       discovered = maps.discovered
 
       return false if configured.empty?
-      return false unless configured.all? { |m| m.state == 'covered' }
-      return false if discovered.any? { |m| m.state == 'initiated' }
+      return false unless configured.all? { |m| m.state == "covered" }
+      return false if discovered.any? { |m| m.state == "initiated" }
 
       true
     end
@@ -61,15 +65,15 @@ module Coverage
 
     def skill_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
+        id: map.skill_id || map.skill_label.downcase.gsub(/\s+/, "-"),
+        label: map.skill_label,
+        state: map.state,
         probe_count: map.probe_count
       }
     end
 
     def skills_remaining(configured_maps)
-      configured_maps.count { |m| m.state != 'covered' }
+      configured_maps.count { |m| m.state != "covered" }
     end
 
     def avg_minutes_per_remaining_skill(remaining_min, skills_left)
@@ -82,10 +86,10 @@ module Coverage
     def pacing_bucket(avg_min)
       return nil unless avg_min
 
-      if avg_min >= 5.0     then 'ahead'
-      elsif avg_min >= 3.0  then 'on_track'
-      elsif avg_min >= 1.5  then 'behind'
-      else                       'critical'
+      if avg_min >= 5.0     then "ahead"
+      elsif avg_min >= 3.0  then "on_track"
+      elsif avg_min >= 1.5  then "behind"
+      else                       "critical"
       end
     end
 
@@ -105,12 +109,12 @@ module Coverage
       priority_order = %w[not_yet initiated partial covered]
 
       best = configured_maps
-             .reject { |m| m.state == 'covered' }
-             .min_by { |m| priority_order.index(m.state) || 999 }
+        .reject { |m| m.state == "covered" }
+        .min_by { |m| priority_order.index(m.state) || 999 }
 
       return nil unless best
 
-      best.skill_id || best.skill_label.downcase.gsub(/\s+/, '-')
+      best.skill_id || best.skill_label.downcase.gsub(/\s+/, "-")
     end
   end
 end

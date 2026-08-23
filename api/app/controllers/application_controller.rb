@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class ApplicationController < ActionController::API
+  include ActionController::Cookies
   include Response
   include ExceptionHandler
 
@@ -9,7 +10,7 @@ class ApplicationController < ActionController::API
   # Declarative auth helper — mirrors rakamin-api's authorize_auth_token! pattern.
   # Usage:
   #   authorize_auth_token! :admin
-  #   authorize_auth_token! :assessor      # allows admin or assessor
+  #   authorize_auth_token! :assessor      # admin or Membership.role == "assessor"
   #   authorize_auth_token! :any           # any authenticated user
   def self.authorize_auth_token!(*roles, **options)
     before_action(options) { authenticate_with_roles!(roles) }
@@ -24,7 +25,31 @@ class ApplicationController < ActionController::API
   def require_tenant!
     return if tenant_resolved?
 
-    raise ExceptionHandler::TenantNotFound, Message.tenant_not_found
+    msg = Message.tenant_not_found
+    raise ExceptionHandler::TenantNotFound, msg[:message]
+  end
+
+  # AC-4.6: reject when no active membership exists for the user in the
+  # resolved org, or when the JWT scheme claim disagrees with the resolved org.
+  def verify_scheme_claim!
+    # Reuse the membership AuthorizeApiRequest already resolved for this
+    # user+org this request, if any, instead of querying it again.
+    cached = Current.membership { nil }
+    membership = if cached && cached.user_id == Current.user.id && cached.organization_id == Current.organization.id
+                   cached
+                 else
+                   Membership.find_by(
+                     user_id: Current.user.id,
+                     organization_id: Current.organization.id
+                   )
+                 end
+
+    raise ExceptionHandler::Unauthorized, "No active membership in this organization" unless membership
+
+    return if Current.user.scheme.blank?
+    return if Current.user.scheme == Current.organization.scheme
+
+    raise ExceptionHandler::Unauthorized, "Token scheme does not match the resolved organisation"
   end
 
   def tenant_resolved?
@@ -53,8 +78,15 @@ class ApplicationController < ActionController::API
 
   def authenticate_with_roles!(roles)
     roles = roles.flatten.map(&:to_s)
-    result = AuthorizeApiRequest.new(request.headers, roles).call
+    result = AuthorizeApiRequest.new(request.headers, roles, cookies: cookies).call
     Current.user = result[:user]
+
+    # AC-4.6, run here (not as a separate before_action) so it's guaranteed to
+    # execute after Current.user is set — before_actions declared on this
+    # parent class run before ones added by subclasses via authorize_auth_token!,
+    # so a plain `before_action :verify_scheme_claim!` here would always fire
+    # before Current.user exists and silently no-op.
+    verify_scheme_claim! if current_organization.present?
   end
 
   # ── Params ──────────────────────────────────────────────────────────────────
@@ -65,8 +97,8 @@ class ApplicationController < ActionController::API
 
   def path_params
     @path_params ||= request.path_parameters
-                             .except(:controller, :action)
-                             .with_indifferent_access
+      .except(:controller, :action)
+      .with_indifferent_access
   end
 
   def request_body

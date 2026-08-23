@@ -1,0 +1,17 @@
+# frozen_string_literal: true
+
+FactoryBot.define do
+  factory :user do
+    sequence(:email) { |n| "user#{n}@test-corp.local" }
+    password { "password" }
+    role { "admin" }
+
+    trait :assessor do
+      role { "admin" }
+    end
+
+    trait :candidate do
+      role { "user" }
+    end
+  end
+end

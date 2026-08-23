@@ -6,11 +6,11 @@ Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.
-  config.cache_classes = true
+  config.enable_reloading = false
 
   # Eager loading loads your whole application. When running a single test locally,
   # this might not be necessary. It's recommended that you set this to true in CI though.
-  config.eager_load = ENV["CI"].present?
+  config.eager_load = false
 
   # Configure public file server for tests with Cache-Control for performance.
   config.public_file_server.enabled = true
@@ -25,10 +25,17 @@ Rails.application.configure do
 
   # Render exception templates for rescuable exceptions and return status
   # code for other exceptions.
-  config.action_dispatch.show_exceptions = false
+  config.action_dispatch.show_exceptions = :none
 
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
+
+  # Rails 8's default Host Authorization only auto-permits IP hosts and
+  # .localhost/.test suffixes — it blocks rspec-rails/Rack::Test's default
+  # request host ("www.example.com"), which broke the entire request-spec
+  # suite after the Rails 7.0->8.1 upgrade. Test requests aren't real
+  # browsers hitting real hosts, so disable the check entirely here.
+  config.hosts.clear
 
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
@@ -47,4 +54,8 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Mailer test config
+  config.action_mailer.delivery_method = :test
+  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
 end

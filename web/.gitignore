@@ -18,6 +18,9 @@ tech-docs
 .DS_Store
 Thumbs.db
 
+# paraglide generated output
+src/paraglide/
+
 # logs
 *.log
 npm-debug.log*

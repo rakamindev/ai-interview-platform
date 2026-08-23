@@ -1,0 +1,185 @@
+plugins:
+  - rubocop-rails
+  - rubocop-rspec
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.3
+  SuggestExtensions: false
+  Exclude:
+    - "db/schema.rb"
+    - "vendor/**/*"
+    - "node_modules/**/*"
+    - "tmp/**/*"
+    - "log/**/*"
+    - "bin/**/*"
+
+# ── Layout ────────────────────────────────────────────────────────────────────
+
+Layout/LineLength:
+  Max: 140
+  AllowedPatterns:
+    - "^\\s*#"
+  Exclude:
+    - "db/seeds/**/*"
+    - "db/seeds.rb"
+
+Layout/ExtraSpacing:
+  AllowForAlignment: true
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+# ── Metrics ───────────────────────────────────────────────────────────────────
+
+Metrics/MethodLength:
+  Max: 50
+  Exclude:
+    - "db/migrate/**/*"
+
+Metrics/AbcSize:
+  Max: 100
+  Exclude:
+    - "db/migrate/**/*"
+
+Metrics/CyclomaticComplexity:
+  Max: 30
+  Exclude:
+    - "db/migrate/**/*"
+
+Metrics/PerceivedComplexity:
+  Max: 30
+  Exclude:
+    - "db/migrate/**/*"
+
+Metrics/ClassLength:
+  Max: 600
+  Exclude:
+    - "db/migrate/**/*"
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "config/routes.rb"
+    - "app/channels/**/*"
+
+Metrics/ParameterLists:
+  Max: 15
+
+# ── Naming ────────────────────────────────────────────────────────────────────
+
+Naming/MethodParameterName:
+  MinNameLength: 1
+
+Naming/VariableNumber:
+  Enabled: false
+
+Naming/PredicateMethod:
+  Enabled: false
+
+# ── Lint ──────────────────────────────────────────────────────────────────────
+
+Lint/UnusedMethodArgument:
+  Enabled: true
+  AllowUnusedKeywordArguments: true
+
+Lint/UnusedBlockArgument:
+  Enabled: true
+
+Lint/UselessConstantScoping:
+  Enabled: true
+
+Lint/NoReturnInBeginEndBlocks:
+  Enabled: true
+
+Lint/ConstantDefinitionInBlock:
+  Enabled: false
+
+# ── Style ─────────────────────────────────────────────────────────────────────
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/BlockDelimiters:
+  EnforcedStyle: line_count_based
+
+Style/IfUnlessModifier:
+  Enabled: true
+
+Style/Documentation:
+  Enabled: false
+
+Style/ComparableClamp:
+  Enabled: true
+
+Style/MultilineBlockChain:
+  Enabled: false
+
+Style/OpenStructUse:
+  Enabled: false
+
+Style/SafeNavigationChainLength:
+  Enabled: false
+
+# ── Rails ─────────────────────────────────────────────────────────────────────
+
+Rails/Output:
+  Exclude:
+    - "db/seeds/**/*"
+    - "db/seeds.rb"
+    - "lib/tasks/**/*"
+
+Rails/SkipsModelValidations:
+  Exclude:
+    - "app/channels/**/*"
+    - "app/services/sessions/end_handler.rb"
+    - "spec/**/*"
+
+Rails/CreateTableWithTimestamps:
+  Enabled: false
+
+Rails/BulkChangeTable:
+  Enabled: false
+
+# ── RSpec ─────────────────────────────────────────────────────────────────────
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Max: 40
+  Enabled: true
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 15
+  Enabled: true
+
+RSpec/LetSetup:
+  Enabled: false
+
+RSpec/AnyInstance:
+  Enabled: false
+
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/LeadingSubject:
+  Enabled: false
+
+RSpec/MessageSpies:
+  Enabled: false
+
+RSpec/BeEq:
+  Enabled: false
+
+RSpec/HookArgument:
+  EnforcedStyle: implicit
+
+RSpec/DescribeClass:
+  Enabled: false
+
+RSpec/ContextWording:
+  Enabled: true

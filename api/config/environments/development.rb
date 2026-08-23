@@ -3,8 +3,8 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
-  # Code is not reloaded between requests.
-  config.cache_classes = false
+  # Code is reloaded between requests.
+  config.enable_reloading = true
 
   # Do not eager load code on boot.
   config.eager_load = false
@@ -18,8 +18,8 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   # config.active_storage.service = :local
 
-  # Don't care if the mailer can't send.
-  # config.action_mailer.raise_delivery_errors = false
+  # No SMTP server in dev/demo — capture mail instead of attempting real delivery.
+  config.action_mailer.delivery_method = :test
   # config.action_mailer.perform_caching = false
 
   # Print deprecation notices to the Rails logger.

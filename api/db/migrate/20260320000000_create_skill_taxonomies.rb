@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateSkillTaxonomies < ActiveRecord::Migration[7.0]
+class CreateSkillTaxonomies < ActiveRecord::Migration[8.0]
   def up
     execute "SET search_path TO ai_interview, public"
 
@@ -17,8 +17,8 @@ class CreateSkillTaxonomies < ActiveRecord::Migration[7.0]
       t.text   :l5_anchor,    null: false
     end
 
-    add_index :skill_taxonomies, :skill_id, unique: true, name: 'idx_skill_taxonomies_skill_id'
-    add_index :skill_taxonomies, :category, name: 'idx_skill_taxonomies_category'
+    add_index :skill_taxonomies, :skill_id, unique: true, name: "idx_skill_taxonomies_skill_id"
+    add_index :skill_taxonomies, :category, name: "idx_skill_taxonomies_category"
   end
 
   def down

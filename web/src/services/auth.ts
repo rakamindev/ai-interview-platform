@@ -1,4 +1,4 @@
-import api from "./api";
+import { api } from "./api";
 
 export interface LoginPayload {
   email: string;
@@ -6,13 +6,21 @@ export interface LoginPayload {
 }
 
 export interface LoginResponse {
-  token: string;
+  access_token: string;
+  user: { id: string; email: string; role: string };
 }
 
 export const authApi = {
-  login: (data: LoginPayload) =>
-    api.post<LoginResponse>("/auth/login", data),
+  login: (data: LoginPayload) => api.post<LoginResponse>("/auth/login", data),
 
   signup: (data: { email: string; password: string; role: "admin" | "user" }) =>
     api.post<LoginResponse>("/signup", data),
+
+  logout: () => api.delete("/auth/delete"),
+
+  acceptInvite: (data: { token: string; password: string }) =>
+    api.post<LoginResponse>("/auth/accept_invite", data),
+
+  createInvite: (data: { email: string; role: "admin" | "assessor" }) =>
+    api.post<{ invite_url: string }>("/auth/invites", { invite: data })
 };

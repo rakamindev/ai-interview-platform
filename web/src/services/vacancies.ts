@@ -1,5 +1,13 @@
-import api from "./api";
-import type { Vacancy, VacancySkill, PaginationMeta } from "@/types";
+import { api, parseResponse } from "./api";
+import { VacancySchema } from "@/schemas/vacancy";
+import type { Vacancy, VacancySkill } from "@/types";
+
+const EMPTY_VACANCY: Vacancy = {
+  id: 0,
+  role_title: "",
+  culture_dimensions: "",
+  competency_expectations: ""
+};
 
 export interface VacancyPayload {
   role_title: string;
@@ -10,18 +18,52 @@ export interface VacancyPayload {
 
 export const vacanciesApi = {
   list: (page = 1) =>
-    api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
+    api.get("/vacancies", { params: { page } }).then((res) => {
+      const raw = res.data as Record<string, unknown>;
+      return {
+        ...res,
+        data: {
+          vacancies: Array.isArray(raw?.vacancies)
+            ? (raw.vacancies as unknown[])
+                .map((v: unknown) => parseResponse(v, VacancySchema, EMPTY_VACANCY))
+                .filter((v: Vacancy) => v.id !== 0)
+            : [],
+          meta: (raw?.meta as Record<string, unknown>) ?? {
+            current_page: 1,
+            total_pages: 1,
+            total_count: 0,
+            per_page: 10
+          }
+        }
+      };
     }),
 
   get: (id: number) =>
-    api.get<{ vacancy: Vacancy }>(`/vacancies/${id}`),
+    api.get(`/vacancies/${id}`).then((res) => {
+      const raw = res.data as Record<string, unknown>;
+      return {
+        ...res,
+        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) }
+      };
+    }),
 
   create: (data: VacancyPayload) =>
-    api.post<{ vacancy: Vacancy }>("/vacancies", { vacancy: data }),
+    api.post("/vacancies", { vacancy: data }).then((res) => {
+      const raw = res.data as Record<string, unknown>;
+      return {
+        ...res,
+        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) }
+      };
+    }),
 
   update: (id: number, data: VacancyPayload) =>
-    api.put<{ vacancy: Vacancy }>(`/vacancies/${id}`, { vacancy: data }),
+    api.put(`/vacancies/${id}`, { vacancy: data }).then((res) => {
+      const raw = res.data as Record<string, unknown>;
+      return {
+        ...res,
+        data: { vacancy: parseResponse(raw?.vacancy, VacancySchema, EMPTY_VACANCY) }
+      };
+    }),
 
-  delete: (id: number) => api.delete(`/vacancies/${id}`),
+  delete: (id: number) => api.delete(`/vacancies/${id}`)
 };

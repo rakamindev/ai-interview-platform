@@ -15,26 +15,26 @@ module Api
 
       # GET /api/v1/skill_taxonomies/:skill_id
       def show
-        skill = SkillTaxonomy.find_by!(skill_id: params[:skill_id])
+        skill = SkillTaxonomy.find_by!(skill_id: params.expect(:skill_id))
         json_response(skill: skill_json(skill))
       rescue ActiveRecord::RecordNotFound
-        json_error("Skill not found", :not_found)
+        json_error("Skill not found", :not_found, code: "skill_not_found")
       end
 
       private
 
       def skill_json(skill)
         {
-          skill_id:      skill.skill_id,
-          skill_label:   skill.skill_label,
-          category:      skill.category,
+          skill_id: skill.skill_id,
+          skill_label: skill.skill_label,
+          category: skill.category,
           scope_include: skill.scope_include,
           scope_exclude: skill.scope_exclude,
-          l1_anchor:     skill.l1_anchor,
-          l2_anchor:     skill.l2_anchor,
-          l3_anchor:     skill.l3_anchor,
-          l4_anchor:     skill.l4_anchor,
-          l5_anchor:     skill.l5_anchor
+          l1_anchor: skill.l1_anchor,
+          l2_anchor: skill.l2_anchor,
+          l3_anchor: skill.l3_anchor,
+          l4_anchor: skill.l4_anchor,
+          l5_anchor: skill.l5_anchor
         }
       end
     end
