@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Vacancy, VacancySkill, PaginationMeta } from "@/types";
+import type { Vacancy, VacancySkill, VacancyCandidate, VacancyAssessmentSummary, PaginationMeta } from "@/types";
 
 export interface VacancyPayload {
   role_title: string;
@@ -24,4 +24,10 @@ export const vacanciesApi = {
     api.put<{ vacancy: Vacancy }>(`/vacancies/${id}`, { vacancy: data }),
 
   delete: (id: number) => api.delete(`/vacancies/${id}`),
+
+  listAssessments: (vacancyId: number) =>
+    api.get<{ assessments: VacancyAssessmentSummary[] }>(`/vacancies/${vacancyId}/assessments`),
+
+  listCandidates: (vacancyId: number) =>
+    api.get<{ candidates: VacancyCandidate[] }>(`/vacancies/${vacancyId}/candidates`),
 };

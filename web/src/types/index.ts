@@ -4,6 +4,7 @@ export interface Assessment {
   time_limit_min: number;
   language?: "en" | "id";
   system_prompt?: string;
+  vacancy_id?: number | null;
   created_by?: number;
   created_at?: string;
   updated_at?: string;
@@ -12,6 +13,32 @@ export interface Assessment {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
   };
+}
+
+export interface VacancyAssessmentSummary {
+  id: number;
+  name: string;
+  time_limit_min: number;
+  language: string;
+  created_at: string;
+  session_count: number;
+}
+
+export interface VacancyCandidate {
+  session_id: number;
+  assessment_id: number;
+  candidate_name?: string;
+  status: "pending" | "active" | "ended";
+  end_reason?: string;
+  started_at?: string;
+  ended_at?: string;
+  duration_seconds?: number;
+  portfolio_id?: number;
+  profile_ready?: boolean;
+  fit_score?: number | null;
+  fit_label?: string | null;
+  matched_skills: string[];
+  gap_skills: string[];
 }
 
 export interface AssessmentSkill {
