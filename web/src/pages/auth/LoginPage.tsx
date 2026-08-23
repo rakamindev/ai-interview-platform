@@ -28,7 +28,7 @@ export default function LoginPage() {
     } catch (err) {
       const code = getErrorCode(err);
       if (code === "tenant_unresolved") {
-        setError("Unable to determine your organization. Please access via your organization's URL.");
+        setError(m.login_tenant_unresolved());
       } else if (code === "invalid_credentials") {
         setError(m.auth_invalid_credentials());
       } else {

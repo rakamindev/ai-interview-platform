@@ -410,5 +410,10 @@
 
   "validation_role_title_required": "Judul posisi wajib diisi",
   "validation_time_limit_required": "Batas waktu wajib diisi",
-  "validation_add_skill": "Tambahkan minimal satu keahlian"
+  "validation_add_skill": "Tambahkan minimal satu keahlian",
+
+  "interview_retry": "Coba Lagi",
+  "login_tenant_unresolved": "Tidak dapat menentukan organisasi Anda. Silakan akses melalui URL organisasi Anda.",
+  "audit_skill_placeholder": "React, Python...",
+  "audit_filter_placeholder": "filter@contoh.com"
 }

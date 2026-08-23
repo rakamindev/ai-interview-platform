@@ -410,5 +410,10 @@
 
   "validation_role_title_required": "Role title is required",
   "validation_time_limit_required": "Time limit is required",
-  "validation_add_skill": "Add at least one skill"
+  "validation_add_skill": "Add at least one skill",
+
+  "interview_retry": "Retry",
+  "login_tenant_unresolved": "Unable to determine your organization. Please access via your organization's URL.",
+  "audit_skill_placeholder": "React, Python...",
+  "audit_filter_placeholder": "filter@example.com"
 }
