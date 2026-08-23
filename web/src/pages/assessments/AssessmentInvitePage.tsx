@@ -227,15 +227,17 @@ export default function AssessmentInvitePage() {
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleDeleteSession = async () => {
     if (!deletingSessionId) return;
     try {
       await sessionsApi.delete(deletingSessionId);
       loadSessions();
-    } catch (e) {
-      console.error("Failed to delete session", e);
-    } finally {
       setDeletingSessionId(null);
+    } catch (e: any) {
+      console.error("Failed to delete session", e);
+      setDeleteError(e.response?.data?.errors?.[0]?.message || "Failed to delete session");
     }
   };
 
@@ -426,6 +428,22 @@ export default function AssessmentInvitePage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteError !== null} onOpenChange={() => { setDeleteError(null); setDeletingSessionId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cannot Delete Session</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => { setDeleteError(null); setDeletingSessionId(null); }}>
+              Close
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

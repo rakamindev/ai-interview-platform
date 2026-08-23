@@ -68,15 +68,17 @@ export default function AssessmentListPage() {
     return () => clearTimeout(delay);
   }, [page, search, limit]);
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
       await assessmentsApi.delete(deletingId);
       loadAssessments();
-    } catch (e) {
-      console.error("Failed to delete assessment", e);
-    } finally {
       setDeletingId(null);
+    } catch (e: any) {
+      console.error("Failed to delete assessment", e);
+      setDeleteError(e.response?.data?.errors?.[0]?.message || "Failed to delete assessment");
     }
   };
 
@@ -177,6 +179,22 @@ export default function AssessmentListPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteError !== null} onOpenChange={() => { setDeleteError(null); setDeletingId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cannot Delete Assessment</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => { setDeleteError(null); setDeletingId(null); }}>
+              Close
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

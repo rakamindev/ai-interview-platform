@@ -120,8 +120,11 @@ module Api
 
       # DELETE /api/v1/sessions/:id
       def destroy
-        @session.destroy
-        json_response({ message: "Session deleted" })
+        if @session.destroy
+          json_response({ message: "Session deleted" })
+        else
+          json_error("Failed to delete session", :unprocessable_entity)
+        end
       end
 
       # POST /sessions/:token/audio_complete  — no JWT, invite token in URL

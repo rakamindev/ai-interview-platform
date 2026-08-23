@@ -6,6 +6,7 @@ class Portfolio < ApplicationRecord
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
+  has_many :fit_gap_reports, dependent: :destroy
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
