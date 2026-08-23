@@ -236,16 +236,28 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
+                            <div className="mt-2 space-y-2">
+                                <div className="flex gap-3 text-xs">
+                                    <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                                        ↓ {internetResult.download} Mbps
+                                    </span>
+                                    <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                        ↑ {internetResult.upload} Mbps
+                                    </span>
+                                    <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                        {internetResult.ping} ms
+                                    </span>
+                                </div>
+                                {internetWarning && (
+                                    <div role="status" className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                                        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                                        <p>
+                                            Your connection is below the recommended speed or latency. If possible, switch to a stronger or more stable
+                                            internet connection before continuing. You can still continue once the device checks pass, but the interview may
+                                            reconnect or have audio delays.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -264,17 +276,6 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     </div>
                 ))}
             </div>
-
-            {internetWarning && (
-                <div role="status" className="mx-4 my-3 flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-                    <p>
-                        Your connection is below the recommended speed or latency. If possible, switch to a stronger or more stable
-                        internet connection before continuing. You can still continue once the device checks pass, but the interview may
-                        reconnect or have audio delays.
-                    </p>
-                </div>
-            )}
 
             {/* Footer */}
             <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
