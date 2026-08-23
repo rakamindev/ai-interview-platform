@@ -9,7 +9,13 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, FileText, Loader2, Zap, MoreVertical, RefreshCw } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -47,7 +53,7 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -120,7 +126,7 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="hidden sm:flex gap-2 justify-end">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -136,7 +142,7 @@ export default function PortfolioPage() {
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
               >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 PDF
               </Button>
               <Button
@@ -145,11 +151,42 @@ export default function PortfolioPage() {
                 onClick={() => handleExport("json")}
                 disabled={!!exporting}
               >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 JSON
               </Button>
             </>
           )}
+        </div>
+
+        {/* Mobile View */}
+        <div className="sm:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to={`/assessments/${id}/sessions/${sessionId}/transcript`} className="w-full cursor-pointer flex items-center">
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Transcript
+                </Link>
+              </DropdownMenuItem>
+              {!generating && portfolio && (
+                <>
+                  <DropdownMenuItem onClick={() => handleExport("pdf")} disabled={!!exporting}>
+                    {exporting === "pdf" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                    Export PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport("json")} disabled={!!exporting}>
+                    {exporting === "json" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                    Export JSON
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

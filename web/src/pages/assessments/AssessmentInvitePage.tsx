@@ -38,9 +38,9 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 px-4 gap-4">
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+        <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
         <div className="space-y-0.5">
@@ -53,7 +53,7 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center flex-wrap gap-2 sm:gap-3 ml-11 sm:ml-0">
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -79,12 +79,12 @@ function SessionRow({
           </span>
         )}
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto mt-1 sm:mt-0">
           {isPending && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs flex-1 sm:flex-none"
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
@@ -98,7 +98,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs flex-1 sm:flex-none"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
@@ -108,7 +108,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs flex-1 sm:flex-none"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
             >
               Results
@@ -145,7 +145,7 @@ export default function AssessmentInvitePage() {
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => { }).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -190,18 +190,53 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500 py-2">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row justify-between gap-5">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-56 rounded-lg bg-zinc-200/60" />
+            <Skeleton className="h-4 w-36 rounded-md bg-zinc-100" />
+          </div>
+          <div className="flex items-center gap-2 mt-2 sm:mt-0">
+            <Skeleton className="h-9 w-20 rounded-lg bg-zinc-100" />
+            <Skeleton className="h-9 w-36 rounded-lg bg-zinc-200/60" />
+          </div>
+        </div>
+
+        {/* Separator Skeleton */}
+        <Skeleton className="h-px w-full bg-zinc-100" />
+
+        {/* Candidates Section Skeleton */}
+        <div className="space-y-4">
+          <Skeleton className="h-5 w-28 rounded-md bg-zinc-200/60" />
+          <Card className="border-zinc-100 shadow-sm rounded-2xl overflow-hidden">
+            <CardContent className="p-0 divide-y divide-zinc-50">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full bg-zinc-100 shrink-0" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32 sm:w-40 rounded-md bg-zinc-200/60" />
+                      <Skeleton className="h-3 w-20 sm:w-24 rounded-md bg-zinc-100" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-11 sm:ml-0">
+                    <Skeleton className="h-7 w-24 rounded-md bg-zinc-100" />
+                    <Skeleton className="h-7 w-16 rounded-md bg-zinc-100" />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row justify-between">
         <div className="flex items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -215,7 +250,7 @@ export default function AssessmentInvitePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-5 sm:mt-0 justify-end">
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
@@ -290,12 +325,17 @@ export default function AssessmentInvitePage() {
         </div>
 
         {sessions.length === 0 ? (
-          <div className="border rounded-lg p-10 text-center space-y-3">
-            <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
+          <div className="border-2 border-dashed border-zinc-200 rounded-2xl p-12 text-center bg-zinc-50/50 hover:bg-zinc-50 hover:border-zinc-300 transition-all duration-300">
+            <div className="w-16 h-16 bg-white border border-zinc-100 rounded-2xl flex items-center justify-center shadow-sm mx-auto mb-5 relative">
+              <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-50 text-primary rounded-full flex items-center justify-center">
+                <Plus className="w-3 h-3" />
+              </div>
+              <UserRound className="h-8 w-8 text-zinc-400" />
+            </div>
             <div>
-              <p className="text-sm font-medium">No candidates yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click "Invite Candidate" to generate an interview link.
+              <p className="text-lg font-bold text-zinc-900 mb-1.5">No candidates invited yet</p>
+              <p className="text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
+                Click <span className="font-medium text-zinc-700">"Invite Candidate"</span> above to generate a unique interview link.
               </p>
             </div>
           </div>

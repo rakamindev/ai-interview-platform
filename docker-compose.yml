@@ -1,0 +1,93 @@
+# Apple Silicon (ARM64) optimized Docker Compose
+# Both images use -alpine variants which are multi-arch (native ARM64, no Rosetta needed)
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ai-interview-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rakamin_development
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    shm_size: 256mb
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-interview-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  sidekiq:
+    build:
+      context: ./api
+    container_name: ai-interview-sidekiq
+    volumes:
+      - ./api:/ai-interview
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/1
+      - RAILS_ENV=development
+      - RACK_ENV=development
+      - LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2
+    command: >
+      sh -c "bundle config unset without &&
+             bundle config set frozen false &&
+             bundle install &&
+             bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml"
+
+  api:
+    build:
+      context: ./api 
+    container_name: ai-interview-api
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/ai-interview
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/1
+      - WEB_BASE_URL=http://localhost:5174
+      - RAILS_ENV=development 
+      - RACK_ENV=development
+      - LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2
+    command: >
+      sh -c "bundle config unset without &&
+             bundle config set frozen false &&
+             bundle install &&
+             mkdir -p tmp/pids tmp/cache tmp/sockets log &&
+             rm -f tmp/pids/server.pid &&
+             bundle exec puma -C config/puma.rb"
+volumes:
+  pgdata:
+  redisdata:

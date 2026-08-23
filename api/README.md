@@ -1,5 +1,9 @@
 # Local Setup
 
+You can set up the backend using either the **Manual Native Setup** or **Docker Compose (Recommended for easy Hot Reload)**.
+
+## Option 1: Manual Setup (Native)
+
 ## Prerequisites
 
 - Ruby (see `.ruby-version`)
@@ -27,7 +31,7 @@ Fill in the required values in `config/application.yml`:
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `API_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
 
 ---
 
@@ -78,7 +82,7 @@ Runs on **port 3001** by default.
 ## 7. Start the frontend
 
 ```bash
-cd ../ai-interview-web
+cd ../web
 npm install
 npm run dev
 ```
@@ -95,3 +99,44 @@ Runs on **port 5173** by default.
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
 | Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+
+
+## Option 2: Docker Compose Setup (Recommended)
+This project is configured with Docker Compose for a seamless local development experience.
+
+### 1. Environment Variables
+First, duplicate the sample environment configuration file:
+```bash
+cp config/application.yml.sample config/application.yml
+```
+> Note: Ensure the database credentials in config/application.yml match the environment variables defined in the docker-compose.yml file (e.g., DB_USERNAME: "postgres", DB_PASSWORD: "postgres").
+
+### 2. Build and Start the Containers
+```bash
+docker compose up --build
+```
+> (Leave this terminal window open to view the server logs).
+
+### 3. Setup Database
+```bash
+docker compose exec api bundle exec rails db:migrate 
+docker compose exec api bundle exec rails db:seed
+```
+
+Runs on **port 3001** by default.
+
+---
+
+## Running Tests (RSpec)
+
+The backend uses RSpec for testing. Ensure your database is running before executing tests.
+
+**If using Docker Compose (Recommended):**
+```bash
+docker compose exec -e RAILS_ENV=test api bundle exec rspec
+```
+
+**If using Manual Native Setup:**
+```bash
+RAILS_ENV=test bundle exec rspec
+```

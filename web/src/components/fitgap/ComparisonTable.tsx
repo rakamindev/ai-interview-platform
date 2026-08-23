@@ -37,7 +37,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
+              <th className="text-center px-4 py-2.5 font-medium">Expected</th>
               <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
               <th className="text-center px-4 py-2.5 font-medium">Result</th>
             </tr>
@@ -47,7 +47,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
               <tr key={i} className="border-b last:border-0">
                 <td className="px-4 py-2.5">{c.skill_label}</td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+                  {LEVEL_LABELS[c.expected_level]}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (

@@ -90,8 +90,8 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: number;       // 1 | 2 | 3 | 4 | 5
+  ai_confidence: "high" | "medium" | "low";  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
 }
@@ -129,7 +129,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -188,15 +188,15 @@ export type InterviewSpeaker = "ai" | "candidate" | null;
 
 export interface WsControlMessage {
   type:
-    | "session_started"
-    | "session_ended"
-    | "transcript"
-    | "transcription"
-    | "reconnecting"
-    | "reconnected"
-    | "speaker_changed"
-    | "preparing_to_end"
-    | "error";
+  | "session_started"
+  | "session_ended"
+  | "transcript"
+  | "transcription"
+  | "reconnecting"
+  | "reconnected"
+  | "speaker_changed"
+  | "preparing_to_end"
+  | "error";
   speaker?: "candidate" | "ai";
   role?: "candidate" | "ai";
   text?: string;

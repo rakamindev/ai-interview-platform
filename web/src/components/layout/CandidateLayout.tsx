@@ -1,3 +1,4 @@
+import { LayoutDashboard } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 export default function CandidateLayout() {
@@ -6,7 +7,13 @@ export default function CandidateLayout() {
       {/* Minimal header — no nav */}
       <header className="border-b bg-white">
         <div className="max-w-2xl mx-auto px-4 h-12 flex items-center">
-          <span className="font-semibold text-sm text-muted-foreground">AI Interview</span>
+
+          <div className="flex items-center gap-3">
+            <LayoutDashboard className="h-5 w-5 text-black" />
+            <span className="font-bold text-zinc-900 tracking-tight text-lg">
+              Rakamin<span className="text-zinc-500 font-normal"> AI Interview</span>
+            </span>
+          </div>
         </div>
       </header>
 

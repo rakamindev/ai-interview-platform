@@ -77,6 +77,26 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Admin User ───────────────────────────────────────────────────────────────
+#
+# Create a default admin user to allow login through the frontend UI.
+#
+admin_email = "admin@rakamin.com"
+admin_password = "password123"
+
+admin_user = User.find_or_initialize_by(email: admin_email)
+admin_user.assign_attributes(
+  password: admin_password,
+  password_confirmation: admin_password,
+  role: 'admin'
+)
+
+if admin_user.save
+  puts "  Created/Updated admin user: #{admin_email} / #{admin_password}"
+else
+  puts "  ERROR creating admin user: #{admin_user.errors.full_messages.join(', ')}"
+end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [

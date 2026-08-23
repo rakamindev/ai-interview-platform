@@ -61,7 +61,15 @@ async function measureDownloadSpeed(): Promise<number> {
     for (const testFile of testFiles) {
         try {
             const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(testFile.url, { 
+                cache: "no-cache",
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
             if (response.ok) {
                 await response.blob();
                 const seconds = (performance.now() - start) / 1000;
@@ -95,7 +103,17 @@ async function measureUploadSpeed(): Promise<number> {
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            await fetch(endpoint, { 
+                method: "POST", 
+                body: formData,
+                signal: controller.signal 
+            });
+            clearTimeout(timeoutId);
+            
             const seconds = (performance.now() - start) / 1000;
             return uploadSizeMB / seconds;
         } catch {
