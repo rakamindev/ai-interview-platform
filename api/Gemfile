@@ -25,6 +25,7 @@ gem 'figaro'
 # Background jobs
 gem 'redis', '~> 5.0'
 gem 'sidekiq', '~> 7.0'
+gem 'sidekiq-unique-jobs'
 
 # WebSocket
 gem 'faye-websocket'
@@ -58,6 +59,7 @@ group :development do
 end
 
 group :test do
+  gem 'simplecov', require: false
   gem 'database_cleaner'
   gem 'timecop'
 end

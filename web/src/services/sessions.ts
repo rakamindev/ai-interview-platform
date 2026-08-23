@@ -12,6 +12,8 @@ export const sessionsApi = {
       session: { reason },
     }),
 
+  delete: (id: number) => api.delete(`/sessions/${id}`),
+
   getCoverage: (id: number) =>
     api.get<CoverageMap>(`/sessions/${id}/coverage`),
 

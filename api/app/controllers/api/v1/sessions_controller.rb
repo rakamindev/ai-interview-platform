@@ -6,14 +6,20 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript destroy]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        scope = assessment.sessions.order(created_at: :desc)
+        scope = scope.where("candidate_name ILIKE ?", "%#{params[:search]}%") if params[:search].present?
+        scope = scope.where(status: params[:status]) if params[:status].present?
+        sessions = paginate(scope)
 
-        json_response(sessions: sessions.map(&method(:session_json)))
+        json_response(
+          sessions: sessions.map(&method(:session_json)),
+          meta: pagination_meta(sessions)
+        )
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -110,6 +116,15 @@ module Api
           end,
           total: turns.count
         )
+      end
+
+      # DELETE /api/v1/sessions/:id
+      def destroy
+        if @session.destroy
+          json_response({ message: "Session deleted" })
+        else
+          json_error("Failed to delete session", :unprocessable_entity)
+        end
       end
 
       # POST /sessions/:token/audio_complete  — no JWT, invite token in URL

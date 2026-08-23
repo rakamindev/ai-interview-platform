@@ -49,18 +49,20 @@ export function getOSInfo() {
 
 export async function checkCamera(): Promise<MediaStream | null> {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        return await navigator.mediaDevices.getUserMedia({
             video: {
                 width: { max: 640 },
                 height: { max: 480 },
                 frameRate: { max: 20 },
-                facingMode: "user",
             },
             audio: true,
         });
-        return stream;
     } catch {
-        return null;
+        try {
+            return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        } catch {
+            return null;
+        }
     }
 }
 

@@ -42,7 +42,6 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       setIsCapturing(true);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      console.error("[AudioCapture] Failed to start:", error.message);
       onError?.(error);
     }
   }, [isCapturing, onFrame, onError]);

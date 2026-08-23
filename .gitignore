@@ -11,9 +11,11 @@ api/config/application.yml
 **/tmp/
 api/storage/
 
-# Build output
-web/dist/
-web/.vite/
-
 # OS
 .DS_Store
+
+# Agents
+.agents
+graphify-out
+assessment/
+

@@ -279,6 +279,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     </Button>
                 )}
                 <Button
+                    id="hardware-check-start-btn"
                     size="sm"
                     className="ml-auto"
                     disabled={!allPassed}

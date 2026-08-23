@@ -21,21 +21,25 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const hasOverride = !!existingOverride;
 
   const handleSave = async () => {
     setSaving(true);
     setSaveError(false);
+    setErrorMessage(null);
     try {
-      const res = await portfoliosApi.getOverride(skill.id, {
+      const res = await portfoliosApi.saveOverride(skill.id, {
         override_level: overrideLevel,
         assessor_notes: notes,
       });
       onSaved(res.data.override);
       setOpen(false);
-    } catch {
+    } catch (err: any) {
       setSaveError(true);
+      const msg = err?.response?.data?.errors?.[0]?.message || err?.response?.data?.error || err?.message || "Failed to save override. Please try again.";
+      setErrorMessage(msg);
     } finally {
       setSaving(false);
     }
@@ -43,7 +47,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
   if (!open) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
         {hasOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
@@ -89,7 +93,10 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       </div>
 
       {saveError && (
-        <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
+        <div className="flex items-center justify-between text-xs text-destructive bg-destructive/10 p-2 rounded">
+          <span>{errorMessage || "Failed to save override. Please try again."}</span>
+          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={handleSave}>Retry</Button>
+        </div>
       )}
 
       <div className="flex gap-2">

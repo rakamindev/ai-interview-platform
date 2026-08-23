@@ -14,6 +14,15 @@ tech-docs
 *.swo
 *~
 
+# Build output
+dist/
+.vite/
+scripts/
+test-results/
+playwright-report/
+screenshots/
+coverage/
+
 # OS
 .DS_Store
 Thumbs.db

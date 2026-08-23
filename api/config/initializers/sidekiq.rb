@@ -1,9 +1,21 @@
 # frozen_string_literal: true
 
+require 'sidekiq-unique-jobs'
 SIDEKIQ_STATUS_FILE = Rails.root.join('tmp/sidekiq_status').freeze
 
 Sidekiq.configure_server do |config|
   config.redis = { url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1') }
+
+  # sidekiq-unique-jobs 8.x configuration
+  config.client_middleware do |chain|
+    chain.add SidekiqUniqueJobs::Middleware::Client
+  end
+
+  config.server_middleware do |chain|
+    chain.add SidekiqUniqueJobs::Middleware::Server
+  end
+
+  SidekiqUniqueJobs::Server.configure(config)
 
   config.on(:startup) do
     FileUtils.mkdir_p(Rails.root.join('tmp'))
@@ -19,4 +31,8 @@ end
 
 Sidekiq.configure_client do |config|
   config.redis = { url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1') }
+
+  config.client_middleware do |chain|
+    chain.add SidekiqUniqueJobs::Middleware::Client
+  end
 end

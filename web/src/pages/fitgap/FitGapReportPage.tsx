@@ -25,9 +25,12 @@ export default function FitGapReportPage() {
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
+  const [triggerError, setTriggerError] = useState<string | null>(null);
+
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
     try {
+      setTriggerError(null);
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
@@ -38,7 +41,11 @@ export default function FitGapReportPage() {
           setGenerating(true);
         } catch {
           setGenerating(false);
+          setTriggerError("Failed to trigger fit/gap report generation. Please try again.");
         }
+      } else {
+        setGenerating(false);
+        setTriggerError("Failed to load fit/gap report.");
       }
     }
   }, [portfolio, vacancyId]);
@@ -148,6 +155,16 @@ export default function FitGapReportPage() {
         </div>
       )}
 
+      {/* Error state */}
+      {triggerError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="p-4 flex items-center justify-between">
+            <span className="text-sm text-destructive font-medium">{triggerError}</span>
+            <Button size="sm" variant="outline" onClick={fetchReport}>Retry</Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Report ready */}
       {report && (
         <>
@@ -163,17 +180,33 @@ export default function FitGapReportPage() {
 
           <Separator />
 
-          {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
+          {/* Culture & competency narrative */}
+          {report.culture_narrative && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.culture_narrative}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Overall narrative */}
+          {report.overall_narrative && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Overall Recommendation</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.overall_narrative}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (

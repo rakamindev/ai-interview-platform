@@ -23,9 +23,17 @@ export default function SkillPortfolioCard({
     <Card>
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-4">
           <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
+            <div className="flex items-center gap-2">
+              <LevelBadge level={effectiveLevel} />
+              {skill.expected_level != null && (
+                <div className="text-xs text-muted-foreground flex flex-col items-center">
+                  <span className="text-[10px]">Expected</span>
+                  <LevelBadge level={skill.expected_level} size="sm" />
+                </div>
+              )}
+            </div>
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>
@@ -38,7 +46,9 @@ export default function SkillPortfolioCard({
               <ConfidenceIndicator confidence={skill.ai_confidence} />
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          <div className="w-full sm:w-auto self-end sm:self-auto">
+            <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          </div>
         </div>
 
         {/* Low confidence note */}

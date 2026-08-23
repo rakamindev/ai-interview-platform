@@ -11,11 +11,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PaginationControls from "@/components/PaginationControls";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Search, Trash2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -23,12 +36,14 @@ function SessionRow({
   index,
   assessmentId,
   onCopy,
+  onDeleteClick,
   copiedId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onDeleteClick: (id: number) => void;
   copiedId: number | null;
 }) {
   const navigate = useNavigate();
@@ -114,6 +129,14 @@ function SessionRow({
               Results
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => onDeleteClick(session.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </div>
@@ -125,28 +148,41 @@ export default function AssessmentInvitePage() {
   const navigate = useNavigate();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
+  
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null);
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
+    const s = search.trim();
+    const st = statusFilter === "all" ? "" : statusFilter;
+    const res = await assessmentsApi.getSessions(Number(id), page, s, st);
     setSessions(res.data.sessions);
+    setMeta(res.data.meta);
+  }, [id, page, search, statusFilter]);
+
+  useEffect(() => {
+    assessmentsApi.get(Number(id))
+      .then((res) => setAssessment(res.data.assessment))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
+    const delay = setTimeout(() => {
+      loadSessions();
+    }, 300);
+    return () => clearTimeout(delay);
+  }, [loadSessions]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -169,7 +205,10 @@ export default function AssessmentInvitePage() {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
-      setSessions((prev) => [created, ...prev]);
+      setPage(1);
+      setSearch("");
+      setStatusFilter("all");
+      // loadSessions will trigger due to page/search/status reset
     } finally {
       setCreatingSession(false);
     }
@@ -186,6 +225,20 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
+  };
+
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteSession = async () => {
+    if (!deletingSessionId) return;
+    try {
+      await sessionsApi.delete(deletingSessionId);
+      loadSessions();
+      setDeletingSessionId(null);
+    } catch (e: any) {
+      console.error("Failed to delete session", e);
+      setDeleteError(e.response?.data?.errors?.[0]?.message || "Failed to delete session");
+    }
   };
 
   if (loading) {
@@ -279,14 +332,36 @@ export default function AssessmentInvitePage() {
       <Separator />
 
       {/* Sessions list */}
-      <div className="space-y-2">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">
             Candidates
-            {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
+            {meta?.total_count > 0 && (
+              <span className="ml-1.5 text-muted-foreground font-normal">({meta.total_count})</span>
             )}
           </h2>
+          <div className="flex items-center gap-2">
+            <div className="relative w-48">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search name..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="pl-8 h-8 text-xs"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="active">Live</SelectItem>
+                <SelectItem value="ended">Ended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {sessions.length === 0 ? (
@@ -312,12 +387,14 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onDeleteClick={(sid) => setDeletingSessionId(sid)}
                   copiedId={copiedId}
                 />
               ))}
             </CardContent>
           </Card>
         )}
+        <PaginationControls meta={meta} onPageChange={setPage} />
       </div>
 
       {/* Assessment skills detail */}
@@ -338,6 +415,39 @@ export default function AssessmentInvitePage() {
           </div>
         </>
       )}
+
+      <AlertDialog open={deletingSessionId !== null} onOpenChange={(open) => !open && setDeletingSessionId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. It will permanently delete this candidate's session, audio recordings, and results.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteError !== null} onOpenChange={() => { setDeleteError(null); setDeletingSessionId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cannot Delete Session</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => { setDeleteError(null); setDeletingSessionId(null); }}>
+              Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
