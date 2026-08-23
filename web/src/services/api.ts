@@ -30,8 +30,6 @@ export function getErrorCode(error: unknown): string | undefined {
   }
   return undefined;
 }
-  return undefined;
-}
 
 /**
  * Validate API response data against a zod schema.
