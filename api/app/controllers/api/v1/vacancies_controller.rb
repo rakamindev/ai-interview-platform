@@ -9,7 +9,13 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = Vacancy.order(created_at: :desc)
+
+        if params[:title].present?
+          vacancies = vacancies.where("role_title ILIKE ?", "%#{params[:title]}%")
+        end
+
+        vacancies = paginate(vacancies)
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
