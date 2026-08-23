@@ -66,7 +66,7 @@ RSpec.describe PortfolioSkillGenerationEvent do
   end
 
   describe "append-only enforcement" do
-    it "prevents UPDATE via Postgres trigger", skip: "triggers not created in CI migration context" do
+    it "prevents UPDATE via Postgres trigger" do
       event = described_class.create!(
         portfolio_skill_id: skill.id,
         tenant_id: skill.tenant_id,
@@ -83,7 +83,7 @@ RSpec.describe PortfolioSkillGenerationEvent do
       end.to raise_error(ActiveRecord::StatementInvalid, /append-only/)
     end
 
-    it "prevents DELETE via Postgres trigger", skip: "triggers not created in CI migration context" do
+    it "prevents DELETE via Postgres trigger" do
       event = described_class.create!(
         portfolio_skill_id: skill.id,
         tenant_id: skill.tenant_id,

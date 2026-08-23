@@ -55,7 +55,7 @@ jobs:
           working-directory: api
       - name: Prepare database
         working-directory: api
-        run: bundle exec rails db:create db:migrate
+        run: bundle exec rails db:create db:force_migrate
       - name: Run RSpec
         working-directory: api
         run: bundle exec rspec --format documentation

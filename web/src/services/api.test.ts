@@ -53,7 +53,6 @@ function installFailingRefreshHandlers() {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers();
   vi.restoreAllMocks();
   installRefreshHandlers();
 });
@@ -63,7 +62,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe.skip("api — 401 retry & refresh dedup", () => {
+describe("api — 401 retry & refresh dedup", () => {
   it("two concurrent 401s trigger exactly one /refresh call", async () => {
     let refreshCount = 0;
     server.use(
@@ -98,10 +97,11 @@ describe.skip("api — 401 retry & refresh dedup", () => {
 
 describe("api — proactive token rotation", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     installRefreshHandlers();
   });
 
-  it.skip("12-minute timer fires a refresh", async () => {
+  it("12-minute timer fires a refresh", async () => {
     let refreshCount = 0;
     server.use(
       http.post(REFRESH_URL, async () => {
