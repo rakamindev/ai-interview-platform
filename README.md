@@ -1,4 +1,5 @@
 # The Product
+
 Please refer to https://github.com/rakamindev/ai-interview-platform/wiki for initial product specification
 
 # The Platform
@@ -15,10 +16,24 @@ The two services run together: the web app talks to the API over REST and WebSoc
 
 ## Running it locally
 
-Each service has its own setup guide. Run the API first, then the web app pointed at it.
+**One-time setup:**
 
-1. **API** — see [`api/README.md`](api/README.md). Rails app; needs Ruby (see `api/.ruby-version`), PostgreSQL, and Redis. It serves on `http://localhost:3001`.
-2. **Web** — see [`web/README.md`](web/README.md). Vite app; `npm install`, copy `.env.example` to `.env`, point `VITE_API_BASE_URL` at the API, then `npm run dev`. It serves on `http://localhost:5173`.
+```bash
+cd api && cp config/application.yml.sample config/application.yml   # fill in DB_* at least
+bundle install && rails db:create && rails db:migrate && rails db:seed
+cd ../web && cp .env.example .env   # defaults already point at localhost:3001
+npm install
+```
+
+**Every time after that**, from the repo root:
+
+```bash
+bin/dev
+```
+
+Starts everything (Redis, Rails API on `:3001`, Sidekiq, Vite on `:5173`) in one terminal. `Ctrl+C` stops all of it. Then open `http://localhost:5173/login` and log in with the seeded account above.
+
+Full details (all env vars, project structure) are still in [`api/README.md`](api/README.md) and [`web/README.md`](web/README.md) if you need them — `bin/dev` is the fast path.
 
 ## Notes for the case study
 

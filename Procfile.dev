@@ -1,0 +1,4 @@
+redis: docker rm -f ai-interview-redis >/dev/null 2>&1; docker run --rm -p 6379:6379 --name ai-interview-redis redis:alpine
+api: cd api && rm -f tmp/pids/server.pid && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES bundle exec rails server -p 3001
+worker: until nc -z localhost 6379; do sleep 0.5; done; cd api && bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+web: cd web && npm run dev

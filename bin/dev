@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+cd "$(dirname "$0")/../api"
+
+if command -v rbenv &> /dev/null; then
+  exec rbenv exec bundle exec foreman start -f ../Procfile.dev
+else
+  exec bundle exec foreman start -f ../Procfile.dev
+fi
