@@ -18,3 +18,4 @@ web/.vite/
 
 # OS
 .DS_Store
+.worktrees/
