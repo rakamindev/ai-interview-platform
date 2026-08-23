@@ -1,0 +1,111 @@
+/usr/bin/env: ‘ruby\r’: No such file or directory
+/usr/bin/env: use -[v]S to pass options in shebang lines
+
+Randomized with seed 53859
+....FF.FFFFF..........
+
+Failures:
+
+  1) Portfolios::Generator level coercion forces confidence to low when no level could be determined
+     Failure/Error: expect(session.portfolio.portfolio_skills.sole.ai_confidence).to eq('low')
+
+       expected: "low"
+            got: "high"
+
+       (compared using ==)
+     # ./spec/services/portfolios/generator_spec.rb:76:in `block (3 levels) in <top (required)>'
+     # ./spec/rails_helper.rb:36:in `block (3 levels) in <top (required)>'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/strategy.rb:30:in `cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:34:in `block (2 levels) in cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:35:in `cleaning'
+     # ./spec/rails_helper.rb:36:in `block (2 levels) in <top (required)>'
+
+  2) Portfolios::Generator level coercion records no level for an empty string rather than defaulting to L1
+     Failure/Error: expect(skill.ai_level).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/generator_spec.rb:50:in `block (4 levels) in <top (required)>'
+     # ./spec/rails_helper.rb:36:in `block (3 levels) in <top (required)>'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/strategy.rb:30:in `cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:34:in `block (2 levels) in cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:35:in `cleaning'
+     # ./spec/rails_helper.rb:36:in `block (2 levels) in <top (required)>'
+
+  3) Portfolios::Generator level coercion records no level for a missing level rather than defaulting to L1
+     Failure/Error: expect(skill.ai_level).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/generator_spec.rb:50:in `block (4 levels) in <top (required)>'
+     # ./spec/rails_helper.rb:36:in `block (3 levels) in <top (required)>'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/strategy.rb:30:in `cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:34:in `block (2 levels) in cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:35:in `cleaning'
+     # ./spec/rails_helper.rb:36:in `block (2 levels) in <top (required)>'
+
+  4) Portfolios::Generator level coercion records no level for a non-numeric level rather than defaulting to L1
+     Failure/Error: expect(skill.ai_level).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/generator_spec.rb:50:in `block (4 levels) in <top (required)>'
+     # ./spec/rails_helper.rb:36:in `block (3 levels) in <top (required)>'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/strategy.rb:30:in `cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:34:in `block (2 levels) in cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:35:in `cleaning'
+     # ./spec/rails_helper.rb:36:in `block (2 levels) in <top (required)>'
+
+  5) Portfolios::Generator level coercion accepts an "L4"-style level
+     Failure/Error: expect(session.portfolio.portfolio_skills.sole.ai_level).to eq(4)
+
+       expected: 4
+            got: 1
+
+       (compared using ==)
+     # ./spec/services/portfolios/generator_spec.rb:68:in `block (3 levels) in <top (required)>'
+     # ./spec/rails_helper.rb:36:in `block (3 levels) in <top (required)>'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/strategy.rb:30:in `cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:34:in `block (2 levels) in cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:35:in `cleaning'
+     # ./spec/rails_helper.rb:36:in `block (2 levels) in <top (required)>'
+
+  6) Portfolios::Generator level coercion records no level for zero rather than defaulting to L1
+     Failure/Error: expect(skill.ai_level).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/generator_spec.rb:50:in `block (4 levels) in <top (required)>'
+     # ./spec/rails_helper.rb:36:in `block (3 levels) in <top (required)>'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/strategy.rb:30:in `cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:34:in `block (2 levels) in cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:35:in `cleaning'
+     # ./spec/rails_helper.rb:36:in `block (2 levels) in <top (required)>'
+
+  7) Portfolios::Generator level coercion records no level for an out-of-range 9 rather than defaulting to L1
+     Failure/Error: expect(skill.ai_level).to be_nil
+
+       expected: nil
+            got: 5
+     # ./spec/services/portfolios/generator_spec.rb:50:in `block (4 levels) in <top (required)>'
+     # ./spec/rails_helper.rb:36:in `block (3 levels) in <top (required)>'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/strategy.rb:30:in `cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:34:in `block (2 levels) in cleaning'
+     # /usr/local/bundle/gems/database_cleaner-core-2.0.1/lib/database_cleaner/cleaners.rb:35:in `cleaning'
+     # ./spec/rails_helper.rb:36:in `block (2 levels) in <top (required)>'
+
+Finished in 2.15 seconds (files took 18.69 seconds to load)
+22 examples, 7 failures
+
+Failed examples:
+
+rspec ./spec/services/portfolios/generator_spec.rb:71 # Portfolios::Generator level coercion forces confidence to low when no level could be determined
+rspec './spec/services/portfolios/generator_spec.rb[1:1:2]' # Portfolios::Generator level coercion records no level for an empty string rather than defaulting to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:1:1]' # Portfolios::Generator level coercion records no level for a missing level rather than defaulting to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:1:3]' # Portfolios::Generator level coercion records no level for a non-numeric level rather than defaulting to L1
+rspec ./spec/services/portfolios/generator_spec.rb:63 # Portfolios::Generator level coercion accepts an "L4"-style level
+rspec './spec/services/portfolios/generator_spec.rb[1:1:4]' # Portfolios::Generator level coercion records no level for zero rather than defaulting to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:1:5]' # Portfolios::Generator level coercion records no level for an out-of-range 9 rather than defaulting to L1
+
+Randomized with seed 53859
+

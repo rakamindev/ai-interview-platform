@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.in_current_tenant.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +101,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.in_current_tenant.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +127,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.in_current_tenant.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -151,9 +151,13 @@ module Api
         # Routes use :id for both session-based and direct portfolio lookups
         # If called from session context, look up via session
         if @session
+          # @session already came through Session's tenant default_scope.
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          # Direct /portfolios/:id lookups (export) carry no session context,
+          # so they must be scoped explicitly — otherwise any assessor could
+          # export any organization's candidate PDF by guessing an id.
+          @portfolio = Portfolio.in_current_tenant.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -205,6 +209,9 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          # Lets the client say so when the narrative is the post-failure stub
+          # rather than a generated one.
+          narrative_status:  report.narrative_status,
           generated_at:      report.generated_at
         }
       end

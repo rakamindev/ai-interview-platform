@@ -1,0 +1,31 @@
+# Development / test image.
+#
+# The production Dockerfile builds with `--deployment --frozen` and
+# `without 'development test'`, which by design excludes rspec-rails,
+# factory_bot and friends. That image therefore cannot run the test
+# suite. This image installs every bundle group so `rspec` works, and
+# expects the app directory to be bind-mounted for live reload.
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      git \
+      libpq-dev \
+      postgresql-client \
+      tzdata \
+      libjemalloc2 \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install gems into the image (not the bind mount) so a mounted source
+# tree never shadows the bundle.
+COPY Gemfile Gemfile.lock ./
+RUN bundle config set --local without '' \
+ && bundle install --jobs 4 --retry 3
+
+COPY . .
+
+EXPOSE 3001
+
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3001"]

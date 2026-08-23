@@ -5,6 +5,13 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
+    # Raised when the model's response cannot be trusted enough to replace
+    # the portfolio that already exists. Carries no model output, so it is
+    # safe to persist and log.
+    class UnusableResponse < StandardError; end
+
+    NEUTRAL_SUMMARY = 'No competency summary was returned for this skill.'
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
@@ -20,23 +27,185 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      # Row lock: PortfolioGeneratorWorker retries and the regenerate endpoint
+      # can both be in flight for one session. Two generators interleaving
+      # around the delete-and-rewrite below would corrupt the skill set.
+      portfolio.with_lock do
+        portfolio.update!(generation_status: 'generating')
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+        prompt   = build_prompt
+        response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+        # Parse and validate *before* touching anything already persisted.
+        skills = parse_skills(response)
+        save_skills(portfolio, skills)
+
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
-    rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+    rescue StandardError => e
+      reason = safe_error_reason(e)
+      portfolio&.update_columns(generation_status: 'failed', generation_error: reason)
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{reason}")
       raise
     end
 
     private
+
+    # ── Failure reporting ──────────────────────────────────────────────────
+    #
+    # The previous implementation persisted and logged `e.message` verbatim.
+    # A JSON::ParserError message embeds the fragment of the document it
+    # choked on, and that document is the model's reading of the candidate's
+    # interview — their words. That put candidate personal data into
+    # application logs and into a DB column that the API hands back to any
+    # assessor, which UU PDP does not permit for this purpose.
+    #
+    # Failure reporting only needs to tell an operator what to do next, so we
+    # map to a fixed vocabulary and never interpolate untrusted text.
+    def safe_error_reason(error)
+      case error
+      when UnusableResponse
+        error.message
+      when JSON::ParserError
+        'The model returned a response that was not valid JSON.'
+      when ActiveRecord::RecordInvalid
+        # Our own validation text, about our own schema — no model output.
+        "Generated skills failed validation: #{error.record.errors.full_messages.take(3).join('; ')}"
+      when Faraday::TimeoutError, Net::ReadTimeout
+        'The model did not respond within the timeout.'
+      when Faraday::Error
+        'The model request failed.'
+      else
+        "Generation failed (#{error.class.name})."
+      end
+    end
+
+    # ── Response handling ──────────────────────────────────────────────────
+
+    # Returns normalised skill rows, or raises before any write happens.
+    def parse_skills(response)
+      data = response.is_a?(Hash) ? response : JSON.parse(response.to_s)
+
+      unless data.is_a?(Hash)
+        raise UnusableResponse, 'The model response was not an object.'
+      end
+
+      configured = data['configured_skills']
+      discovered = data['discovered_skills']
+
+      # Both keys absent means we cannot tell "the model found nothing" from
+      # "the model answered a different question". Refusing here is what keeps
+      # a malformed response from emptying an existing portfolio.
+      if configured.nil? && discovered.nil?
+        raise UnusableResponse,
+              'The model response contained neither configured_skills nor discovered_skills.'
+      end
+
+      rows = Array(configured).map { |s| normalise_skill(s, discovered: false) } +
+             Array(discovered).map { |s| normalise_skill(s, discovered: true) }
+
+      rows.compact
+    end
+
+    # A skill row the model returned, coerced into something the schema can
+    # hold — without inventing a rating that was never assessed.
+    def normalise_skill(raw, discovered:)
+      return nil unless raw.is_a?(Hash)
+
+      label = raw['skill_label'].presence
+      return nil if label.nil?  # unlabelled row is not attributable to anything
+
+      {
+        skill_id:           discovered ? nil : raw['skill_id'].presence,
+        skill_label:        label.to_s.strip,
+        is_discovered:      discovered,
+        ai_level:           coerce_level(raw['level']),
+        ai_confidence:      coerce_confidence(raw['confidence'], raw['level']),
+        evidence:           Array(raw['evidence']).map(&:to_s).first(3),
+        competency_summary: raw['competency_summary'].presence || NEUTRAL_SUMMARY
+      }
+    end
+
+    # nil when the model gave us nothing usable.
+    #
+    # The previous `level.to_i.clamp(1, 5)` mapped nil, "", "three" and 0 all
+    # onto 1 — "executes with explicit guidance, cannot apply independently".
+    # A skill the interview never reached became a documented weakness.
+    def coerce_level(value)
+      return value if value.is_a?(Integer) && value.between?(1, 5)
+
+      # Accept "4" and "L4", reject everything else rather than guessing.
+      if value.is_a?(String) && (m = value.match(/\A\s*[Ll]?([1-5])\s*\z/))
+        return m[1].to_i
+      end
+
+      nil
+    end
+
+    # An unrated skill cannot carry a confidence in its rating. Anything else
+    # we do not recognise degrades to the most conservative value rather than
+    # failing the whole batch.
+    def coerce_confidence(value, level)
+      return 'low' if coerce_level(level).nil?
+
+      normalised = value.to_s.strip.downcase
+      PortfolioSkill::CONFIDENCE_LEVELS.include?(normalised) ? normalised : 'low'
+    end
+
+    # ── Persistence ────────────────────────────────────────────────────────
+
+    def save_skills(portfolio, rows)
+      # One transaction around delete-and-rewrite. Previously destroy_all ran
+      # first and create! could raise afterwards, leaving the portfolio empty
+      # and marked failed — and because the worker retries three times, a
+      # consistently malformed response wiped it four times over.
+      PortfolioSkill.transaction do
+        preserved = capture_overrides(portfolio)
+
+        portfolio.portfolio_skills.destroy_all
+
+        rows.each do |attrs|
+          skill = portfolio.portfolio_skills.create!(attrs)
+          restore_override(skill, preserved)
+        end
+      end
+    end
+
+    # assessor_overrides are cascaded away by destroy_all, so a regeneration
+    # silently discarded the one judgement in this system a human actually
+    # made. We carry them across, keyed by the same identity the fit/gap
+    # engine matches on.
+    def capture_overrides(portfolio)
+      portfolio.portfolio_skills.includes(:assessor_override).each_with_object({}) do |skill, acc|
+        override = skill.assessor_override
+        next if override.nil?
+
+        acc[override_key(skill.skill_id, skill.skill_label)] = override.attributes.slice(
+          'ai_level', 'override_level', 'assessor_notes', 'overridden_by', 'overridden_at'
+        )
+      end
+    end
+
+    def restore_override(skill, preserved)
+      attrs = preserved[override_key(skill.skill_id, skill.skill_label)]
+      return if attrs.nil?
+
+      # ai_level is kept as it was when the assessor made the call. If the new
+      # model run disagrees with that recorded value the override is stale,
+      # and keeping the original is what makes that detectable downstream —
+      # overwriting it would erase the fact that a human was overruling
+      # something specific.
+      skill.create_assessor_override!(attrs)
+    end
+
+    def override_key(skill_id, skill_label)
+      skill_id.presence&.downcase || skill_label.to_s.strip.downcase
+    end
+
+    # ── Prompt ─────────────────────────────────────────────────────────────
 
     def build_prompt
       assessment       = @session.assessment
@@ -90,9 +259,15 @@ module Portfolios
            Assign the highest level where you see CONSISTENT evidence, not just one strong moment.
            If evidence is mixed (mostly L2 with one L3 moment), assign L2.
 
+           If the transcript does not contain enough evidence to place the
+           candidate against the anchors, return "level": null. Do NOT guess and
+           do NOT default to 1 — an unassessed skill and a weak skill are
+           different findings and must not be reported as the same thing.
+
         3. WRITE THE COMPETENCY SUMMARY
            2-3 sentences. Focus on patterns, not individual answers.
            What does this person reliably do at this skill? What's the ceiling? What's missing?
+           If level is null, say what was missing rather than characterising ability.
 
         4. ASSIGN CONFIDENCE
            high — probe_count >= 3 AND state = covered
@@ -145,37 +320,6 @@ module Portfolios
         probe_count: map.probe_count,
         is_discovered: map.is_discovered
       }
-    end
-
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
-
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
     end
   end
 end
