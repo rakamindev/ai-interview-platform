@@ -17,9 +17,9 @@ GEMINI_API_KEY: "your_gemini_api_key"
 # Compose already sets this; only needed for native (non-container) runs.
 # GEMINI_STUB: "false"
 # GEMINI_STUB_MODE: "valid"   # see app/clients/gemini/stub_client.rb
-GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
-GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
-GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
+GEMINI_LIVE_MODEL: "gemini-3.1-flash-live-preview"
+GEMINI_FLASH_MODEL: "gemini-3.5-flash"
+GEMINI_PRO_MODEL: "gemini-3.5-flash"
 
 # App URL (for invite links)
 APP_BASE_URL: "http://localhost:3001"
@@ -33,3 +33,14 @@ ALLOWED_ORIGINS: "http://localhost:5173"
 
 # Sidekiq / Redis
 REDIS_URL: "redis://localhost:6379/1"
+
+# Native (non-container) `RAILS_ENV=test` runs otherwise inherit DB_NAME from
+# the top-level default above and truncate the real development database via
+# DatabaseCleaner (see rails_helper.rb) — this override keeps test runs on
+# their own database.
+test:
+  DB_NAME: "rakamin_test"
+  # Docker-compose sets this for container test runs; native runs need it
+  # too so specs never make real Gemini API calls (see spec comments in
+  # portfolio_generator_worker_spec.rb and Gemini::ClientFactory).
+  GEMINI_STUB: "true"

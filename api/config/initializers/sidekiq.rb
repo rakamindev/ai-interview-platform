@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "sidekiq/capsule"
+require_relative "../../app/middlewares/sidekiq_correlation_middleware"
 
 SIDEKIQ_STATUS_FILE = Rails.root.join("tmp/sidekiq_status").freeze
 

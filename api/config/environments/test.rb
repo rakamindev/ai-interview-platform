@@ -30,6 +30,13 @@ Rails.application.configure do
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
 
+  # Rails 8's default Host Authorization only auto-permits IP hosts and
+  # .localhost/.test suffixes — it blocks rspec-rails/Rack::Test's default
+  # request host ("www.example.com"), which broke the entire request-spec
+  # suite after the Rails 7.0->8.1 upgrade. Test requests aren't real
+  # browsers hitting real hosts, so disable the check entirely here.
+  config.hosts.clear
+
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 

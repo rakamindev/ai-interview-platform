@@ -110,6 +110,12 @@ rival_corp = demo_org!(name: "Rival Corp", scheme: "rival-corp", identifier: "ri
 # ── Dev user (docs/07 §6) ──────────────────────────────────────────────────────
 dev_user = demo_user!(email: "dev@test-corp.local")
 
+# Memberships (API-NEW-01) — verify_scheme_claim! hard-requires a membership
+# row, so the dev user needs one in both demo orgs to actually be usable.
+[test_corp, rival_corp].each do |org|
+  Membership.find_or_create_by!(user: dev_user, organization: org) { |m| m.role = "admin" }
+end
+
 # ── Assessments ────────────────────────────────────────────────────────────────
 frontend_en = demo_assessment!(
   tenant_id: test_corp.id, created_by: dev_user.id,

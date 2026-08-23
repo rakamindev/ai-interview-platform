@@ -9,7 +9,7 @@ Rails.application.configure do
     correlation_id = Current.correlation_id rescue nil
 
     {
-      time: event.time.iso8601(3),
+      time: Time.now.utc.iso8601(3),
       request_id: event.payload[:request_id],
       remote_ip: event.payload[:remote_ip],
       user_id: event.payload[:user_id],
