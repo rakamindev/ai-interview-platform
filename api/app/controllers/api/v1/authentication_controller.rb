@@ -17,6 +17,7 @@ module Api
         # Per-endpoint authorization (authorize_auth_token!) enforces the actual
         # role gating; login itself only verifies credentials.
         scheme = resolve_scheme
+        return json_error("Unable to determine organization. Please access via your organization's URL.", :unprocessable_entity, code: "tenant_unresolved") unless scheme.present?
 
         json_response(issue_session_for(user, scheme: scheme))
       end
@@ -49,6 +50,8 @@ module Api
 
         user = User.find(token_record.user_id)
         scheme = resolve_scheme
+        return json_error("Unable to determine organization", :unprocessable_entity, code: "tenant_unresolved") unless scheme.present?
+
         new_access_token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
 
         effective_role = Membership.effective_role(user_id: user.id, scheme: scheme, fallback_role: user.role)
