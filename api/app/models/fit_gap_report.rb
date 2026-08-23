@@ -17,4 +17,7 @@ class FitGapReport < ApplicationRecord
   def generating? = status == "generating"
   def complete?   = status == "complete"
   def failed?     = status == "failed"
+
+  def ai_narrative?      = narrative_source == "ai"
+  def fallback_narrative? = narrative_source == "fallback"
 end

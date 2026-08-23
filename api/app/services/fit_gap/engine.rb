@@ -34,7 +34,10 @@ module FitGap
         additional_strengths: additional,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
+        narrative_source: narratives[:source],
+        generation_error: narratives[:error],
         generated_at: Time.current,
+        status: "complete",
         tenant_id: @portfolio.tenant_id
       )
 
@@ -191,10 +194,10 @@ module FitGap
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data["culture_narrative"], overall: data["overall_narrative"] }
+        { culture: data["culture_narrative"], overall: data["overall_narrative"], source: "ai" }
       rescue StandardError => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        { culture: nil, overall: generate_fallback_narrative(skill_comparisons), source: "fallback", error: e.message }
       end
     end
 

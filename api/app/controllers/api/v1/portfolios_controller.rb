@@ -167,6 +167,7 @@ module Api
           additional_strengths: report.additional_strengths,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          narrative_source: report.narrative_source,
           generated_at: report.generated_at,
           schema_version: report.skill_comparisons&.first&.dig(:schema_version)
         }
