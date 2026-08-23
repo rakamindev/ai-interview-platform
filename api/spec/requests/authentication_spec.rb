@@ -25,17 +25,14 @@ RSpec.describe "Authentication", type: :request do
       expect(payload[:scheme]).to eq(org.scheme)
     end
 
-    it "falls back to the first org when no referer is present" do
+    it "returns 422 tenant_unresolved when no referer is present" do
       post "/api/v1/auth/login", params: {
         email: user.email,
         password: "password"
       }
 
-      expect(response).to have_http_status(:ok)
-      token = response.parsed_body["access_token"]
-      payload = JsonWebToken.decode(token)
-
-      expect(payload[:scheme]).to be_present
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body["errors"][0]["code"]).to eq("tenant_unresolved")
     end
 
     it "allows a role: user account to log in (API-FIX-01)" do
@@ -48,6 +45,35 @@ RSpec.describe "Authentication", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["access_token"]).to be_present
+    end
+  end
+
+  describe "POST /api/v1/auth/refresh" do
+    it "returns 422 tenant_unresolved when referer cannot resolve org" do
+      # Login with a valid referer to get a refresh token
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: "password"
+      }, headers: {
+        "Referer" => "http://#{org.host}/"
+      }
+      expect(response).to have_http_status(:ok)
+
+      rt = response.headers["Set-Cookie"].to_s.match(/refresh_token=([a-f0-9]+)/)&.captures&.first
+      csrf = response.headers["Set-Cookie"].to_s.match(/csrf_secret=([a-f0-9]+)/)&.captures&.first
+      expect(rt).to be_present
+      expect(csrf).to be_present
+
+      # Refresh WITHOUT a referer — should fail with 422
+      cookie_header = "refresh_token=#{rt}; csrf_secret=#{csrf}"
+      post "/api/v1/auth/refresh",
+        headers: {
+          "X-CSRF-Token" => csrf,
+          "Cookie" => cookie_header
+        }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body["errors"][0]["code"]).to eq("tenant_unresolved")
     end
   end
 

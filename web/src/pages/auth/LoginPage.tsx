@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setAuth } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
+import { getErrorCode } from "@/services/api";
 import { m } from "@/paraglide/messages.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +25,15 @@ export default function LoginPage() {
       const res = await authApi.login({ email, password });
       setAuth(res.data.access_token, res.data.user);
       navigate("/assessments");
-    } catch {
-      setError(m.auth_invalid_credentials());
+    } catch (err) {
+      const code = getErrorCode(err);
+      if (code === "tenant_unresolved") {
+        setError("Unable to determine your organization. Please access via your organization's URL.");
+      } else if (code === "invalid_credentials") {
+        setError(m.auth_invalid_credentials());
+      } else {
+        setError(m.common_error());
+      }
     } finally {
       setLoading(false);
     }

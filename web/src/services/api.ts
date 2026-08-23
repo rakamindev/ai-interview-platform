@@ -8,6 +8,30 @@ const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
 export const WS_URL = WS_BASE_URL;
 
 /**
+ * Extract a structured error code from an API error response.
+ * Returns undefined when the backend didn't provide a code (network errors, etc).
+ */
+export function getErrorCode(error: unknown): string | undefined {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object" &&
+    "data" in error.response &&
+    error.response.data &&
+    typeof error.response.data === "object" &&
+    "errors" in error.response.data &&
+    Array.isArray(error.response.data.errors) &&
+    error.response.data.errors.length > 0 &&
+    "code" in error.response.data.errors[0]
+  ) {
+    return String(error.response.data.errors[0].code);
+  }
+  return undefined;
+}
+
+/**
  * Validate API response data against a zod schema.
  * Lenient: unknown keys allowed, per-field failure degrades to fallback.
  */

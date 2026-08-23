@@ -102,7 +102,7 @@ module TokenIssuance
   end
 
   def resolve_scheme
-    scheme_from_referer || Organization.order(:created_at).limit(1).pick(:scheme) || "test-corp"
+    scheme_from_referer
   end
 
   def scheme_from_referer
