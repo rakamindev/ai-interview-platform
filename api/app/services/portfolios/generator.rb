@@ -24,9 +24,26 @@ module Portfolios
       portfolio.update!(generation_status: "generating")
 
       if @session.transcript_turns.where(speaker: "candidate").none?
-        portfolio.portfolio_skills.destroy_all
+        non_overridden = portfolio.portfolio_skills.left_joins(:assessor_override)
+                                .where(assessor_overrides: { id: nil })
+        overridden_count = portfolio.portfolio_skills.count - non_overridden.count
+        non_overridden.destroy_all
+
+        if overridden_count.positive?
+          portfolio.portfolio_skills.where.not(id: nil).update_all(ai_presence: "stale")
+          portfolio.portfolio_skills.stale.find_each do |skill|
+            PortfolioSkillGenerationEvent.create!(
+              portfolio_skill_id: skill.id,
+              tenant_id: skill.tenant_id,
+              event_type: "stale_marked",
+              reason: "Empty transcript — AI cannot re-evaluate; override preserved",
+              created_at: Time.current
+            )
+          end
+        end
+
         portfolio.update!(generation_status: "complete", generated_at: Time.current)
-        Rails.logger.info("[N10] Skipping generation for session #{@session.id} — no candidate turns")
+        Rails.logger.info("[N10] Skipping generation for session #{@session.id} — no candidate turns (#{overridden_count} overrides preserved as stale)")
         return portfolio
       end
 
