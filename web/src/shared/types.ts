@@ -15,6 +15,8 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  expired?: boolean;
+  invite_expires_at?: string;
 }
 
 export interface TranscriptTurn {

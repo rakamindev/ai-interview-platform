@@ -5,10 +5,12 @@ class Session < ApplicationRecord
 
   STATUSES   = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
+  INVITE_EXPIRY = 7.days
 
   belongs_to :assessment
   has_many :transcript_turns, dependent: :destroy
   has_many :coverage_maps, dependent: :destroy
+  has_many :session_snapshots, dependent: :destroy
   has_one  :portfolio, dependent: :destroy
 
   validates :invite_token, presence: true, uniqueness: true
@@ -24,9 +26,18 @@ class Session < ApplicationRecord
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+  def expired? = pending? && Time.current > invite_expires_at
+
+  def invite_expires_at
+    self[:invite_expires_at] || (created_at + INVITE_EXPIRY)
+  end
+
+  def extend_invite!(days)
+    update!(invite_expires_at: Time.current + days.to_i.days)
+  end
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('APP_BASE_URL', 'http://localhost:5173')
     "#{base}/interview/#{invite_token}"
   end
 

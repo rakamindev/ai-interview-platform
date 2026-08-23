@@ -9,10 +9,15 @@ export interface AssessmentPayload {
   assessment_skills_attributes: Partial<AssessmentSkill>[];
 }
 
+export interface AssessmentStats {
+  total_candidates: number;
+  live_now: number;
+}
+
 export const assessmentsApi = {
-  list: (page = 1) =>
-    api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
+  list: (page = 1, q?: string) =>
+    api.get<{ assessments: Assessment[]; meta: PaginationMeta; stats: AssessmentStats }>("/assessments", {
+      params: { page, q },
     }),
 
   get: (id: number) =>
@@ -32,12 +37,22 @@ export const assessmentsApi = {
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
 
-  getSessions: (assessmentId: number) =>
-    api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
+  getSessions: (assessmentId: number, page = 1) =>
+    api.get<{ sessions: Session[]; meta: PaginationMeta }>(`/assessments/${assessmentId}/sessions`, {
+      params: { page },
+    }),
 
-  createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
+  createSession: (assessmentId: number, candidateName?: string, candidateId?: number, inviteExpiryDays?: number) =>
     api.post<{ session: Session; invite_url: string }>(
       `/assessments/${assessmentId}/sessions`,
-      { session: { candidate_name: candidateName, candidate_id: candidateId } }
+      { session: { candidate_name: candidateName, candidate_id: candidateId, invite_expiry_days: inviteExpiryDays } }
     ),
+
+  updateSession: (sessionId: number, candidateName: string) =>
+    api.patch<{ session: Session }>(`/sessions/${sessionId}`, { session: { candidate_name: candidateName } }),
+
+  extendInvite: (sessionId: number, days = 7) =>
+    api.post<{ session: Session }>(`/sessions/${sessionId}/extend_invite`, { days }),
+
+  deleteSession: (sessionId: number) => api.delete(`/sessions/${sessionId}`),
 };
