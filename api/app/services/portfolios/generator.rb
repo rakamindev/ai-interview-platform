@@ -24,7 +24,10 @@ module Portfolios
       portfolio.update!(generation_status: "generating")
 
       if @session.transcript_turns.where(speaker: "candidate").none?
-        portfolio.portfolio_skills.destroy_all
+        non_overridden = portfolio.portfolio_skills.left_joins(:assessor_override)
+                                .where(assessor_overrides: { id: nil })
+        overridden_count = portfolio.portfolio_skills.count - non_overridden.count
+        non_overridden.destroy_all
 
         if overridden_count.positive?
           portfolio.portfolio_skills.where.not(id: nil).update_all(ai_presence: "stale")
