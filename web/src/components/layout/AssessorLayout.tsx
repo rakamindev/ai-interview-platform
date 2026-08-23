@@ -60,7 +60,7 @@ export default function AssessorLayout() {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {tenant.name && (
               <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
                 {m.nav_tenant({ name: tenant.name })}
