@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_19_000000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_24_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -53,6 +53,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.bigint "updated_by"
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
@@ -132,6 +133,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000000) do
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
   end
 
+  create_table "session_snapshots", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.datetime "captured_at", null: false
+    t.text "image_data", null: false
+    t.index ["session_id"], name: "index_session_snapshots_on_session_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.bigint "tenant_id", null: false
     t.bigint "assessment_id", null: false
@@ -145,6 +153,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_19_000000) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "proctoring_consented_at"
+    t.datetime "invite_expires_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true

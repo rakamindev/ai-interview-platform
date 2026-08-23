@@ -34,4 +34,19 @@ export const sessionsApi = {
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+
+  recordProctoringConsent: (token: string) =>
+    api.post<{ proctoring_consented_at: string }>(`/sessions/${token}/consent`),
+
+  uploadSnapshot: (token: string, image: string) =>
+    api.post<{ message: string }>(`/sessions/${token}/snapshot`, { image }),
+
+  getSnapshots: (id: number) =>
+    api.get<{ snapshots: SessionSnapshot[] }>(`/sessions/${id}/snapshots`),
 };
+
+export interface SessionSnapshot {
+  id: number;
+  captured_at: string;
+  image_data: string;
+}

@@ -3,6 +3,9 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  candidate_name?: string;
+  started_at?: string;
+  transcript?: { speaker: "candidate" | "ai" | "assessor" | "system"; text: string }[];
 }
 
 // WebSocket message types
@@ -14,7 +17,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "invalid";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

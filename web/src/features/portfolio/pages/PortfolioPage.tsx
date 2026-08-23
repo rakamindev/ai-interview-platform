@@ -5,6 +5,7 @@ import { Separator } from "@/shared/ui/separator";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import SkillPortfolioCard from "@/features/portfolio/components/SkillPortfolioCard";
+import SnapshotStrip from "@/features/portfolio/components/SnapshotStrip";
 import { sessionsApi } from "@/shared/services/sessions";
 import { vacanciesApi } from "@/features/vacancies/services/vacancies";
 import { portfoliosApi } from "@/features/portfolio/services/portfolios";
@@ -187,6 +188,8 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          <SnapshotStrip sessionId={Number(sessionId)} />
+
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>

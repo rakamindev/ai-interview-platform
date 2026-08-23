@@ -19,8 +19,10 @@ import TranscriptBubble from "@/shared/components/TranscriptBubble";
 import { useAudioCapture } from "@/features/interview/hooks/useAudioCapture";
 import { useAudioPlayback } from "@/features/interview/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/features/interview/hooks/useAudioWebSocket";
+import { useSnapshotCapture } from "@/features/interview/hooks/useSnapshotCapture";
 import { sessionsApi } from "@/shared/services/sessions";
 import HardwareCheck from "@/features/interview/components/HardwareCheck";
+import ProctoringConsent from "@/features/interview/components/ProctoringConsent";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker } from "@/features/interview/types";
 import type { TranscriptTurn } from "@/shared/types";
@@ -33,12 +35,19 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [proctoringConsented, setProctoringConsented] = useState(false);
+
+  const handleProctoringConsent = () => {
+    if (token) sessionsApi.recordProctoringConsent(token);
+    setProctoringConsented(true);
+  };
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const resumedRef = useRef(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -48,8 +57,12 @@ export default function InterviewPage() {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "active") {
+          setTranscript(res.data.transcript ?? []);
+          setInterviewState("active");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("invalid"));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -145,6 +158,10 @@ export default function InterviewPage() {
     onFrame: send,
   });
 
+  const { start: startSnapshots, stop: stopSnapshots } = useSnapshotCapture({
+    onCapture: (image) => { if (token) sessionsApi.uploadSnapshot(token, image); },
+  });
+
   muteRef.current = mute;
   unmuteRef.current = unmute;
 
@@ -165,21 +182,31 @@ export default function InterviewPage() {
     setInterviewState("connecting");
     connect();
     await startCapture();
+    startSnapshots();
     // Start muted — only unmute when backend sends speaker_changed: candidate.
     // This prevents mic audio from being sent during AI speech, since separate
     // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
-  }, [sessionId, connect, startCapture]);
+  }, [sessionId, connect, startCapture, startSnapshots]);
+
+  // Reconnect automatically when a candidate returns to an already-active session (refresh, dropped call, etc).
+  useEffect(() => {
+    if (resumedRef.current) return;
+    if (!sessionId || candidateInfo?.session_status !== "active") return;
+    resumedRef.current = true;
+    startInterview();
+  }, [sessionId, candidateInfo, startInterview]);
 
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
     stopCapture();
+    stopSnapshots();
     stopPlayback();
     sendJson({ type: "end_session" });
     disconnect();
     setInterviewState("complete");
-  }, [stopCapture, stopPlayback, sendJson, disconnect]);
+  }, [stopCapture, stopSnapshots, stopPlayback, sendJson, disconnect]);
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
@@ -201,7 +228,16 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {candidateInfo?.candidate_name && (
+          <p className="text-xs text-center text-muted-foreground">
+            This interview was invited for <strong>{candidateInfo.candidate_name}</strong>.
+            If this isn't you, please contact the hiring team.
+          </p>
+        )}
+
+        {!proctoringConsented ? (
+          <ProctoringConsent onAgree={handleProctoringConsent} />
+        ) : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
@@ -242,9 +278,25 @@ export default function InterviewPage() {
     );
   }
 
+  if (interviewState === "invalid") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="font-display text-xl font-semibold">Invite link invalid or expired</h2>
+        <p className="text-sm text-muted-foreground">
+          This interview link is no longer valid. Please contact the hiring team for a new invite.
+        </p>
+      </div>
+    );
+  }
+
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
+  const elapsedSeconds = candidateInfo?.started_at
+    ? Math.floor((Date.now() - new Date(candidateInfo.started_at).getTime()) / 1000)
+    : 0;
+  const remainingSeconds = Math.max((candidateInfo?.time_limit_min ?? 0) * 60 - elapsedSeconds, 0);
 
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
@@ -253,7 +305,7 @@ export default function InterviewPage() {
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
-            totalSeconds={candidateInfo.time_limit_min * 60}
+            totalSeconds={remainingSeconds}
             running={interviewState === "active"}
             onExpired={endInterview}
           />
@@ -273,6 +325,14 @@ export default function InterviewPage() {
             <span>Briefly reconnecting — please wait a moment.</span>
           </div>
         )
+      )}
+
+      {/* Mic muted banner */}
+      {micMuted && interviewState === "active" && (
+        <div className="flex items-center gap-2 text-sm bg-destructive/10 border border-destructive/40 text-destructive rounded-lg px-4 py-2.5 mt-2">
+          <MicOff className="h-4 w-4 shrink-0" />
+          <span>Your mic is off — the interviewer can't hear you. Tap "Muted" below to turn it back on.</span>
+        </div>
       )}
 
       {/* Reconnected prompt */}
