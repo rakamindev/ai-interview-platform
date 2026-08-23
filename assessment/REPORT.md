@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | **Video walkthrough** | https://youtu.be/bs6h74YCspc |
-| **Pull request** | https://github.com/rakamindev/ai-interview-platform/compare/main...myst-al:feat/fit-gap-integrity |
+| **Pull request** | [rakamindev/ai-interview-platform **#106**](https://github.com/rakamindev/ai-interview-platform/pull/106) |
 | **Branch** | [`myst-al/ai-interview-platform` → `feat/fit-gap-integrity`](https://github.com/myst-al/ai-interview-platform/tree/feat/fit-gap-integrity) |
 | **Seeded fault branch** | [`spike/seeded-fault`](https://github.com/myst-al/ai-interview-platform/tree/spike/seeded-fault) — fault [`075e96e`](https://github.com/myst-al/ai-interview-platform/commit/075e96e), revert [`49f1636`](https://github.com/myst-al/ai-interview-platform/commit/49f1636) |
 
