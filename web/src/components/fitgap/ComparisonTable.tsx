@@ -4,6 +4,7 @@ import { CheckCircle, AlertTriangle, TrendingUp, Minus, HelpCircle } from "lucid
 import { m } from "@/paraglide/messages.js";
 import type { SkillComparison, SkillComparisonResult } from "@/types";
 import OverrideProvenance from "./OverrideProvenance";
+import AnchorRail from "./AnchorRail";
 
 interface ComparisonTableProps {
   comparisons: SkillComparison[];
@@ -96,12 +97,24 @@ export default function ComparisonTable({ comparisons, caption, scope }: Compari
                   {scope && <span className="ml-1 text-xs text-muted-foreground">({scope})</span>}
                 </td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.expected_level] ?? `L${c.expected_level}`}
+                  <AnchorRail
+                    compact
+                    skillLabel=""
+                    requiredLevel={c.expected_level}
+                  />
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
                     <span className="inline-flex items-center gap-1">
-                      {LEVEL_LABELS[c.candidate_level] ?? `L${c.candidate_level}`}
+                      <AnchorRail
+                        compact
+                        skillLabel=""
+                        requiredLevel={c.expected_level}
+                        candidateLevel={c.candidate_level}
+                        confidence={(c.confidence?.toLowerCase() as "high" | "medium" | "low") ?? "high"}
+                        result={c.result}
+                        isOverride={c.is_override}
+                      />
                       {c.is_override && (
                         <OverrideProvenance
                           actor={c.override_actor ?? undefined}
