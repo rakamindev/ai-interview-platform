@@ -6,22 +6,11 @@ class ApplicationController < ActionController::API
   include ExceptionHandler
 
   before_action :require_tenant!
-  before_action :verify_scheme_claim!, if: lambda {
-    begin
-      Current.user.present?
-    rescue StandardError
-      false
-    end && begin
-      Current.organization.present?
-    rescue StandardError
-      false
-    end
-  }
 
   # Declarative auth helper — mirrors rakamin-api's authorize_auth_token! pattern.
   # Usage:
   #   authorize_auth_token! :admin
-  #   authorize_auth_token! :assessor      # currently admin-only (API-FIX-07)
+  #   authorize_auth_token! :assessor      # admin or Membership.role == "assessor"
   #   authorize_auth_token! :any           # any authenticated user
   def self.authorize_auth_token!(*roles, **options)
     before_action(options) { authenticate_with_roles!(roles) }
@@ -42,10 +31,17 @@ class ApplicationController < ActionController::API
   # AC-4.6: reject when no active membership exists for the user in the
   # resolved org, or when the JWT scheme claim disagrees with the resolved org.
   def verify_scheme_claim!
-    membership = Membership.find_by(
-      user_id: Current.user.id,
-      organization_id: Current.organization.id
-    )
+    # Reuse the membership AuthorizeApiRequest already resolved for this
+    # user+org this request, if any, instead of querying it again.
+    cached = Current.membership { nil }
+    membership = if cached && cached.user_id == Current.user.id && cached.organization_id == Current.organization.id
+                   cached
+                 else
+                   Membership.find_by(
+                     user_id: Current.user.id,
+                     organization_id: Current.organization.id
+                   )
+                 end
 
     raise ExceptionHandler::Unauthorized, "No active membership in this organization" unless membership
 
@@ -83,6 +79,13 @@ class ApplicationController < ActionController::API
     roles = roles.flatten.map(&:to_s)
     result = AuthorizeApiRequest.new(request.headers, roles, cookies: cookies).call
     Current.user = result[:user]
+
+    # AC-4.6, run here (not as a separate before_action) so it's guaranteed to
+    # execute after Current.user is set — before_actions declared on this
+    # parent class run before ones added by subclasses via authorize_auth_token!,
+    # so a plain `before_action :verify_scheme_claim!` here would always fire
+    # before Current.user exists and silently no-op.
+    verify_scheme_claim! if current_organization.present?
   end
 
   # ── Params ──────────────────────────────────────────────────────────────────

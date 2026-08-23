@@ -8,7 +8,10 @@ require "ostruct"
 # from the DB membership row when a matching membership exists.
 class AuthorizeApiRequest
   # Roles that map to "assessor" permission in the AI interview context.
-  # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
+  # 'admin' always qualifies; 'assessor' comes from the user's per-org
+  # Membership.role (see #resolve_role_from_membership below) — User::ROLES
+  # itself only has admin/user, since assessor is an org-scoped permission,
+  # not an account-wide one.
   ASSESSOR_ROLES = %w[admin assessor].freeze
 
   def initialize(headers = {}, required_roles = [], cookies: {})
@@ -50,10 +53,20 @@ class AuthorizeApiRequest
   def resolve_role_from_membership(user_id, scheme)
     return nil if scheme.blank?
 
-    org = Organization.find_by(scheme: scheme)
+    # TenantResolverMiddleware already resolved the org for this same scheme
+    # earlier in the request — reuse it instead of a duplicate lookup. Not
+    # every caller goes through that middleware (e.g. the WebSocket
+    # middlewares call this directly), so Current.organization may be unset.
+    cached_org = begin
+      Current.organization
+    rescue StandardError
+      nil
+    end
+    org = (cached_org if cached_org&.scheme == scheme) || Organization.find_by(scheme: scheme)
     return nil unless org
 
     membership = Membership.find_by(user_id: user_id, organization_id: org.id)
+    Current.membership = membership
     membership&.role
   end
 

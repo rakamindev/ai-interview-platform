@@ -42,4 +42,5 @@ module Current
   class_accessor :organization # Organization AR record (from public schema)
   class_accessor :tenant_id # Convenience alias: Current.organization.id
   class_accessor :correlation_id # UUID per-request, threaded through WS→worker→Gemini
+  class_accessor :membership # Membership row for Current.user in Current.organization (avoids a duplicate query in verify_scheme_claim!)
 end
