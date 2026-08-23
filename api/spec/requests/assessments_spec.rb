@@ -4,7 +4,9 @@ require "rails_helper"
 
 RSpec.describe "Assessments", type: :request do
   let(:org) { create(:organization, scheme: "test-corp") }
-  let(:user) { create(:user, email: "assessor@test-corp.local", role: "assessor", organization: org) }
+  # "assessor" is a Membership-level role (API-NEW-01), not a User-level one —
+  # User::ROLES only allows admin/user. jwt_for grants the matching membership.
+  let(:user) { create(:user, email: "assessor@test-corp.local", role: "admin") }
   let(:headers) { jwt_for(user: user, scheme: org.scheme) }
   let(:assessment) { create(:assessment, tenant_id: org.id) }
 
@@ -36,14 +38,19 @@ RSpec.describe "Assessments", type: :request do
         end
       end
 
+      auth_headers = headers # force lazy setup (user/org/membership) before measuring
+
       queries = []
       callback = ->(*_args, payload) { queries << payload[:sql] }
       ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
-        get "/api/v1/assessments", headers: headers
+        get "/api/v1/assessments", headers: auth_headers
       end
 
       real_queries = queries.grep_v(/SCHEMA|BEGIN|COMMIT|SAVEPOINT/)
-      expect(real_queries.length).to be <= 3
+      # Floor is 4: tenant org resolution (middleware) + membership check
+      # (auth) + assessments SELECT + one windowed DISTINCT ON for latest
+      # sessions — bounded regardless of how many sessions exist.
+      expect(real_queries.length).to be <= 4
     end
   end
 
@@ -56,8 +63,9 @@ RSpec.describe "Assessments", type: :request do
 
         expect(response).to have_http_status(:unprocessable_entity)
         body = response.parsed_body
-        expect(body["error"]).to be_present
-        expect(body["error"]).to match(/session/i)
+        message = body.dig("errors", 0, "message")
+        expect(message).to be_present
+        expect(message).to match(/session/i)
       end
     end
 

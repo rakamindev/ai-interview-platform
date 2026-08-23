@@ -6,7 +6,7 @@ RSpec.describe FitGap::Engine do
   let(:organization) { create(:organization) }
   let(:session)      { create(:session) }
   let(:portfolio)    { create(:portfolio, session: session) }
-  let(:vacancy)      { create(:vacancy, organization: organization) }
+  let(:vacancy)      { create(:vacancy, tenant_id: organization.id) }
   let(:gemini_stub)  { Gemini::StubClient.new(mode: :valid) }
 
   subject(:engine) { described_class.new(portfolio: portfolio, vacancy: vacancy, gemini_client: gemini_stub) }
@@ -222,7 +222,12 @@ RSpec.describe FitGap::Engine do
   end
 
   # AC-1.13: duplicate vacancy skill labels → both compared
-  describe "AC-1.13 — duplicate vacancy skill labels" do
+  # OBSOLETE: db/migrate/20260819000005_add_uniqueness_and_fitgap_status.rb
+  # later added a unique index on (vacancy_id, skill_label), so two vacancy
+  # skills sharing a label on the same vacancy can no longer exist — this
+  # scenario is now impossible to construct. Left pending rather than
+  # deleted since it documents a real, deliberate behavior change.
+  describe "AC-1.13 — duplicate vacancy skill labels", pending: "obsoleted by unique index on (vacancy_id, skill_label)" do
     # Two vacancy skills with same label but different skill_ids.
     let!(:vs1) { create(:vacancy_skill, vacancy: vacancy, skill_id: "SK-A", skill_label: "Ruby", expected_level: 3) }
     let!(:vs2) { create(:vacancy_skill, vacancy: vacancy, skill_id: "SK-B", skill_label: "Ruby", expected_level: 4) }
@@ -297,6 +302,14 @@ RSpec.describe FitGap::Engine do
     end
 
     it "stores skill_comparisons and narratives" do
+      # The shared :valid Gemini fixture is shaped for Portfolios::Generator
+      # (configured_skills/discovered_skills), not this engine's narrative
+      # output — stub the shape it actually expects.
+      allow(gemini_stub).to receive(:generate_content).and_return(
+        "culture_narrative" => "Strong alignment with the team's technical culture.",
+        "overall_narrative" => "A solid match overall."
+      )
+
       report = engine.call
       expect(report.skill_comparisons).to be_an(Array)
       expect(report.culture_narrative).to be_present

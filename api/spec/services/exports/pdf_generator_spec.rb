@@ -33,4 +33,13 @@ RSpec.describe Exports::PdfGenerator do
       expect(pdf_bytes.byteslice(0, 4)).to eq("%PDF")
     end
   end
+
+  describe "candidate name in header" do
+    it "includes the candidate name in the PDF" do
+      pdf_bytes = generator.call
+      hex_name = session.candidate_name.unpack1("H*")
+
+      expect(pdf_bytes).to include(hex_name)
+    end
+  end
 end

@@ -6,12 +6,10 @@ RSpec.describe FitGapGeneratorWorker do
   let(:organization) { create(:organization) }
   let(:session)      { create(:session) }
   let(:portfolio)    { create(:portfolio, session: session, generation_status: "complete") }
-  let(:vacancy)      { create(:vacancy, organization: organization) }
-  let(:gemini_stub)  { Gemini::StubClient.new(mode: :valid) }
-
-  before do
-    allow_any_instance_of(FitGap::Engine).to receive(:gemini_client).and_return(gemini_stub)
-  end
+  let(:vacancy)      { create(:vacancy, tenant_id: organization.id) }
+  # GEMINI_STUB=true (set for this whole container) already redirects
+  # Gemini::HttpClient.new to Gemini::StubClient with mode: :valid by
+  # default — FitGap::Engine's real gemini_client is already a stub.
 
   describe "#perform" do
     it "creates a FitGapReport for the portfolio and vacancy" do

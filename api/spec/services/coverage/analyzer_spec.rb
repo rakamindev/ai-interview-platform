@@ -48,6 +48,15 @@ RSpec.describe Coverage::Analyzer do
       map = session.coverage_maps.find_by(skill_id: "SK-ENG-001")
       original_probe = map.probe_count
 
+      # Gemini claims a jump of +5 — the analyzer must cap it to +1 regardless.
+      allow(gemini_stub).to receive(:generate_content).and_return(
+        "skill_updates" => [
+          { "id" => "SK-ENG-001", "new_state" => "partial", "new_probe_count" => original_probe + 5,
+            "reason" => "test" }
+        ],
+        "discovered_skills" => []
+      )
+
       result = analyzer.call
 
       update = result[:skill_updates].find { |u| u[:coverage_map_id] == map.id }

@@ -11,16 +11,16 @@ RSpec.describe "Sessions", type: :request do
     it "rejects an expired invite token on candidate_info" do
       session.update_column(:invite_expires_at, 1.day.ago)
 
-      get "/sessions/#{session.invite_token}/candidate"
+      get "/api/v1/sessions/#{session.invite_token}/candidate"
 
       expect(response).to have_http_status(:unauthorized)
-      expect(response.parsed_body["message"]).to include("expired")
+      expect(response.parsed_body.dig("errors", 0, "message")).to include("expired")
     end
 
     it "allows a valid invite token on candidate_info" do
       session.update_column(:invite_expires_at, 14.days.from_now)
 
-      get "/sessions/#{session.invite_token}/candidate"
+      get "/api/v1/sessions/#{session.invite_token}/candidate"
 
       expect(response).to have_http_status(:ok)
     end
@@ -28,7 +28,7 @@ RSpec.describe "Sessions", type: :request do
     it "rejects an expired invite token on audio_complete" do
       session.update_column(:invite_expires_at, 1.day.ago)
 
-      post "/sessions/#{session.invite_token}/audio_complete"
+      post "/api/v1/sessions/#{session.invite_token}/audio_complete"
 
       expect(response).to have_http_status(:unauthorized)
     end
@@ -37,7 +37,7 @@ RSpec.describe "Sessions", type: :request do
       session.update_column(:invite_expires_at, 14.days.from_now)
       session.update!(status: "ended") # Already ended → idempotent
 
-      post "/sessions/#{session.invite_token}/audio_complete"
+      post "/api/v1/sessions/#{session.invite_token}/audio_complete"
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["ended"]).to be true

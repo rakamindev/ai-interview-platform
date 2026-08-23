@@ -90,6 +90,7 @@ RSpec.describe CoverageAnalyzerWorker do
         session.update!(status: "ended")
         analyzer = instance_double(Coverage::Analyzer)
         allow(Coverage::Analyzer).to receive(:new).and_return(analyzer)
+        allow(analyzer).to receive(:call)
 
         described_class.new.perform(session.id, 1)
 
@@ -117,7 +118,7 @@ RSpec.describe CoverageAnalyzerWorker do
 
   describe "sidekiq configuration" do
     it "uses the coverage queue" do
-      expect(described_class.sidekiq_options["queue"]).to eq("coverage")
+      expect(described_class.sidekiq_options["queue"]).to eq(:coverage)
     end
 
     it "does not retry" do

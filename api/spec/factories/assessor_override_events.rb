@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :assessor_override_event do
     association :portfolio_skill
+    tenant_id { portfolio_skill.tenant_id }
     ai_level { 2 }
     override_level { 4 }
     assessor_notes { "Override reason." }

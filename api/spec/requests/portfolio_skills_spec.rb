@@ -14,7 +14,7 @@ RSpec.describe "Portfolio skills overrides", type: :request do
     create(:portfolio_skill, portfolio: portfolio, tenant_id: org.id, ai_level: 3)
   end
 
-  let(:override_url) { "/api/v1/portfolio-skills/#{portfolio_skill.id}/override" }
+  let(:override_url) { "/api/v1/portfolio_skills/#{portfolio_skill.id}/override" }
   let(:valid_params) { { override: { override_level: 4, assessor_notes: "Strong signal" } } }
 
   describe "AC-3.1: valid override with a reason" do
@@ -114,7 +114,7 @@ RSpec.describe "Portfolio skills overrides", type: :request do
     end
 
     it "returns 404" do
-      post "/api/v1/portfolio-skills/#{portfolio_skill_b.id}/override",
+      post "/api/v1/portfolio_skills/#{portfolio_skill_b.id}/override",
            params: valid_params,
            headers: headers
 

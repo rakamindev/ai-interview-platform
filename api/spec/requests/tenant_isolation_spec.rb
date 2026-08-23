@@ -27,13 +27,13 @@ RSpec.describe "Tenant isolation", type: :request do
 
   describe "AC-4.1: cross-tenant portfolio access" do
     it "returns 404 when assessor A requests tenant B portfolio" do
-      get "/api/v1/portfolios/#{portfolio_b.id}", headers: headers_a
+      get "/api/v1/sessions/#{session_b.id}/portfolio", headers: headers_a
 
       expect(response).to have_http_status(:not_found)
     end
 
     it "returns 404 when assessor B requests tenant A portfolio" do
-      get "/api/v1/portfolios/#{portfolio_a.id}", headers: headers_b
+      get "/api/v1/sessions/#{session_a.id}/portfolio", headers: headers_b
 
       expect(response).to have_http_status(:not_found)
     end
@@ -67,7 +67,7 @@ RSpec.describe "Tenant isolation", type: :request do
 
   describe "AC-4.4: cross-tenant override" do
     it "returns 404 when assessor A overrides tenant B portfolio skill" do
-      post "/api/v1/portfolio-skills/#{portfolio_skill_b.id}/override",
+      post "/api/v1/portfolio_skills/#{portfolio_skill_b.id}/override",
            params: { override: { override_level: 4, assessor_notes: "Override" } },
            headers: headers_a
 
@@ -91,12 +91,13 @@ RSpec.describe "Tenant isolation", type: :request do
 
   describe "AC-4.10: response body reveals nothing" do
     it "returns a generic 404 message" do
-      get "/api/v1/portfolios/#{portfolio_b.id}", headers: headers_a
+      get "/api/v1/sessions/#{session_b.id}/portfolio", headers: headers_a
 
       body = response.parsed_body
-      expect(body["message"]).to be_present
-      expect(body["message"]).not_to include("portfolio")
-      expect(body["message"]).not_to include("tenant")
+      message = body.dig("errors", 0, "message")
+      expect(message).to be_present
+      expect(message).not_to include("portfolio")
+      expect(message).not_to include("tenant")
     end
   end
 end

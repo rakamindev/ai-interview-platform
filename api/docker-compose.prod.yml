@@ -32,7 +32,7 @@ services:
   api-prod:
     build:
       context: .
-      target: prod
+      target: production
     restart: unless-stopped
     depends_on:
       postgres:
@@ -64,10 +64,10 @@ services:
       - .:/ai-interview
     command: ["bundle", "exec", "puma", "-C", "config/puma.rb"]
 
-  sidekiq:
+  sidekiq-prod:
     build:
       context: .
-      target: dev
+      target: production
     restart: unless-stopped
     depends_on:
       postgres:

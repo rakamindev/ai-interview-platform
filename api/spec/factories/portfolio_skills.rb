@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :portfolio_skill do
     association :portfolio
+    tenant_id { portfolio.tenant_id }
     skill_id { "SK-TEST-001" }
     sequence(:skill_label) { |n| "Test Skill #{n}" }
     is_discovered { false }

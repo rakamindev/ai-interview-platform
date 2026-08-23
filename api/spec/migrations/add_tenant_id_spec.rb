@@ -1,12 +1,27 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require Rails.root.join("db/migrate/20260819000001_add_tenant_id_to_portfolio_family")
 
 RSpec.describe AddTenantIdToPortfolioFamily do
   let(:migration) { described_class.new }
 
   before do
     allow(migration).to receive(:say_with_time).and_yield
+  end
+
+  # db:prepare loads the final schema.rb directly rather than running
+  # migrations one by one, so this migration is already applied before any
+  # example runs — `migration.up` would immediately hit "already exists".
+  # Roll it back first, run the example, then roll the whole thing back
+  # (Postgres DDL is transactional) so the suite's baseline schema is
+  # untouched afterward regardless of pass/fail.
+  around do |example|
+    ActiveRecord::Base.connection.transaction do
+      migration.down
+      example.run
+      raise ActiveRecord::Rollback
+    end
   end
 
   describe "#up" do
@@ -33,6 +48,7 @@ RSpec.describe AddTenantIdToPortfolioFamily do
 
   describe "#down" do
     it "removes tenant_id columns from all portfolio family tables" do
+      migration.up
       migration.down
 
       %i[portfolios portfolio_skills fit_gap_reports assessor_overrides].each do |table|

@@ -78,22 +78,22 @@ RSpec.describe Portfolios::Generator do
     it 'coerces "L3" and 3.7 to 3, rejects "three"' do
       portfolio = generator.call
 
-      skills_by_label = portfolio.portfolio_skills.index_by(&:skill_label)
+      skills_by_id = portfolio.portfolio_skills.index_by(&:skill_id)
 
-      # "L3" → 3
-      l3_skill = skills_by_label.values.find { |s| s.skill_label.include?("L3") }
-      expect(l3_skill&.ai_level).to eq(3)
-      expect(l3_skill&.rating_state).to eq("rated") if l3_skill
-
-      # 3.7 → 3
-      float_skill = skills_by_label.values.find { |s| s.skill_label.include?("float") }
-      expect(float_skill&.ai_level).to eq(3)
-      expect(float_skill&.rating_state).to eq("rated") if float_skill
-
-      # "three" → unrated
-      word_skill = skills_by_label.values.find { |s| s.skill_label.include?("word") }
+      # "three" (SK-ENG-001) → unrated
+      word_skill = skills_by_id["SK-ENG-001"]
       expect(word_skill&.ai_level).to be_nil
-      expect(word_skill&.rating_state).to eq("unrated") if word_skill
+      expect(word_skill&.rating_state).to eq("unrated")
+
+      # "L3" (SK-ENG-002) → 3
+      l3_skill = skills_by_id["SK-ENG-002"]
+      expect(l3_skill&.ai_level).to eq(3)
+      expect(l3_skill&.rating_state).to eq("rated")
+
+      # 3.7 (SK-ENG-003) → 3
+      float_skill = skills_by_id["SK-ENG-003"]
+      expect(float_skill&.ai_level).to eq(3)
+      expect(float_skill&.rating_state).to eq("rated")
     end
   end
 
@@ -170,7 +170,7 @@ RSpec.describe Portfolios::Generator do
     let(:gemini_stub) { Gemini::StubClient.new(mode: :malformed_json) }
 
     it "raises and marks portfolio as failed" do
-      portfolio = session.portfolio || session.create!(
+      portfolio = session.portfolio || session.create_portfolio!(
         candidate_id: session.candidate_id,
         tenant_id: session.tenant_id,
         generation_status: "pending"
@@ -201,7 +201,7 @@ RSpec.describe Portfolios::Generator do
     let(:gemini_stub) { Gemini::StubClient.new(mode: :timeout) }
 
     it "marks portfolio as failed with timeout error" do
-      portfolio = session.portfolio || session.create!(
+      portfolio = session.portfolio || session.create_portfolio!(
         candidate_id: session.candidate_id,
         tenant_id: session.tenant_id,
         generation_status: "pending"
@@ -220,7 +220,7 @@ RSpec.describe Portfolios::Generator do
     let(:gemini_stub) { Gemini::StubClient.new(mode: :rate_limited) }
 
     it "marks portfolio as failed" do
-      portfolio = session.portfolio || session.create!(
+      portfolio = session.portfolio || session.create_portfolio!(
         candidate_id: session.candidate_id,
         tenant_id: session.tenant_id,
         generation_status: "pending"
@@ -254,9 +254,11 @@ RSpec.describe Portfolios::Generator do
                                                                        "discovered_skills" => []
                                                                      })
 
-      # Stub upsert_skill to raise mid-transaction
+      # Stub upsert_skill to raise mid-transaction — RecordInvalid needs a real
+      # record (it calls #errors on whatever's passed to build its message).
+      invalid_record = PortfolioSkill.new(tenant_id: session.tenant_id).tap(&:valid?)
       allow_any_instance_of(described_class).to receive(:upsert_skill).and_raise(
-        ActiveRecord::RecordInvalid, "simulated failure"
+        ActiveRecord::RecordInvalid.new(invalid_record)
       )
 
       failing_gen = described_class.new(session: session, gemini_client: failing_client)
@@ -276,7 +278,7 @@ RSpec.describe Portfolios::Generator do
       skill = portfolio.portfolio_skills.find_by(skill_label: "React / Frontend Development Core")
 
       # Create an override
-      override = create(:assessor_override, portfolio_skill: skill, override_level: 4, reason: "Manual correction")
+      override = create(:assessor_override, portfolio_skill: skill, override_level: 4, assessor_notes: "Manual correction")
       override_id = override.id
 
       # Regenerate — the skill label matches, so find_or_initialize_by finds existing row
@@ -308,6 +310,25 @@ RSpec.describe Portfolios::Generator do
     end
   end
 
+  # AC-2.18: No candidate turns → completes with zero skills, Gemini never called
+  describe "AC-2.18 — session ended with no candidate turns" do
+    let(:session) { create(:session, assessment: assessment, status: "ended") }
+
+    before do
+      TranscriptTurn.where(session: session, speaker: "candidate").delete_all
+    end
+
+    it "skips generation entirely" do
+      expect(gemini_stub).not_to receive(:generate_content)
+
+      portfolio = generator.call
+
+      expect(portfolio.generation_status).to eq("complete")
+      expect(portfolio.generated_at).not_to be_nil
+      expect(portfolio.portfolio_skills.count).to eq(0)
+    end
+  end
+
   # AC-2.16: Skill label changed → override not silently dropped
   describe "AC-2.16 — label change preserves old skill row" do
     it "keeps the old skill row with override, new skill is a separate row" do
@@ -316,7 +337,7 @@ RSpec.describe Portfolios::Generator do
       skill = portfolio.portfolio_skills.find_by(skill_label: "React / Frontend Development Core")
 
       # Create an override
-      create(:assessor_override, portfolio_skill: skill, override_level: 4, reason: "Manual")
+      create(:assessor_override, portfolio_skill: skill, override_level: 4, assessor_notes: "Manual")
 
       # Modify the fixture to change the skill label
       new_response = {

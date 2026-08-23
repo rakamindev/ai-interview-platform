@@ -37,6 +37,18 @@ RSpec.describe "Authentication", type: :request do
 
       expect(payload[:scheme]).to be_present
     end
+
+    it "allows a role: user account to log in (API-FIX-01)" do
+      candidate_user = create(:user, :candidate, email: "regular@test-corp.local")
+
+      post "/api/v1/auth/login", params: {
+        email: candidate_user.email,
+        password: "password"
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["access_token"]).to be_present
+    end
   end
 
   describe "scheme claim mismatch guard (AC-4.6)" do
@@ -47,12 +59,14 @@ RSpec.describe "Authentication", type: :request do
       )
 
       # Request with the foreign token — middleware resolves org from the JWT scheme
-      get "/api/v1/portfolios/1", headers: {
+      get "/api/v1/assessments/1", headers: {
         "Authorization" => "Bearer #{foreign_token}"
       }
 
-      # Should reject because the token's scheme doesn't match any org
-      expect(response).to have_http_status(:unauthorized)
+      # "foreign-corp" resolves to no org at all, so this actually hits
+      # require_tenant! (TenantNotFound), not verify_scheme_claim! directly —
+      # both map to 403 by design (exception_handler.rb), not 401.
+      expect(response).to have_http_status(:forbidden)
     end
 
     it "allows when JWT scheme matches the resolved org" do
@@ -61,7 +75,7 @@ RSpec.describe "Authentication", type: :request do
       # The middleware resolves org from the JWT scheme, which matches
       # We can't fully test the happy path without a portfolio,
       # but we can verify the guard doesn't fire on a 404
-      get "/api/v1/portfolios/999999", headers: token
+      get "/api/v1/assessments/999999", headers: token
 
       # Should get 404 (not found), not 401 (scheme mismatch)
       expect(response).to have_http_status(:not_found)
@@ -72,7 +86,7 @@ RSpec.describe "Authentication", type: :request do
     it "JWT wins over the header" do
       token = jwt_for(user: user, scheme: org.scheme)
 
-      get "/api/v1/portfolios/999999", headers: token.merge(
+      get "/api/v1/assessments/999999", headers: token.merge(
         "X-Tenant-Scheme" => "rival-corp"
       )
 

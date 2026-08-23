@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "WebSocket authentication", type: :request do
   let(:org) { create(:organization, scheme: "test-corp") }
   let(:assessment) { create(:assessment, tenant_id: org.id) }
-  let(:session) { create(:session, assessment: assessment, tenant_id: org.id) }
+  let(:session) { create(:session, assessment: assessment, tenant_id: org.id, status: "pending") }
 
   describe "coverage WebSocket role check (AC-4.9)" do
     it "rejects a non-assessor role" do
@@ -74,7 +74,8 @@ RSpec.describe "WebSocket authentication", type: :request do
     it "allows a candidate via invite token (no role check)" do
       middleware = AudioWebSocketMiddleware.new(nil)
       env = {
-        "PATH_INFO" => "/ws/sessions/#{session.id}/audio?token=#{session.invite_token}",
+        "PATH_INFO" => "/ws/sessions/#{session.id}/audio",
+        "QUERY_STRING" => "token=#{session.invite_token}",
         "rack.input" => StringIO.new
       }
 

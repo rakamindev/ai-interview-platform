@@ -16,9 +16,11 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
     response
   end
 
+  # Rack 3's Set-Cookie header value is an Array of one string per cookie
+  # (Rack 2 joined them with "\n" into a single string) — normalize both.
   def extract_cookies
     cookie_jar = {}
-    response.headers["Set-Cookie"].to_s.split("\n").each do |raw|
+    Array(response.headers["Set-Cookie"]).flat_map { |v| v.to_s.split("\n") }.each do |raw|
       name, value = raw.split("=", 2)
       cookie_jar[name.strip.to_sym] = value.to_s.split(";").first
     end
@@ -62,16 +64,16 @@ RSpec.describe "Refresh Token / CSRF / Logout", type: :request do
 
       raw = response.headers["Set-Cookie"].to_s
       expect(raw).to match(/refresh_token=[a-f0-9]+/)
-      expect(raw).to include("HttpOnly")
+      # Rack 3 emits the flag lowercase ("httponly"); match case-insensitively.
+      expect(raw).to match(/httponly/i)
     end
 
     it "sets a non-httpOnly csrf_secret cookie" do
       login
-      raw = response.headers["Set-Cookie"].to_s
-      expect(raw).to match(/csrf_secret=[a-f0-9]+/)
-      # httponly must NOT appear on the csrf_secret cookie line
-      csrf_line = raw.split("\n").find { |l| l.include?("csrf_secret") }
-      expect(csrf_line).not_to include("httponly")
+      cookies = Array(response.headers["Set-Cookie"]).flat_map { |v| v.to_s.split("\n") }
+      csrf_line = cookies.find { |l| l.include?("csrf_secret") }
+      expect(csrf_line).to match(/csrf_secret=[a-f0-9]+/)
+      expect(csrf_line).not_to match(/httponly/i)
     end
 
     it "returns an access_token in the body" do

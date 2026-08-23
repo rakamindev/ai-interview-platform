@@ -5,11 +5,9 @@ require "rails_helper"
 RSpec.describe PortfolioGeneratorWorker do
   let(:assessment)  { create(:assessment) }
   let(:session)     { create(:session, assessment: assessment, status: "ended") }
-  let(:gemini_stub) { Gemini::StubClient.new(mode: :valid) }
-
-  before do
-    allow_any_instance_of(Portfolios::Generator).to receive(:gemini_client).and_return(gemini_stub)
-  end
+  # GEMINI_STUB=true (set for this whole container) already redirects
+  # Gemini::HttpClient.new to Gemini::StubClient with mode: :valid by
+  # default — Portfolios::Generator's real gemini_client is already a stub.
 
   describe "#perform" do
     it "delegates to Portfolios::Generator" do
@@ -39,7 +37,7 @@ RSpec.describe PortfolioGeneratorWorker do
 
   describe "sidekiq configuration" do
     it "uses the portfolio queue" do
-      expect(described_class.sidekiq_options["queue"]).to eq("portfolio")
+      expect(described_class.sidekiq_options["queue"]).to eq(:portfolio)
     end
 
     it "retries 3 times" do

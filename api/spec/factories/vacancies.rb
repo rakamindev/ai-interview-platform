@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :vacancy do
-    association :organization, strategy: :create
+    tenant_id { association(:organization).id }
     created_by { association(:user).id }
     sequence(:role_title) { |n| "Vacancy #{n}" }
   end

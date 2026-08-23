@@ -15,6 +15,14 @@
       "confidence": "high",
       "evidence": ["A rating above 5 is outside the L1-L5 scale."],
       "competency_summary": "Out-of-range high."
+    },
+    {
+      "skill_id": "SK-ENG-003",
+      "skill_label": "System Design & Architecture",
+      "level": 3,
+      "confidence": "high",
+      "evidence": ["A level within the L1-L5 scale should be kept as-is."],
+      "competency_summary": "Valid level."
     }
   ],
   "discovered_skills": []
