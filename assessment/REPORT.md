@@ -596,6 +596,23 @@ Below `sm` the table is replaced by stacked cards rather than left to scroll hor
 
 The unrated skill carries a dashed grey badge reading **Not rated** rather than borrowing L1's styling, and its override panel is labelled *Set rating* with a note that anything recorded is the assessor's own judgement, attributed to them. Saving is disabled until a level is chosen — no pre-selected default, because a default is how an unassessed skill acquires a rating nobody intended.
 
+## The rest of the product
+
+The change above is one vertical slice. For context, these are the surfaces it sits inside — untouched by this PR except where the design system needed the same states.
+
+| | |
+|---|---|
+| ![Assessments](screenshots/11-assessments-list.png) | ![Vacancies](screenshots/15-vacancies-list.png) |
+| **Assessments** — where an assessor configures skills and a time limit | **Vacancies** — the role definition the portfolio is compared against |
+| ![Assessment edit](screenshots/12-assessment-edit.png) | ![Vacancy edit](screenshots/16-vacancy-edit.png) |
+| **Skill configuration** — each skill carries five behavioural anchors from the shared taxonomy | **Expected levels** — the right-hand side of every fit/gap comparison |
+| ![Transcript](screenshots/14-transcript.png) | ![Invite](screenshots/13-assessment-invite.png) |
+| **Transcript** — the evidence every level is supposed to be traceable to | **Invite** — how a candidate reaches the interview |
+
+![Candidate interview](screenshots/17-candidate-interview.png)
+
+The candidate's own view. Worth looking at while thinking about UU PDP: this is the only screen the person being assessed ever sees, and it is the last one. They receive no copy of the portfolio, the levels, or the narrative written about them.
+
 ### Reproducing these
 
 `tooling/capture.mjs` (outside the repo — the PR should not carry a browser binary to produce report images) drives headless Chromium, resolves the seeded ids from the API rather than hardcoding them, and waits on rendered content rather than a timer. The first run of it captured eight skeleton loaders, which is its own small lesson about verifying output rather than exit codes.
