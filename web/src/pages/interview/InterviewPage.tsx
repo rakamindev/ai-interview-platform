@@ -300,7 +300,7 @@ export default function InterviewPage() {
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
-      <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-2xl w-full mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">
             {candidateInfo?.role_title ?? m.interview_title()}
@@ -349,7 +349,7 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
+      <main className="max-w-2xl w-full mx-auto px-4 py-16 text-center space-y-4 flex flex-col items-center">
         <CheckCircle className="h-10 w-10 text-green-500" />
         <h2 className="text-xl font-semibold">{m.interview_complete()}</h2>
         <p className="text-sm text-muted-foreground">{m.interview_complete_thank()}</p>
@@ -374,7 +374,7 @@ export default function InterviewPage() {
       : m.interview_waiting_turn();
 
   return (
-    <main className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <main className="max-w-2xl w-full mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
         <span className="text-sm font-medium">{m.interview_title()}</span>
