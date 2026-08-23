@@ -34,6 +34,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import { AssessmentFormSchema } from "@/schemas/forms";
+import { m } from "@/(paraglide)/messages.js";
 import type { AssessmentFormValues } from "@/schemas/forms";
 import type { AssessmentSkill } from "@/types";
 
@@ -94,7 +95,7 @@ export default function AssessmentNewPage() {
 
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
+      setError(m.assessment.add_skill_error());
       return;
     }
     setError(null);
@@ -122,8 +123,8 @@ export default function AssessmentNewPage() {
   return (
     <main className="max-w-2xl mx-auto">
       <PageHeader
-        title="New Assessment"
-        description="Define a skill-based interview template."
+        title={m.assessment.new()}
+        description={m.assessment.subtitle()}
         backTo="/assessments"
         backLabel="Back to assessments"
       />
@@ -132,7 +133,7 @@ export default function AssessmentNewPage() {
         {/* Role title */}
         <div className="space-y-1.5">
           <Label htmlFor="name">
-            Role title <span className="text-destructive">*</span>
+            {m.assessment.role_title()} <span className="text-destructive">*</span>
           </Label>
           <Input id="name" placeholder="Senior Frontend Engineer" {...register("name")} />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
@@ -141,7 +142,7 @@ export default function AssessmentNewPage() {
         {/* Time limit */}
         <div className="space-y-1.5">
           <Label>
-            Session time limit <span className="text-destructive">*</span>
+            {m.assessment.session_time_limit()} <span className="text-destructive">*</span>
           </Label>
           <Select defaultValue="45" onValueChange={(v) => setValue("time_limit_min", Number(v))}>
             <SelectTrigger className="w-40">
@@ -159,14 +160,14 @@ export default function AssessmentNewPage() {
 
         {/* Language */}
         <div className="space-y-1.5">
-          <Label>Interview language</Label>
+          <Label>{m.assessment.interview_language()}</Label>
           <Select defaultValue="en" onValueChange={(v) => setValue("language", v as "en" | "id")}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="id">Indonesian</SelectItem>
+              <SelectItem value="en">{m.assessment.language_en()}</SelectItem>
+              <SelectItem value="id">{m.assessment.language_id()}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -175,12 +176,12 @@ export default function AssessmentNewPage() {
 
         {/* Skills section */}
         <div className="space-y-3">
-          <Label>Skills to assess</Label>
+          <Label>{m.assessment.skills_to_assess()}</Label>
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              <p className="mb-1">No skills added yet.</p>
-              <p>Add at least one skill to continue.</p>
+              <p className="mb-1">{m.assessment.no_skills()}</p>
+              <p>{m.assessment.add_skill_error()}</p>
             </div>
           ) : (
             <DndContext
@@ -210,11 +211,11 @@ export default function AssessmentNewPage() {
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Add from Skill Taxonomy
+              {m.assessment.add_from_taxonomy()}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={addCustomSkill}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Add custom skill
+              {m.assessment.add_custom_skill()}
             </Button>
           </div>
         </div>
@@ -226,11 +227,11 @@ export default function AssessmentNewPage() {
         {/* Actions */}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/assessments")}>
-            Cancel
+            {m.assessment.cancel()}
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            {m.assessment.save_create()} →
           </Button>
         </div>
       </form>

@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight, ClipboardList } from "lucide-react";
+import { m } from "@/(paraglide)/messages.js";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -13,19 +14,19 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
 
   if (session.status === "active")
     return (
-      <span className="flex items-center gap-1 text-xs text-primary">
+        <span className="flex items-center gap-1 text-xs text-primary">
         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        Live now
+        {m.assessment.live_now()}
       </span>
     );
 
   if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
+    return <span className="text-xs text-destructive">{m.assessment.last_failed()}</span>;
 
   if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
+    return <span className="text-xs text-muted-foreground">{m.assessment.last_completed()}</span>;
 
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  return <span className="text-xs text-muted-foreground">{m.assessment.awaiting_candidate()}</span>;
 }
 
 export default function AssessmentListPage() {
@@ -45,18 +46,18 @@ export default function AssessmentListPage() {
   return (
     <main>
       <PageHeader
-        title="Assessments"
+        title={m.nav.assessments()}
         description="Skill-based interview templates and their candidate sessions."
         actions={
           <Button onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> New Assessment
+            <Plus className="h-4 w-4 mr-1.5" /> {m.assessment.new()}
           </Button>
         }
       />
 
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive mb-4">
-          Failed to load assessments. Please refresh the page.
+          {m.assessment.failed_to_load()}
         </div>
       )}
 
@@ -69,9 +70,9 @@ export default function AssessmentListPage() {
       ) : assessments.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="No assessments yet"
+          title={m.assessment.no_assessments()}
           description="Create an assessment to start inviting candidates to AI-led interviews."
-          actionLabel="Create your first assessment"
+          actionLabel={m.assessment.create_first()}
           onAction={() => navigate("/assessments/new")}
         />
       ) : (
