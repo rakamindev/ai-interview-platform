@@ -1,11 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import SkillPortfolioCard from "./SkillPortfolioCard";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 vi.mock("@/services/portfolios", () => ({
   portfoliosApi: {
-    getOverride: vi.fn()
+    getOverride: vi.fn(),
+    getOverrideHistory: vi.fn(() => Promise.resolve({ data: { override_events: [] } }))
   }
 }));
 
@@ -109,7 +110,9 @@ describe("SkillPortfolioCard", () => {
         onOverrideSaved={noopOverrideSaved}
       />
     );
-    // L5 appears in both SkillPortfolioCard's LevelBadge and OverridePanel's AI→override display
+    // L5 appears in SkillPortfolioCard's LevelBadge; the second (AI→override)
+    // is inside OverridePanel's dialog, which only mounts once opened.
+    fireEvent.click(screen.getByRole("button", { name: /override applied/i }));
     const l5Elements = screen.getAllByText("L5");
     expect(l5Elements.length).toBeGreaterThanOrEqual(2);
   });

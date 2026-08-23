@@ -240,7 +240,7 @@ export default function BulkInvitePage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">Invite Candidates</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Invite Candidates</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Add multiple candidates to this assessment at once.
             </p>

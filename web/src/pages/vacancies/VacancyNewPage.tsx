@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import PageHeader from "@/components/PageHeader";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { VacancyFormSchema } from "@/schemas/forms";
 import type { VacancyFormValues } from "@/schemas/forms";
 
@@ -53,14 +54,13 @@ export default function VacancyNewPage() {
 
   return (
     <main className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground" aria-label="Back to vacancies">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Vacancies</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Vacancy</span>
-      </div>
+      <PageHeader
+        title="New Vacancy"
+        description="Define the skills and culture fit a candidate's portfolio will be compared against."
+        eyebrow="Vacancies"
+        backTo="/vacancies"
+        backLabel="Back to vacancies"
+      />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">

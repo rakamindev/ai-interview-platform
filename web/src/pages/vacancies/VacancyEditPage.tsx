@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import PageHeader from "@/components/PageHeader";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -79,12 +80,7 @@ export default function VacancyEditPage() {
 
   return (
     <main className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground" aria-label="Back to vacancies">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm font-medium">Edit Vacancy</span>
-      </div>
+      <PageHeader title="Edit Vacancy" backTo="/vacancies" backLabel="Back to vacancies" />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import PageHeader from "@/components/PageHeader";
+import EmptyState from "@/components/EmptyState";
 import { vacanciesApi } from "@/services/vacancies";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
 import type { Vacancy } from "@/types";
@@ -22,16 +23,19 @@ export default function VacancyListPage() {
   }, []);
 
   return (
-    <main className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Vacancies</h1>
-        <Button onClick={() => navigate("/vacancies/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
-        </Button>
-      </div>
+    <main>
+      <PageHeader
+        title="Vacancies"
+        description="Roles used to generate fit/gap reports against candidate portfolios."
+        actions={
+          <Button onClick={() => navigate("/vacancies/new")}>
+            <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive mb-4">
           Failed to load vacancies. Please refresh the page.
         </div>
       )}
@@ -43,28 +47,29 @@ export default function VacancyListPage() {
           ))}
         </div>
       ) : vacancies.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No vacancies yet.</p>
-          <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy
-          </Button>
-        </div>
+        <EmptyState
+          icon={Briefcase}
+          title="No vacancies yet"
+          description="Create a vacancy to compare candidate portfolios against required skills."
+          actionLabel="Create your first vacancy"
+          onAction={() => navigate("/vacancies/new")}
+        />
       ) : (
         <div className="space-y-2">
           {vacancies.map((v) => (
-            <Card
+            <Link
               key={v.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/vacancies/${v.id}/edit`)}
+              to={`/vacancies/${v.id}/edit`}
+              className="block rounded-xl border bg-card text-card-foreground shadow hover:border-primary/40 hover:shadow-sm transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
+              <div className="py-3 px-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium text-sm">{v.role_title}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+              </div>
+            </Link>
           ))}
         </div>
       )}

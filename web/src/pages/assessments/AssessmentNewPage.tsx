@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   DndContext,
   closestCenter,
@@ -29,7 +29,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
+import { Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import { AssessmentFormSchema } from "@/schemas/forms";
@@ -120,15 +121,12 @@ export default function AssessmentNewPage() {
 
   return (
     <main className="max-w-2xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Assessment</span>
-      </div>
+      <PageHeader
+        title="New Assessment"
+        description="Define a skill-based interview template."
+        backTo="/assessments"
+        backLabel="Back to assessments"
+      />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Role title */}

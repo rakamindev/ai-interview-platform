@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import PageHeader from "@/components/PageHeader";
+import EmptyState from "@/components/EmptyState";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ChevronRight, ClipboardList } from "lucide-react";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -42,16 +43,19 @@ export default function AssessmentListPage() {
   }, []);
 
   return (
-    <main className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Assessment
-        </Button>
-      </div>
+    <main>
+      <PageHeader
+        title="Assessments"
+        description="Skill-based interview templates and their candidate sessions."
+        actions={
+          <Button onClick={() => navigate("/assessments/new")}>
+            <Plus className="h-4 w-4 mr-1.5" /> New Assessment
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive mb-4">
           Failed to load assessments. Please refresh the page.
         </div>
       )}
@@ -63,21 +67,22 @@ export default function AssessmentListPage() {
           ))}
         </div>
       ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="No assessments yet"
+          description="Create an assessment to start inviting candidates to AI-led interviews."
+          actionLabel="Create your first assessment"
+          onAction={() => navigate("/assessments/new")}
+        />
       ) : (
         <div className="space-y-2">
           {assessments.map((a) => (
-            <Card
+            <Link
               key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/assessments/${a.id}/invite`)}
+              to={`/assessments/${a.id}/invite`}
+              className="block rounded-xl border bg-card text-card-foreground shadow hover:border-primary/40 hover:shadow-sm transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
+              <div className="py-3 px-4 flex items-center justify-between">
                 <div>
                   <p className="font-medium text-sm">{a.name}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -94,8 +99,8 @@ export default function AssessmentListPage() {
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+              </div>
+            </Link>
           ))}
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -13,9 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PageHeader from "@/components/PageHeader";
+import EmptyState from "@/components/EmptyState";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { Copy, Check, Eye, Pencil, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -38,7 +41,7 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
+    <div className="flex items-center justify-between py-3 px-4 hover:bg-muted/40 transition-colors">
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
@@ -182,6 +185,11 @@ export default function AssessmentInvitePage() {
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+      toast.success(
+        created.candidate_name
+          ? `Invite link created for ${created.candidate_name}`
+          : "Invite link created"
+      );
     } finally {
       setCreatingSession(false);
     }
@@ -190,6 +198,7 @@ export default function AssessmentInvitePage() {
   const copyLink = (session: Session, copyId: number) => {
     navigator.clipboard.writeText(session.invite_url);
     setCopiedId(copyId);
+    toast.success("Link copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -197,6 +206,7 @@ export default function AssessmentInvitePage() {
     if (!newSession?.invite_url) return;
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
+    toast.success("Link copied to clipboard");
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 
@@ -211,36 +221,29 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link
-            to="/assessments"
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Back to assessments"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-          </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            {creatingSession ? "Creating..." : "Invite Candidate"}
-          </Button>
-        </div>
-      </div>
+    <main className="max-w-2xl mx-auto">
+      <PageHeader
+        title={assessment?.name ?? "—"}
+        backTo="/assessments"
+        backLabel="Back to assessments"
+        description={`${assessment?.time_limit_min ?? 0} min · ${assessment?.skills?.length ?? 0} skills`}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/assessments/${id}/edit`)}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+            </Button>
+            <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              {creatingSession ? "Creating..." : "Invite Candidate"}
+            </Button>
+          </>
+        }
+      />
+      <div className="space-y-6">
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -284,7 +287,7 @@ export default function AssessmentInvitePage() {
                 <>New invite link ready — share with your candidate:</>
               )}
             </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-background">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>
@@ -318,15 +321,13 @@ export default function AssessmentInvitePage() {
         </div>
 
         {sessions.length === 0 ? (
-          <div className="border rounded-lg p-10 text-center space-y-3">
-            <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
-            <div>
-              <p className="text-sm font-medium">No candidates yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click "Invite Candidate" to generate an interview link.
-              </p>
-            </div>
-          </div>
+          <EmptyState
+            icon={UserRound}
+            title="No candidates yet"
+            description='Click "Invite Candidate" to generate an interview link.'
+            actionLabel="Invite Candidate"
+            onAction={openInviteDialog}
+          />
         ) : (
           <Card>
             <CardContent className="p-0 divide-y">
@@ -369,6 +370,7 @@ export default function AssessmentInvitePage() {
           </div>
         </>
       )}
+      </div>
     </main>
   );
 }
