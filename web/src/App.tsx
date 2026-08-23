@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { performRefresh } from "@/services/api";
+import { Toaster } from "@/components/ui/sonner";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -22,6 +23,7 @@ import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 import OverrideHistoryPage from "@/pages/audit/OverrideHistoryPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -40,7 +42,9 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
+    <>
+      <Toaster />
+      <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
@@ -48,11 +52,27 @@ export default function App() {
           Remove once no external links reference /signup. */}
 
       {/* Assessor routes (protected) */}
-      <Route element={<ProtectedRoute isAuthReady={isAuthReady} />}>
+      <Route element={<ProtectedRoute isAuthReady={isAuthReady} requiredRole="assessor" />}>
         <Route element={<AssessorLayout />}>
           <Route path="/" element={<Navigate to="/assessments" replace />} />
-          <Route path="/admin/invite" element={<InviteAdminPage />} />
-          <Route path="/audit/overrides" element={<OverrideHistoryPage />} />
+          <Route element={<ProtectedRoute isAuthReady={isAuthReady} requiredRole="admin" />}>
+            <Route
+              path="/admin/invite"
+              element={
+                <RouteErrorBoundary routeName="admin-invite">
+                  <InviteAdminPage />
+                </RouteErrorBoundary>
+              }
+            />
+          </Route>
+          <Route
+            path="/audit/overrides"
+            element={
+              <RouteErrorBoundary routeName="audit-overrides">
+                <OverrideHistoryPage />
+              </RouteErrorBoundary>
+            }
+          />
           <Route
             path="/assessments"
             element={
@@ -61,8 +81,22 @@ export default function App() {
               </RouteErrorBoundary>
             }
           />
-          <Route path="/assessments/new" element={<AssessmentNewPage />} />
-          <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
+          <Route
+            path="/assessments/new"
+            element={
+              <RouteErrorBoundary routeName="assessment-new">
+                <AssessmentNewPage />
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path="/assessments/:id/edit"
+            element={
+              <RouteErrorBoundary routeName="assessment-edit">
+                <AssessmentEditPage />
+              </RouteErrorBoundary>
+            }
+          />
           <Route
             path="/assessments/:id/invite"
             element={
@@ -71,10 +105,21 @@ export default function App() {
               </RouteErrorBoundary>
             }
           />
-          <Route path="/assessments/:id/bulk-invite" element={<BulkInvitePage />} />
+          <Route
+            path="/assessments/:id/bulk-invite"
+            element={
+              <RouteErrorBoundary routeName="bulk-invite">
+                <BulkInvitePage />
+              </RouteErrorBoundary>
+            }
+          />
           <Route
             path="/assessments/:id/sessions/:sessionId/monitor"
-            element={<LiveMonitorPage />}
+            element={
+              <RouteErrorBoundary routeName="monitor">
+                <LiveMonitorPage />
+              </RouteErrorBoundary>
+            }
           />
           <Route
             path="/assessments/:id/sessions/:sessionId/portfolio"
@@ -86,15 +131,44 @@ export default function App() {
           />
           <Route
             path="/assessments/:id/sessions/:sessionId/transcript"
-            element={<TranscriptPage />}
+            element={
+              <RouteErrorBoundary routeName="transcript">
+                <TranscriptPage />
+              </RouteErrorBoundary>
+            }
           />
           <Route
             path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
-            element={<FitGapReportPage />}
+            element={
+              <RouteErrorBoundary routeName="fitgap">
+                <FitGapReportPage />
+              </RouteErrorBoundary>
+            }
           />
-          <Route path="/vacancies" element={<VacancyListPage />} />
-          <Route path="/vacancies/new" element={<VacancyNewPage />} />
-          <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+          <Route
+            path="/vacancies"
+            element={
+              <RouteErrorBoundary routeName="vacancies">
+                <VacancyListPage />
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path="/vacancies/new"
+            element={
+              <RouteErrorBoundary routeName="vacancy-new">
+                <VacancyNewPage />
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path="/vacancies/:id/edit"
+            element={
+              <RouteErrorBoundary routeName="vacancy-edit">
+                <VacancyEditPage />
+              </RouteErrorBoundary>
+            }
+          />
         </Route>
       </Route>
 
@@ -109,6 +183,10 @@ export default function App() {
           }
         />
       </Route>
-    </Routes>
+
+      {/* Catch-all: no route matched */}
+      <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </>
   );
 }
