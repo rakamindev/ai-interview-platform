@@ -4,15 +4,13 @@ import InterviewPage from "@/pages/interview/InterviewPage";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { sessionsApi } from "@/services/sessions";
 
+import * as hardwareUtils from "@/utils/hardwareUtils";
+
 vi.mock("@/services/sessions");
-// Mock hardware utilities to avoid actual media requests
-vi.mock("@/utils/hardwareUtils", () => ({
-  checkAudioInput: vi.fn().mockResolvedValue(true),
-  checkAudioOutput: vi.fn().mockResolvedValue(true),
-}));
 
 describe("UU PDP Consent", () => {
   it("requires consent checkbox to be true before showing hardware check", async () => {
+    vi.spyOn(hardwareUtils, "checkCamera").mockResolvedValue(true as any);
     vi.spyOn(sessionsApi, "getCandidateInfo").mockResolvedValueOnce({
       data: { session_id: 1, role_title: "Developer", time_limit_min: 30, session_status: "pending" },
     } as any);
@@ -39,7 +37,7 @@ describe("UU PDP Consent", () => {
     // Warning should disappear and hardware check should appear
     await waitFor(() => {
       expect(screen.queryByText(/Please accept the privacy consent above/i)).not.toBeInTheDocument();
-      expect(screen.getByText(/Checking hardware/i)).toBeInTheDocument(); // HardwareCheck component text
+      expect(screen.getByText(/OS & browser/i)).toBeInTheDocument(); // HardwareCheck component text
     });
   });
 });
