@@ -106,8 +106,9 @@ spec:
             failureThreshold: 30   # 5 minutes max startup
 
           readinessProbe:
+            # Deep check: DB + Redis + EventMachine reactor (WS health)
             httpGet:
-              path: /health
+              path: /api/v1/health/ready
               port: 3001
             initialDelaySeconds: 10
             periodSeconds: 30

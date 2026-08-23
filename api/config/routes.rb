@@ -9,6 +9,8 @@ Rails.application.routes.draw do
       post 'auth/login', to: 'authentication#authenticate'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+      # Deep readiness — DB + Redis + EventMachine reactor (k8s readinessProbe)
+      get  'health/ready', to: 'readiness#show'
 
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
