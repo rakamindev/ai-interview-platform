@@ -5,6 +5,9 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
+    class InvalidRecommendation < StandardError; end
+    class FinalizedPortfolio < StandardError; end
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
@@ -20,16 +23,30 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      raise FinalizedPortfolio, 'Cannot regenerate a portfolio after its decision is finalized' if portfolio.portfolio_decision&.finalized?
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      validate_recommendation!(data)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      Portfolio.transaction do
+        portfolio.with_lock do
+          raise FinalizedPortfolio, 'Cannot replace evidence after decision finalization' if portfolio.portfolio_decision&.finalized?
+
+          save_skills(portfolio, data)
+          save_ai_recommendation(portfolio, data.fetch('overall_recommendation'))
+          portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+        end
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
+    rescue FinalizedPortfolio => e
+      Rails.logger.warn("[N10] #{e.message} (session=#{@session.id})")
+      raise
     rescue => e
       portfolio&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
@@ -99,6 +116,12 @@ module Portfolios
            medium — probe_count = 2 OR state = partial
            low — probe_count <= 1 OR state = initiated
 
+        5. RECOMMEND AN OVERALL OUTCOME
+           Compare the evidence and assigned levels for configured skills against their EXPECTED LEVELS.
+           Make a holistic recommendation, not a mechanical all-skills gate. Discovered skills may add context but cannot replace a
+           configured requirement. Recommend "pass" when the candidate broadly demonstrates the role requirements; otherwise
+           recommend "fail". This is an advisory assessment recommendation, not a final hiring decision.
+
         OUTPUT (JSON only, no prose):
         {
           "configured_skills": [
@@ -119,7 +142,11 @@ module Portfolios
               "evidence": ["quote 1"],
               "competency_summary": "2-3 sentence summary"
             }
-          ]
+          ],
+          "overall_recommendation": {
+            "outcome": "pass",
+            "rationale": "2-4 concise sentences grounded in configured-skill evidence and expected levels"
+          }
         }
       PROMPT
     end
@@ -127,6 +154,7 @@ module Portfolios
     def skill_definition_block(skill)
       lines = ["━━━━━━━━━━━━━━━"]
       lines << "SKILL: #{skill.skill_label} (#{skill.skill_id || 'custom'})"
+      lines << "EXPECTED LEVEL: L#{skill.expected_level}"
       lines << "SCOPE: #{skill.scope_include}" if skill.scope_include.present?
       lines << ""
       lines << "L1 — #{skill.l1_anchor}"
@@ -147,9 +175,7 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
-
+    def save_skills(portfolio, data)
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
@@ -176,6 +202,35 @@ module Portfolios
           competency_summary: skill_data['competency_summary']
         )
       end
+    end
+
+    def validate_recommendation!(data)
+      recommendation = data['overall_recommendation']
+      raise InvalidRecommendation, 'Portfolio response is missing overall_recommendation' unless recommendation.is_a?(Hash)
+
+      outcome = recommendation['outcome'].to_s.downcase
+      rationale = recommendation['rationale'].to_s.strip
+      return if PortfolioDecision::OUTCOMES.include?(outcome) && rationale.present?
+
+      raise InvalidRecommendation, 'Portfolio recommendation must include pass/fail outcome and rationale'
+    end
+
+    def save_ai_recommendation(portfolio, recommendation)
+      decision = portfolio.portfolio_decision || portfolio.build_portfolio_decision
+      return decision if decision.persisted? && decision.ai_recommendation_available?
+
+      decision.assign_attributes(
+        ai_outcome:        recommendation.fetch('outcome').to_s.downcase,
+        ai_rationale:      recommendation.fetch('rationale').to_s.strip,
+        ai_recommended_at: Time.current
+      )
+      decision.save!
+      decision.portfolio_decision_events.create!(
+        event_type: 'ai_recommended',
+        outcome:    decision.ai_outcome,
+        note:       decision.ai_rationale
+      )
+      decision
     end
   end
 end

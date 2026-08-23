@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_23_000000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_23_010100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -141,6 +141,37 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_23_000000) do
     t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
+  create_table "portfolio_decision_events", force: :cascade do |t|
+    t.bigint "portfolio_decision_id", null: false
+    t.string "event_type", limit: 30, null: false
+    t.string "outcome", limit: 10
+    t.text "note"
+    t.bigint "actor_id"
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.index ["portfolio_decision_id", "created_at"], name: "idx_portfolio_decision_events_timeline"
+    t.index ["portfolio_decision_id"], name: "index_portfolio_decision_events_on_portfolio_decision_id"
+    t.check_constraint "event_type::text = ANY (ARRAY['ai_recommended'::character varying, 'admin_finalized'::character varying, 'admin_reopened'::character varying]::text[])", name: "chk_portfolio_decision_events_type"
+    t.check_constraint "outcome IS NULL OR (outcome::text = ANY (ARRAY['pass'::character varying, 'fail'::character varying]::text[]))", name: "chk_portfolio_decision_events_outcome"
+  end
+
+  create_table "portfolio_decisions", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.string "ai_outcome", limit: 10
+    t.text "ai_rationale"
+    t.datetime "ai_recommended_at"
+    t.string "final_outcome", limit: 10
+    t.text "finalization_note"
+    t.bigint "finalized_by_id"
+    t.datetime "finalized_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["portfolio_id"], name: "index_portfolio_decisions_on_portfolio_id", unique: true
+    t.check_constraint "ai_outcome IS NULL OR (ai_outcome::text = ANY (ARRAY['pass'::character varying, 'fail'::character varying]::text[]))", name: "chk_portfolio_decisions_ai_outcome"
+    t.check_constraint "final_outcome IS NULL AND finalized_by_id IS NULL AND finalized_at IS NULL AND finalization_note IS NULL OR final_outcome IS NOT NULL AND finalized_by_id IS NOT NULL AND finalized_at IS NOT NULL", name: "chk_portfolio_decisions_finalization_fields"
+    t.check_constraint "final_outcome IS NULL OR (final_outcome::text = ANY (ARRAY['pass'::character varying, 'fail'::character varying]::text[]))", name: "chk_portfolio_decisions_final_outcome"
+  end
+
   create_table "portfolio_skills", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.string "skill_id", limit: 50
@@ -248,6 +279,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_23_000000) do
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "portfolio_decision_events", "portfolio_decisions"
+  add_foreign_key "portfolio_decisions", "portfolios"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessment_versions"

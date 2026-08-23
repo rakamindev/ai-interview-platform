@@ -9,29 +9,35 @@ module Api
 
       # POST /api/v1/portfolio-skills/:id/override
       def override
-        existing = @portfolio_skill.assessor_override
-
-        if existing
-          if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
-            regenerate_stale_fitgap_reports
-            json_response(override: override_json(existing))
-          else
-            json_error(existing.errors.full_messages.first, :unprocessable_entity)
+        @portfolio_skill.portfolio.with_lock do
+          if @portfolio_skill.portfolio.portfolio_decision&.finalized?
+            return json_error('This decision is finalized. Reopen it before changing skill ratings.', :conflict)
           end
-        else
-          new_override = @portfolio_skill.build_assessor_override(
-            override_params.merge(
-              ai_level:      @portfolio_skill.ai_level,
-              overridden_by: current_user.id,
-              overridden_at: Time.current
-            )
-          )
 
-          if new_override.save
-            regenerate_stale_fitgap_reports
-            json_response({ override: override_json(new_override) }, :created)
+          existing = @portfolio_skill.assessor_override
+
+          if existing
+            if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
+              regenerate_stale_fitgap_reports
+              json_response(override: override_json(existing))
+            else
+              json_error(existing.errors.full_messages.first, :unprocessable_entity)
+            end
           else
-            json_error(new_override.errors.full_messages.first, :unprocessable_entity)
+            new_override = @portfolio_skill.build_assessor_override(
+              override_params.merge(
+                ai_level:      @portfolio_skill.ai_level,
+                overridden_by: current_user.id,
+                overridden_at: Time.current
+              )
+            )
+
+            if new_override.save
+              regenerate_stale_fitgap_reports
+              json_response({ override: override_json(new_override) }, :created)
+            else
+              json_error(new_override.errors.full_messages.first, :unprocessable_entity)
+            end
           end
         end
       end
@@ -49,6 +55,8 @@ module Api
 
       def set_portfolio_skill
         @portfolio_skill = PortfolioSkill.joins(:portfolio)
+                                         .joins('INNER JOIN sessions ON sessions.id = portfolios.session_id')
+                                         .where(sessions: { tenant_id: current_tenant_id })
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

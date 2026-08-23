@@ -112,6 +112,35 @@ export interface Portfolio {
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+  decision: PortfolioDecision;
+}
+
+export type DecisionOutcome = "pass" | "fail";
+
+export interface PortfolioDecisionEvent {
+  event_type: "ai_recommended" | "admin_finalized" | "admin_reopened";
+  outcome?: DecisionOutcome | null;
+  note?: string | null;
+  actor_id?: number | null;
+  created_at: string;
+}
+
+export interface PortfolioDecision {
+  status: "ai_recommended" | "finalized" | "unavailable";
+  effective_outcome: DecisionOutcome | null;
+  source: "ai" | "admin" | null;
+  ai_recommendation: {
+    outcome: DecisionOutcome;
+    rationale: string;
+    recommended_at: string;
+  } | null;
+  finalization: {
+    outcome: DecisionOutcome;
+    note?: string | null;
+    finalized_by: number;
+    finalized_at: string;
+  } | null;
+  history: PortfolioDecisionEvent[];
 }
 
 export interface PortfolioSkill {

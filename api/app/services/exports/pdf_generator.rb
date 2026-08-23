@@ -21,6 +21,7 @@ module Exports
       @vacancy     = vacancy
       @session     = portfolio.session
       @rubric      = @session.rubric
+      @decision    = portfolio.portfolio_decision
       @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
     end
 
@@ -28,6 +29,7 @@ module Exports
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
         render_header(pdf)
+        render_decision_section(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
         render_footer(pdf)
@@ -72,6 +74,36 @@ module Exports
         pdf.move_down 6
         discovered.each { |skill| render_skill_card(pdf, skill) }
       end
+    end
+
+    def render_decision_section(pdf)
+      pdf.font_size(16) { pdf.text 'Overall Decision', style: :bold }
+      pdf.move_down 6
+
+      unless @decision
+        pdf.font_size(10) { pdf.text 'Decision: unavailable — this legacy portfolio has no AI recommendation.' }
+        pdf.move_down 12
+        return
+      end
+
+      if @decision.finalized?
+        pdf.font_size(11) { pdf.text "Final outcome: #{@decision.final_outcome.upcase} (Admin finalized)", style: :bold }
+        pdf.font_size(10) { pdf.text "AI recommendation: #{@decision.ai_outcome&.upcase || 'Unavailable'}" }
+        if @decision.finalization_note.present?
+          pdf.move_down 3
+          pdf.font_size(10) { pdf.text "Finalization note: #{@decision.finalization_note}" }
+        end
+      elsif @decision.ai_recommendation_available?
+        pdf.font_size(11) { pdf.text "AI recommendation: #{@decision.ai_outcome.upcase}", style: :bold }
+        if @decision.ai_rationale.present?
+          pdf.move_down 3
+          pdf.font_size(10) { pdf.text @decision.ai_rationale }
+        end
+      else
+        pdf.font_size(10) { pdf.text 'Decision: unavailable — this legacy portfolio has no AI recommendation.' }
+      end
+
+      pdf.move_down 12
     end
 
     def render_skill_card(pdf, skill)

@@ -4,6 +4,7 @@ class Portfolio < ApplicationRecord
   GENERATION_STATUSES = %w[pending generating complete failed].freeze
 
   belongs_to :session
+  has_one :portfolio_decision, dependent: :restrict_with_error
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
 

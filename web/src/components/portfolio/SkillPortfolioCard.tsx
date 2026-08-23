@@ -10,12 +10,14 @@ interface SkillPortfolioCardProps {
   skill: PortfolioSkill;
   override?: AssessorOverride;
   onOverrideSaved: (override: AssessorOverride) => void;
+  reviewLocked?: boolean;
 }
 
 export default function SkillPortfolioCard({
   skill,
   override,
   onOverrideSaved,
+  reviewLocked = false,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
 
@@ -38,7 +40,7 @@ export default function SkillPortfolioCard({
               <ConfidenceIndicator confidence={skill.ai_confidence} />
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} locked={reviewLocked} />
         </div>
 
         {/* Low confidence note */}

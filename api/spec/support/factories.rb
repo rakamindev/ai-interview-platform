@@ -39,4 +39,39 @@ FactoryBot.define do
     expected_level { 3 }
     sequence(:display_order)
   end
+
+  factory :session do
+    assessment
+    tenant_id { assessment.tenant_id }
+    status { 'ended' }
+    end_reason { 'all_covered' }
+    started_at { 45.minutes.ago }
+    ended_at { Time.current }
+    duration_seconds { 2700 }
+  end
+
+  factory :portfolio do
+    session
+    candidate_id { session.candidate_id }
+    generation_status { 'complete' }
+    generated_at { Time.current }
+  end
+
+  factory :portfolio_skill do
+    portfolio
+    sequence(:skill_id) { |n| "portfolio-skill-#{n}" }
+    sequence(:skill_label) { |n| "Portfolio Skill #{n}" }
+    is_discovered { false }
+    ai_level { 3 }
+    ai_confidence { 'high' }
+    evidence { ['Candidate explained a concrete implementation trade-off.'] }
+    competency_summary { 'Consistently demonstrates the configured skill at the expected level.' }
+  end
+
+  factory :portfolio_decision do
+    portfolio
+    ai_outcome { 'pass' }
+    ai_rationale { 'Configured skills broadly meet their expected levels with sufficient evidence.' }
+    ai_recommended_at { Time.current }
+  end
 end
