@@ -5,8 +5,8 @@ module Api
     class PortfoliosController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_session,   only: %i[show regenerate]
-      before_action :set_portfolio, only: %i[show export]
+      before_action :set_session,   only: %i[show regenerate finalize_decision reopen_decision]
+      before_action :set_portfolio, only: %i[show export finalize_decision reopen_decision]
 
       # GET /api/v1/sessions/:id/portfolio
       def show
@@ -43,6 +43,41 @@ module Api
           message:   "Portfolio generation queued",
           portfolio: portfolio_json(portfolio)
         )
+      end
+
+      # POST /api/v1/sessions/:id/decision/finalize
+      def finalize_decision
+        return json_error('Portfolio not found', :not_found) unless @portfolio
+
+        decision = Portfolios::DecisionLifecycle.new(portfolio: @portfolio, actor: current_user).finalize(
+          outcome: decision_params[:outcome],
+          note:    decision_params[:note]
+        )
+
+        json_response(decision: decision_json(decision))
+      rescue Portfolios::DecisionLifecycle::InvalidTransition => e
+        json_error(e.message, :conflict)
+      rescue Portfolios::DecisionLifecycle::InvalidDecision => e
+        json_error(e.message, :unprocessable_entity)
+      rescue ActiveRecord::StaleObjectError
+        json_error('Decision changed while you were reviewing it. Reload and try again.', :conflict)
+      end
+
+      # POST /api/v1/sessions/:id/decision/reopen
+      def reopen_decision
+        return json_error('Portfolio not found', :not_found) unless @portfolio
+
+        decision = Portfolios::DecisionLifecycle.new(portfolio: @portfolio, actor: current_user).reopen(
+          note: decision_params[:note]
+        )
+
+        json_response(decision: decision_json(decision))
+      rescue Portfolios::DecisionLifecycle::InvalidTransition => e
+        json_error(e.message, :conflict)
+      rescue Portfolios::DecisionLifecycle::InvalidDecision => e
+        json_error(e.message, :unprocessable_entity)
+      rescue ActiveRecord::StaleObjectError
+        json_error('Decision changed while you were reviewing it. Reload and try again.', :conflict)
       end
 
       # GET /api/v1/portfolios/:id/export
@@ -168,7 +203,45 @@ module Api
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides:         portfolio.assessor_overrides.map(&method(:override_json))
+          overrides:         portfolio.assessor_overrides.map(&method(:override_json)),
+          decision:          decision_json(portfolio.portfolio_decision)
+        }
+      end
+
+      def decision_json(decision)
+        return {
+          status: 'unavailable',
+          effective_outcome: nil,
+          source: nil,
+          ai_recommendation: nil,
+          finalization: nil,
+          history: []
+        } unless decision
+
+        {
+          status:            decision.status,
+          effective_outcome: decision.effective_outcome,
+          source:            decision.source,
+          ai_recommendation: decision.ai_recommendation_available? ? {
+            outcome:        decision.ai_outcome,
+            rationale:      decision.ai_rationale,
+            recommended_at: decision.ai_recommended_at
+          } : nil,
+          finalization: decision.finalized? ? {
+            outcome:      decision.final_outcome,
+            note:         decision.finalization_note,
+            finalized_by: decision.finalized_by_id,
+            finalized_at: decision.finalized_at
+          } : nil,
+          history: decision.portfolio_decision_events.order(:created_at, :id).map do |event|
+            {
+              event_type: event.event_type,
+              outcome:    event.outcome,
+              note:       event.note,
+              actor_id:   event.actor_id,
+              created_at: event.created_at
+            }
+          end
         }
       end
 
@@ -195,6 +268,10 @@ module Api
           overridden_by:  override.overridden_by,
           overridden_at:  override.overridden_at
         }
+      end
+
+      def decision_params
+        params.require(:decision).permit(:outcome, :note)
       end
 
       def fit_gap_json(report)

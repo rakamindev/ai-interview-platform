@@ -45,6 +45,35 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  rubric?: {
+    status: "captured" | "legacy";
+    version: number | null;
+  };
+}
+
+export interface AssessmentRubricVersionSkill {
+  skill_id?: string | number;
+  skill_label: string;
+  is_custom: boolean;
+  expected_level: number;
+  display_order: number;
+  scope_include?: string;
+  scope_exclude?: string;
+  l1_anchor?: string;
+  l2_anchor?: string;
+  l3_anchor?: string;
+  l4_anchor?: string;
+  l5_anchor?: string;
+}
+
+export interface AssessmentRubricVersion {
+  id: number;
+  rubric_version: number;
+  name: string;
+  time_limit_min: number;
+  language: "en" | "id";
+  created_at: string;
+  skills: AssessmentRubricVersionSkill[];
 }
 
 export interface CoverageSkill {
@@ -83,6 +112,35 @@ export interface Portfolio {
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+  decision: PortfolioDecision;
+}
+
+export type DecisionOutcome = "pass" | "fail";
+
+export interface PortfolioDecisionEvent {
+  event_type: "ai_recommended" | "admin_finalized" | "admin_reopened";
+  outcome?: DecisionOutcome | null;
+  note?: string | null;
+  actor_id?: number | null;
+  created_at: string;
+}
+
+export interface PortfolioDecision {
+  status: "ai_recommended" | "finalized" | "unavailable";
+  effective_outcome: DecisionOutcome | null;
+  source: "ai" | "admin" | null;
+  ai_recommendation: {
+    outcome: DecisionOutcome;
+    rationale: string;
+    recommended_at: string;
+  } | null;
+  finalization: {
+    outcome: DecisionOutcome;
+    note?: string | null;
+    finalized_by: number;
+    finalized_at: string;
+  } | null;
+  history: PortfolioDecisionEvent[];
 }
 
 export interface PortfolioSkill {

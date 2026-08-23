@@ -19,7 +19,7 @@ module Coverage
     def call
       turns        = last_n_turns
       coverage_maps = @session.coverage_maps.order(:id).to_a
-      skills       = @session.assessment.assessment_skills.order(:display_order).to_a
+      skills       = @session.rubric.rubric_skills.order(:display_order).to_a
 
       return { skill_updates: [], discovered_skills: [] } if turns.empty?
 

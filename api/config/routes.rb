@@ -18,6 +18,9 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
+        member do
+          get :versions
+        end
         resources :sessions, only: %i[index create]
       end
 
@@ -29,6 +32,8 @@ Rails.application.routes.draw do
           get  :transcript
           get  :portfolio, to: 'portfolios#show'
           post 'portfolio/regenerate', to: 'portfolios#regenerate'
+          post 'decision/finalize', to: 'portfolios#finalize_decision'
+          post 'decision/reopen', to: 'portfolios#reopen_decision'
         end
       end
 

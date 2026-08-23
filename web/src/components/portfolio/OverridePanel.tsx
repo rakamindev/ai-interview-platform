@@ -13,9 +13,10 @@ interface OverridePanelProps {
   skill: PortfolioSkill;
   existingOverride?: AssessorOverride;
   onSaved: (override: AssessorOverride) => void;
+  locked?: boolean;
 }
 
-export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
+export default function OverridePanel({ skill, existingOverride, onSaved, locked = false }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
   const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
@@ -23,6 +24,10 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [saveError, setSaveError] = useState(false);
 
   const hasOverride = !!existingOverride;
+
+  if (locked) {
+    return <span className="text-xs text-muted-foreground">Decision finalized — reopen to edit ratings.</span>;
+  }
 
   const handleSave = async () => {
     setSaving(true);

@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Assessment, AssessmentSkill, PaginationMeta, Session } from "@/types";
+import type { Assessment, AssessmentRubricVersion, AssessmentSkill, PaginationMeta, Session } from "@/types";
 
 export interface AssessmentPayload {
   name: string;
@@ -33,6 +33,9 @@ export const assessmentsApi = {
 
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
+
+  getVersions: (assessmentId: number) =>
+    api.get<{ versions: AssessmentRubricVersion[] }>(`/assessments/${assessmentId}/versions`),
 
   createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
     api.post<{ session: Session; invite_url: string }>(

@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, DecisionOutcome, PortfolioDecision } from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
@@ -25,6 +25,16 @@ export const sessionsApi = {
 
   regeneratePortfolio: (id: number) =>
     api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),
+
+  finalizeDecision: (sessionId: number, outcome: DecisionOutcome, note?: string) =>
+    api.post<{ decision: PortfolioDecision }>(`/sessions/${sessionId}/decision/finalize`, {
+      decision: { outcome, note },
+    }),
+
+  reopenDecision: (sessionId: number, note: string) =>
+    api.post<{ decision: PortfolioDecision }>(`/sessions/${sessionId}/decision/reopen`, {
+      decision: { note },
+    }),
 
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),

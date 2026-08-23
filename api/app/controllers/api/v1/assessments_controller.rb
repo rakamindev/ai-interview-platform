@@ -5,7 +5,7 @@ module Api
     class AssessmentsController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_assessment, only: %i[show update destroy]
+      before_action :set_assessment, only: %i[show update destroy versions]
 
       # GET /api/v1/assessments
       def index
@@ -24,6 +24,16 @@ module Api
         json_response(assessment: assessment_with_skills_json(@assessment))
       end
 
+      # GET /api/v1/assessments/:id/versions
+      # Versions are read-only published contracts used by candidate sessions.
+      def versions
+        versions = @assessment.assessment_versions
+                              .includes(:assessment_version_skills)
+                              .order(rubric_version: :desc)
+
+        json_response(versions: versions.map(&method(:assessment_version_json)))
+      end
+
       # POST /api/v1/assessments
       def create
         assessment = Assessment.new(assessment_params)
@@ -39,12 +49,17 @@ module Api
 
       # PUT /api/v1/assessments/:id
       def update
-        if @assessment.update(assessment_params)
-          SystemPromptGeneratorWorker.perform_async(@assessment.id)
-          json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
-        else
-          json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
+        @assessment.with_lock do
+          @assessment.update!(assessment_params)
+          @assessment.increment!(:rubric_version)
         end
+
+        # Queue only after the locked transaction has committed. This prompt is a
+        # mutable-template cache; candidate sessions use their published version.
+        SystemPromptGeneratorWorker.perform_async(@assessment.id)
+        json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.record.errors.full_messages.first, :unprocessable_entity)
       end
 
       # DELETE /api/v1/assessments/:id
@@ -115,6 +130,33 @@ module Api
             }
           end
         )
+      end
+
+      def assessment_version_json(version)
+        {
+          id:             version.id,
+          rubric_version: version.rubric_version,
+          name:           version.name,
+          time_limit_min: version.time_limit_min,
+          language:       version.language,
+          created_at:     version.created_at,
+          skills: version.assessment_version_skills.sort_by(&:display_order).map do |skill|
+            {
+              skill_id:       skill.skill_id,
+              skill_label:    skill.skill_label,
+              is_custom:      skill.is_custom,
+              scope_include:  skill.scope_include,
+              scope_exclude:  skill.scope_exclude,
+              l1_anchor:      skill.l1_anchor,
+              l2_anchor:      skill.l2_anchor,
+              l3_anchor:      skill.l3_anchor,
+              l4_anchor:      skill.l4_anchor,
+              l5_anchor:      skill.l5_anchor,
+              expected_level: skill.expected_level,
+              display_order:  skill.display_order
+            }
+          end
+        }
       end
 
       def pagination_meta(collection)

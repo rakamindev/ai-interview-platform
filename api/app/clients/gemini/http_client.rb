@@ -2,7 +2,9 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    # The current Gemini models used by analysis and portfolio generation are
+    # exposed through the v1beta generateContent endpoint for this integration.
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_23_010100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -43,6 +43,39 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_assessment_skills_expected_level"
   end
 
+  create_table "assessment_version_skills", force: :cascade do |t|
+    t.bigint "assessment_version_id", null: false
+    t.string "skill_id", limit: 50
+    t.string "skill_label", limit: 255, null: false
+    t.boolean "is_custom", default: false, null: false
+    t.text "scope_include"
+    t.text "scope_exclude"
+    t.text "l1_anchor", null: false
+    t.text "l2_anchor", null: false
+    t.text "l3_anchor", null: false
+    t.text "l4_anchor", null: false
+    t.text "l5_anchor", null: false
+    t.integer "expected_level", null: false
+    t.integer "display_order", default: 0, null: false
+    t.index ["assessment_version_id", "display_order"], name: "idx_assessment_version_skills_order", unique: true
+    t.index ["assessment_version_id"], name: "index_assessment_version_skills_on_assessment_version_id"
+    t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_assessment_version_skills_expected_level"
+  end
+
+  create_table "assessment_versions", force: :cascade do |t|
+    t.bigint "assessment_id", null: false
+    t.integer "rubric_version", null: false
+    t.string "name", limit: 255, null: false
+    t.integer "time_limit_min", null: false
+    t.string "language", limit: 10, default: "en", null: false
+    t.text "system_prompt", null: false
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.index ["assessment_id", "rubric_version"], name: "idx_assessment_versions_revision", unique: true
+    t.index ["assessment_id"], name: "index_assessment_versions_on_assessment_id"
+    t.check_constraint "rubric_version >= 1", name: "chk_assessment_versions_revision"
+    t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessment_versions_time_limit"
+  end
+
   create_table "assessments", force: :cascade do |t|
     t.bigint "tenant_id", null: false
     t.bigint "created_by", null: false
@@ -52,6 +85,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.integer "rubric_version", default: 1, null: false
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
@@ -107,6 +141,37 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
+  create_table "portfolio_decision_events", force: :cascade do |t|
+    t.bigint "portfolio_decision_id", null: false
+    t.string "event_type", limit: 30, null: false
+    t.string "outcome", limit: 10
+    t.text "note"
+    t.bigint "actor_id"
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.index ["portfolio_decision_id", "created_at"], name: "idx_portfolio_decision_events_timeline"
+    t.index ["portfolio_decision_id"], name: "index_portfolio_decision_events_on_portfolio_decision_id"
+    t.check_constraint "event_type::text = ANY (ARRAY['ai_recommended'::character varying, 'admin_finalized'::character varying, 'admin_reopened'::character varying]::text[])", name: "chk_portfolio_decision_events_type"
+    t.check_constraint "outcome IS NULL OR (outcome::text = ANY (ARRAY['pass'::character varying, 'fail'::character varying]::text[]))", name: "chk_portfolio_decision_events_outcome"
+  end
+
+  create_table "portfolio_decisions", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.string "ai_outcome", limit: 10
+    t.text "ai_rationale"
+    t.datetime "ai_recommended_at"
+    t.string "final_outcome", limit: 10
+    t.text "finalization_note"
+    t.bigint "finalized_by_id"
+    t.datetime "finalized_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["portfolio_id"], name: "index_portfolio_decisions_on_portfolio_id", unique: true
+    t.check_constraint "ai_outcome IS NULL OR (ai_outcome::text = ANY (ARRAY['pass'::character varying, 'fail'::character varying]::text[]))", name: "chk_portfolio_decisions_ai_outcome"
+    t.check_constraint "final_outcome IS NULL AND finalized_by_id IS NULL AND finalized_at IS NULL AND finalization_note IS NULL OR final_outcome IS NOT NULL AND finalized_by_id IS NOT NULL AND finalized_at IS NOT NULL", name: "chk_portfolio_decisions_finalization_fields"
+    t.check_constraint "final_outcome IS NULL OR (final_outcome::text = ANY (ARRAY['pass'::character varying, 'fail'::character varying]::text[]))", name: "chk_portfolio_decisions_final_outcome"
+  end
+
   create_table "portfolio_skills", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.string "skill_id", limit: 50
@@ -143,7 +208,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.bigint "assessment_version_id"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
+    t.index ["assessment_version_id"], name: "index_sessions_on_assessment_version_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
     t.index ["tenant_id", "status"], name: "idx_sessions_tenant_status"
@@ -206,12 +273,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   end
 
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessment_version_skills", "assessment_versions"
+  add_foreign_key "assessment_versions", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "portfolio_decision_events", "portfolio_decisions"
+  add_foreign_key "portfolio_decisions", "portfolios"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
+  add_foreign_key "sessions", "assessment_versions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
   add_foreign_key "vacancy_skills", "vacancies"

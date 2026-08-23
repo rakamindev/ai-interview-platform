@@ -102,9 +102,9 @@ class AudioWebSocketMiddleware
   def connect_to_gemini(browser_ws, state)
     session = state.session
 
-    ensure_system_prompt(session)
+    ensure_legacy_system_prompt(session) if session.rubric_status == 'legacy'
 
-    unless session.assessment.system_prompt.present?
+    unless session.rubric.system_prompt.present?
       send_json(browser_ws, type: 'error', code: 'no_system_prompt',
                             message: 'Assessment configuration is incomplete.', recoverable: false)
       browser_ws.close
@@ -124,7 +124,9 @@ class AudioWebSocketMiddleware
     state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
   end
 
-  def ensure_system_prompt(session)
+  # Published versions always carry their exact prompt. Only legacy sessions
+  # retain the former template-cache fallback.
+  def ensure_legacy_system_prompt(session)
     return if session.assessment.system_prompt.present?
 
     Rails.logger.warn("[AudioWS] system_prompt missing for assessment #{session.assessment.id} — regenerating")
@@ -137,7 +139,7 @@ class AudioWebSocketMiddleware
     session = state.session
 
     state.gemini_client = Gemini::LiveClient.new(
-      system_prompt: session.assessment.system_prompt,
+      system_prompt: session.rubric.system_prompt,
       on_audio: build_on_audio(browser_ws, state),
       on_input_transcription: build_on_input_transcription(browser_ws, state, session),
       on_output_transcription: build_on_output_transcription(browser_ws, state, session),
@@ -659,11 +661,11 @@ class AudioWebSocketMiddleware
   end
 
   def check_time_ceiling(session, state, browser_ws)
-    return unless session.started_at && session.assessment.time_limit_min
+    return unless session.started_at && session.rubric.time_limit_min
     return if state.ending_scheduled
 
     elapsed   = (Time.current - session.started_at).to_i
-    limit     = session.assessment.time_limit_min * 60
+    limit     = session.rubric.time_limit_min * 60
     remaining = limit - elapsed
 
     if remaining <= 0

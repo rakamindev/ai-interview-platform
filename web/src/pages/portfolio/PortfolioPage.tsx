@@ -5,12 +5,13 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import DecisionPanel from "@/components/portfolio/DecisionPanel";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import type { Portfolio, AssessorOverride, PortfolioDecision, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -56,6 +57,10 @@ export default function PortfolioPage() {
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
+  };
+
+  const handleDecisionChanged = (decision: PortfolioDecision) => {
+    setPortfolio((current) => current ? { ...current, decision } : current);
   };
 
   const handleRunFitGap = () => {
@@ -186,6 +191,12 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          <DecisionPanel
+            sessionId={Number(sessionId)}
+            decision={portfolio.decision}
+            onDecisionChanged={handleDecisionChanged}
+          />
+
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>
@@ -197,6 +208,7 @@ export default function PortfolioPage() {
                   skill={skill}
                   override={overrides[skill.id]}
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  reviewLocked={portfolio.decision.status === "finalized"}
                 />
               ))}
           </div>
@@ -223,6 +235,7 @@ export default function PortfolioPage() {
                       skill={skill}
                       override={overrides[skill.id]}
                       onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      reviewLocked={portfolio.decision.status === "finalized"}
                     />
                   ))}
               </div>
