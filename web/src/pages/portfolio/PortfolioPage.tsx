@@ -75,7 +75,7 @@ export default function PortfolioPage() {
         return;
       })
       .catch(() => {
-        setError("Failed to load portfolio data. Please try again.");
+        setError(m.portfolio_load_error());
       })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
@@ -134,13 +134,13 @@ export default function PortfolioPage() {
           // Server returned JSON error inside a Blob response — read it
           const text = await data.text();
           const parsed = JSON.parse(text);
-          setExportError(parsed.message ?? parsed.error ?? "Export failed");
+          setExportError(parsed.message ?? parsed.error ?? m.portfolio_export_failed());
         } else {
-          setExportError("Export returned an unexpected response. Please try again.");
+          setExportError(m.portfolio_export_unexpected());
         }
       }
     } catch {
-      setExportError("Export failed. Please try again.");
+      setExportError(m.portfolio_export_failed());
     } finally {
       setExporting(null);
     }
@@ -317,7 +317,7 @@ export default function PortfolioPage() {
                     {m.portfolio_discovered_skills()}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
+                    {m.portfolio_discovered_description_long()}
                   </p>
                 </div>
                 {portfolio.skills

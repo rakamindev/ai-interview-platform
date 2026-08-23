@@ -70,7 +70,7 @@ export default function InviteAdminPage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="text-sm text-muted-foreground">Admin</span>
+        <span className="text-sm text-muted-foreground">{m.admin_breadcrumb()}</span>
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">{m.admin_invite_title()}</span>
       </div>
@@ -113,7 +113,7 @@ export default function InviteAdminPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="colleague@company.com"
+                placeholder={m.admin_invite_email_placeholder()}
                 {...register("email")}
               />
               {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}

@@ -73,7 +73,7 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
 export const SESSION_END_REASON_LABELS: Record<string, string> = {
   manual_candidate: m.constants_session_ended_by_candidate(),
   manual_assessor: m.constants_session_ended_by_assessor(),
-  all_covered: "all skills covered",
+  all_covered: m.constants_all_covered(),
   time_ceiling: m.constants_session_ended_by_timeout(),
   error: m.constants_session_ended_by_error()
 };

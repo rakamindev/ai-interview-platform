@@ -50,14 +50,14 @@ export default function FitGapReportPage() {
             pollStartRef.current = Date.now();
           } catch {
             setGenerating(false);
-            setError("Failed to start report generation");
+            setError(m.fitgap_start_generation_error());
           }
         }
       } else if (status === 202) {
         // Report is generating — keep polling
         setGenerating(true);
       } else if (status != null && status >= 500) {
-        setError("Server error — please try again later");
+        setError(m.fitgap_server_error());
         setGenerating(false);
       }
     }
@@ -74,7 +74,7 @@ export default function FitGapReportPage() {
         return;
       })
       .catch(() => {
-        setError("Failed to load portfolio");
+        setError(m.fitgap_load_portfolio_error());
       })
       .finally(() => setLoading(false));
   }, [sessionId]);
@@ -126,7 +126,7 @@ export default function FitGapReportPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setError(`Failed to export ${format.toUpperCase()}`);
+      setError(m.fitgap_export_error());
     } finally {
       setExporting(null);
     }
@@ -257,7 +257,7 @@ export default function FitGapReportPage() {
           <CardContent className="py-12 text-center space-y-3">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
             <p className="text-sm text-muted-foreground">
-              Report generation is taking longer than expected.
+              {m.fitgap_generating_slow()}
             </p>
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>
               {regenerating ? (
@@ -322,7 +322,7 @@ export default function FitGapReportPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-1.5">
                     <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills (not in vacancy requirements)
+                    {m.fitgap_discovered_skills_title()}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-2">
@@ -334,12 +334,12 @@ export default function FitGapReportPage() {
                         <span className="text-muted-foreground">
                           {s.ai_level} (
                           {s.ai_confidence?.toLowerCase() === "low"
-                            ? "low confidence"
-                            : "confirmed"}
+                            ? m.fitgap_low_confidence()
+                            : m.fitgap_confirmed()}
                           )
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          — Not required for this role, may be additive.
+                          — {m.fitgap_discovered_not_required()}
                         </span>
                       </div>
                     ))}
