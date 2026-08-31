@@ -99,11 +99,12 @@ export default function LiveMonitorPage() {
     try {
       const res = await sessionsApi.getTranscript(
         Number(sessionId),
-        lastTurnRef.current + 1
+        lastTurnRef.current + 1,
       );
       if (res.data.turns.length > 0) {
         setTranscript((prev) => [...prev, ...res.data.turns].slice(-10));
-        lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
+        lastTurnRef.current =
+          res.data.turns[res.data.turns.length - 1].turn_number;
       }
     } catch {
       // transient poll failure — silently skip, retry on next interval
@@ -113,7 +114,9 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     if (!sessionActive || loading) return;
     pollTimerRef.current = setInterval(fetchNewTurns, 3000);
-    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
   }, [sessionActive, loading, fetchNewTurns]);
 
   const handleEndSession = async () => {
@@ -146,22 +149,30 @@ export default function LiveMonitorPage() {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link
+              to={`/assessments/${id}/invite`}
+              className="text-muted-foreground hover:text-foreground"
+              data-testid="btn-back"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <h1 className="text-lg font-semibold">Live Monitor</h1>
           </div>
           {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
+            <p className="text-sm text-muted-foreground pl-6">
+              {assessmentName}
+            </p>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
+          <span
+            className={cn(
+              "flex items-center gap-1 text-xs",
+              isConnected ? "text-green-600" : "text-muted-foreground",
+            )}
+          >
             <Radio className="h-3 w-3" />
             {isConnected ? "Live" : "Reconnecting..."}
           </span>
@@ -184,7 +195,9 @@ export default function LiveMonitorPage() {
             size="sm"
             variant="outline"
             className="ml-auto"
-            onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
+            onClick={() =>
+              navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)
+            }
           >
             View portfolio →
           </Button>
@@ -198,7 +211,9 @@ export default function LiveMonitorPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {configuredSkills.length === 0 && discoveredSkills.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Waiting for interview to begin...</p>
+            <p className="text-sm text-muted-foreground">
+              Waiting for interview to begin...
+            </p>
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
@@ -206,9 +221,14 @@ export default function LiveMonitorPage() {
                   <span className="font-medium">{skill.skill_label}</span>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {skill.probe_count > 0 && (
-                      <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                      <span>
+                        {skill.probe_count} probe
+                        {skill.probe_count !== 1 ? "s" : ""}
+                      </span>
                     )}
-                    <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
+                    <span className="capitalize">
+                      {COVERAGE_STATE_LABELS[skill.state]}
+                    </span>
                   </div>
                 </div>
                 <Progress
@@ -234,7 +254,10 @@ export default function LiveMonitorPage() {
                   Discovered
                 </p>
                 {discoveredSkills.map((skill) => (
-                  <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
+                  <div
+                    key={skill.id ?? skill.skill_label}
+                    className="space-y-1.5"
+                  >
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-1">
                         <Zap className="h-3 w-3 text-amber-500" />
@@ -242,9 +265,14 @@ export default function LiveMonitorPage() {
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {skill.probe_count > 0 && (
-                          <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                          <span>
+                            {skill.probe_count} probe
+                            {skill.probe_count !== 1 ? "s" : ""}
+                          </span>
                         )}
-                        <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
+                        <span className="capitalize">
+                          {COVERAGE_STATE_LABELS[skill.state]}
+                        </span>
                       </div>
                     </div>
                     <Progress
@@ -276,7 +304,11 @@ export default function LiveMonitorPage() {
           ) : (
             <div className="space-y-2">
               {transcript.map((turn) => (
-                <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
+                <TranscriptBubble
+                  key={turn.id}
+                  speaker={turn.speaker}
+                  text={turn.text}
+                />
               ))}
             </div>
           )}
@@ -307,14 +339,18 @@ export default function LiveMonitorPage() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleEndSession}>End Session</AlertDialogAction>
+                <AlertDialogAction onClick={handleEndSession}>
+                  End Session
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         ) : (
           <Button
             variant="outline"
-            onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
+            onClick={() =>
+              navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)
+            }
           >
             View portfolio →
           </Button>

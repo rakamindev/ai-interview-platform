@@ -1,6 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
-import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker } from "@/types";
+import { getStoredToken } from "@/stores/authAtom";
+import type {
+  WsControlMessage,
+  TranscriptTurn,
+  InterviewState,
+  InterviewSpeaker,
+} from "@/types";
 
 interface UseAudioWebSocketOptions {
   sessionId: number;
@@ -27,9 +33,9 @@ export function useAudioWebSocket({
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
-  const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
-    "disconnected"
-  );
+  const [connectionState, setConnectionState] = useState<
+    "disconnected" | "connecting" | "connected"
+  >("disconnected");
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -47,6 +53,10 @@ export function useAudioWebSocket({
       setConnectionState("connected");
       reconnectAttemptsRef.current = 0;
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
+      // Send Bearer token separately for candidate_id population
+      const bearerToken = getStoredToken();
+      if (bearerToken)
+        ws.send(JSON.stringify({ type: "bearer_auth", token: bearerToken }));
     };
 
     // Only signal AI speaking once per turn (first binary chunk).
@@ -70,7 +80,11 @@ export function useAudioWebSocket({
             case "transcription":
             case "transcript":
               if (msg.speaker && msg.text) {
-                onTranscript({ speaker: msg.speaker === "candidate" ? "candidate" : "assessor", text: msg.text });
+                onTranscript({
+                  speaker:
+                    msg.speaker === "candidate" ? "candidate" : "assessor",
+                  text: msg.text,
+                });
               }
               break;
             case "speaker_changed":
@@ -130,7 +144,14 @@ export function useAudioWebSocket({
         onStateChange("complete");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [
+    sessionId,
+    token,
+    onAudioChunk,
+    onTranscript,
+    onStateChange,
+    onSpeakerChange,
+  ]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

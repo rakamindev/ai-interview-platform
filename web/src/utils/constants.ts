@@ -68,3 +68,8 @@ export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   exceed: "text-green-700 bg-green-50",
   not_assessed: "text-neutral-500 bg-neutral-50",
 };
+
+export const ROLES = {
+  admin: "admin",
+  user: "user",
+};

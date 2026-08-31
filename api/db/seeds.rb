@@ -6,9 +6,14 @@
 # Usage:
 #   bundle exec rails db:seed
 #
+# This creates:
+#   - Organization: Test Corp (scheme: test-corp)
+#   - Users: admin@example.com (admin), user@example.com (user)
+#
 # After seeding, use the Rails console to mint a JWT for testing:
 #   bundle exec rails console
-#   > token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' })
+#   > admin_user = User.find_by(email: 'admin@example.com')
+#   > token = JsonWebToken.encode({ user_id: admin_user.id, role: admin_user.role, scheme: 'test-corp' })
 #   > puts token
 
 puts "== Seeding AI Interview development data =="
@@ -34,6 +39,16 @@ TEST_ORG = {
   scheme:     "test-corp",
   identifier: "test-corp",
   host:       "localhost"
+}.freeze
+
+ADMIN = {
+  email:    "admin@example.com",
+  role:     "admin"
+}.freeze
+
+USER = {
+  email:    "user@example.com",
+  role:     "user"
 }.freeze
 
 ActiveRecord::Base.connection.execute(<<~SQL)
@@ -76,6 +91,32 @@ else
 
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
+
+# ── Users ───────────────────────────────────────────────────────────────────────
+
+puts ""
+puts "== Seeding Users =="
+
+[
+  { email: ADMIN[:email], password: 'password123', role: ADMIN[:role] },
+  { email: USER[:email], password: 'password123', role: USER[:role] }
+].each do |user_attrs|
+  user = User.find_or_initialize_by(email: user_attrs[:email])
+  
+  if user.new_record?
+    user.assign_attributes(user_attrs)
+    if user.save
+      puts "  Created user: #{user.email} (role: #{user.role})"
+    else
+      puts "  ERROR creating user #{user_attrs[:email]}: #{user.errors.full_messages.join(', ')}"
+    end
+  else
+    puts "  User already exists: #{user.email} (role: #{user.role}) (skipped)"
+  end
+end
+
+puts "  Done — users seeded."
+puts ""
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
@@ -388,12 +429,12 @@ puts "  bundle exec rails console"
 puts ""
 puts "Then run:"
 puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
+puts "  # Admin token (can create assessments, view sessions, etc.)"
+puts "  token = JsonWebToken.encode({ user_id: 1, role: '#{ADMIN[:role]}', scheme: '#{TEST_ORG[:scheme]}' })"
 puts "  puts token"
 puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
+puts "  # User token"
+puts "  token = JsonWebToken.encode({ user_id: 2, role: '#{USER[:role]}', scheme: '#{TEST_ORG[:scheme]}' })"
 puts "  puts token"
 puts ""
 puts "Then hit the API:"

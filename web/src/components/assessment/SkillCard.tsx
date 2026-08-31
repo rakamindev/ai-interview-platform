@@ -3,12 +3,11 @@ import { UseFormReturn, useWatch } from "react-hook-form";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { cn } from "@/lib/utils";
+import { AssessmentFormValues } from "@/pages/assessments/hooks/useAssessment";
 import LevelRadio from "./LevelRadio";
 import CustomSkillForm from "./CustomSkillForm";
-import { cn } from "@/lib/utils";
-import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
-
 interface SkillCardProps {
   index: number;
   id: string;
@@ -16,10 +15,21 @@ interface SkillCardProps {
   onRemove: () => void;
 }
 
-export default function SkillCard({ index, id, form, onRemove }: SkillCardProps) {
+export default function SkillCard({
+  index,
+  id,
+  form,
+  onRemove,
+}: SkillCardProps) {
   const [anchorsOpen, setAnchorsOpen] = useState(false);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
 
   const skill = useWatch({ control: form.control, name: `skills.${index}` });
   const isCustom = skill?.is_custom;
@@ -36,7 +46,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       style={style}
       className={cn(
         "border rounded-lg bg-white",
-        isDragging && "opacity-50 shadow-lg"
+        isDragging && "opacity-50 shadow-lg",
       )}
     >
       {/* Card header */}
@@ -54,7 +64,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">{skillLabel}</span>
             <span className="text-xs text-muted-foreground shrink-0">
-              {isCustom ? "Custom" : skill?.skill_id ? `SK-${String(skill.skill_id).padStart(3, "0")}` : ""}
+              {isCustom ? "Custom" : (skill?.skill_id ?? "")}
             </span>
           </div>
         </div>
@@ -81,17 +91,26 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
               onClick={() => setAnchorsOpen((o) => !o)}
               className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {anchorsOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
               {anchorsOpen ? "Hide L1–L5 anchors" : "Show L1–L5 anchors"}
             </button>
 
             {anchorsOpen && (
               <div className="text-xs text-muted-foreground space-y-1 bg-muted/50 rounded p-2">
                 {[1, 2, 3, 4, 5].map((level) => {
-                  const anchor = skill?.[`l${level}_anchor` as keyof typeof skill] as string;
+                  const anchor = skill?.[
+                    `l${level}_anchor` as keyof typeof skill
+                  ] as string;
                   return anchor ? (
                     <div key={level}>
-                      <span className="font-medium text-foreground">L{level}</span> {anchor}
+                      <span className="font-medium text-foreground">
+                        L{level}
+                      </span>{" "}
+                      {anchor}
                     </div>
                   ) : null;
                 })}
@@ -99,10 +118,14 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             )}
 
             <div className="space-y-1.5">
-              <span className="text-xs text-muted-foreground">Expected level:</span>
+              <span className="text-xs text-muted-foreground">
+                Expected level:
+              </span>
               <LevelRadio
                 value={skill?.expected_level ?? 3}
-                onChange={(v) => form.setValue(`skills.${index}.expected_level`, v)}
+                onChange={(v) =>
+                  form.setValue(`skills.${index}.expected_level`, v)
+                }
               />
             </div>
           </div>

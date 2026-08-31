@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
+import { Loader2 } from "lucide-react";
+
 import { authAtom, saveToken } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import decodeToken from "@/utils/decodeToken";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -24,8 +26,13 @@ export default function LoginPage() {
       const res = await authApi.login({ email, password });
       const token = res.data.token;
       saveToken(token);
+      const { role } = decodeToken(token);
       setAuth({ token });
-      navigate("/assessments");
+      if (role === "admin") {
+        navigate("/assessments");
+      } else {
+        navigate("/interview");
+      }
     } catch {
       setError("Invalid email or password.");
     } finally {
@@ -38,7 +45,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Sign in to your account
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,7 +82,6 @@ export default function LoginPage() {
             Sign in
           </Button>
         </form>
-
       </div>
     </div>
   );

@@ -7,7 +7,9 @@ max_threads_count = ENV.fetch('RAILS_MAX_THREADS', 16)
 min_threads_count = ENV.fetch('RAILS_MIN_THREADS') { max_threads_count }
 threads min_threads_count, max_threads_count
 
-workers ENV.fetch('WEB_CONCURRENCY', 2)
+# fix crash on macos
+default_workers = RUBY_PLATFORM.include?('darwin') ? 0 : 2
+workers ENV.fetch('WEB_CONCURRENCY', default_workers)
 
 worker_timeout 3600 if ENV.fetch('RAILS_ENV', 'development') == 'development'
 

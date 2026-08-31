@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import {
   DndContext,
@@ -19,43 +19,48 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
-import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
-
-export interface AssessmentFormValues {
-  name: string;
-  time_limit_min: number;
-  language: "en" | "id";
-  skills: Partial<AssessmentSkill>[];
-}
+import useAssessment from "./hooks/useAssessment";
+import { UnsavedConfirmationDialog } from "@/components/ui/unsaved-comfirmation-dialog";
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
-  const form = useForm<AssessmentFormValues>({
-    defaultValues: {
-      name: "",
-      time_limit_min: 45,
-      language: "en",
-      skills: [],
-    },
+  const { loading, errorResponse, onSubmit, hasUnsavedChanges, ...form } =
+    useAssessment();
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+    submitting,
+    clearErrors,
+  } = form;
+  const { fields, append, remove, move } = useFieldArray({
+    control,
+    name: "skills",
   });
-
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -80,37 +85,14 @@ export default function AssessmentNewPage() {
     append({ ...skill, display_order: fields.length });
   };
 
-  const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-    try {
-      const payload = {
-        name: data.name,
-        time_limit_min: data.time_limit_min,
-        language: data.language,
-        assessment_skills_attributes: data.skills.map((s, i) => ({
-          ...s,
-          display_order: i,
-        })),
-      };
-      const res = await assessmentsApi.create(payload);
-      navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link
+          to="/assessments"
+          className="text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -209,6 +191,10 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
+          {errors.skills && (
+            <p className="text-xs text-destructive">{errors.skills.message}</p>
+          )}
+
           <div className="flex gap-2">
             <Button
               type="button"
@@ -223,7 +209,10 @@ export default function AssessmentNewPage() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={addCustomSkill}
+              onClick={() => {
+                addCustomSkill();
+                clearErrors("skills");
+              }}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add custom skill
@@ -233,8 +222,8 @@ export default function AssessmentNewPage() {
 
         <Separator />
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
+        {errorResponse && (
+          <p className="text-sm text-destructive">{errorResponse}</p>
         )}
 
         {/* Actions */}
@@ -242,7 +231,13 @@ export default function AssessmentNewPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/assessments")}
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                setCancelDialogOpen(true);
+                return;
+              }
+              navigate("/assessments");
+            }}
           >
             Cancel
           </Button>
@@ -256,7 +251,16 @@ export default function AssessmentNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={addB7Skill}
+        onSelect={(skill) => {
+          addB7Skill(skill);
+          clearErrors("skills");
+        }}
+      />
+
+      <UnsavedConfirmationDialog
+        onConfirm={() => navigate("/assessments")}
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
       />
     </div>
   );

@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import LevelRadio from "./LevelRadio";
-import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
+import { AssessmentFormValues } from "@/pages/assessments/hooks/useAssessment";
 
 interface CustomSkillFormProps {
   index: number;
@@ -19,8 +19,15 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
 };
 
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
-  const { register, setValue, formState: { errors } } = form;
-  const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
+  const {
+    register,
+    setValue,
+    formState: { errors },
+  } = form;
+  const expectedLevel = useWatch({
+    control: form.control,
+    name: `skills.${index}.expected_level`,
+  });
 
   return (
     <div className="space-y-3 pt-1">
@@ -37,7 +44,8 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor={`skills.${index}.scope_include`}>
-          What counts (scope include) <span className="text-destructive">*</span>
+          What counts (scope include){" "}
+          <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id={`skills.${index}.scope_include`}
@@ -48,7 +56,15 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
       </div>
 
       <div className="space-y-2">
-        {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map((key, i) => (
+        {(
+          [
+            "l1_anchor",
+            "l2_anchor",
+            "l3_anchor",
+            "l4_anchor",
+            "l5_anchor",
+          ] as const
+        ).map((key, i) => (
           <div key={key} className="space-y-1">
             <Label htmlFor={`skills.${index}.${key}`}>
               L{i + 1} anchor <span className="text-destructive">*</span>

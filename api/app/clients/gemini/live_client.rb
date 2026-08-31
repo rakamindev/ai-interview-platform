@@ -28,6 +28,8 @@ module Gemini
       on_audio: nil,
       on_input_transcription: nil,
       on_output_transcription: nil,
+      on_input_transcription_partial: nil,
+      on_output_transcription_partial: nil,
       on_model_turn_complete: nil,
       on_go_away: nil,
       on_close: nil,
@@ -44,6 +46,8 @@ module Gemini
       @ws = nil
       @input_text_buffer  = +''
       @output_text_buffer = +''
+      @last_input_partial = ''
+      @last_output_partial = ''
       @last_activity_at = nil
       @inactivity_timer = nil
       @last_audio_forwarded_at = nil
@@ -52,6 +56,8 @@ module Gemini
       @on_audio = on_audio
       @on_input_transcription = on_input_transcription
       @on_output_transcription = on_output_transcription
+      @on_input_transcription_partial = on_input_transcription_partial
+      @on_output_transcription_partial = on_output_transcription_partial
       @on_model_turn_complete = on_model_turn_complete
       @on_go_away = on_go_away
       @on_close = on_close
@@ -375,6 +381,20 @@ module Gemini
 
       text = input_tx.dig('parts', 0, 'text') || input_tx['text']
       @input_text_buffer << text.to_s
+
+      # Stream partial to client with proper spacing
+      return unless @on_input_transcription_partial
+
+      partial_text = text.to_s
+      if partial_text.present? && @last_input_partial.present?
+        # Add space if current doesn't start with space and previous didn't end with space
+        unless partial_text.start_with?(' ') || @last_input_partial.end_with?(' ')
+          partial_text = ' ' + partial_text
+        end
+      end
+
+      @on_input_transcription_partial.call(partial_text) if partial_text.present?
+      @last_input_partial = partial_text
     end
 
     def handle_output_transcription(data)
@@ -383,6 +403,20 @@ module Gemini
 
       text = output_tx.dig('parts', 0, 'text') || output_tx['text']
       @output_text_buffer << text.to_s
+
+      # Stream partial to client with proper spacing
+      return unless @on_output_transcription_partial
+
+      partial_text = text.to_s
+      if partial_text.present? && @last_output_partial.present?
+        # Add space if current doesn't start with space and previous didn't end with space
+        unless partial_text.start_with?(' ') || @last_output_partial.end_with?(' ')
+          partial_text = ' ' + partial_text
+        end
+      end
+
+      @on_output_transcription_partial.call(partial_text) if partial_text.present?
+      @last_output_partial = partial_text
     end
 
     # Must run before turnComplete handling — both can arrive in the same message and order matters.
@@ -395,6 +429,8 @@ module Gemini
 
       flush_input_buffer
       flush_output_buffer
+      @last_input_partial = ''   # Reset partial tracking on generation complete
+      @last_output_partial = ''  # Reset partial tracking on generation complete
 
       if emitted_audio
         @gate_timer&.cancel
@@ -419,6 +455,7 @@ module Gemini
       @gate_timer&.cancel
       Rails.logger.info('[Gemini::LiveClient] Model interrupted — resetting audio gate immediately')
       flush_output_buffer
+      @last_output_partial = '' # Reset partial tracking on interruption
       @on_model_turn_complete&.call
     end
 
@@ -439,6 +476,7 @@ module Gemini
         Rails.logger.info("[Gemini::LiveClient] User turnComplete — input_buffer=#{@input_text_buffer.length}chars silence_pumping=#{@silence_pumping}")
         stop_silence_pump
         flush_input_buffer
+        @last_input_partial = ''
       end
     end
 
@@ -474,15 +512,19 @@ module Gemini
     def flush_input_buffer
       return unless @input_text_buffer.present?
 
-      @on_input_transcription&.call(@input_text_buffer.strip)
+      # @on_input_transcription&.call(@input_text_buffer.strip)
+      @on_input_transcription&.call(@input_text_buffer)
       @input_text_buffer = +''
+      @last_input_partial = ''
     end
 
     def flush_output_buffer
       return unless @output_text_buffer.present?
 
-      @on_output_transcription&.call(@output_text_buffer.strip)
+      # @on_output_transcription&.call(@output_text_buffer.strip)
+      @on_output_transcription&.call(@output_text_buffer)
       @output_text_buffer = +''
+      @last_output_partial = ''
     end
   end
 end
