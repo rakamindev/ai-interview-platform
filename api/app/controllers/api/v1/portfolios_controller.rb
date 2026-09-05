@@ -180,6 +180,7 @@ module Api
           is_discovered:     skill.is_discovered,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
+          covered_by:        skill.covered_by,
           evidence:          skill.evidence_quotes,
           competency_summary: skill.competency_summary
         }

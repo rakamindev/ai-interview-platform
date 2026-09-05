@@ -95,9 +95,16 @@ module Portfolios
            What does this person reliably do at this skill? What's the ceiling? What's missing?
 
         4. ASSIGN CONFIDENCE
-           high — probe_count >= 3 AND state = covered
+           high — probe_count >= 3 AND state = covered AND covered_by = "analyzer"
            medium — probe_count = 2 OR state = partial
-           low — probe_count <= 1 OR state = initiated
+           low — probe_count <= 1 OR state = initiated OR covered_by != "analyzer"
+
+           covered_by tells you who promoted the skill to "covered".
+           "analyzer" means the evidence was judged sufficient during the interview.
+           "window_timeout" means the skill aged out of the analysis window and was
+           promoted on probe count alone, with no judgement of the evidence.
+           null means the promotion predates this field and cannot be verified.
+           Never assign high confidence unless covered_by is "analyzer".
 
         OUTPUT (JSON only, no prose):
         {
@@ -139,12 +146,43 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
+        id:          coverage_key(map.skill_id, map.skill_label),
         label:       map.skill_label,
         state:       map.state,
         probe_count: map.probe_count,
+        covered_by:  map.covered_by,
         is_discovered: map.is_discovered
       }
+    end
+
+    # Must match the id sent in the coverage block for the response to map back.
+    def coverage_key(skill_id, skill_label)
+      skill_id.presence || skill_label.to_s.downcase.gsub(/\s+/, '-')
+    end
+
+    def coverage_maps_by_key
+      @coverage_maps_by_key ||= @session.coverage_maps
+                                        .index_by { |m| coverage_key(m.skill_id, m.skill_label) }
+    end
+
+    # Covered without the analyzer judging the evidence. The prompt's own rule
+    # (probe_count >= 3 AND state = covered) is satisfied by a sweep the model
+    # cannot see, so the cap has to be enforced here.
+    def unverified_keys
+      @unverified_keys ||= coverage_maps_by_key
+                           .select { |_key, map| map.state == 'covered' && map.covered_by != 'analyzer' }
+                           .keys.to_set
+    end
+
+    def coverage_source_for(key)
+      coverage_maps_by_key[key]&.covered_by
+    end
+
+    def resolve_confidence(model_confidence, key)
+      return 'low' if unverified_keys.include?(key)
+      return 'low' unless PortfolioSkill::CONFIDENCE_LEVELS.include?(model_confidence)
+
+      model_confidence
     end
 
     def save_skills(portfolio, response)
@@ -154,24 +192,30 @@ module Portfolios
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        key = coverage_key(skill_data['skill_id'], skill_data['skill_label'])
+
         portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_confidence:      resolve_confidence(skill_data['confidence'], key),
+          covered_by:         coverage_source_for(key),
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        key = coverage_key(nil, skill_data['skill_label'])
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_confidence:      resolve_confidence(skill_data['confidence'], key),
+          covered_by:         coverage_source_for(key),
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
