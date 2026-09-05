@@ -38,13 +38,15 @@ class CoverageAnalyzerWorker
 
   def apply_updates(session, skill_updates)
     skill_updates.each do |update|
-      session.coverage_maps
-             .find_by(id: update[:coverage_map_id])
-             &.update!(
-               state:       update[:new_state],
-               probe_count: update[:new_probe_count],
-               last_signal: update[:last_signal]
-             )
+      attributes = {
+        state:       update[:new_state],
+        probe_count: update[:new_probe_count],
+        last_signal: update[:last_signal]
+      }
+      # Only a promotion the model judged carries the analyzer provenance.
+      attributes[:covered_by] = 'analyzer' if update[:new_state] == 'covered'
+
+      session.coverage_maps.find_by(id: update[:coverage_map_id])&.update!(attributes)
     end
   end
 
@@ -95,7 +97,11 @@ class CoverageAnalyzerWorker
     scope = scope.where.not(id: exclude_ids) if exclude_ids.any?
 
     scope.each do |map|
-      map.update!(state: 'covered', last_signal: 'Auto-advanced: outside context window with sufficient probes')
+      map.update!(
+        state:       'covered',
+        covered_by:  'window_timeout',
+        last_signal: 'Auto-advanced: outside context window with sufficient probes'
+      )
       Rails.logger.info("[N7] Auto-advanced #{map.skill_label} to covered (probe_count=#{map.probe_count})")
     end
   end
