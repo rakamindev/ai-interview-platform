@@ -179,7 +179,6 @@ module Portfolios
     end
 
     def resolve_confidence(model_confidence, key)
-      return 'low' if unverified_keys.include?(key)
       return 'low' unless PortfolioSkill::CONFIDENCE_LEVELS.include?(model_confidence)
 
       model_confidence

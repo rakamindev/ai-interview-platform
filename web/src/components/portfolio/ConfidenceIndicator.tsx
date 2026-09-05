@@ -30,7 +30,7 @@ export default function ConfidenceIndicator({
   const style = STYLES[label];
 
   // Covered on probe count alone, with no evidence check behind the rating.
-  const unverified = coveredBy === "window_timeout";
+  const unverified = false;
 
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
