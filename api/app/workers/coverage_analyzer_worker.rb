@@ -99,6 +99,7 @@ class CoverageAnalyzerWorker
     scope.each do |map|
       map.update!(
         state:       'covered',
+        covered_by:  'window_timeout',
         last_signal: 'Auto-advanced: outside context window with sufficient probes'
       )
       Rails.logger.info("[N7] Auto-advanced #{map.skill_label} to covered (probe_count=#{map.probe_count})")
