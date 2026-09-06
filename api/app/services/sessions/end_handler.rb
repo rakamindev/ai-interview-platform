@@ -12,6 +12,9 @@ module Sessions
     end
 
     def call(reason: 'manual_assessor')
+      # A provider failure is not a completed interview and must not create a portfolio.
+      return @session if @session.failed?
+
       # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
       if @session.ended?
         manual = %w[manual_candidate manual_assessor]
@@ -23,7 +26,14 @@ module Sessions
 
       reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
 
-      ActiveRecord::Base.transaction do
+      ended_now = false
+
+      # Completion retries and the WebSocket timeout can race. Lock the row so
+      # a portfolio and its generation job are created exactly once.
+      @session.with_lock do
+        @session.reload
+        next if @session.ended? || @session.failed?
+
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
 
         @session.update!(
@@ -34,7 +44,10 @@ module Sessions
         )
 
         create_portfolio
+        ended_now = true
       end
+
+      return @session unless ended_now
 
       enqueue_portfolio_generation
       publish_status_update
