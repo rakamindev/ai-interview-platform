@@ -8,7 +8,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.1-pro-preview'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -39,7 +39,7 @@ module Portfolios
     private
 
     def build_prompt
-      assessment       = @session.assessment
+      assessment        = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
       turns             = @session.transcript_turns.ordered
@@ -80,21 +80,28 @@ module Portfolios
 
         For EACH skill in the coverage map (both configured and discovered):
 
-        1. FIND THE EVIDENCE
+        1. CHECK IF ASSESSED
+           If coverage state = 'not_yet' OR (probe_count < 2 AND evidence is empty):
+           You MUST set "not_assessed": true, "level": null, and "confidence": null.
+           NEVER assign a rating/level if the candidate was never questioned or probed on this skill.
+           Honesty is mandatory — not_assessed is accurate and fair to the candidate.
+
+        2. FIND THE EVIDENCE (if assessed)
            Read all transcript turns where this skill was discussed.
            Identify the 2-3 most revealing quotes from the CANDIDATE (not the AI).
            A quote is revealing if it shows HOW they think, not just WHAT they know.
 
-        2. ASSIGN A LEVEL
+        3. ASSIGN A LEVEL (if assessed)
            Compare the candidate's actual behavior to the L1-L5 anchors.
            Assign the highest level where you see CONSISTENT evidence, not just one strong moment.
            If evidence is mixed (mostly L2 with one L3 moment), assign L2.
 
-        3. WRITE THE COMPETENCY SUMMARY
+        4. WRITE THE COMPETENCY SUMMARY
            2-3 sentences. Focus on patterns, not individual answers.
            What does this person reliably do at this skill? What's the ceiling? What's missing?
+           If not_assessed: explicitly state that this skill was not probed during the session.
 
-        4. ASSIGN CONFIDENCE
+        5. ASSIGN CONFIDENCE (if assessed, null if not_assessed)
            high — probe_count >= 3 AND state = covered
            medium — probe_count = 2 OR state = partial
            low — probe_count <= 1 OR state = initiated
@@ -105,15 +112,26 @@ module Portfolios
             {
               "skill_id": "sk-eng-001",
               "skill_label": "React / Frontend Development",
+              "not_assessed": false,
               "level": 3,
               "confidence": "high",
               "evidence": ["quote 1", "quote 2", "quote 3"],
               "competency_summary": "2-3 sentence summary"
+            },
+            {
+              "skill_id": "sk-eng-002",
+              "skill_label": "System Architecture",
+              "not_assessed": true,
+              "level": null,
+              "confidence": null,
+              "evidence": [],
+              "competency_summary": "Skill was not probed during this session."
             }
           ],
           "discovered_skills": [
             {
               "skill_label": "Micro-frontend Architecture",
+              "not_assessed": false,
               "level": 2,
               "confidence": "low",
               "evidence": ["quote 1"],
@@ -139,10 +157,10 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
-        probe_count: map.probe_count,
+        id:            map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
+        label:         map.skill_label,
+        state:         map.state,
+        probe_count:   map.probe_count,
         is_discovered: map.is_discovered
       }
     end
@@ -154,28 +172,37 @@ module Portfolios
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        attrs = extract_skill_attrs(skill_data)
         portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          skill_id:      skill_data['skill_id'],
+          skill_label:   skill_data['skill_label'],
+          is_discovered: false,
+          **attrs
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        attrs = extract_skill_attrs(skill_data)
         portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          skill_id:      nil,
+          skill_label:   skill_data['skill_label'],
+          is_discovered: true,
+          **attrs
         )
       end
+    end
+
+    def extract_skill_attrs(skill_data)
+      not_assessed = [true, 'true'].include?(skill_data['not_assessed']) || skill_data['level'].nil?
+      ai_level     = not_assessed ? nil : skill_data['level'].to_i.clamp(1, 5)
+
+      {
+        not_assessed:       not_assessed,
+        ai_level:           ai_level,
+        ai_confidence:      not_assessed ? nil : skill_data['confidence'],
+        evidence:           not_assessed ? [] : Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary'].to_s
+      }
     end
   end
 end

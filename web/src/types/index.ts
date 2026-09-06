@@ -90,8 +90,9 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  not_assessed?: boolean;
+  ai_level: string | null;       // "L1" | "L2" | "L3" | "L4" | "L5" | null
+  ai_confidence?: string | null;  // "high" | "medium" | "low" | null
   evidence: string[];
   competency_summary: string;
 }

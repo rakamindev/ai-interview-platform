@@ -1,5 +1,5 @@
 interface ConfidenceIndicatorProps {
-  confidence: string; // "high" | "medium" | "low" from API
+  confidence?: string | null;
 }
 
 function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
@@ -10,6 +10,7 @@ function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
 }
 
 export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
+  if (!confidence) return null;
   const label = getLabel(confidence);
 
   if (label === "HIGH") {

@@ -25,7 +25,7 @@ export default function SkillPortfolioCard({
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
+            <LevelBadge level={effectiveLevel} notAssessed={skill.not_assessed} />
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>
@@ -41,11 +41,17 @@ export default function SkillPortfolioCard({
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
         </div>
 
-        {/* Low confidence note */}
-        {skill.ai_confidence?.toLowerCase() === "low" && (
-          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+        {/* Unassessed or Low confidence note */}
+        {skill.not_assessed ? (
+          <div className="text-xs text-muted-foreground bg-neutral-50 border border-neutral-200 rounded px-3 py-2">
+            Skill ini belum sempat diprobe dalam sesi interview. Tidak ada rating L1–L5 yang difabrikasi demi objektivitas penilaian.
           </div>
+        ) : (
+          skill.ai_confidence?.toLowerCase() === "low" && (
+            <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+            </div>
+          )
         )}
 
         {/* Evidence */}

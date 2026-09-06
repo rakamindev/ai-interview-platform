@@ -32,6 +32,8 @@ module TenantScoped
   private
 
   def assign_tenant_id
-    self.tenant_id ||= Current.tenant_id
+    return if tenant_id.present?
+
+    self.tenant_id = Current.tenant_id if RequestStore.store.key?(:tenant_id)
   end
 end
