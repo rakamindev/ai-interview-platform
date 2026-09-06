@@ -89,7 +89,7 @@ vi.mock("@/components/HardwareCheck", () => ({
   ),
 }));
 
-function renderAt(token = "tok-abc123") {
+function renderAt(token = "nilai-token-palsu-untuk-test") {
   return render(
     <MemoryRouter initialEntries={[`/interview/${token}`]}>
       <Routes>
@@ -133,7 +133,7 @@ describe("InterviewPage — kegagalan tidak boleh tampil sebagai sukses", () => 
     getCandidateInfoMock.mockRejectedValue(
       backendError(404, "Invalid or expired invite token")
     );
-    renderAt("tok-kedaluwarsa");
+    renderAt("token-palsu-kedaluwarsa");
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
