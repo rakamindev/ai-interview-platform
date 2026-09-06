@@ -4,6 +4,8 @@ export interface Assessment {
   time_limit_min: number;
   language?: "en" | "id";
   system_prompt?: string;
+  prompt_generation_status?: "pending" | "generating" | "complete" | "failed";
+  prompt_generation_error?: string | null;
   created_by?: number;
   created_at?: string;
   updated_at?: string;

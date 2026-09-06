@@ -18,6 +18,9 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
+        member do
+          post :retry_prompt
+        end
         resources :sessions, only: %i[index create]
       end
 

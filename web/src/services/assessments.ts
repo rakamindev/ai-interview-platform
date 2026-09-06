@@ -31,6 +31,9 @@ export const assessmentsApi = {
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
 
+  retryPrompt: (id: number) =>
+    api.post<{ assessment: Assessment }>(`/assessments/${id}/retry_prompt`),
+
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
