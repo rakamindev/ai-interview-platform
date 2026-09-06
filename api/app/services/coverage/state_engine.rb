@@ -26,10 +26,17 @@ module Coverage
     end
 
     # Given a proposed update from N7, returns the safe state to apply.
-    # If the proposed state skips steps (e.g. not_yet → partial), we walk
-    # forward one step at a time, applying probe_count gates at each step.
-    # This prevents the state from getting stuck when Flash proposes a
-    # state multiple steps ahead.
+    # The result advances AT MOST one state forward per call. Skipping steps
+    # is still impossible (VALID_TRANSITIONS only allows adjacent states),
+    # and crucially: each new state must be earned by probes made *after
+    # entering* the previous one. The old implementation replayed the same
+    # probe_count at every rung of the ladder, so a single call with
+    # probe_count == 2 pushed not_yet → initiated → partial → covered at
+    # once — the HARD RULE gate could never fail because it was never
+    # re-evaluated against probes made inside the states it waved through.
+    # One step per turn is the safe floor: the next transcript turn gets a
+    # fresh resolve_state call and can advance one more rung if evidence
+    # still supports it.
     def self.resolve_state(current_state:, proposed_state:, probe_count:)
       return current_state if current_state == proposed_state
 
@@ -39,16 +46,10 @@ module Coverage
       # Unknown proposed state — don't change
       return current_state unless proposed_idx && proposed_idx > current_idx
 
-      # Walk forward one step at a time
-      result = current_state
-      (current_idx + 1).upto(proposed_idx) do |i|
-        candidate = STATES[i]
-        break unless valid_transition?(from: result, to: candidate, probe_count: probe_count)
+      candidate = STATES[current_idx + 1]
+      return current_state unless valid_transition?(from: current_state, to: candidate, probe_count: probe_count)
 
-        result = candidate
-      end
-
-      result
+      candidate
     end
   end
 end
