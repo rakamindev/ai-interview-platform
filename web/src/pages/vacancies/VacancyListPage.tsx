@@ -4,21 +4,53 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
-import { Plus, Briefcase, ChevronRight } from "lucide-react";
+import { Plus, Briefcase, ChevronRight, Trash2 } from "lucide-react";
 import type { Vacancy } from "@/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function VacancyListPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Vacancy | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    vacanciesApi.list()
+    vacanciesApi
+      .list()
       .then((res) => setVacancies(res.data.vacancies))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await vacanciesApi.delete(deleteTarget.id);
+      setVacancies((prev) => prev.filter((v) => v.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.error ||
+        "Failed to delete vacancy. Please try again.";
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -37,7 +69,9 @@ export default function VacancyListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
         </div>
       ) : vacancies.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
@@ -59,12 +93,137 @@ export default function VacancyListPage() {
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium text-sm">{v.role_title}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(v);
+                      setDeleteError(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Vacancy</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-foreground">
+                "{deleteTarget?.role_title}"
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="text-sm text-destructive px-1">{deleteError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
+// ____________________________________________________________________________
+
+// before development delete feature
+
+// import { useEffect, useState } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { Button } from "@/components/ui/button";
+// import { Card, CardContent } from "@/components/ui/card";
+// import { Skeleton } from "@/components/ui/skeleton";
+// import { vacanciesApi } from "@/services/vacancies";
+// import { Plus, Briefcase, ChevronRight } from "lucide-react";
+// import type { Vacancy } from "@/types";
+
+// export default function VacancyListPage() {
+//   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(false);
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     vacanciesApi.list()
+//       .then((res) => setVacancies(res.data.vacancies))
+//       .catch(() => setError(true))
+//       .finally(() => setLoading(false));
+//   }, []);
+
+//   return (
+//     <div className="space-y-4">
+//       <div className="flex items-center justify-between">
+//         <h1 className="text-xl font-semibold">Vacancies</h1>
+//         <Button onClick={() => navigate("/vacancies/new")}>
+//           <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
+//         </Button>
+//       </div>
+
+//       {error && (
+//         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+//           Failed to load vacancies. Please refresh the page.
+//         </div>
+//       )}
+
+//       {loading ? (
+//         <div className="space-y-2">
+//           {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+//         </div>
+//       ) : vacancies.length === 0 ? (
+//         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
+//           <p className="mb-3">No vacancies yet.</p>
+//           <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
+//             <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy
+//           </Button>
+//         </div>
+//       ) : (
+//         <div className="space-y-2">
+//           {vacancies.map((v) => (
+//             <Card
+//               key={v.id}
+//               className="cursor-pointer hover:border-primary/40 transition-colors"
+//               onClick={() => navigate(`/vacancies/${v.id}/edit`)}
+//             >
+//               <CardContent className="py-3 px-4 flex items-center justify-between">
+//                 <div className="flex items-center gap-2">
+//                   <Briefcase className="h-4 w-4 text-muted-foreground" />
+//                   <p className="font-medium text-sm">{v.role_title}</p>
+//                 </div>
+//                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
+//               </CardContent>
+//             </Card>
+//           ))}
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
