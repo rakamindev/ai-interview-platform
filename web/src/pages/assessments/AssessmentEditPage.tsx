@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -86,7 +86,7 @@ export default function AssessmentEditPage() {
     try {
       const skillsPayload = [
         ...data.skills.map((s, i) => ({ ...s, display_order: i })),
-        ...deletedSkillIdsRef.current.map((delId) => ({ id: delId, _destroy: true })),
+        ...deletedSkillIdsRef.current.map((delId: number) => ({ id: delId, _destroy: true })),
       ];
       await assessmentsApi.update(Number(id), {
         name: data.name,

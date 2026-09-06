@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ export default function VacancyEditPage() {
     try {
       const skillsPayload = [
         ...data.skills,
-        ...deletedSkillIdsRef.current.map((delId) => ({ id: delId, _destroy: true })),
+        ...deletedSkillIdsRef.current.map((delId: number) => ({ id: delId, _destroy: true })),
       ];
       await vacanciesApi.update(Number(id), {
         role_title: data.role_title,
