@@ -3,7 +3,7 @@
 class User < ApplicationRecord
   has_secure_password
 
-  ROLES = %w[admin user].freeze
+  ROLES = %w[admin user assessor recruiter hr].freeze
 
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },

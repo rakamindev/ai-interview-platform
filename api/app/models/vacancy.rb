@@ -2,6 +2,9 @@
 
 class Vacancy < ApplicationRecord
   include TenantScoped
+  include Sanitizable
+
+  sanitize_text_fields :role_title, :culture_dimensions, :competency_expectations
 
   has_many :vacancy_skills, dependent: :destroy
   has_many :fit_gap_reports, dependent: :destroy

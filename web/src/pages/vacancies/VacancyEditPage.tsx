@@ -119,7 +119,12 @@ export default function VacancyEditPage() {
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        existingSkillLabels={fields.filter((f) => !f._destroy).map((f) => f.skill_label).filter(Boolean)}
+      />
     </div>
   );
 }

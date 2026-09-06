@@ -104,6 +104,17 @@ module Gemini
       Rails.logger.info('[Gemini::LiveClient] trigger_opening sent')
     end
 
+    # Explicit push-to-talk / end-turn signal from candidate.
+    # Immediately engages silence pump so Gemini's VAD triggers turn-complete.
+    def trigger_done_speaking
+      return unless @connected && @ws && !@model_emitting_audio
+
+      @silence_pump_timer&.cancel
+      @silence_pump_timer = nil
+      start_silence_pump
+      Rails.logger.info('[Gemini::LiveClient] trigger_done_speaking invoked — silence pump engaged')
+    end
+
     # True when this client is ready to accept audio frames.
     def accepting_audio?
       @connected && @ws && !@superseded

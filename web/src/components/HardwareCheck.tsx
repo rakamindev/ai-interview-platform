@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from "@/utils/internetSpeedTest";
+import { testInternetSpeed, DEFAULT_THRESHOLDS, getConnectionQuality, type InternetSpeedResult } from "@/utils/internetSpeedTest";
 import {
     ProctoringState,
     type HardwareCheckingProgress,
@@ -241,16 +241,31 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
+                            <div className="mt-2.5 space-y-2 text-xs">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex gap-3">
+                                        <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600 font-medium" : "text-destructive font-medium"}>
+                                            ↓ {internetResult.download.toFixed(1)} Mbps
+                                        </span>
+                                        <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600 font-medium" : "text-destructive font-medium"}>
+                                            ↑ {internetResult.upload.toFixed(1)} Mbps
+                                        </span>
+                                        <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600 font-medium" : "text-destructive font-medium"}>
+                                            {internetResult.ping} ms
+                                        </span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${getConnectionQuality(internetResult, thresholds).badgeClass}`}>
+                                        {getConnectionQuality(internetResult, thresholds).label}
+                                    </span>
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">
+                                    Standar Minimum: Download ≥ {thresholds.minDownloadMbps} Mbps, Upload ≥ {thresholds.minUploadMbps} Mbps, Ping ≤ {thresholds.maxPingMs} ms
+                                </div>
+                                {!internetResult.passed && (
+                                    <p className="text-[11px] text-destructive bg-destructive/10 p-2 rounded">
+                                        {getConnectionQuality(internetResult, thresholds).description}
+                                    </p>
+                                )}
                             </div>
                         )}
 

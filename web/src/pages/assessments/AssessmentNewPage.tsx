@@ -68,6 +68,7 @@ export default function AssessmentNewPage() {
   };
 
   const addCustomSkill = () => {
+    setError(null);
     append({
       skill_label: "",
       is_custom: true,
@@ -77,6 +78,7 @@ export default function AssessmentNewPage() {
   };
 
   const addB7Skill = (skill: Partial<AssessmentSkill>) => {
+    setError(null);
     append({ ...skill, display_order: fields.length });
   };
 
@@ -257,6 +259,7 @@ export default function AssessmentNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
+        existingSkillLabels={fields.map((f) => f.skill_label).filter(Boolean)}
       />
     </div>
   );

@@ -159,6 +159,12 @@ export default function InterviewPage() {
     }
   }, [mute, unmute]);
 
+  const handleDoneSpeaking = useCallback(() => {
+    sendJson({ type: "done_speaking" });
+    muteRef.current?.();
+    setSpeaker("ai");
+  }, [sendJson]);
+
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
     setInterviewState("connecting");
@@ -317,11 +323,21 @@ export default function InterviewPage() {
             />
 
             {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
+              <div className="flex flex-col items-center gap-3">
+                <VoiceBars
+                  active={true}
+                  label="You're speaking"
+                  variant="candidate"
+                />
+                <Button
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm animate-pulse"
+                  onClick={handleDoneSpeaking}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1.5" />
+                  Selesai Menjawab (Done Speaking)
+                </Button>
+              </div>
             )}
 
             {/* Transcript */}
@@ -341,6 +357,17 @@ export default function InterviewPage() {
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
+          {candidateSpeaking && (
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-primary text-primary-foreground shadow-sm"
+              onClick={handleDoneSpeaking}
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Done Speaking
+            </Button>
+          )}
+
           <Button
             variant={micMuted ? "destructive" : "outline"}
             size="sm"

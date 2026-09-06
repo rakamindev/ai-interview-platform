@@ -10,7 +10,43 @@ export function usePolling(
 
   useEffect(() => {
     if (!active) return;
-    const id = setInterval(() => fnRef.current(), intervalMs);
-    return () => clearInterval(id);
+
+    let id: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (id !== null) clearInterval(id);
+      id = setInterval(() => {
+        if (!document.hidden) {
+          fnRef.current();
+        }
+      }, intervalMs);
+    };
+
+    const stopPolling = () => {
+      if (id !== null) {
+        clearInterval(id);
+        id = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        fnRef.current();
+        startPolling();
+      }
+    };
+
+    if (!document.hidden) {
+      startPolling();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [intervalMs, active]);
 }

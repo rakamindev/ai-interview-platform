@@ -16,6 +16,16 @@ class Rack::Attack
     req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})
   end
 
+  # Throttle LLM triggers (portfolio & fitgap generation): 5 per minute per IP.
+  throttle('llm/generation', limit: 5, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.match?(%r{\A/api/v1/(sessions/[^/]+/portfolio/regenerate|portfolios/[^/]+/(fitgap|regenerate_fitgap))\z})
+  end
+
+  # General API protection against scraping and flood: 120 requests per minute per IP.
+  throttle('api/general', limit: 120, period: 1.minute) do |req|
+    req.ip if req.path.start_with?('/api/v1')
+  end
+
   # Return 429 JSON instead of the default plain-text response.
   self.throttled_responder = lambda do |_req|
     [

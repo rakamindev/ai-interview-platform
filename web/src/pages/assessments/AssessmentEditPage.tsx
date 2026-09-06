@@ -191,7 +191,12 @@ export default function AssessmentEditPage() {
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ ...s, display_order: fields.length })}
+        existingSkillLabels={fields.filter((f) => !f._destroy).map((f) => f.skill_label).filter(Boolean)}
+      />
     </div>
   );
 }

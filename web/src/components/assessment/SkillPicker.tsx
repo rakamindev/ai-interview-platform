@@ -15,9 +15,10 @@ interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (skill: Partial<AssessmentSkill>) => void;
+  existingSkillLabels?: (string | undefined)[];
 }
 
-export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
+export default function SkillPicker({ open, onOpenChange, onSelect, existingSkillLabels = [] }: SkillPickerProps) {
   const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -79,16 +80,31 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
           ) : (
-            filtered.map((s) => (
-              <button
-                key={s.skill_id}
-                type="button"
-                onClick={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
-              >
-                {s.skill_label}
-              </button>
-            ))
+            filtered.map((s) => {
+              const isAlreadyAdded = existingSkillLabels.some(
+                (l) => Boolean(l) && l!.trim().toLowerCase() === s.skill_label.trim().toLowerCase()
+              );
+              return (
+                <button
+                  key={s.skill_id}
+                  type="button"
+                  disabled={isAlreadyAdded}
+                  onClick={() => !isAlreadyAdded && handleSelect(s)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-sm ${
+                    isAlreadyAdded
+                      ? "opacity-50 cursor-not-allowed bg-muted/40 text-muted-foreground"
+                      : "hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <span>{s.skill_label}</span>
+                  {isAlreadyAdded && (
+                    <span className="text-[11px] bg-muted px-1.5 py-0.5 rounded border text-muted-foreground font-normal">
+                      Added
+                    </span>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </DialogContent>
