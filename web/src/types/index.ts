@@ -128,11 +128,14 @@ export interface VacancySkill {
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
+  skill_id?: string | number;
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  required_level?: number;
+  expected_level?: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: string | number;
   is_override?: boolean;
 }
 
