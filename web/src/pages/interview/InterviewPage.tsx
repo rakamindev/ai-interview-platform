@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, X, Zap } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -159,6 +159,12 @@ export default function InterviewPage() {
     }
   }, [mute, unmute]);
 
+  const handleDoneSpeaking = useCallback(() => {
+    sendJson({ type: "done_speaking" });
+    muteRef.current?.();
+    setSpeaker("ai");
+  }, [sendJson]);
+
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
     setInterviewState("connecting");
@@ -179,6 +185,48 @@ export default function InterviewPage() {
     disconnect();
     setInterviewState("complete");
   }, [stopCapture, stopPlayback, sendJson, disconnect]);
+
+  // Keyboard shortcuts: Space (mute/unmute), Enter (Done Speaking when candidate is speaking)
+  useEffect(() => {
+    const isLive = interviewState === "active" || interviewState === "connecting";
+    if (!isLive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const tagName = activeEl?.tagName.toLowerCase();
+      if (tagName === "input" || tagName === "textarea" || (activeEl as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        toggleMic();
+      } else if (e.code === "Enter" && speaker === "candidate") {
+        e.preventDefault();
+        handleDoneSpeaking();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [interviewState, toggleMic, speaker, handleDoneSpeaking]);
+
+  // Guard against accidental tab closure, page reload, or navigation during active interview
+  useEffect(() => {
+    const isLive = interviewState === "active" || interviewState === "connecting" || interviewState === "draining_audio";
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isLive) {
+        e.preventDefault();
+        e.returnValue = "Wawancara sedang berlangsung. Anda yakin ingin meninggalkan sesi?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [interviewState]);
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
@@ -230,7 +278,7 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
+        <CheckCircle className="h-16 w-16 text-green-600 mx-auto" />
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
@@ -278,16 +326,22 @@ export default function InterviewPage() {
       {reconnectedPrompt && (
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+          <button
+            className="ml-3 text-blue-500 hover:text-blue-700 shrink-0 p-1"
+            onClick={() => setReconnectedPrompt(false)}
+            aria-label="Tutup pemberitahuan"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
       {/* Voice indicator */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
         {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
+          <div className="text-sm text-muted-foreground animate-pulse" role="status" aria-live="polite">Connecting...</div>
         ) : interviewState === "draining_audio" ? (
-          <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex flex-col items-center gap-2 text-center" role="status" aria-live="polite">
             <VoiceBars active={true} label="AI speaking" variant="ai" />
             <p className="text-xs text-muted-foreground">Wrapping up...</p>
           </div>
@@ -309,7 +363,7 @@ export default function InterviewPage() {
 
             {/* Transcript */}
             {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
+              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]" role="log" aria-live="polite">
                 {transcript.map((turn, i) => (
                   <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
                 ))}
@@ -324,16 +378,35 @@ export default function InterviewPage() {
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
+          {candidateSpeaking && (
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-primary text-primary-foreground shadow-sm"
+              onClick={handleDoneSpeaking}
+              aria-label="Selesai Menjawab"
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Done Speaking
+              <kbd className="ml-1.5 text-[10px] bg-primary-foreground/25 text-primary-foreground px-1 py-0.5 rounded font-mono font-semibold">
+                ↵ Enter
+              </kbd>
+            </Button>
+          )}
+
           <Button
             variant={micMuted ? "destructive" : "outline"}
             size="sm"
             onClick={toggleMic}
+            aria-label={micMuted ? "Buka mic (Space)" : "Matikan mic (Space)"}
           >
             {micMuted ? (
               <><MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted</>
             ) : (
               <><Mic className="h-3.5 w-3.5 mr-1.5" /> Mic On</>
             )}
+            <kbd className="ml-1.5 text-[10px] bg-muted-foreground/10 px-1 py-0.5 rounded font-mono text-muted-foreground">
+              Space
+            </kbd>
           </Button>
 
         <AlertDialog>
@@ -356,7 +429,7 @@ export default function InterviewPage() {
         {import.meta.env.DEV && (
           <Button variant="outline" size="sm" className="text-xs opacity-50"
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
+            <Zap className="h-3 w-3 mr-1" /> Force reconnect
           </Button>
         )}
         </div>

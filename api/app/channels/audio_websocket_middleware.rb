@@ -426,6 +426,10 @@ class AudioWebSocketMiddleware
         handle_gemini_close(browser_ws, state, code: 1011, reason: 'debug_force_reconnect')
         old_client&.close
       end
+    when 'done_speaking'
+      Rails.logger.info("[AudioWS] Candidate signaled done_speaking for session #{state.session&.id}")
+      state.gemini_client&.trigger_done_speaking
+      send_json(browser_ws, type: 'speaker_changed', speaker: 'ai')
     when 'end_session'
       state.proactive_reconnect_timer&.cancel
       state.graceful_end_timer&.cancel

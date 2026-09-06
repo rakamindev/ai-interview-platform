@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class AssessmentSkill < ApplicationRecord
+  include Sanitizable
+
+  sanitize_text_fields :skill_label, :scope_include, :l1_anchor, :l2_anchor, :l3_anchor, :l4_anchor, :l5_anchor
+
   belongs_to :assessment, inverse_of: :assessment_skills
 
   validates :skill_label, presence: true

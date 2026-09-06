@@ -46,12 +46,10 @@ module Sessions
     private
 
     def publish_status_update
-      redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
-      redis.publish("coverage:#{@session.id}", { type: 'session_status', status: @session.status, end_reason: @session.end_reason }.to_json)
+      payload = { type: 'session_status', status: @session.status, end_reason: @session.end_reason }.to_json
+      Sidekiq.redis { |conn| conn.publish("coverage:#{@session.id}", payload) }
     rescue => e
       Rails.logger.error("[EndHandler] Failed to publish status update: #{e.message}")
-    ensure
-      redis&.close
     end
 
     def create_portfolio

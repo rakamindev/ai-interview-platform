@@ -6,21 +6,24 @@ class CoverageAnalyzerWorker
   sidekiq_options queue: :coverage, retry: 0  # non-critical — no retry
 
   def perform(session_id, turn_number)
-    session = Session.find(session_id)
-
+    session = Session.unscoped.find_by(id: session_id)
+    return unless session
     return if session.ended?
 
-    result = Coverage::Analyzer.new(session: session).call
+    org = session.assessment&.organization || Organization.find_by(id: session.tenant_id)
+    Current.set(tenant_id: session.tenant_id, organization: org) do
+      result = Coverage::Analyzer.new(session: session).call
 
-    apply_updates(session, result[:skill_updates])
-    create_discovered_skills(session, result[:discovered_skills])
+      apply_updates(session, result[:skill_updates])
+      create_discovered_skills(session, result[:discovered_skills])
 
-    # Pass the IDs of maps just updated this run so we never auto-advance a
-    # skill that was touched in the same job (it isn't stale yet).
-    updated_ids = result[:skill_updates].filter_map { |u| u[:coverage_map_id] }
-    advance_stale_partials(session, exclude_ids: updated_ids)
+      # Pass the IDs of maps just updated this run so we never auto-advance a
+      # skill that was touched in the same job (it isn't stale yet).
+      updated_ids = result[:skill_updates].filter_map { |u| u[:coverage_map_id] }
+      advance_stale_partials(session, exclude_ids: updated_ids)
 
-    publish_coverage_update(session)
+      publish_coverage_update(session)
+    end
     # Session-end detection removed from worker (H1 fix) — the middleware owns
     # session lifecycle because it's the only component with access to both the
     # Gemini client and the browser WebSocket. The worker updating DB state and

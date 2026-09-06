@@ -17,22 +17,49 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+    minDownloadMbps: 1.5,
+    minUploadMbps: 0.5,
+    maxPingMs: 600,
 };
+
+export function getConnectionQuality(result: InternetSpeedResult, thresholds = DEFAULT_THRESHOLDS): {
+    label: string;
+    badgeClass: string;
+    description: string;
+} {
+    if (!result.passed) {
+        return {
+            label: "Kurang / Tidak Layak",
+            badgeClass: "bg-red-100 text-red-700 border-red-200",
+            description: "Koneksi tidak memenuhi syarat minimum. Disarankan menggunakan Wi-Fi atau jaringan yang lebih stabil.",
+        };
+    }
+    if (result.download >= 5 && result.upload >= 2 && result.ping <= 200) {
+        return {
+            label: "Optimal (Sangat Baik)",
+            badgeClass: "bg-green-100 text-green-700 border-green-200",
+            description: "Koneksi sangat prima untuk transmisi suara real-time.",
+        };
+    }
+    return {
+        label: "Layak (Cukup)",
+        badgeClass: "bg-teal-100 text-teal-700 border-teal-200",
+        description: "Koneksi memenuhi standar minimum untuk wawancara.",
+    };
+}
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
 const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
 
 async function measurePing(): Promise<number> {
-    if (SPEED_TEST_PING_URL) {
+    const endpoints = SPEED_TEST_PING_URL ? [SPEED_TEST_PING_URL] : ["/api/v1/health", "/health"];
+    for (const ep of endpoints) {
         try {
             const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
-            return performance.now() - start;
+            await fetch(ep, { cache: "no-cache" });
+            return Math.round(performance.now() - start);
         } catch {
-            return 999;
+            // try next
         }
     }
     const testUrls = [
@@ -44,7 +71,7 @@ async function measurePing(): Promise<number> {
         try {
             const start = performance.now();
             await fetch(url, { mode: "no-cors", cache: "no-cache" });
-            return performance.now() - start;
+            return Math.round(performance.now() - start);
         } catch {
             continue;
         }
@@ -89,7 +116,7 @@ async function measureUploadSpeed(): Promise<number> {
     });
     const endpoints = SPEED_TEST_UPLOAD_URL
         ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        : ["/api/v1/speed_test", "https://httpbin.org/post"];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();

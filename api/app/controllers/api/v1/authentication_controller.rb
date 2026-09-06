@@ -5,13 +5,15 @@ module Api
     class AuthenticationController < ApiController
       skip_before_action :require_tenant!
 
+      ALLOWED_LOGIN_ROLES = %w[admin user assessor recruiter hr].freeze
+
       # POST /api/v1/auth/login
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
         return json_error('Invalid email or password', :unauthorized) unless user&.authenticate(params[:password])
 
-        return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
+        return json_error('Unauthorized role', :forbidden) unless ALLOWED_LOGIN_ROLES.include?(user.role)
 
         scheme = resolve_scheme
         token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })

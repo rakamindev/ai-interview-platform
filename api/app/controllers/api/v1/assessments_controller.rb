@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(:latest_session).order(created_at: :desc)
         )
 
         json_response(
@@ -49,8 +49,11 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          json_error(@assessment.errors.full_messages.join(', '), :unprocessable_entity)
+        end
       end
 
       private
@@ -58,7 +61,7 @@ module Api
       def set_assessment
         @assessment = Assessment.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        return json_error("Assessment not found", :not_found)
       end
 
       def assessment_params
@@ -76,7 +79,7 @@ module Api
       end
 
       def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+        latest = assessment.latest_session
 
         {
           id:             assessment.id,
@@ -115,15 +118,6 @@ module Api
             }
           end
         )
-      end
-
-      def pagination_meta(collection)
-        {
-          current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
-        }
       end
     end
   end

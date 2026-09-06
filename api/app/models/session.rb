@@ -2,11 +2,15 @@
 
 class Session < ApplicationRecord
   include TenantScoped
+  include Sanitizable
+
+  sanitize_text_fields :candidate_name
 
   STATUSES   = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
   belongs_to :assessment
+  belongs_to :organization, foreign_key: :tenant_id, optional: true
   has_many :transcript_turns, dependent: :destroy
   has_many :coverage_maps, dependent: :destroy
   has_one  :portfolio, dependent: :destroy
@@ -26,7 +30,8 @@ class Session < ApplicationRecord
   def pending? = status == 'pending'
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('WEB_APP_URL', ENV.fetch('APP_BASE_URL', 'http://localhost:5174'))
+    base = base.sub(':3001', ':5174') if base.include?(':3001')
     "#{base}/interview/#{invite_token}"
   end
 

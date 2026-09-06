@@ -96,7 +96,7 @@ module Api
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        return json_error("Portfolio not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
@@ -122,13 +122,15 @@ module Api
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        return json_error("Portfolio not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        portfolio = Portfolio.joins(:session).where(sessions: { tenant_id: Current.tenant_id }).find_by(id: params[:id])
+        return json_error("Portfolio not found", :not_found) unless portfolio
+
+        report = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
@@ -136,7 +138,7 @@ module Api
 
         json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        return json_error("Portfolio not found", :not_found)
       end
 
       private
@@ -144,19 +146,24 @@ module Api
       def set_session
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Session not found", :not_found)
+        return json_error("Session not found", :not_found)
       end
 
       def set_portfolio
         # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
+        # If called from session context, look up via session (which is TenantScoped)
         if @session
-          @portfolio = @session.portfolio
+          @portfolio = Portfolio.includes(:portfolio_skills, :assessor_overrides).find_by(session_id: @session.id)
+          return json_error("Portfolio not found", :not_found) unless @portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.joins(:session)
+                                .where(sessions: { tenant_id: Current.tenant_id })
+                                .includes(:portfolio_skills, :assessor_overrides)
+                                .find_by(id: params[:id])
+          return json_error("Portfolio not found", :not_found) unless @portfolio
         end
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        return json_error("Portfolio not found", :not_found)
       end
 
       def portfolio_json(portfolio)

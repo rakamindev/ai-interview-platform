@@ -45,6 +45,11 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  assessment?: {
+    id: number;
+    name: string;
+    time_limit_min: number;
+  };
 }
 
 export interface CoverageSkill {
@@ -90,7 +95,7 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: number | string; // supports both integer 1..5 and "L1".."L5"
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
@@ -128,11 +133,14 @@ export interface VacancySkill {
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
+  skill_id?: string | number;
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  required_level?: number;
+  expected_level?: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: string | number;
   is_override?: boolean;
 }
 

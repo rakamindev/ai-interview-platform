@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from "@/utils/internetSpeedTest";
+import { testInternetSpeed, DEFAULT_THRESHOLDS, getConnectionQuality, type InternetSpeedResult } from "@/utils/internetSpeedTest";
 import {
     ProctoringState,
     type HardwareCheckingProgress,
@@ -13,6 +13,10 @@ import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
+}
+
+interface WebkitWindow extends Window {
+    webkitAudioContext?: typeof AudioContext;
 }
 
 function StateIcon({ state }: { state: ProctoringState }) {
@@ -69,9 +73,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     const checkAudioPlayback = async (): Promise<boolean> => {
         try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const AudioCtx = window.AudioContext || (window as unknown as WebkitWindow).webkitAudioContext;
+            if (!AudioCtx) return false;
+
             const ctx = new AudioCtx();
             if (ctx.state === "suspended") await ctx.resume();
+            
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
@@ -86,7 +93,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     const startAudioLevelMonitoring = (stream: MediaStream) => {
         try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const AudioCtx = window.AudioContext || (window as unknown as WebkitWindow).webkitAudioContext;
+            if (!AudioCtx) return;
+
             const ctx = new AudioCtx();
             const source = ctx.createMediaStreamSource(stream);
             const analyser = ctx.createAnalyser();
@@ -241,16 +250,31 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
+                            <div className="mt-2.5 space-y-2 text-xs">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex gap-3">
+                                        <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600 font-medium" : "text-destructive font-medium"}>
+                                            ↓ {internetResult.download.toFixed(1)} Mbps
+                                        </span>
+                                        <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600 font-medium" : "text-destructive font-medium"}>
+                                            ↑ {internetResult.upload.toFixed(1)} Mbps
+                                        </span>
+                                        <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600 font-medium" : "text-destructive font-medium"}>
+                                            {internetResult.ping} ms
+                                        </span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${getConnectionQuality(internetResult, thresholds).badgeClass}`}>
+                                        {getConnectionQuality(internetResult, thresholds).label}
+                                    </span>
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">
+                                    Standar Minimum: Download ≥ {thresholds.minDownloadMbps} Mbps, Upload ≥ {thresholds.minUploadMbps} Mbps, Ping ≤ {thresholds.maxPingMs} ms
+                                </div>
+                                {!internetResult.passed && (
+                                    <p className="text-[11px] text-destructive bg-destructive/10 p-2 rounded">
+                                        {getConnectionQuality(internetResult, thresholds).description}
+                                    </p>
+                                )}
                             </div>
                         )}
 

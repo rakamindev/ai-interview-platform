@@ -6,10 +6,13 @@ class FitGapGeneratorWorker
   sidekiq_options queue: :default, retry: 2
 
   def perform(portfolio_id, vacancy_id)
-    portfolio = Portfolio.find(portfolio_id)
-    vacancy   = Vacancy.unscoped.find(vacancy_id)
+    portfolio = Portfolio.unscoped.find_by(id: portfolio_id)
+    vacancy   = Vacancy.unscoped.find_by(id: vacancy_id)
+    return unless portfolio && vacancy
 
-    FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+    Current.set(tenant_id: portfolio.tenant_id) do
+      FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+    end
   rescue ActiveRecord::RecordNotFound => e
     Rails.logger.warn("[N13] Record not found: #{e.message}")
   rescue StandardError => e

@@ -72,6 +72,25 @@ export default function LoginPage() {
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Sign in
           </Button>
+
+          {import.meta.env.DEV && import.meta.env.VITE_DEV_TOKEN && (
+            <div className="pt-2 border-t text-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-xs text-muted-foreground"
+                onClick={() => {
+                  const devToken = import.meta.env.VITE_DEV_TOKEN;
+                  saveToken(devToken);
+                  setAuth({ token: devToken });
+                  navigate("/assessments");
+                }}
+              >
+                Quick Login (Dev Mode)
+              </Button>
+            </div>
+          )}
         </form>
 
       </div>

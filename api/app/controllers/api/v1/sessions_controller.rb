@@ -15,7 +15,7 @@ module Api
 
         json_response(sessions: sessions.map(&method(:session_json)))
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        return json_error("Assessment not found", :not_found)
       end
 
       # POST /api/v1/assessments/:assessment_id/sessions
@@ -40,7 +40,7 @@ module Api
           json_error(session.errors.full_messages.first, :unprocessable_entity)
         end
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        return json_error("Assessment not found", :not_found)
       end
 
       # GET /api/v1/sessions/:id
@@ -92,24 +92,29 @@ module Api
       # GET /api/v1/sessions/:id/transcript
       def transcript
         from_turn = params[:from_turn].to_i
-        turns     = @session.transcript_turns
-                             .ordered
-                             .then { from_turn > 0 ? _1.where("turn_number >= ?", from_turn) : _1 }
+        scope     = @session.transcript_turns.ordered
+        scope     = scope.where("turn_number >= ?", from_turn) if from_turn > 0
 
-        json_response(
-          turns: turns.map do |t|
-            {
-              id:             t.id,
-              turn_number:    t.turn_number,
-              speaker:        t.speaker,
-              text:           t.text,
-              audio_start_ms: t.audio_start_ms,
-              audio_end_ms:   t.audio_end_ms,
-              created_at:     t.created_at
-            }
-          end,
-          total: turns.count
-        )
+        total = scope.count
+
+        if params[:page].present?
+          page     = [params[:page].to_i, 1].max
+          per_page = (params[:per_page] || 50).to_i.clamp(1, 200)
+          turns    = scope.offset((page - 1) * per_page).limit(per_page)
+
+          json_response(
+            turns: turns_json(turns),
+            total: total,
+            page: page,
+            per_page: per_page,
+            total_pages: (total.to_f / per_page).ceil
+          )
+        else
+          json_response(
+            turns: turns_json(scope),
+            total: total
+          )
+        end
       end
 
       # POST /sessions/:token/audio_complete  — no JWT, invite token in URL
@@ -120,6 +125,7 @@ module Api
         return json_error("Invalid or expired invite token", :not_found) unless session
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
+        return json_error("Session is not active", :unprocessable_entity) unless session.active?
 
         # No coverage re-check here. The backend WS already verified all_covered
         # before sending preparing_to_end. Re-checking here caused false negatives
@@ -158,7 +164,7 @@ module Api
       def set_session
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Session not found", :not_found)
+        return json_error("Session not found", :not_found)
       end
 
       def session_json(session)
@@ -190,6 +196,20 @@ module Api
           last_signal:   map.last_signal,
           updated_at:    map.updated_at
         }
+      end
+
+      def turns_json(turns)
+        turns.map do |t|
+          {
+            id:             t.id,
+            turn_number:    t.turn_number,
+            speaker:        t.speaker,
+            text:           t.text,
+            audio_start_ms: t.audio_start_ms,
+            audio_end_ms:   t.audio_end_ms,
+            created_at:     t.created_at
+          }
+        end
       end
     end
   end

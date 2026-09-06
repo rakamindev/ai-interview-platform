@@ -22,12 +22,10 @@ module Sessions
     private
 
     def publish_status_update
-      redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
-      redis.publish("coverage:#{@session.id}", { type: 'session_status', status: @session.status, end_reason: nil }.to_json)
+      payload = { type: 'session_status', status: @session.status, end_reason: nil }.to_json
+      Sidekiq.redis { |conn| conn.publish("coverage:#{@session.id}", payload) }
     rescue => e
       Rails.logger.error("[StartHandler] Failed to publish status update: #{e.message}")
-    ensure
-      redis&.close
     end
 
     def initialize_coverage_maps

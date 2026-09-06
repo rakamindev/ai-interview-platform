@@ -64,9 +64,15 @@ class CoverageWebSocketMiddleware
 
     ws.on :close do |_event|
       Rails.logger.debug("[CoverageWS] Assessor disconnected from session #{session_id}")
-      # H4 fix: unsubscribe so the blocking Thread exits cleanly instead of
-      # hanging forever waiting for the next message.
-      Thread.new { redis_sub&.unsubscribe rescue nil }
+      
+      Thread.new do
+        begin
+          redis_sub&.unsubscribe
+          redis_sub&.disconnect!
+        rescue StandardError => e
+          Rails.logger.debug("[CoverageWS] Cleanup on close: #{e.message}")
+        end
+      end
     end
 
     ws.rack_response

@@ -15,10 +15,19 @@ export const sessionsApi = {
   getCoverage: (id: number) =>
     api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
-  getTranscript: (id: number, fromTurn?: number) =>
-    api.get<{ turns: TranscriptTurn[]; total: number }>(`/sessions/${id}/transcript`, {
-      params: fromTurn ? { from_turn: fromTurn } : undefined,
-    }),
+  getTranscript: (id: number, optionsOrFromTurn?: number | { fromTurn?: number; page?: number; perPage?: number }) => {
+    const params = typeof optionsOrFromTurn === "number"
+      ? { from_turn: optionsOrFromTurn }
+      : {
+          from_turn: optionsOrFromTurn?.fromTurn,
+          page: optionsOrFromTurn?.page,
+          per_page: optionsOrFromTurn?.perPage,
+        };
+    return api.get<{ turns: TranscriptTurn[]; total: number; page?: number; per_page?: number; total_pages?: number }>(
+      `/sessions/${id}/transcript`,
+      { params: Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined)) }
+    );
+  },
 
   getPortfolio: (id: number) =>
     api.get<{ portfolio: Portfolio } | { status: string }>(`/sessions/${id}/portfolio`),

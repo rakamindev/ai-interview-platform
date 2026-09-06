@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -51,7 +51,9 @@ export default function AssessmentEditPage() {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch(() => {
+        setError("Gagal memuat data asesmen. Silakan muat ulang halaman.");
+      })
       .finally(() => setLoading(false));
   }, [id, reset]);
 
@@ -69,19 +71,39 @@ export default function AssessmentEditPage() {
     }
   };
 
+  const deletedSkillIdsRef = useRef<number[]>([]);
+
+  const handleRemoveSkill = (index: number) => {
+    const currentSkills = form.getValues("skills") as Partial<AssessmentSkill>[];
+    const skillToRemove = currentSkills?.[index];
+    const realDbId = skillToRemove?.id;
+    if (realDbId && typeof realDbId === "number" && !isNaN(realDbId)) {
+      deletedSkillIdsRef.current.push(realDbId);
+    }
+    remove(index);
+  };
+
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) { setError("Add at least one skill."); return; }
     setError(null);
     setSubmitting(true);
     try {
+      const deletedAttrs = deletedSkillIdsRef.current
+        .filter((delId) => typeof delId === "number" && !isNaN(delId) && delId > 0)
+        .map((delId) => ({ id: delId, _destroy: true }));
+
+      const skillsPayload = [
+        ...data.skills.map((s, i) => ({ ...s, display_order: i })),
+        ...deletedAttrs,
+      ];
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: skillsPayload,
       });
       navigate(`/assessments/${id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
+    } catch {
+      setError("Gagal menyimpan perubahan asesmen. Silakan periksa kembali formulir.");
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +165,7 @@ export default function AssessmentEditPage() {
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => handleRemoveSkill(index)} />
                   ))}
                 </div>
               </SortableContext>
@@ -171,7 +193,12 @@ export default function AssessmentEditPage() {
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ ...s, display_order: fields.length })}
+        existingSkillLabels={fields.filter((f) => !f._destroy).map((f) => f.skill_label).filter(Boolean)}
+      />
     </div>
   );
 }

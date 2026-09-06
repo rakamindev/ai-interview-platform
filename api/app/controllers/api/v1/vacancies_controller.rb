@@ -54,7 +54,7 @@ module Api
       def set_vacancy
         @vacancy = Vacancy.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Vacancy not found", :not_found)
+        return json_error("Vacancy not found", :not_found)
       end
 
       def vacancy_params
@@ -103,15 +103,6 @@ module Api
           l3_anchor:      taxonomy&.l3_anchor,
           l4_anchor:      taxonomy&.l4_anchor,
           l5_anchor:      taxonomy&.l5_anchor
-        }
-      end
-
-      def pagination_meta(collection)
-        {
-          current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
         }
       end
     end

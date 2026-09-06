@@ -15,6 +15,11 @@ export const LEVEL_LABELS: Record<number, string> = {
   5: "L5",
 };
 
+export function formatLevel(level: string | number): string {
+  const n = parseLevel(level);
+  return LEVEL_LABELS[n] ?? `L${n}`;
+}
+
 export const LEVEL_DESCRIPTIONS: Record<number, string> = {
   1: "Foundational",
   2: "Functional",

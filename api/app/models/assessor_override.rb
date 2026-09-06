@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class AssessorOverride < ApplicationRecord
+  include Sanitizable
+
+  sanitize_text_fields :assessor_notes
+
   belongs_to :portfolio_skill
 
   validates :ai_level,       numericality: { only_integer: true, in: 1..5 }
