@@ -97,8 +97,9 @@ export default function AssessmentNewPage() {
           display_order: i,
         })),
       };
-      const res = await assessmentsApi.create(payload);
-      navigate(`/assessments/${res.data.assessment.id}/invite`);
+      await assessmentsApi.create(payload);
+      // Navigate to list so user can see AI generation status badge
+      navigate(`/assessments`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
     } finally {
@@ -248,7 +249,7 @@ export default function AssessmentNewPage() {
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            Save Assessment
           </Button>
         </div>
       </form>
