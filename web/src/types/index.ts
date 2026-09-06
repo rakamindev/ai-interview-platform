@@ -100,19 +100,23 @@ export interface PortfolioSkill {
   skill_label: string;
   is_discovered: boolean;
   /**
-   * Integer 1..5, BUKAN string "L1".
+   * Integer 1..5, BUKAN string "L1" — atau `null` saat AI tidak pernah
+   * menghasilkan level yang bisa dipakai.
    *
-   * Sebelumnya dideklarasikan `string` dengan komentar `"L1" | ... | "L5"`.
-   * Itu keliru, dan kontraknya bisa dibaca hitam-putih:
-   *   api/db/schema.rb:115                      t.integer "ai_level", null: false
-   *   api/db/schema.rb:120                      CHECK (ai_level >= 1 AND ai_level <= 5)
-   *   api/app/models/portfolio_skill.rb:10      numericality: { only_integer: true, in: 1..5 }
-   *   api/app/controllers/.../portfolios_controller.rb:181  ai_level: skill.ai_level
+   * Kontraknya bisa dibaca hitam-putih:
+   *   api/db/schema.rb                       t.integer "ai_level" — nullable sejak
+   *                                          migrasi relax_portfolio_skills_ai_level
+   *   api/db/schema.rb                       CHECK (ai_level IS NULL OR (ai_level >= 1 AND ai_level <= 5))
+   *   api/app/models/portfolio_skill.rb      numericality: { only_integer: true, in: 1..5, allow_nil: true }
+   *   api/app/services/portfolios/level_parser.rb  level hilang/rusak → nil, BUKAN L1
+   *   api/app/controllers/.../portfolios_controller.rb  ai_level: skill.ai_level
    *
-   * Serializer meneruskan Integer apa adanya, jadi JSON-nya `"ai_level": 3`.
-   * Prefiks "L" adalah bahasa presentasi (LEVEL_LABELS), bukan bahasa API.
+   * Serializer meneruskan Integer atau null apa adanya. `null` = "belum dinilai"
+   * dan HARUS tampil sebagai ketiadaan (parseLevel → null, LevelBadge "Unknown") —
+   * bukan sebagai rating terendah. Prefiks "L" adalah bahasa presentasi
+   * (LEVEL_LABELS), bukan bahasa API.
    */
-  ai_level: number;
+  ai_level: number | null;
   /**
    * Enum database, sudah dijamin NOT NULL di level tabel:
    *   api/db/schema.rb:116                  t.enum "ai_confidence", null: false

@@ -64,4 +64,14 @@ describe("DiscoveredSkillRow", () => {
     expect(screen.queryByText(/confirmed/i)).not.toBeInTheDocument();
     expect(screen.getByText(/confidence not available/i)).toBeInTheDocument();
   });
+
+  it("menampilkan Unknown level — bukan undefined atau rating karangan — saat ai_level null", () => {
+    // Backend kini mengirim null saat AI tidak menghasilkan level yang bisa
+    // dipakai (Portfolios::LevelParser). Indexing LEVEL_LABELS langsung akan
+    // merender "undefined (…)" — data hilang menyamar jadi teks.
+    render(<DiscoveredSkillRow skill={makeSkill({ ai_level: null })} />);
+    expect(screen.getByText(/unknown level/i)).toBeInTheDocument();
+    expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/L1/)).not.toBeInTheDocument();
+  });
 });
