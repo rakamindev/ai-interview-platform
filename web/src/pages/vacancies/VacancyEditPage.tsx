@@ -77,7 +77,7 @@ export default function VacancyEditPage() {
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
                 <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
               </div>
-              <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
+              <LevelRadio label={watch(`skills.${index}.skill_label`)} value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
