@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -18,7 +18,7 @@ module Gemini
     class TimeoutError < ApiError; end
 
     def initialize(model: nil, api_key: nil, timeout: 60)
-      @model = model
+      @model = model || ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash')
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
       @timeout = timeout
       @connection = build_connection
@@ -26,8 +26,8 @@ module Gemini
 
     # Generates content using Gemini REST API.
     # Returns parsed JSON response body.
-    def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
+    def generate_content(prompt, temperature: 0.2, response_mime_type: 'application/json')
+      response = @connection.post(generate_url, request_body(prompt, temperature, response_mime_type: response_mime_type), request_headers)
       parse_response(response)
     rescue Faraday::TimeoutError => e
       raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
@@ -45,10 +45,13 @@ module Gemini
       { 'Content-Type' => 'application/json', 'x-goog-api-key' => @api_key }
     end
 
-    def request_body(prompt, temperature)
+    def request_body(prompt, temperature, response_mime_type: 'application/json')
+      config = { temperature: temperature }
+      config[:responseMimeType] = response_mime_type if response_mime_type.present?
+
       {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: temperature }
+        generationConfig: config
       }.to_json
     end
 
@@ -56,14 +59,15 @@ module Gemini
       Faraday.new do |f|
         f.request :retry, {
           max: 3,
-          interval: 1,
+          interval: 2,
           interval_randomness: 0.5,
           backoff_factor: 2,
+          methods: %i[delete get head options put post],
           retry_statuses: [429, 500, 502, 503],
           retry_block: ->(env, _opts, retries, exc) {
             retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
+            sleep([retry_after || 2, 30].min) if env&.status == 429
+            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message || env&.status}")
           }
         }
         f.options.timeout = @timeout
