@@ -58,8 +58,8 @@ module Api
 
       # POST /api/v1/sessions/:id/end
       def end_session
-        if @session.ended?
-          return json_error("Session is already ended", :unprocessable_entity)
+        if @session.ended? || @session.failed?
+          return json_error("Session is already finished", :unprocessable_entity)
         end
 
         reason = params.dig(:session, :reason) || "manual_assessor"
@@ -120,10 +120,14 @@ module Api
         return json_error("Invalid or expired invite token", :not_found) unless session
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
+        return json_error("Session could not be completed", :unprocessable_entity) if session.failed?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
+        unless Sessions::CompletionGate.allowed?(session)
+          return json_error("Session is not ready to be completed", :unprocessable_entity)
+        end
+
+        # The WebSocket persists this flag only after coverage reaches a natural
+        # end. It removes the timing gap without trusting the browser to decide.
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
       end
@@ -149,7 +153,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          failure_code:    session.failed? ? session.failure_code : nil
         )
       end
 
@@ -172,6 +177,7 @@ module Api
           invite_url:       session.invite_url,
           status:           session.status,
           end_reason:       session.end_reason,
+          failure_code:     session.failure_code,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,

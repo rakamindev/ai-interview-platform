@@ -23,7 +23,28 @@ class Session < ApplicationRecord
 
   def active?  = status == 'active'
   def ended?   = status == 'ended'
+  def failed?  = status == 'failed'
   def pending? = status == 'pending'
+
+  def authorize_completion!
+    return false unless active?
+
+    update!(completion_authorized_at: Time.current)
+    true
+  end
+
+  def mark_failed!(code:)
+    return if ended? || failed?
+
+    update!(
+      status: 'failed',
+      end_reason: 'error',
+      failure_code: code.to_s.first(64),
+      failure_at: Time.current,
+      ended_at: Time.current,
+      duration_seconds: started_at ? (Time.current - started_at).to_i : nil
+    )
+  end
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')

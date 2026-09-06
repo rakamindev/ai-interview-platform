@@ -21,12 +21,13 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { AlertCircle, CheckCircle, Mic, MicOff, RefreshCw } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [candidateLoadState, setCandidateLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
@@ -41,14 +42,24 @@ export default function InterviewPage() {
 
   // Fetch candidate info
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setCandidateLoadState("error");
+      setInterviewState("failed");
+      return;
+    }
+    setCandidateLoadState("loading");
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        setCandidateLoadState("ready");
         if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "failed") setInterviewState("failed");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => {
+        setCandidateLoadState("error");
+        setInterviewState("failed");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -108,10 +119,16 @@ export default function InterviewPage() {
     }
     // Retry until success — endpoint now always returns ended:true or an error.
     // ended:false is no longer a valid response; any success means the session ended.
+    let attempts = 0;
     const attempt = async (delay: number) => {
       try {
         await sessionsApi.audioComplete(token);
       } catch {
+        attempts += 1;
+        if (attempts >= 4) {
+          setInterviewState("failed");
+          return;
+        }
         setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
       }
     };
@@ -130,7 +147,7 @@ export default function InterviewPage() {
     }
   }, [scheduleAfterPlayback]);
 
-  const { connect, send, sendJson, disconnect, connectionState } = useAudioWebSocket({
+  const { connect, send, sendJson, connectionState } = useAudioWebSocket({
     sessionId: sessionId ?? 0,
     token,
     onAudioChunk: playChunk,
@@ -176,9 +193,12 @@ export default function InterviewPage() {
     stopCapture();
     stopPlayback();
     sendJson({ type: "end_session" });
-    disconnect();
-    setInterviewState("complete");
-  }, [stopCapture, stopPlayback, sendJson, disconnect]);
+    // Wait for the server acknowledgement; do not claim the interview was
+    // recorded if the final write did not arrive.
+    setTimeout(() => {
+      setInterviewState((current) => current === "ending" ? "failed" : current);
+    }, 15_000);
+  }, [stopCapture, stopPlayback, sendJson]);
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
@@ -188,6 +208,37 @@ export default function InterviewPage() {
       : "reconnecting";
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
+  if (candidateLoadState === "loading") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-3">
+        <div className="mx-auto h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <p className="text-sm text-muted-foreground">Preparing your interview securely…</p>
+      </div>
+    );
+  }
+
+  if (interviewState === "failed" || candidateLoadState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-5">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-700">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Interview unavailable</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            We could not start or finish this interview safely. No successful interview has been recorded from this attempt.
+            Please contact the hiring team for a new link or instructions.
+          </p>
+        </div>
+        {candidateLoadState === "error" && (
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Try again
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (interviewState === "idle") {
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">

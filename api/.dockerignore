@@ -1,0 +1,6 @@
+# Runtime secrets are supplied as environment variables, never baked into an image.
+config/application.yml
+log/
+tmp/
+coverage/
+.git/

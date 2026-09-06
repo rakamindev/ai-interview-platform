@@ -144,7 +144,8 @@ class AudioWebSocketMiddleware
       on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
       on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
       on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
-      on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
+      # Provider errors can echo candidate content, so never write their body to logs.
+      on_error: ->(_message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id}") },
       on_resumption_token_update: build_on_resumption_token_update(state, session),
       on_ready: build_on_ready(browser_ws, state, session)
     )
@@ -258,8 +259,7 @@ class AudioWebSocketMiddleware
             next if state.ending_scheduled
             Rails.logger.warn("[AudioWS] on_model_turn_complete delayed — finalizing via closing-phrase fallback (session=#{session.id})")
             state.ending_scheduled = true
-            send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
-            poll_for_session_end(browser_ws, state, session, attempts: 0)
+            poll_for_session_end(browser_ws, state, session, attempts: 0) if authorize_completion_and_prepare_end(browser_ws, session)
           end
         end
       end
@@ -384,9 +384,9 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
-      Sessions::EndHandler.new(state.session).call(reason: 'error')
-      send_json(browser_ws, type: 'session_ended', reason: 'error',
-                            message: 'The session encountered a problem. Please contact the interviewer.')
+      state.session.mark_failed!(code: 'gemini_connection_failed')
+      send_json(browser_ws, type: 'session_failed', code: 'provider_connection_failed',
+                            message: 'We could not keep the interview connected. Please contact the hiring team.')
       browser_ws.close
     end
   end
@@ -507,7 +507,7 @@ class AudioWebSocketMiddleware
           next if state.session.reload.ended?
 
           Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
+          state.session.mark_failed!(code: 'candidate_connection_lost')
           EM.schedule { state.gemini_client&.close }
         end
       rescue StandardError => e
@@ -562,8 +562,7 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] Wrap-up turn complete — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
-    poll_for_session_end(browser_ws, state, session, attempts: 0)
+    poll_for_session_end(browser_ws, state, session, attempts: 0) if authorize_completion_and_prepare_end(browser_ws, session)
   end
 
   # Wait for candidate response before injecting wrap-up so silence pump doesn't fire premature close;
@@ -589,8 +588,7 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] AI closed naturally — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
-    poll_for_session_end(browser_ws, state, session, attempts: 0)
+    poll_for_session_end(browser_ws, state, session, attempts: 0) if authorize_completion_and_prepare_end(browser_ws, session)
   end
 
   # Polls until the session is ended (via audio_complete API call) or max_attempts is reached.
@@ -615,6 +613,20 @@ class AudioWebSocketMiddleware
         Rails.logger.error("[AudioWS] Thread crashed (poll session end): #{e.class}: #{e.message}")
       end
     end
+  end
+
+  def authorize_completion_and_prepare_end(browser_ws, session)
+    unless session.reload.authorize_completion!
+      return send_json(browser_ws, type: 'error', code: 'completion_unavailable', recoverable: false,
+                                    message: 'The interview could not be completed safely.')
+    end
+
+    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+    true
+  rescue ActiveRecord::ActiveRecordError
+    send_json(browser_ws, type: 'error', code: 'completion_unavailable', recoverable: false,
+                          message: 'The interview could not be completed safely.')
+    false
   end
 
   # Refreshes cached coverage text from a background thread; assigns digest+text atomically on EM thread
