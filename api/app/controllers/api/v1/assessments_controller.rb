@@ -49,8 +49,15 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
+        active_sessions = @assessment.sessions.where(status: 'active')
+        if active_sessions.exists?
+          return json_error(
+            "Cannot delete assessment with active interview sessions in progress",
+            :unprocessable_entity
+          )
+        end
         @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        json_response({ message: "Assessment deleted successfully" })
       end
 
       private
@@ -99,19 +106,19 @@ module Api
         assessment_json(assessment).merge(
           skills: assessment.assessment_skills.order(:display_order).map do |s|
             {
-              id:            s.id,
-              skill_id:      s.skill_id,
-              skill_label:   s.skill_label,
-              is_custom:     s.is_custom,
-              scope_include: s.scope_include,
-              scope_exclude: s.scope_exclude,
-              l1_anchor:     s.l1_anchor,
-              l2_anchor:     s.l2_anchor,
-              l3_anchor:     s.l3_anchor,
-              l4_anchor:     s.l4_anchor,
-              l5_anchor:     s.l5_anchor,
+              id:             s.id,
+              skill_id:       s.skill_id,
+              skill_label:    s.skill_label,
+              is_custom:      s.is_custom,
+              scope_include:  s.scope_include,
+              scope_exclude:  s.scope_exclude,
+              l1_anchor:      s.l1_anchor,
+              l2_anchor:      s.l2_anchor,
+              l3_anchor:      s.l3_anchor,
+              l4_anchor:      s.l4_anchor,
+              l5_anchor:      s.l5_anchor,
               expected_level: s.expected_level,
-              display_order: s.display_order
+              display_order:  s.display_order
             }
           end
         )
