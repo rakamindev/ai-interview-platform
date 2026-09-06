@@ -5,10 +5,12 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import HiringDecisionPanel from "@/components/portfolio/HiringDecisionPanel";
 import ErrorState from "@/components/ui/ErrorState";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
+import { getHiringDecision, type HiringDecision } from "@/services/hiringDecisions";
 import { parseApiError, type ApiError } from "@/utils/apiError";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
@@ -26,6 +28,7 @@ export default function PortfolioPage() {
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [pageError, setPageError] = useState<ApiError | null>(null);
+  const [hiringDecision, setHiringDecision] = useState<HiringDecision | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -40,7 +43,8 @@ export default function PortfolioPage() {
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
         overrideMap[o.portfolio_skill_id] = o;
       });
-      setOverrides(overrideMap);
+      const decision = await getHiringDecision(data.portfolio.id).catch(() => null);
+      setHiringDecision(decision);
     }
   }, [sessionId]);
 
@@ -259,6 +263,17 @@ export default function PortfolioPage() {
             <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
               Run Fit/Gap Analysis →
             </Button>
+          </div>
+
+          <Separator />
+
+          {/* Hiring Decision Panel */}
+          <div className="mt-6">
+            <HiringDecisionPanel
+              portfolioId={portfolio.id}
+              existing={hiringDecision}
+              onDecisionMade={(d) => setHiringDecision(d)}
+            />
           </div>
         </>
       )}

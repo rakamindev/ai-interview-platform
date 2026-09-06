@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_06_133655) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_06_145705) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -94,6 +94,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_06_133655) do
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["tenant_id"], name: "index_fit_gap_reports_on_tenant_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+  end
+
+  create_table "hiring_decisions", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.bigint "decided_by", null: false
+    t.bigint "tenant_id", null: false
+    t.string "decision", limit: 20, null: false
+    t.text "rationale", null: false
+    t.string "ip_address", limit: 45
+    t.string "user_agent", limit: 500
+    t.datetime "decided_at", default: -> { "now()" }, null: false
+    t.index ["decided_by"], name: "index_hiring_decisions_on_decided_by"
+    t.index ["portfolio_id"], name: "index_hiring_decisions_on_portfolio_id", unique: true
+    t.index ["tenant_id"], name: "index_hiring_decisions_on_tenant_id"
+    t.check_constraint "decision::text = ANY (ARRAY['advance'::character varying, 'hold'::character varying, 'reject'::character varying]::text[])", name: "chk_hiring_decisions_decision"
   end
 
   create_table "organizations", force: :cascade do |t|

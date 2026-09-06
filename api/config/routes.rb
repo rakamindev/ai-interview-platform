@@ -58,6 +58,9 @@ Rails.application.routes.draw do
           get  'fitgap/:vacancy_id', to: 'portfolios#show_fitgap', as: :fitgap_vacancy
           get  :export
         end
+        resource :hiring_decision,
+                 only: [:show, :create],
+                 controller: 'portfolios/hiring_decisions'
       end
     end
   end
