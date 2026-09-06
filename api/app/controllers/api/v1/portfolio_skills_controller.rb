@@ -40,10 +40,22 @@ module Api
 
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+        skill_id = @portfolio_skill.skill_id
+        skill_label = @portfolio_skill.skill_label.to_s.downcase
+
+        FitGapReport.where(portfolio_id: portfolio.id).includes(:vacancy).find_each do |report|
+          vacancy = report.vacancy
+          next unless vacancy
+
+          # Selective regeneration: only queue worker for vacancies evaluating this skill
+          has_skill = vacancy.vacancy_skills.any? do |vs|
+            (skill_id.present? && vs.skill_id.to_s == skill_id.to_s) ||
+              vs.skill_label.to_s.downcase == skill_label
+          end
+
+          if has_skill
+            FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+          end
         end
       end
 
@@ -53,7 +65,7 @@ module Api
                                          .find_by(id: params[:id])
         return json_error("Portfolio skill not found", :not_found) unless @portfolio_skill
       rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio skill not found", :not_found)
+        return json_error("Portfolio skill not found", :not_found)
       end
 
       def override_params
