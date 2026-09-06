@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
+import DiscoveredSkillRow from "@/components/fitgap/DiscoveredSkillRow";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
@@ -190,13 +191,7 @@ export default function FitGapReportPage() {
                   {portfolio.skills
                     .filter((s) => s.is_discovered)
                     .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
-                        <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
-                        </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
-                      </div>
+                      <DiscoveredSkillRow key={s.id} skill={s} />
                     ))}
                 </CardContent>
               </Card>

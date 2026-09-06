@@ -4,6 +4,7 @@ import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
 import { Zap } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
+import { isLowConfidence, isConfidenceKnown } from "@/utils/confidence";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface SkillPortfolioCardProps {
@@ -42,9 +43,21 @@ export default function SkillPortfolioCard({
         </div>
 
         {/* Low confidence note */}
-        {skill.ai_confidence?.toLowerCase() === "low" && (
+        {isLowConfidence(skill.ai_confidence) && (
           <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
             Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+          </div>
+        )}
+
+        {/*
+          Confidence hilang. Sebelumnya kartu ini diam saja, jadi terlihat sama
+          meyakinkan dengan skill yang benar-benar terverifikasi. Assessor perlu
+          tahu bahwa ada informasi yang tidak sampai kepadanya — bukan menebak.
+        */}
+        {!isConfidenceKnown(skill.ai_confidence) && (
+          <div className="text-xs text-muted-foreground bg-muted border rounded px-3 py-2">
+            Confidence data is missing for this skill. Treat the level above as unverified — do not
+            read it as either strong or weak evidence.
           </div>
         )}
 
