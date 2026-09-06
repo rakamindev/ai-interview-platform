@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(:latest_session).order(created_at: :desc)
         )
 
         json_response(
@@ -58,7 +58,7 @@ module Api
       def set_assessment
         @assessment = Assessment.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        return json_error("Assessment not found", :not_found)
       end
 
       def assessment_params
@@ -76,7 +76,7 @@ module Api
       end
 
       def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+        latest = assessment.latest_session
 
         {
           id:             assessment.id,
