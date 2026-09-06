@@ -15,7 +15,7 @@ module Api
 
         json_response(sessions: sessions.map(&method(:session_json)))
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        return json_error("Assessment not found", :not_found)
       end
 
       # POST /api/v1/assessments/:assessment_id/sessions
@@ -40,7 +40,7 @@ module Api
           json_error(session.errors.full_messages.first, :unprocessable_entity)
         end
       rescue ActiveRecord::RecordNotFound
-        json_error("Assessment not found", :not_found)
+        return json_error("Assessment not found", :not_found)
       end
 
       # GET /api/v1/sessions/:id
@@ -159,7 +159,7 @@ module Api
       def set_session
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Session not found", :not_found)
+        return json_error("Session not found", :not_found)
       end
 
       def session_json(session)

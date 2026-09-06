@@ -54,7 +54,7 @@ module Api
       def set_vacancy
         @vacancy = Vacancy.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        json_error("Vacancy not found", :not_found)
+        return json_error("Vacancy not found", :not_found)
       end
 
       def vacancy_params
