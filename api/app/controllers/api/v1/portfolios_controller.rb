@@ -127,8 +127,10 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        portfolio = Portfolio.joins(:session).where(sessions: { tenant_id: Current.tenant_id }).find_by(id: params[:id])
+        return json_error("Portfolio not found", :not_found) unless portfolio
+
+        report = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
@@ -149,11 +151,12 @@ module Api
 
       def set_portfolio
         # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
+        # If called from session context, look up via session (which is TenantScoped)
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.joins(:session).where(sessions: { tenant_id: Current.tenant_id }).find_by(id: params[:id])
+          return json_error("Portfolio not found", :not_found) unless @portfolio
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)

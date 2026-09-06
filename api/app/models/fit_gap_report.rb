@@ -6,5 +6,7 @@ class FitGapReport < ApplicationRecord
   belongs_to :portfolio
   belongs_to :vacancy
 
+  delegate :tenant_id, to: :portfolio, allow_nil: true
+
   validates :skill_comparisons, presence: true
 end

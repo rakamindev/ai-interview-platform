@@ -120,6 +120,7 @@ module Api
         return json_error("Invalid or expired invite token", :not_found) unless session
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
+        return json_error("Session is not active", :unprocessable_entity) unless session.active?
 
         # No coverage re-check here. The backend WS already verified all_covered
         # before sending preparing_to_end. Re-checking here caused false negatives

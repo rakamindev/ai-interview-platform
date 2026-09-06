@@ -7,6 +7,8 @@ class Portfolio < ApplicationRecord
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
 
+  delegate :tenant_id, to: :session, allow_nil: true
+
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
   scope :complete,    -> { where(generation_status: 'complete') }
