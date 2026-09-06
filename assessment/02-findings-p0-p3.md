@@ -29,7 +29,7 @@ Ini klaster yang kupilih jadi tema.
 | A2 | Auto-advance `partial → covered` di `probe_count >= 4` **tanpa penilaian AI**, lalu menimpa `last_signal` dengan string robot — portfolio generator mengutip kalimat itu sebagai *evidence* penilaian | `api/app/workers/coverage_analyzer_worker.rb:91-101` (juga `retry: 0` :6, `rescue` telanjang :32-34, read-modify-write tanpa lock :39-48) | P0 |
 | A3 | `level` hilang dari respons AI → `nil.to_i` = 0 → `clamp(1,5)` = **L1** (rating terburuk); lolos validasi karena 1 nilai sah. File yang sama: `JSON.parse` tanpa penanganan rusak (:151), `destroy_all` tanpa lock (:154) | `api/app/services/portfolios/generator.rb:161` | P1 |
 | A4 | Confidence "tidak diketahui" ditampilkan **LOW** (undefined jatuh ke `"LOW"`); pasangnya: `medium` di-render sebagai kata **"confirmed"** | `web/src/components/portfolio/ConfidenceIndicator.tsx:5-10`, `web/src/pages/fitgap/FitGapReportPage.tsx:196` | P1 |
-| A5 | Pemilihan skill berikutnya pakai `min_by` → prioritas terbalik; plus shared secret `SYS-TC-7x9k` ditanam di dalam prompt | `map_injector.rb:105,109`, `system_prompt_compiler.rb:166` | P1 |
+| A5 | Pemilihan skill berikutnya pakai `min_by` → prioritas terbalik; plus shared secret sistem ditanam di dalam prompt (nilai literal sengaja direduksi di dokumen ini — lihat `SYSTEM_SIGNAL_TOKEN` di `audio_websocket_middleware.rb:16` dan pemakaiannya di `system_prompt_compiler.rb:140–150`) | `map_injector.rb:105,109`, `system_prompt_compiler.rb:140–150` | P1 |
 
 ## Klaster B — Kegagalan senyap (wawancara hilang tanpa ada yang tahu)
 
