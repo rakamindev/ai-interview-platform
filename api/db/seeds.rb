@@ -77,6 +77,25 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+puts ""
+puts "== Seeding default admin user =="
+
+DEFAULT_ADMIN = {
+  email:    "admin@test-corp.com",
+  password: "Password123!"
+}.freeze
+
+admin = User.find_or_initialize_by(email: DEFAULT_ADMIN[:email])
+if admin.persisted?
+  puts "  Admin user already exists: #{admin.email} (skipped)"
+else
+  admin.password = DEFAULT_ADMIN[:password]
+  admin.password_confirmation = DEFAULT_ADMIN[:password]
+  admin.role = "admin"
+  admin.save!
+  puts "  Created admin user: #{admin.email} / #{DEFAULT_ADMIN[:password]}"
+end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [
@@ -382,24 +401,19 @@ puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
+puts "Log in with the seeded admin account:"
+puts ""
+puts "  curl -s -X POST http://localhost:3001/api/v1/auth/login \\"
+puts "       -H 'Content-Type: application/json' \\"
+puts "       -d '{\"email\":\"#{DEFAULT_ADMIN[:email]}\",\"password\":\"#{DEFAULT_ADMIN[:password]}\"}'"
+puts ""
+puts "Then hit the API with the returned token:"
+puts ""
+puts "  curl -s -H 'Authorization: Bearer <token_from_login>' \\"
+puts "       http://localhost:3001/api/v1/assessments"
+puts ""
+puts "For a candidate-role JWT (used in the WebSocket ?token= param), mint one in the console:"
 puts ""
 puts "  bundle exec rails console"
-puts ""
-puts "Then run:"
-puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
 puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "Then hit the API:"
-puts ""
-puts "  curl -s http://localhost:3001/api/v1/health"
-puts ""
-puts "  curl -s -H 'Authorization: Bearer <your_token>' \\"
-puts "       http://localhost:3001/api/v1/assessments"
 puts ""

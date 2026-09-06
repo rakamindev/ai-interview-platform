@@ -80,9 +80,9 @@ export default function VacancyNewPage() {
             <div className="space-y-2">
               {fields.map((field, index) => (
                 <div key={field.id} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium truncate min-w-0">{watch(`skills.${index}.skill_label`)}</span>
+                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive shrink-0">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
