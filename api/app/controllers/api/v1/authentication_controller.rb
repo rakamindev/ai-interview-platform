@@ -19,12 +19,31 @@ module Api
         json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
       end
 
+      # POST /api/v1/auth/signup
+      # Creates an assessor (admin) account. Role is not client-supplied —
+      # this app is assessor-only, so every signup becomes an 'admin' user.
+      def signup
+        user = User.new(signup_params)
+        user.role = 'admin'
+
+        return json_error(user.errors.full_messages.first, :unprocessable_entity) unless user.save
+
+        scheme = resolve_scheme
+        token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
+
+        json_response({ token:, user: { id: user.id, email: user.email, role: user.role } }, :created)
+      end
+
       private
+
+      def signup_params
+        params.permit(:email, :password)
+      end
 
       def resolve_scheme
         request.headers['X-Tenant-Scheme'].presence ||
           ActiveRecord::Base.connection.select_value(
-            'SELECT scheme FROM organizations LIMIT 1'
+            'SELECT scheme FROM public.organizations LIMIT 1'
           ) || 'test-corp'
       end
     end

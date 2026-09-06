@@ -7,6 +7,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      post 'auth/signup', to: 'authentication#signup'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
@@ -18,8 +19,12 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
-        resources :sessions, only: %i[index create]
+        resources :sessions, only: %i[index create destroy]
       end
+
+      # Dashboard statistics
+      get 'dashboard/stats', to: 'dashboard#stats'
+      get 'assessments/:assessment_id/dashboard', to: 'dashboard#assessment'
 
       # Sessions
       resources :sessions, only: %i[show] do
@@ -44,7 +49,7 @@ Rails.application.routes.draw do
       end
 
       # B7 Skill Taxonomy (read-only reference data)
-      get  'skill_taxonomies',          to: 'skill_taxonomies#index'
+      get  'skill_taxonomies', to: 'skill_taxonomies#index'
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
       # Vacancies

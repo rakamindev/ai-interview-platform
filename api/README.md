@@ -95,3 +95,40 @@ Runs on **port 5173** by default.
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
 | Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+
+---
+
+## 8. Testing
+
+### Setup the test database (first time only)
+
+```bash
+rails db:create db:migrate RAILS_ENV=test
+```
+
+Uses the `rakamin_test` database with the same `ai_interview` search path as dev/prod.
+
+### Run the test suite
+
+```bash
+bundle exec rspec
+```
+
+Target just the auth area:
+
+```bash
+bundle exec rspec spec/requests/api/v1/authentication_spec.rb spec/models/user_spec.rb
+```
+
+Run the linter:
+
+```bash
+bundle exec rubocop
+```
+
+Notes:
+
+- `Rack::Attack` (rate limiting) is disabled during the suite via `spec/support/rack_attack.rb` so per-IP throttles don't cause 429s.
+- Request specs pick a tenant via the `X-Tenant-Scheme` header (fallback to the first `public.organizations` row). Request helpers live in `spec/support/request_helpers.rb`.
+- `Current` (RequestStore-based) is cleared after every example via `rails_helper.rb` so tenant/user state does not leak between tests.
+- Current status: **21 examples, 0 failures** (auth request specs + user model). `Metrics/BlockLength` offenses in `spec/` are within the project's existing rubocop baseline.

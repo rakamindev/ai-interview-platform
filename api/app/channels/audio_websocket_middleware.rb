@@ -9,6 +9,8 @@ class AudioWebSocketMiddleware
 
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
+  # Non-transient close codes — retrying never helps (invalid model, unsupported feature, policy violation).
+  NON_TRANSIENT_WS_CODES = [1003, 1008].freeze
   BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
@@ -378,6 +380,20 @@ class AudioWebSocketMiddleware
     return if code == 1000 && !state.gemini_client&.inactivity_close
 
     state.proactive_reconnect_timer&.cancel
+
+    # Non-transient: deterministically rejected by Gemini (e.g. invalid/unavailable model).
+    # Abort immediately instead of burning MAX_RECONNECT_ATTEMPTS of pointless retries.
+    if NON_TRANSIENT_WS_CODES.include?(code)
+      Rails.logger.error("[AudioWS] Gemini non-transient close (code=#{code}, reason=#{reason}) " \
+                         "— ending session #{state.session.id} with error")
+      Sessions::EndHandler.new(state.session).call(reason: 'error')
+      send_json(browser_ws, type: 'error', code: 'gemini_config_error',
+                            message: 'Interview service unavailable. Contact the interviewer.',
+                            recoverable: false)
+      browser_ws.close
+      return
+    end
+
     state.reconnect_attempts ||= 0
 
     if state.reconnect_attempts < MAX_RECONNECT_ATTEMPTS

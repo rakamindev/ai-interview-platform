@@ -43,6 +43,9 @@ gem 'bootsnap', require: false
 gem 'kaminari'
 gem 'listen', '~> 3.2'
 
+# Tambahan
+gem "tzinfo-data"
+
 group :development, :test do
   gem 'byebug', platforms: %i[mri mingw x64_mingw]
   gem 'factory_bot_rails'
@@ -55,6 +58,8 @@ group :development do
   gem 'rubocop', require: false
   gem 'rubocop-rails', require: false
   gem 'rubocop-rspec', require: false
+  # Tambahan
+  gem 'wdm', '>= 0.1.0', platforms: [:mswin, :mingw, :x64_mingw]
 end
 
 group :test do

@@ -9,10 +9,15 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface SignupPayload {
+  email: string;
+  password: string;
+}
+
 export const authApi = {
   login: (data: LoginPayload) =>
     api.post<LoginResponse>("/auth/login", data),
 
-  signup: (data: { email: string; password: string; role: "admin" | "user" }) =>
-    api.post<LoginResponse>("/signup", data),
+  signup: (data: SignupPayload) =>
+    api.post<LoginResponse>("/auth/signup", data),
 };

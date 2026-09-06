@@ -9,7 +9,7 @@ export interface Assessment {
   updated_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: "pending" | "active" | "ended" | "failed";
     end_reason?: string | null;
   };
 }
@@ -39,7 +39,7 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
@@ -166,6 +166,55 @@ export interface CandidateInfo {
   session_status: string;
 }
 
+export interface SessionTotals {
+  pending: number;
+  active: number;
+  ended: number;
+  failed: number;
+}
+
+export interface LiveSession {
+  id: number;
+  assessment_id: number;
+  assessment_name: string;
+  candidate_name?: string;
+  started_at: string;
+}
+
+export interface AssessmentSummary {
+  id: number;
+  name: string;
+  total: number;
+  started: number;
+  completion_rate?: number | null;
+  avg_duration_seconds?: number | null;
+  totals: SessionTotals;
+  ended_reasons: { reason: string; count: number }[];
+}
+
+export interface DashboardStats {
+  total: number;
+  started: number;
+  completion_rate?: number | null;
+  avg_duration_seconds?: number | null;
+  totals: SessionTotals;
+  ended_reasons: { reason: string; count: number }[];
+  live_sessions: LiveSession[];
+  per_assessment: AssessmentSummary[];
+}
+
+export interface AssessmentDashboard {
+  assessment_id: number;
+  name: string;
+  time_limit_min: number;
+  started: number;
+  completion_rate?: number | null;
+  avg_duration_seconds?: number | null;
+  totals: SessionTotals;
+  ended_reasons: { reason: string; count: number }[];
+  last_started_at?: string;
+}
+
 export interface PaginationMeta {
   current_page: number;
   total_pages: number;
@@ -182,6 +231,7 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
+  | "error"
   | "complete";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;

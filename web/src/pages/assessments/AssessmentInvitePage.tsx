@@ -14,9 +14,48 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { dashboardApi } from "@/services/dashboard";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
-import type { Assessment, Session } from "@/types";
+import { formatRate, formatDuration } from "@/utils/format";
+import { END_REASON_LABELS } from "@/utils/constants";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  Trash2,
+  UserRound,
+} from "lucide-react";
+import type { Assessment, AssessmentDashboard, Session } from "@/types";
+
+function MiniStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-lg bg-muted/50 px-3 py-2">
+      <p className="text-lg font-semibold leading-none">{value}</p>
+      <p className="text-xs text-muted-foreground mt-1">{label}</p>
+    </div>
+  );
+}
 
 function SessionRow({
   session,
@@ -24,62 +63,70 @@ function SessionRow({
   assessmentId,
   onCopy,
   copiedId,
+  onRequestDelete,
+  deletingId,
+  deleteError,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
   copiedId: number | null;
+  onRequestDelete: (session: Session) => void;
+  deletingId: number | null;
+  deleteError: { id: number; message: string } | null;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  const isDeleting = deletingId === session.id;
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-          {index}
+    <div>
+      <div className="flex items-center justify-between py-3 px-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+            {index}
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-sm font-medium">{displayName}</div>
+            {session.started_at && (
+              <div className="text-xs text-muted-foreground">
+                {new Date(session.started_at).toLocaleDateString()}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
-          {session.started_at && (
-            <div className="text-xs text-muted-foreground">
-              {new Date(session.started_at).toLocaleDateString()}
-            </div>
+
+        <div className="flex items-center gap-3">
+          {isPending && (
+            <span className="flex items-center gap-1 text-xs text-amber-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Awaiting candidate
+            </span>
           )}
-        </div>
-      </div>
+          {isLive && (
+            <span className="flex items-center gap-1 text-xs text-primary">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Live
+            </span>
+          )}
+          {isEnded && session.end_reason === "error" && (
+            <span className="flex items-center gap-1 text-xs text-destructive">
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+              Failed
+            </span>
+          )}
+          {isEnded && session.end_reason !== "error" && (
+            <span className="flex items-center gap-1 text-xs text-green-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Completed
+            </span>
+          )}
 
-      <div className="flex items-center gap-3">
-        {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Awaiting candidate
-          </span>
-        )}
-        {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Live
-          </span>
-        )}
-        {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
-        )}
-        {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
-        )}
-
-        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
           {isPending && (
             <Button
               variant="ghost"
@@ -88,9 +135,13 @@ function SessionRow({
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
+                <>
+                  <Check className="h-3 w-3 mr-1" /> Copied
+                </>
               ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                <>
+                  <Copy className="h-3 w-3 mr-1" /> Copy link
+                </>
               )}
             </Button>
           )}
@@ -99,7 +150,11 @@ function SessionRow({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
+              onClick={() =>
+                navigate(
+                  `/assessments/${assessmentId}/sessions/${session.id}/monitor`,
+                )
+              }
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
@@ -109,12 +164,35 @@ function SessionRow({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              onClick={() =>
+                navigate(
+                  `/assessments/${assessmentId}/sessions/${session.id}/portfolio`,
+                )
+              }
             >
               Results
             </Button>
           )}
+          {!isLive && (
+            <button
+              type="button"
+              aria-label={`Remove ${displayName}`}
+              disabled={deletingId !== null}
+              onClick={() => onRequestDelete(session)}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </button>
+          )}
         </div>
+      </div>
+      {deleteError && deleteError.id === session.id && (
+        <p className="px-4 pb-2 text-xs text-destructive">{deleteError.message}</p>
+      )}
       </div>
     </div>
   );
@@ -132,29 +210,46 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState<Session | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<{ id: number; message: string } | null>(null);
+  const [stat, setStat] = useState<AssessmentDashboard | null>(null);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
     setSessions(res.data.sessions);
   }, [id]);
 
+  const loadStats = useCallback(async () => {
+    const res = await dashboardApi.assessment(Number(id));
+    setStat(res.data);
+  }, [id]);
+
   useEffect(() => {
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
+    ])
+      .then(([aRes, sRes]) => {
+        setAssessment(aRes.data.assessment);
+        setSessions(sRes.data.sessions);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+
+    loadStats().catch(() => {});
+  }, [id, loadStats]);
 
   // Poll while any session is live or pending
   useEffect(() => {
     const hasActive = sessions.some((s) => s.status !== "ended");
     if (!hasActive) return;
-    const interval = setInterval(loadSessions, 5000);
+    const interval = setInterval(() => {
+      loadSessions().catch(() => {});
+      loadStats().catch(() => {});
+    }, 5000);
     return () => clearInterval(interval);
-  }, [sessions, loadSessions]);
+  }, [sessions, loadSessions, loadStats]);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
@@ -166,7 +261,10 @@ export default function AssessmentInvitePage() {
     setShowInviteDialog(false);
     setNewSession(null);
     try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
+      const res = await assessmentsApi.createSession(
+        Number(id),
+        candidateNameInput.trim() || undefined,
+      );
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
@@ -188,6 +286,33 @@ export default function AssessmentInvitePage() {
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 
+  const requestDelete = (session: Session) => {
+    setDeleteError(null);
+    setConfirmTarget(session);
+  };
+
+  const handleDelete = async () => {
+    if (!confirmTarget) return;
+    const sessionId = confirmTarget.id;
+
+    setDeletingId(sessionId);
+    setDeleteError(null);
+    try {
+      await assessmentsApi.deleteSession(Number(id), sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      setConfirmTarget(null);
+    } catch (e: any) {
+      setConfirmTarget(null);
+      setDeleteError({
+        id: sessionId,
+        message:
+          e?.response?.data?.errors?.[0]?.message ?? "Failed to remove candidate.",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
@@ -203,28 +328,90 @@ export default function AssessmentInvitePage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+          <Link
+            to="/assessments"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+          >
             <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">
+                {assessment?.name ?? "—"}
+              </h1>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                <Clock className="h-3 w-3" />
+                {assessment?.time_limit_min} min ·{" "}
+                {assessment?.skills?.length ?? 0} skills
+              </div>
             </div>
-          </div>
+          </Link>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/assessments/${id}/edit`)}
+          >
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button
+            size="sm"
+            onClick={openInviteDialog}
+            disabled={creatingSession}
+          >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
         </div>
       </div>
+
+      {/* Assessment statistics */}
+      {stat && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">Statistics</h2>
+              {stat.last_started_at && (
+                <span className="text-xs text-muted-foreground">
+                  Last started{" "}
+                  {new Date(stat.last_started_at).toLocaleString()}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <MiniStat label="Pending" value={stat.totals.pending} />
+              <MiniStat label="Live now" value={stat.totals.active} />
+              <MiniStat label="Completed" value={stat.totals.ended} />
+              <MiniStat label="Failed" value={stat.totals.failed} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2 sm:grid-cols-4">
+              <MiniStat
+                label="Completion rate"
+                value={formatRate(stat.completion_rate)}
+              />
+              <MiniStat
+                label="Avg duration"
+                value={formatDuration(stat.avg_duration_seconds)}
+              />
+            </div>
+            {stat.ended_reasons.length > 0 && (
+              <div className="mt-3 pt-3 border-t flex flex-wrap gap-x-6 gap-y-1">
+                {stat.ended_reasons.map(({ reason, count }) => (
+                  <span
+                    key={reason}
+                    className="text-xs text-muted-foreground"
+                  >
+                    {END_REASON_LABELS[reason] ?? reason}:{" "}
+                    <span className="font-medium text-foreground">
+                      {count}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -242,10 +429,17 @@ export default function AssessmentInvitePage() {
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-xs text-muted-foreground">
+              Optional — helps you identify this session later.
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowInviteDialog(false)}
+            >
+              Cancel
+            </Button>
             <Button onClick={handleInviteCandidate}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
@@ -256,20 +450,37 @@ export default function AssessmentInvitePage() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-4 space-y-2">
             <p className="text-sm font-medium">
-              {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
+              {newSession.candidate_name ? (
+                <>
+                  Link for{" "}
+                  <span className="font-semibold">
+                    {newSession.candidate_name}
+                  </span>{" "}
+                  ready — share with your candidate:
+                </>
+              ) : (
+                <>New invite link ready — share with your candidate:</>
+              )}
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyNewSessionLink}
+              className="w-full"
+            >
               {newSessionCopied ? (
-                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+                <>
+                  <Check className="h-3.5 w-3.5 mr-1.5" /> Copied!
+                </>
               ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link
+                </>
               )}
             </Button>
           </CardContent>
@@ -284,7 +495,9 @@ export default function AssessmentInvitePage() {
           <h2 className="text-sm font-semibold">
             Candidates
             {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
+              <span className="ml-1.5 text-muted-foreground font-normal">
+                ({sessions.length})
+              </span>
             )}
           </h2>
         </div>
@@ -313,12 +526,49 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onRequestDelete={requestDelete}
+                  deletingId={deletingId}
+                  deleteError={deleteError}
                 />
               ))}
             </CardContent>
           </Card>
         )}
       </div>
+
+{/* Remove candidate confirm */}
+      <AlertDialog
+        open={confirmTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove candidate?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span>
+                &quot;{confirmTarget?.candidate_name ?? "This candidate"}&quot; and
+                their interview data will be permanently removed. This cannot be
+                undone.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deletingId !== null}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
+            >
+              {deletingId !== null && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (
@@ -328,10 +578,15 @@ export default function AssessmentInvitePage() {
             <h2 className="text-sm font-semibold">Skills assessed</h2>
             <ul className="space-y-1">
               {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <li
+                  key={s.id ?? s.skill_label}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                   <span>•</span>
                   <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                  <span className="text-xs">
+                    (expected {LEVEL_LABELS[s.expected_level]})
+                  </span>
                 </li>
               ))}
             </ul>

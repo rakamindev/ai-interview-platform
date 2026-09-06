@@ -46,16 +46,16 @@ export default function TranscriptPage() {
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5"
           >
             <ArrowLeft className="h-4 w-4" />
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">Interview Transcript</h1>
+              {candidateName && (
+                <p className="text-sm text-muted-foreground">{candidateName}</p>
+              )}
+            </div>
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
-          </div>
         </div>
         {!loading && !error && turns.length > 0 && (
           <Button variant="outline" size="sm" onClick={handleDownload}>

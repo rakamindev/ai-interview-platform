@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { AlertTriangle, CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -53,6 +53,8 @@ export default function InterviewPage() {
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
+  const stopCaptureRef = useRef<(() => void) | null>(null);
+  const stopPlaybackRef = useRef<(() => void) | null>(null);
 
   const handleStateChange = useCallback((state: InterviewState) => {
     setInterviewState(state);
@@ -67,6 +69,11 @@ export default function InterviewPage() {
       }, 10_000);
       waitForDrain(() => callAudioComplete());
       return;
+    }
+
+    if (state === "error") {
+      stopCaptureRef.current?.();
+      stopPlaybackRef.current?.();
     }
 
     if (state === "reconnecting") {
@@ -146,6 +153,8 @@ export default function InterviewPage() {
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+  stopCaptureRef.current = stopCapture;
+  stopPlaybackRef.current = stopPlayback;
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
@@ -222,6 +231,19 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State E: Error ──────────────────────────────────────────────────────
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <AlertTriangle className="h-10 w-10 mx-auto text-red-500" />
+        <h2 className="text-xl font-semibold">Interview interrupted</h2>
+        <p className="text-sm text-muted-foreground">
+          The interview service is temporarily unavailable. Please contact the interviewer to retry or reschedule.
+        </p>
       </div>
     );
   }

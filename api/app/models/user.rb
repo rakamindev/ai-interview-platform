@@ -9,6 +9,7 @@ class User < ApplicationRecord
                     uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :role, inclusion: { in: ROLES }
+  validates :password, length: { minimum: 8 }, if: -> { password.present? }
 
   before_save :downcase_email
 

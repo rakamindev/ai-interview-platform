@@ -11,6 +11,11 @@ class Rack::Attack
     req.ip if req.path == '/api/v1/auth/login' && req.post?
   end
 
+  # Throttle signup attempts: 5 per minute per IP.
+  throttle('auth/signup', limit: 5, period: 1.minute) do |req|
+    req.ip if req.path == '/api/v1/auth/signup' && req.post?
+  end
+
   # Throttle candidate-facing endpoints: 30 per minute per IP.
   throttle('candidate/session', limit: 30, period: 1.minute) do |req|
     req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})

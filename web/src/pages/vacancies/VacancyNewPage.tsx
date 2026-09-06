@@ -25,8 +25,20 @@ export default function VacancyNewPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<VacancyFormValues>({
+    defaultValues: {
+      role_title: "",
+      culture_dimensions: "",
+      competency_expectations: "",
+      skills: [],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
@@ -43,7 +55,9 @@ export default function VacancyNewPage() {
       });
       navigate("/vacancies");
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
+      setError(
+        e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -52,18 +66,27 @@ export default function VacancyNewPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
+        <Link
+          to="/vacancies"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+        >
           <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm text-muted-foreground">Vacancies</span>
         </Link>
-        <span className="text-sm text-muted-foreground">Vacancies</span>
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">New Vacancy</span>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
-          <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Label htmlFor="role_title">
+            Role title <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="role_title"
+            placeholder="Senior Frontend Engineer"
+            {...register("role_title", { required: true })}
+          />
         </div>
 
         <Separator />
@@ -81,16 +104,26 @@ export default function VacancyNewPage() {
               {fields.map((field, index) => (
                 <div key={field.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                    <span className="text-sm font-medium">
+                      {watch(`skills.${index}.skill_label`)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Expected level:</span>
+                    <span className="text-xs text-muted-foreground">
+                      Expected level:
+                    </span>
                     <LevelRadio
                       value={watch(`skills.${index}.expected_level`) ?? 3}
-                      onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
+                      onChange={(v) =>
+                        setValue(`skills.${index}.expected_level`, v)
+                      }
                     />
                   </div>
                 </div>
@@ -98,7 +131,12 @@ export default function VacancyNewPage() {
             </div>
           )}
 
-          <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPickerOpen(true)}
+          >
             <Plus className="h-3.5 w-3.5 mr-1" /> Add skill expectation
           </Button>
         </div>
@@ -106,7 +144,9 @@ export default function VacancyNewPage() {
         <Separator />
 
         <div className="space-y-1.5">
-          <Label htmlFor="culture_dimensions">Company culture (used in AI narrative)</Label>
+          <Label htmlFor="culture_dimensions">
+            Company culture (used in AI narrative)
+          </Label>
           <Textarea
             id="culture_dimensions"
             placeholder="Ownership-driven, async-first, direct feedback culture..."
@@ -116,7 +156,9 @@ export default function VacancyNewPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="competency_expectations">Competency expectations (used in AI narrative)</Label>
+          <Label htmlFor="competency_expectations">
+            Competency expectations (used in AI narrative)
+          </Label>
           <Textarea
             id="competency_expectations"
             placeholder="Strong communicator who can align cross-functional teams..."
@@ -128,7 +170,13 @@ export default function VacancyNewPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/vacancies")}
+          >
+            Cancel
+          </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Vacancy
@@ -139,7 +187,13 @@ export default function VacancyNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        onSelect={(s) =>
+          append({
+            skill_id: s.skill_id,
+            skill_label: s.skill_label,
+            expected_level: 3,
+          })
+        }
       />
     </div>
   );

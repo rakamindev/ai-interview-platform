@@ -97,3 +97,24 @@ public/
 - The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
 - Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
 - The backend must be running for authentication, session management, and real-time audio streaming to work.
+
+## Testing
+
+Vitest + React Testing Library running in jsdom:
+
+```bash
+npm test          # interactive watch mode
+npm run test:run  # one-shot (CI-friendly)
+```
+
+Target just the auth area:
+
+```bash
+npm run test:run src/services/auth.test.ts src/stores/authAtom.test.ts src/components/ProtectedRoute.test.tsx src/pages/auth/LoginPage.test.tsx src/pages/auth/SignupPage.test.tsx
+```
+
+Notes:
+
+- Jest-DOM matchers and per-test cleanup are wired up in `src/test/setup.ts`.
+- `VITE_DEV_TOKEN` from `.env` is loaded into `import.meta.env` during tests, so specs that depend on the `authAtom` default stub it to `undefined` before importing the module (see `authAtom.test.ts` / `ProtectedRoute.test.tsx`).
+- Current status: **5 files, 15 tests, all passing** (auth service, auth atom, ProtectedRoute, LoginPage, SignupPage).

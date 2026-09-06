@@ -68,3 +68,11 @@ export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   exceed: "text-green-700 bg-green-50",
   not_assessed: "text-neutral-500 bg-neutral-50",
 };
+
+export const END_REASON_LABELS: Record<string, string> = {
+  manual_candidate: "Candidate ended",
+  manual_assessor: "Assessor ended",
+  all_covered: "All skills covered",
+  time_ceiling: "Time limit",
+  error: "Error",
+};
