@@ -9,7 +9,7 @@ module FitGap
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
         model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
-        timeout: 30
+        timeout: 10
       )
     end
 
@@ -19,8 +19,8 @@ module FitGap
       narratives        = generate_narratives(skill_comparisons)
 
       report = FitGapReport.find_or_initialize_by(
-        portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
+        portfolio: @portfolio,
+        vacancy:   @vacancy
       )
 
       report.update!(
@@ -43,7 +43,7 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
+        if portfolio_skill && !portfolio_skill[:unassessed] && portfolio_skill[:effective_level].present?
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
@@ -60,9 +60,12 @@ module FitGap
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          required_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill ? portfolio_skill[:overridden] : false,
+          overridden:      portfolio_skill ? portfolio_skill[:overridden] : false
         }
       end
 
@@ -73,14 +76,20 @@ module FitGap
     def effective_portfolio_skills
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
         override = skill.assessor_override
+        # An unprobed configured skill is unassessed unless human evaluator provided an override
+        is_unassessed = skill.evidence.blank? &&
+                        (skill.ai_confidence == 'low' || skill.competency_summary.to_s.downcase.include?('not probed')) &&
+                        override.nil?
+
         {
           id:              skill.id,
           skill_id:        skill.skill_id,
           skill_label:     skill.skill_label,
-          ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
+          ai_level:        is_unassessed ? nil : skill.ai_level,
+          effective_level: override ? override.override_level : (is_unassessed ? nil : skill.ai_level),
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          overridden:      override.present?,
+          unassessed:      is_unassessed
         }
       end
     end

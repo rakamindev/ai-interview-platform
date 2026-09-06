@@ -1,13 +1,15 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
+/** Parse "L3" → 3, passthrough number, fallback to 0 (unassessed) */
+export function parseLevel(level: string | number | null | undefined): number {
+  if (level == null) return 0;
   if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+  const n = parseInt(String(level).replace(/\D/g, ""), 10);
+  return isNaN(n) ? 0 : n;
 }
 
 export const LEVEL_LABELS: Record<number, string> = {
+  0: "—",
   1: "L1",
   2: "L2",
   3: "L3",
@@ -16,6 +18,7 @@ export const LEVEL_LABELS: Record<number, string> = {
 };
 
 export const LEVEL_DESCRIPTIONS: Record<number, string> = {
+  0: "Unassessed",
   1: "Foundational",
   2: "Functional",
   3: "Proficient",
@@ -25,6 +28,7 @@ export const LEVEL_DESCRIPTIONS: Record<number, string> = {
 
 // L-badge colors (Tailwind classes)
 export const LEVEL_BADGE_CLASSES: Record<number, string> = {
+  0: "bg-muted text-muted-foreground",
   1: "bg-neutral-200 text-neutral-700",
   2: "bg-blue-100 text-blue-700",
   3: "bg-teal-100 text-teal-700",

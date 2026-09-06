@@ -149,12 +149,12 @@ export default function AssessmentInvitePage() {
   }, [id]);
 
   // Poll while any session is live or pending
+  const hasActiveSession = sessions.some((s) => s.status !== "ended");
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
-    if (!hasActive) return;
+    if (!hasActiveSession) return;
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);
-  }, [sessions, loadSessions]);
+  }, [hasActiveSession, loadSessions]);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");

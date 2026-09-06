@@ -7,8 +7,8 @@ interface ComparisonTableProps {
 }
 
 function ResultBadge({ comparison }: { comparison: SkillComparison }) {
-  const label = FIT_GAP_RESULT_LABELS[comparison.result];
-  const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
+  const label = FIT_GAP_RESULT_LABELS[comparison.result] || comparison.result;
+  const classes = FIT_GAP_RESULT_CLASSES[comparison.result] || "text-neutral-500 bg-neutral-50";
 
   let icon = "";
   let suffix = "";
@@ -25,6 +25,14 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
 }
 
 export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
+  if (!comparisons || comparisons.length === 0) {
+    return (
+      <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+        No skill comparisons available.
+      </div>
+    );
+  }
+
   // Summary counts
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
@@ -43,27 +51,32 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
-              </tr>
-            ))}
+            {comparisons.map((c, i) => {
+              const reqLevel = c.required_level ?? c.expected_level;
+              const isOverridden = Boolean(c.is_override || c.overridden);
+
+              return (
+                <tr key={i} className="border-b last:border-0">
+                  <td className="px-4 py-2.5">{c.skill_label}</td>
+                  <td className="px-4 py-2.5 text-center text-muted-foreground">
+                    {LEVEL_LABELS[reqLevel] || (reqLevel ? `L${reqLevel}` : "—")}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    {c.candidate_level != null ? (
+                      <span>
+                        {LEVEL_LABELS[c.candidate_level] || `L${c.candidate_level}`}
+                        {isOverridden && <span className="text-xs text-muted-foreground ml-1" title="Human override applied">✏</span>}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <ResultBadge comparison={c} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

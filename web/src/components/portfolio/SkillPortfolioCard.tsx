@@ -21,16 +21,16 @@ export default function SkillPortfolioCard({
 
   return (
     <Card>
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="p-4 space-y-3">
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <LevelBadge level={effectiveLevel} />
             <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-sm">{skill.skill_label}</span>
                 {skill.is_discovered && (
-                  <span className="flex items-center gap-0.5 text-xs text-amber-600">
+                  <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 font-medium">
                     <Zap className="h-3 w-3" /> Discovered
                   </span>
                 )}
@@ -49,8 +49,8 @@ export default function SkillPortfolioCard({
         )}
 
         {/* Evidence */}
-        {skill.evidence.length > 0 && (
-          <div className="space-y-1.5">
+        {skill.evidence && skill.evidence.length > 0 && (
+          <div className="space-y-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Evidence from interview
             </span>

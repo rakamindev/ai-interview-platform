@@ -8,18 +8,21 @@ interface LevelBadgeProps {
 }
 
 export default function LevelBadge({ level, size = "md", className }: LevelBadgeProps) {
+  const label = LEVEL_LABELS[level] || (level === 0 ? "—" : `L${level}`);
+  const desc = LEVEL_DESCRIPTIONS[level] || (level === 0 ? "Unassessed" : "");
+
   return (
     <div
       className={cn(
         "inline-flex flex-col items-center justify-center rounded font-semibold",
         size === "md" ? "px-3 py-2 min-w-14 text-base" : "px-2 py-1 min-w-10 text-sm",
-        LEVEL_BADGE_CLASSES[level],
+        LEVEL_BADGE_CLASSES[level] || "bg-muted text-muted-foreground",
         className
       )}
     >
-      <span>{LEVEL_LABELS[level]}</span>
-      {size === "md" && (
-        <span className="text-[10px] font-normal opacity-70">{LEVEL_DESCRIPTIONS[level]}</span>
+      <span>{label}</span>
+      {size === "md" && desc && (
+        <span className="text-[10px] font-normal opacity-70">{desc}</span>
       )}
     </div>
   );

@@ -42,8 +42,11 @@ module Exports
       pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
       pdf.move_down 4
 
+      candidate_display = @session.candidate_name.presence || "Candidate ##{@session.candidate_id || @session.id}"
+
       pdf.font_size(10) do
-        pdf.text "Session: #{@session.id}"
+        pdf.text "Candidate: #{candidate_display}", style: :bold
+        pdf.text "Session ID: #{@session.id}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
         pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
       end
@@ -60,10 +63,21 @@ module Exports
       configured = skills.reject(&:is_discovered)
       discovered = skills.select(&:is_discovered)
 
-      if configured.any?
+      is_unassessed = ->(s) { s.evidence.blank? && (s.ai_confidence == 'low' || s.competency_summary.to_s.downcase.include?('not probed')) && s.assessor_override.nil? }
+      assessed = configured.reject(&is_unassessed)
+      unassessed = configured.select(&is_unassessed)
+
+      if assessed.any?
         pdf.font_size(13) { pdf.text "Assessed Skills", style: :bold }
         pdf.move_down 6
-        configured.each { |skill| render_skill_card(pdf, skill) }
+        assessed.each { |skill| render_skill_card(pdf, skill) }
+      end
+
+      if unassessed.any?
+        pdf.move_down 6
+        pdf.font_size(13) { pdf.text "Unassessed Skills (Not Probed)", style: :bold }
+        pdf.move_down 6
+        unassessed.each { |skill| render_unassessed_skill_card(pdf, skill) }
       end
 
       if discovered.any?
@@ -72,6 +86,23 @@ module Exports
         pdf.move_down 6
         discovered.each { |skill| render_skill_card(pdf, skill) }
       end
+    end
+
+    def render_unassessed_skill_card(pdf, skill)
+      pdf.font_size(11) do
+        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text "Level: — (Unassessed)  |  Status: Not Probed during interview"
+      end
+
+      pdf.move_down 4
+
+      if skill.competency_summary.present?
+        pdf.font_size(10) { pdf.text skill.competency_summary }
+      end
+
+      pdf.move_down 4
+      pdf.stroke { pdf.stroke_color 'CCCCCC'; pdf.horizontal_rule }
+      pdf.move_down 8
     end
 
     def render_skill_card(pdf, skill)

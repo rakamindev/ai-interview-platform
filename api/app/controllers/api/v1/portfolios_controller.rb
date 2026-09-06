@@ -115,12 +115,13 @@ module Api
 
         # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
+        latest_override_at = portfolio.assessor_overrides.maximum(:overridden_at)
+        if existing && (latest_override_at.nil? || existing.generated_at >= latest_override_at)
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+        json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
@@ -130,8 +131,17 @@ module Api
         portfolio = Portfolio.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
-        if report.nil?
-          return json_error("Fit/gap report not found", :not_found)
+        # Check if report is missing OR stale due to newer assessor override
+        latest_override_at = portfolio.assessor_overrides.maximum(:overridden_at)
+        is_stale = report && latest_override_at && report.generated_at < latest_override_at
+
+        if report.nil? || is_stale
+          vacancy = Vacancy.find_by(id: params[:vacancy_id])
+          if vacancy && portfolio.complete?
+            report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+          elsif report.nil?
+            return json_error("Fit/gap report not found", :not_found)
+          end
         end
 
         json_response(report: fit_gap_json(report))

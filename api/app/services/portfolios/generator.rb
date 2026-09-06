@@ -150,11 +150,28 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
+      # Preserve existing assessor overrides before wiping skills (BUG-03 fix)
+      existing_overrides = {}
+      portfolio.portfolio_skills.includes(:assessor_override).each do |ps|
+        if ps.assessor_override
+          override_data = {
+            override_level: ps.assessor_override.override_level,
+            assessor_notes: ps.assessor_override.assessor_notes,
+            overridden_by:  ps.assessor_override.overridden_by,
+            overridden_at:  ps.assessor_override.overridden_at
+          }
+          existing_overrides[ps.skill_id] = override_data if ps.skill_id.present?
+          existing_overrides[ps.skill_label.to_s.downcase] = override_data if ps.skill_label.present?
+        end
+      end
+
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
+      saved_labels = []
+
       (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
+        new_ps = portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
@@ -163,10 +180,30 @@ module Portfolios
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
+        saved_labels << skill_data['skill_label']&.downcase
+
+        relink_override(new_ps, existing_overrides)
+      end
+
+      # GAP-02: Ensure all configured assessment skills exist even if not probed by AI
+      configured_assessment_skills = @session.assessment.assessment_skills.order(:display_order)
+      configured_assessment_skills.each do |cas|
+        next if saved_labels.include?(cas.skill_label.downcase)
+
+        new_ps = portfolio.portfolio_skills.create!(
+          skill_id:           cas.skill_id,
+          skill_label:        cas.skill_label,
+          is_discovered:      false,
+          ai_level:           1,
+          ai_confidence:      'low',
+          evidence:           [],
+          competency_summary: 'Skill was configured in the assessment but was not probed or evaluated during the interview.'
+        )
+        relink_override(new_ps, existing_overrides)
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
+        new_ps = portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
@@ -175,7 +212,22 @@ module Portfolios
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
+        relink_override(new_ps, existing_overrides)
       end
+    end
+
+    def relink_override(portfolio_skill, existing_overrides)
+      prev = (portfolio_skill.skill_id.present? && existing_overrides[portfolio_skill.skill_id]) ||
+             existing_overrides[portfolio_skill.skill_label.to_s.downcase]
+      return unless prev
+
+      portfolio_skill.create_assessor_override!(
+        ai_level:       portfolio_skill.ai_level,
+        override_level: prev[:override_level],
+        assessor_notes: prev[:assessor_notes],
+        overridden_by:  prev[:overridden_by],
+        overridden_at:  prev[:overridden_at]
+      )
     end
   end
 end
