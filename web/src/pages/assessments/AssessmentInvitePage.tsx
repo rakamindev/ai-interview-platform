@@ -188,6 +188,12 @@ export default function AssessmentInvitePage() {
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 
+  // Route /assessments/:id/invite menjamin ada id; guard untuk URL tidak valid.
+  // Letaknya setelah semua hook (aturan hook), sebelum render pertama.
+  if (id == null) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
@@ -307,7 +313,7 @@ export default function AssessmentInvitePage() {
                   key={session.id}
                   session={session}
                   index={sessions.length - i}
-                  assessmentId={id!}
+                  assessmentId={id}
                   onCopy={(sid) => {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
