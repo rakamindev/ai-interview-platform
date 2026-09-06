@@ -12,12 +12,18 @@ import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
+interface PortfolioApiResponse {
+  status?: string;
+  portfolio?: Portfolio;
+}
+
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
@@ -25,19 +31,23 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
-    const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-      setGenerating(true);
-    } else if (data.portfolio) {
-      setPortfolio(data.portfolio);
-      setGenerating(false);
-      // Build overrides map
-      const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
-        overrideMap[o.portfolio_skill_id] = o;
-      });
-      setOverrides(overrideMap);
+    try {
+      const res = await sessionsApi.getPortfolio(Number(sessionId));
+      const data = res.data as unknown as PortfolioApiResponse;
+      if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
+        setGenerating(true);
+      } else if (data.portfolio) {
+        setPortfolio(data.portfolio);
+        setGenerating(false);
+        // Build overrides map
+        const overrideMap: Record<number, AssessorOverride> = {};
+        data.portfolio.overrides.forEach((o: AssessorOverride) => {
+          overrideMap[o.portfolio_skill_id] = o;
+        });
+        setOverrides(overrideMap);
+      }
+    } catch {
+      // Polling or initial fetch error
     }
   }, [sessionId]);
 
@@ -47,7 +57,9 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => {
+        setError("Gagal memuat data portofolio kandidat. Silakan refresh halaman.");
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -66,6 +78,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -89,6 +102,8 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch {
+      setError("Gagal mengekspor dokumen portfolio. Silakan coba beberapa saat lagi.");
     } finally {
       setExporting(null);
     }
@@ -106,6 +121,13 @@ export default function PortfolioPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {error && (
+        <div className="border border-destructive/40 bg-destructive/10 rounded-lg p-3 text-sm text-destructive flex items-center justify-between">
+          <span>{error}</span>
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="h-6 px-2 text-xs">Tutup</Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">

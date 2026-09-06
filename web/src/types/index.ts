@@ -45,6 +45,11 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  assessment?: {
+    id: number;
+    name: string;
+    time_limit_min: number;
+  };
 }
 
 export interface CoverageSkill {

@@ -15,6 +15,10 @@ interface HardwareCheckProps {
     onStart?: () => void;
 }
 
+interface WebkitWindow extends Window {
+    webkitAudioContext?: typeof AudioContext;
+}
+
 function StateIcon({ state }: { state: ProctoringState }) {
     if (state === ProctoringState.LOADING)
         return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
@@ -69,9 +73,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     const checkAudioPlayback = async (): Promise<boolean> => {
         try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const AudioCtx = window.AudioContext || (window as unknown as WebkitWindow).webkitAudioContext;
+            if (!AudioCtx) return false;
+
             const ctx = new AudioCtx();
             if (ctx.state === "suspended") await ctx.resume();
+            
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
@@ -86,7 +93,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     const startAudioLevelMonitoring = (stream: MediaStream) => {
         try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const AudioCtx = window.AudioContext || (window as unknown as WebkitWindow).webkitAudioContext;
+            if (!AudioCtx) return;
+
             const ctx = new AudioCtx();
             const source = ctx.createMediaStreamSource(stream);
             const analyser = ctx.createAnalyser();

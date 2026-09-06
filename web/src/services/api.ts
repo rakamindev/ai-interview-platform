@@ -17,12 +17,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Unwrap backend envelope: { data: { ... } } → { ... }
+// Unwrap backend envelope: { data: { ... }, meta?: { ... } }
+// Preserves meta when pagination metadata is included.
 // On 401/403, clear stored credentials and redirect to login.
 api.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === "object" && "data" in response.data) {
-      response.data = response.data.data;
+      const { data, meta } = response.data;
+      if (meta !== undefined) {
+        if (data && typeof data === "object" && !Array.isArray(data)) {
+          response.data = { ...data, meta };
+        } else {
+          response.data = { data, meta };
+        }
+      } else {
+        response.data = data;
+      }
     }
     return response;
   },

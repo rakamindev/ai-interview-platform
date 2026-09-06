@@ -47,9 +47,8 @@ export default function FitGapReportPage() {
     sessionsApi
       .getPortfolio(Number(sessionId))
       .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
+        if ("portfolio" in res.data && res.data.portfolio) {
+          setPortfolio(res.data.portfolio);
         }
       })
       .finally(() => setLoading(false));

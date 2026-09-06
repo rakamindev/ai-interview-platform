@@ -4,8 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ChevronRight, Trash2, ClipboardList } from "lucide-react";
 import type { Assessment } from "@/types";
+import EmptyState from "@/components/ui/EmptyState";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
   if (!session) return null;
@@ -41,6 +53,16 @@ export default function AssessmentListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    try {
+      await assessmentsApi.delete(id);
+      setAssessments((prev) => prev.filter((a) => a.id !== id));
+    } catch {
+      setError(true);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -52,7 +74,7 @@ export default function AssessmentListPage() {
 
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load assessments. Please refresh the page.
+          Failed to process request. Please refresh the page.
         </div>
       )}
 
@@ -61,12 +83,13 @@ export default function AssessmentListPage() {
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="Belum ada asesmen yang dibuat"
+          description="Buat asesmen peran pekerjaan baru untuk mulai mengundang kandidat dan mengukur kompetensi berbasis AI."
+          actionLabel="Buat Asesmen Pertama"
+          onAction={() => navigate("/assessments/new")}
+        />
       ) : (
         <div className="space-y-2">
           {assessments.map((a) => (
@@ -91,7 +114,39 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Hapus asesmen ${a.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Hapus Asesmen?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Apakah Anda yakin ingin menghapus asesmen <strong>"{a.name}"</strong>? Seluruh data sesi wawancara yang terkait akan dihapus secara permanen.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                          onClick={(e) => handleDelete(e, a.id)}
+                        >
+                          Hapus Asesmen
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}

@@ -51,7 +51,9 @@ export default function AssessmentEditPage() {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch(() => {
+        setError("Gagal memuat data asesmen. Silakan muat ulang halaman.");
+      })
       .finally(() => setLoading(false));
   }, [id, reset]);
 
@@ -72,7 +74,7 @@ export default function AssessmentEditPage() {
   const deletedSkillIdsRef = useRef<number[]>([]);
 
   const handleRemoveSkill = (index: number) => {
-    const currentSkills = form.getValues("skills") as any[];
+    const currentSkills = form.getValues("skills") as Partial<AssessmentSkill>[];
     const skillToRemove = currentSkills?.[index];
     const realDbId = skillToRemove?.id;
     if (realDbId && typeof realDbId === "number" && !isNaN(realDbId)) {
@@ -100,8 +102,8 @@ export default function AssessmentEditPage() {
         assessment_skills_attributes: skillsPayload,
       });
       navigate(`/assessments/${id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
+    } catch {
+      setError("Gagal menyimpan perubahan asesmen. Silakan periksa kembali formulir.");
     } finally {
       setSubmitting(false);
     }

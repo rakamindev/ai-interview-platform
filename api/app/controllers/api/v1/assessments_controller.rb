@@ -49,8 +49,11 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          json_error(@assessment.errors.full_messages.join(', '), :unprocessable_entity)
+        end
       end
 
       private
@@ -115,15 +118,6 @@ module Api
             }
           end
         )
-      end
-
-      def pagination_meta(collection)
-        {
-          current_page: collection.current_page,
-          total_pages:  collection.total_pages,
-          total_count:  collection.total_count,
-          per_page:     collection.limit_value
-        }
       end
     end
   end

@@ -26,6 +26,7 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, reset, getValues } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -36,13 +37,15 @@ export default function VacancyEditPage() {
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
       reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {
+      setError("Gagal memuat detail lowongan.");
+    }).finally(() => setLoading(false));
   }, [id, reset]);
 
   const deletedSkillIdsRef = useRef<number[]>([]);
 
   const handleRemoveSkill = (index: number) => {
-    const currentSkills = getValues("skills") as any[];
+    const currentSkills = getValues("skills") as Partial<VacancySkill>[];
     const skillToRemove = currentSkills?.[index];
     const realDbId = skillToRemove?.id;
     if (realDbId && typeof realDbId === "number" && !isNaN(realDbId)) {
@@ -53,6 +56,7 @@ export default function VacancyEditPage() {
 
   const onSubmit = async (data: VacancyFormValues) => {
     setSubmitting(true);
+    setError(null);
     try {
       const deletedAttrs = deletedSkillIdsRef.current
         .filter((delId) => typeof delId === "number" && !isNaN(delId) && delId > 0)
@@ -69,6 +73,8 @@ export default function VacancyEditPage() {
         vacancy_skills_attributes: skillsPayload,
       });
       navigate("/vacancies");
+    } catch {
+      setError("Gagal menyimpan perubahan lowongan. Silakan periksa formulir.");
     } finally {
       setSubmitting(false);
     }
@@ -82,6 +88,13 @@ export default function VacancyEditPage() {
         <Link to="/vacancies" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
         <span className="text-sm font-medium">Edit Vacancy</span>
       </div>
+
+      {error && (
+        <div className="border border-destructive/40 bg-destructive/10 rounded-lg p-3 text-sm text-destructive flex items-center justify-between mb-6">
+          <span>{error}</span>
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="h-6 px-2 text-xs">Tutup</Button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">

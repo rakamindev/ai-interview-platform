@@ -11,11 +11,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Trash2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -82,13 +93,13 @@ function SessionRow({
         <div className="flex items-center gap-1.5">
           {isPending && (
             <Button
-              variant="ghost"
+              variant={copiedId === session.id ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 px-2 text-xs"
+              className={`h-7 px-2 text-xs transition-colors ${copiedId === session.id ? "text-green-700 bg-green-50 border border-green-200" : ""}`}
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
+                <><Check className="h-3 w-3 mr-1 text-green-600" /> Copied!</>
               ) : (
                 <><Copy className="h-3 w-3 mr-1" /> Copy link</>
               )}
@@ -126,6 +137,7 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -134,8 +146,12 @@ export default function AssessmentInvitePage() {
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
+    try {
+      const res = await assessmentsApi.getSessions(Number(id));
+      setSessions(res.data.sessions);
+    } catch {
+      // Background poll failure non-intrusive
+    }
   }, [id]);
 
   useEffect(() => {
@@ -145,7 +161,9 @@ export default function AssessmentInvitePage() {
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {
+      setError("Gagal memuat data asesmen. Silakan refresh halaman.");
+    }).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -170,8 +188,19 @@ export default function AssessmentInvitePage() {
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+    } catch {
+      setError("Gagal membuat sesi undangan kandidat.");
     } finally {
       setCreatingSession(false);
+    }
+  };
+
+  const handleDeleteAssessment = async () => {
+    try {
+      await assessmentsApi.delete(Number(id));
+      navigate("/assessments");
+    } catch {
+      setError("Gagal menghapus asesmen.");
     }
   };
 
@@ -219,12 +248,49 @@ export default function AssessmentInvitePage() {
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hapus Asesmen?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Apakah Anda yakin ingin menghapus asesmen <strong>"{assessment?.name}"</strong>? Seluruh data sesi wawancara yang terkait akan dihapus secara permanen.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                  onClick={handleDeleteAssessment}
+                >
+                  Hapus Asesmen
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="border border-destructive/40 bg-destructive/10 rounded-lg p-3 text-sm text-destructive flex items-center justify-between">
+          <span>{error}</span>
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="h-6 px-2 text-xs">Tutup</Button>
+        </div>
+      )}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -265,9 +331,14 @@ export default function AssessmentInvitePage() {
                 {newSession.invite_url}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
+            <Button
+              variant={newSessionCopied ? "secondary" : "outline"}
+              size="sm"
+              onClick={copyNewSessionLink}
+              className={`w-full transition-colors ${newSessionCopied ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : ""}`}
+            >
               {newSessionCopied ? (
-                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+                <><Check className="h-3.5 w-3.5 mr-1.5 text-green-600" /> Copied to clipboard!</>
               ) : (
                 <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
               )}

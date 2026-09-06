@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import PageErrorBoundary from "@/components/PageErrorBoundary";
 
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const AssessmentListPage = lazy(() => import("@/pages/assessments/AssessmentListPage"));
@@ -27,48 +28,56 @@ function RouteLoadingFallback() {
   );
 }
 
+function PageWrap({ children, name }: { children: React.ReactNode; name?: string }) {
+  return (
+    <PageErrorBoundary pageName={name}>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        {children}
+      </Suspense>
+    </PageErrorBoundary>
+  );
+}
+
 export default function App() {
   return (
-    <Suspense fallback={<RouteLoadingFallback />}>
-      <Routes>
-        {/* Auth routes */}
-        <Route path="/login" element={<LoginPage />} />
+    <Routes>
+      {/* Auth routes */}
+      <Route path="/login" element={<PageWrap name="Login"><LoginPage /></PageWrap>} />
 
-        {/* Assessor routes (protected) */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AssessorLayout />}>
-            <Route path="/" element={<Navigate to="/assessments" replace />} />
-            <Route path="/assessments" element={<AssessmentListPage />} />
-            <Route path="/assessments/new" element={<AssessmentNewPage />} />
-            <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
-            <Route path="/assessments/:id/invite" element={<AssessmentInvitePage />} />
-            <Route
-              path="/assessments/:id/sessions/:sessionId/monitor"
-              element={<LiveMonitorPage />}
-            />
-            <Route
-              path="/assessments/:id/sessions/:sessionId/portfolio"
-              element={<PortfolioPage />}
-            />
-            <Route
-              path="/assessments/:id/sessions/:sessionId/transcript"
-              element={<TranscriptPage />}
-            />
-            <Route
-              path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
-              element={<FitGapReportPage />}
-            />
-            <Route path="/vacancies" element={<VacancyListPage />} />
-            <Route path="/vacancies/new" element={<VacancyNewPage />} />
-            <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
-          </Route>
+      {/* Assessor routes (protected) */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AssessorLayout />}>
+          <Route path="/" element={<Navigate to="/assessments" replace />} />
+          <Route path="/assessments" element={<PageWrap name="Assessments"><AssessmentListPage /></PageWrap>} />
+          <Route path="/assessments/new" element={<PageWrap name="New Assessment"><AssessmentNewPage /></PageWrap>} />
+          <Route path="/assessments/:id/edit" element={<PageWrap name="Edit Assessment"><AssessmentEditPage /></PageWrap>} />
+          <Route path="/assessments/:id/invite" element={<PageWrap name="Assessment Sessions"><AssessmentInvitePage /></PageWrap>} />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/monitor"
+            element={<PageWrap name="Live Monitor"><LiveMonitorPage /></PageWrap>}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/portfolio"
+            element={<PageWrap name="Portfolio"><PortfolioPage /></PageWrap>}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/transcript"
+            element={<PageWrap name="Transcript"><TranscriptPage /></PageWrap>}
+          />
+          <Route
+            path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
+            element={<PageWrap name="Fit/Gap Analysis"><FitGapReportPage /></PageWrap>}
+          />
+          <Route path="/vacancies" element={<PageWrap name="Vacancies"><VacancyListPage /></PageWrap>} />
+          <Route path="/vacancies/new" element={<PageWrap name="New Vacancy"><VacancyNewPage /></PageWrap>} />
+          <Route path="/vacancies/:id/edit" element={<PageWrap name="Edit Vacancy"><VacancyEditPage /></PageWrap>} />
         </Route>
+      </Route>
 
-        {/* Candidate route (public) */}
-        <Route element={<CandidateLayout />}>
-          <Route path="/interview/:token" element={<InterviewPage />} />
-        </Route>
-      </Routes>
-    </Suspense>
+      {/* Candidate route (public) */}
+      <Route element={<CandidateLayout />}>
+        <Route path="/interview/:token" element={<PageWrap name="Interview"><InterviewPage /></PageWrap>} />
+      </Route>
+    </Routes>
   );
 }
