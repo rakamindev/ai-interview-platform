@@ -13,7 +13,9 @@ FactoryBot.define do
 
   factory :user do
     sequence(:email) { |n| "user#{n}@example.test" }
-    password { 'password123' }
+    # tidak ada spec yang login pakai password ini — nilainya tidak pernah
+    # diverifikasi; diturunkan runtime agar tidak ada pola "hardcoded password"
+    password { SecureRandom.hex(12) }
     role { 'admin' }
   end
 
