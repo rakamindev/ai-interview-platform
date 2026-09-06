@@ -9,44 +9,40 @@ Ringkasan:
 
 | Item | Status | Kenapa |
 |---|---|---|
-| #1–#3 (A1, A2, A3) | **Rencana, tidak dieksekusi** | Ruby/rspec tidak terpasang; `spec/` tidak ada → perbaikan tidak bisa dibuktikan jalan |
+| #1–#3 (A1, A2, A3) | ✅ **dieksekusi + dites** (lihat [04](./04-implementation.md) §2.5–2.7) | bukan lagi item "belum" — blocker Ruby diatasi lewat Docker |
 | Klaster C (C1–C9) | **Rekomendasi tertulis, tanpa kode** | Arsitektur lintas-repo; menambal setengah jalan lebih berbahaya daripada tidak menambal |
 | B3, B4 | Tidak diperbaiki | Scope 9 perbaikan ditetapkan tema (A + B1/B2) + harness |
 | D4, D6 | Tidak disentuh | Perubahan program penuh / keputusan desain tim, bukan footnote |
 | E2, E3 | Tidak diperbaiki | Program, bukan patch |
 | S2 | Tidak diperbaiki | Doc-fix di repo yang bukan deliverable utama |
-| `rspec` / `rubocop` / `brakeman` | **Belum dijalankan** | Ruby belum terpasang (05 §6) |
-| CI di GitHub | Workflow **dibuat**, **belum pernah hijau** | Repo belum di-push |
+| `rubocop` / `brakeman` | **Belum dijalankan** | lint atas codebase lama yang belum pernah di-lint = keputusan tim soal gaya, bukan bagian tema |
+| `retry: 0` / rescue telanjang / lock di worker | Tidak disentuh | keputusan desain job queue; tema integritas #2 hanya menghapus pengarangan data |
+| CI di GitHub | Workflow **dibuat** (2 job: web + api), **belum pernah jalan** | Repo belum di-push |
 
 ---
 
-## 1. #1–#3 — inti tema, tapi tidak dieksekusi
+## 1. #1–#3 — ~~inti tema, tapi tidak dieksekusi~~ SEKARANG SUDAH
 
-Ini bagian yang paling tidak nyaman untuk dijawab, jadi ditulis paling depan.
+**Status awal catatan ini (dipertahankan agar narasinya jujur):** tiga perbaikan inti
+backend sempat tertahan karena tidak ada Ruby yang jalan di environment kerja — memperbaiki
+A1–A3 tanpa bisa menjalankan spec-nya berarti melakukan persis hal yang brief larang:
+mengklaim sesuatu yang tidak dijalankan.
 
-- **A1** — loop transisi memakai `probe_count` sama berulang
-  (`api/app/services/coverage/state_engine.rb`, loop `resolve_state`): opsi B
-  (maksimal satu state maju per panggilan) sudah dipilih di 03, tapi hanya **rencana**.
-- **A2** — auto-advance `covered` menimpa `last_signal` dengan string robot
-  (`coverage_analyzer_worker.rb:91-101`): opsi B (tidak menulis `covered`, tidak
-  menyentuh `last_signal`, + `Rails.logger.warn` terstruktur) hanya **rencana**.
-- **A3** — `level` hilang dari respons AI → L1 (`portfolios/generator.rb:161`): opsi B
-  (`ai_level` kosong + status `unknown`) hanya **rencana** — dan ini butuh perubahan
-  kontrak validasi (`schema.rb:115`, `ai_level` NOT NULL), yang merupakan keputusan tim,
-  bukan keputusan intern.
+**Cara blocker-nya diatasi:** bukan dengan mengklaim, tapi dengan membangun environment
+yang bisa menjalankan buktinya — Ruby 3.3.2 + bundle lengkap di Docker
+(`api/Dockerfile.dev`), PostgreSQL 16 + Redis 7 sebagai container, `spec/` di-bootstrap
+dari nol (rspec-rails + factory_bot yang sudah dideklarasikan Gemfile sejak awal), dan
+database test di-prepare dari migrasi. Setelah itu ketiganya dieksekusi sesuai opsi yang
+dipilih di [03](./03-options-tradeoffs.md):
 
-**Kenapa tidak dieksekusi:** tidak ada Ruby yang jalan di environment kerja ini.
-Buktinya ada di D1 — `api/.rspec` sudah ada (`--require spec_helper`) tapi folder
-`spec/` tidak ada sama sekali, jadi `rspec` tidak bisa boot. Memperbaiki A1–A3
-**tanpa** bisa menjalankan spec-nya berarti melakukan persis hal yang brief larang:
-mengklaim sesuatu yang tidak dijalankan. Maka yang diserahkan adalah: temuan + bukti
-`file:line` + 3 opsi + alasan pilihan (03 §#1–#3) — eksekusinya tertahan di blocker
-lingkungan, bukan di pemahaman.
-
-**Yang dibutuhkan untuk melanjutkannya:** Ruby 3.3.2 + bundler, bootstrap `spec/`
-(`spec_helper` + factory_bot — semua sudah dideklarasikan di `Gemfile`), tiga spec
-(satu per item), satu seeded fault (kembalikan loop asli `StateEngine` → merah).
-Detail siklusnya sudah direncanakan di 05 §4b.
+- **A1** — `resolve_state` maksimal satu state maju per panggilan (opsi B) → 10 contoh
+  table-driven hijau + seeded fault: commit fault → MERAH `7 examples, 2 failures` →
+  revert → HIJAU `43/0` (history branch: `52be6c3` → `20a47b0`).
+- **A2** — auto-advance tidak menulis `covered`, tidak menyentuh `last_signal`, log
+  terstruktur (opsi B) → spec worker mengunci ketiganya dengan DB nyata.
+- **A3** — `Portfolios::LevelParser` + migrasi nullable dengan `down` yang dijaga
+  (opsi B) → 19 kasus parse table-driven + spec generator DB nyata + bukti reversibilitas
+  (`db:rollback` → `db:migrate`) + jahitan FE `ai_level: number | null`.
 
 ## 2. Klaster C — P0 tertinggi secara absolut, sengaja tidak disentuh
 
@@ -134,17 +130,16 @@ dilindungi — sedangkan B3 halaman sekunder dan B4 onboarding.
 
 Berurutan, berdasarkan ketergantungan:
 
-1. **Ruby + spec** (D1): Ruby 3.3.2 + bundler, bootstrap `spec/`, jalankan `rspec`
-   sampai bisa boot dengan dependensi yang sudah ada di `Gemfile`. Ini yang
-   membuka pintu #1–#3.
-2. **#1–#3 dengan RSpec**: tiga spec + satu seeded fault BE (siklus HIJAU→MERAH→
-   HIJAU sudah direncanakan di 05 §4b), eksekusi rencana 03.
-3. **C7**: `filter_parameters` + hentikan transkrip di log — item C dengan rasio
-   terbaik, bisa berdiri sendiri.
-4. **B3 + B4**: state error form assessment; hardware check sungguhan.
-5. **CI hijau di GitHub** (workflow sudah dibuat — 04 §2; repo belum di-push),
-   screenshot, video 3–5 menit, PDF.
-6. **Klaster C sebagai proposal proyek** — urut 1–3 dari tabel §2 (JWT terverifikasi,
+1. **C7**: `filter_parameters` + hentikan transkrip di log — item C dengan rasio
+   terbaik, bisa berdiri sendiri; dan sekarang jaring pengaman `spec/` sudah ada
+   untuk menjaganya.
+2. **B3 + B4**: state error form assessment; hardware check sungguhan.
+3. **RuboCop dengan konfigurasi bertahap**: baseline config dari tim → hanya file baru
+   yang diangket → menyusul file lama. Masih keputusan tim soal gaya, tapi sekarang
+   bisa punya CI yang menjaganya.
+4. **CI hijau di GitHub** (workflow dua job sudah dibuat — 04 §2c), screenshot, video
+   3–5 menit, PDF.
+5. **Klaster C sebagai proposal proyek** — urut 1–3 dari tabel §2 (JWT terverifikasi,
    fail-closed, `users.tenant_id`), dengan koordinasi lintas-repo ditulis eksplisit.
    Sebagai proyek yang di-scoped dengan benar, bukan PR setengah jadi.
 
@@ -155,18 +150,21 @@ nyata — itu program), dan keputusan D4/D6 (itu rapat tim, bukan kode).
 
 Untuk dibaca ulang sebelum submit:
 
-- [ ] `rspec` — **belum dijalankan** (Ruby belum terpasang)
-- [ ] `rubocop` / `brakeman` — **belum dijalankan**
-- [ ] CI di GitHub — workflow **dibuat** (`.github/workflows/ci.yml`), **belum pernah
-  hijau** (repo belum di-push)
-- [ ] Walkthrough aplikasi dengan backend hidup — **belum dijalankan** (API tidak
-  dinyalakan; sisi web diverifikasi lewat test, typecheck, lint, build)
-- [ ] Seeded fault backend (A1) — **rencana** (05 §4b), **belum dijalankan**
-- [ ] Screenshot, video, PDF — akan dibuat (panduan di `screenshots/`)
+- [x] `rspec` — **43 examples, 0 failures** (Docker ruby 3.3.2 + Postgres 16 + Redis 7)
+- [x] Seeded fault backend (A1) — MERAH `7 examples, 2 failures` → revert → HIJAU
+  (commit `52be6c3` + revert `20a47b0` terlihat di history branch)
+- [x] Migrasi #3 reversibel — `db:rollback STEP=1` → `db:migrate` dijalankan
+- [x] Walkthrough aplikasi dengan backend hidup — API jalan (`/api/v1/health` 200),
+  data portfolio/fit-gap dirender dari DB lokal
+- [ ] `rubocop` / `brakeman` — **belum dijalankan** (keputusan tim, lihat ringkasan)
+- [ ] CI di GitHub — workflow **dibuat** (`.github/workflows/ci.yml`, 2 job), **belum
+  pernah jalan** (repo belum di-push)
+- [ ] Screenshot, video, PDF — screenshot dibuat dari run nyata (folder `screenshots/`);
+  video direkam sendiri; PDF dirakit sebelum upload
 
-Semua yang **di luar** daftar ini — 46 test FE hijau, seeded fault FE 1 baris dengan
-output MERAH aslinya, typecheck, lint, build — benar-benar dijalankan. Output aslinya
-ada di 04 §10 dan 05 §6.
+Semua yang **di luar** daftar ini — 47 test FE hijau, 43 RSpec examples, seeded fault
+FE dan BE dengan output MERAH aslinya, typecheck, lint, build — benar-benar dijalankan.
+Output aslinya ada di 04 §10 dan 05 §4/§6.
 
 > **[PERLU SUARAMU:** dokumen ini adalah tempat jawaban "kenapa tidak dikerjakan
 > X?" di defense disiapkan. Latih satu jawaban 30 detik untuk tiap butir:
@@ -174,7 +172,7 @@ ada di 04 §10 dan 05 §6.
 > 2. Kenapa B4 tidak dikerjakan padahal jernih sekali cacatnya?
 > 3. Kenapa tidak sekalian aktifkan `noUncheckedIndexedAccess`?
 > 4. Hari pertama dari 2 minggu itu kamu mulai dari apa, dan kenapa dari sana?
-> 5. Kalau penanya bilang *"C7 cuma 1 baris — kenapa tidak?"* — jawaban jurnya ada
->    di §2: bisa, tapi tidak dieksekusi karena ia hidup di `api/` yang belum punya
->    satu pun jaring pengaman yang bisa dijalankan. Alasan yang sama dengan #1–#3,
->    dan itu konsisten.]
+> 5. Kalau penanya bilang *"C7 cuma 1 baris — kenapa tidak?"* — jawaban jujurnya:
+>     bisa dikerjakan sekarang (harness sudah ada), diprioritaskan ke 2-minggu karena
+>     menambah cakupan berarti memperlebar permukaan yang harus diuji di defense —
+>     dan kalimat itu harus terasa jujur, bukan alasan.]

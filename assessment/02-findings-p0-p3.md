@@ -19,6 +19,10 @@ atau data orang; **P1** = kegagalan yang menipu user atau melemahkan integritas;
 Bukan crash — **produk diam-diam menghasilkan angka yang salah, dan tidak ada yang tahu.**
 Ini klaster yang kupilih jadi tema.
 
+> **Status:** A1, A2, A3 **sudah diperbaiki dan dites** (lihat [04](./04-implementation.md)
+> §2.5–2.7 dan [05 §4b](./05-testing.md)). `file:line` di bawah mengacu state sebelum
+> perbaikan.
+
 | ID | Temuan | Bukti (file:line) | Sev |
 |---|---|---|---|
 | A1 | State machine coverage bisa dilompati: `probe_count` yang sama dipakai ulang di **setiap langkah** loop, jadi satu panggilan dengan `probe_count == 2` mendorong `not_yet → initiated → partial → covered` sekaligus | `api/app/services/coverage/state_engine.rb` (loop `resolve_state`) | P0 |

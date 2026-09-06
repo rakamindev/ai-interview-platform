@@ -12,7 +12,7 @@ sebagai hilang/gagal — bukan menyamar jadi nilai.** Itu inti tema "Integritas 
 
 ## #1 — Loop transisi `StateEngine` memakai `probe_count` sama berulang (A1, P0)
 
-> **[Rencana — menunggu Ruby.]**
+> **✅ Sudah dieksekusi sesuai opsi B — lihat [04](./04-implementation.md) §2.5/2.6.**
 
 - **Opsi A — Tiap transisi butuh probe baru.** `initiated → partial` harus dipenuhi 2 probe
   yang masuk *setelah* skill mencapai `initiated`. Paling setia ke HARD RULE PRD, tapi
@@ -38,7 +38,7 @@ yang sah kalau tim memilih interpretasi PRD yang ketat.
 
 ## #2 — Auto-advance mengarang `covered` + menghapus `last_signal` (A2, P0)
 
-> **[Rencana — menunggu Ruby.]**
+> **✅ Sudah dieksekusi sesuai opsi B — lihat [04](./04-implementation.md) §2.5/2.6.**
 
 - **Opsi A — Hapus auto-advance sepenuhnya.** `partial` tetap `partial` sampai AI benar-
   benar menilai. Paling jujur; trade-off: skill yang sudah di-probe panjang bisa "stuck"
@@ -73,11 +73,13 @@ adalah keputusan integritas yang bisa diambil kandidat.
   Paling murah; tapi tidak menyelesaikan masalah aslinya — kandidat masih tetap dinilai
   level 1 secara salah, hanya sekarang ada baris log yang tidak dibaca siapa pun.
 
-**Pilihan (rencana): B.** Alasannya: prinsip "data hilang harus terlihat sebagai hilang,
-bukan menyamar jadi nilai terburuk". Ini juga satu-satunya opsi yang memperbaiki backend
-dan frontend di jahitan yang sama (frontend-nya — menampilkan "belum dinilai" — sudah
-tersedia berkat #5: `parseLevel` mengembalikan `null` dan badge menampilkan ketiadaan,
-bukan angka karangan).
+**Pilihan: B — ✅ sudah dieksekusi, lihat [04](./04-implementation.md) §2.7.** Alasannya:
+prinsip "data hilang harus terlihat sebagai hilang, bukan menyamar jadi nilai terburuk".
+Ini juga satu-satunya opsi yang memperbaiki backend dan frontend di jahitan yang sama
+(frontend-nya — menampilkan "belum dinilai" — sudah tersedia berkat #5: `parseLevel`
+mengembalikan `null` dan badge menampilkan ketiadaan, bukan angka karangan). Eksekusinya:
+`Portfolios::LevelParser` + migrasi nullable dengan `down` yang dijaga + jahitan FE
+`ai_level: number | null`.
 
 ---
 

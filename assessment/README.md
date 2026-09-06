@@ -21,20 +21,23 @@ Case study Rakamin · posisi Front-end Intern · tema yang dipilih: **"Integrita
 
 | # | Perbaikan | Sisi | Status |
 |---|---|---|---|
-| 1 | Loop transisi tidak memakai `probe_count` sama berulang | BE | ⏳ menunggu Ruby |
-| 2 | Auto-advance tidak mengarang `covered` / tidak menimpa `last_signal` | BE | ⏳ menunggu Ruby |
-| 3 | `level` hilang ≠ L1 — ditolak / ditandai unknown | BE | ⏳ menunggu Ruby |
+| 1 | Loop transisi tidak memakai `probe_count` sama berulang | BE | ✅ hijau + seeded fault MERAH→HIJAU |
+| 2 | Auto-advance tidak mengarang `covered` / tidak menimpa `last_signal` | BE | ✅ hijau (log terstruktur, tanpa tulisan) |
+| 3 | `level` hilang ≠ L1 — ditolak / ditandai unknown | BE+FE | ✅ hijau (LevelParser, migrasi nullable reversibel, jahitan FE `number \| null`) |
 | 4 | Confidence unknown ≠ LOW; `medium` ≠ "confirmed" | FE | ✅ hijau 5/5 |
 | 5 | `parseLevel` gagal ≠ 1 | FE | ✅ hijau 8/8 |
 | 6 | `ai_level` konsisten (`string` → `number`) | FE | ✅ `tsc` bersih |
 | 7 | Error interview ≠ "Complete" (B1 **dan** B2) | FE | ✅ hijau 5/5 (bukti MERAH→HIJAU) |
 | 8 | `LevelRadio` id di-scope + `aria-label` | FE | ✅ hijau 4/4 + 5/5 |
-| 9 | Harness: Vitest, ESLint, Prettier, GitHub Actions | Both | 🟡 frontend siap; CI belum hijau (job api menunggu Ruby) |
+| 9 | Harness: Vitest, ESLint, Prettier, RSpec, GitHub Actions | Both | ✅ FE 9 file / 47 test · BE 43 examples · CI 2 job (menunggu push pertama untuk hijau) |
 
-**Bukti yang sudah dijalankan (bukan rencana):** suite frontend **9 file / 46 test hijau**,
+**Bukti yang sudah dijalankan (bukan rencana):** suite frontend **9 file / 47 test hijau**,
 `tsc --noEmit` bersih, `npm run lint` exit 0 (0 errors, 17 warnings), `npm run build` bersih
-(1844 modul, 579 kB JS / gzip 186 kB). Perbaikan #1–#3 **belum** dikerjakan dan **belum** dites —
-blocker satu-satunya: Ruby 3.3.2 + PostgreSQL belum terpasang.
+(1844 modul, 579 kB JS / gzip 186 kB). Suite backend **43 RSpec examples, 0 failures**
+(Ruby 3.3.2 + Postgres 16 + Redis 7 di Docker — `api/Dockerfile.dev`). Seeded fault
+dua sisi dengan bukti MERAH→HIJAU (FE: 1 baris + re-run; BE: commit fault `52be6c3` +
+revert `20a47b0` di history). Migrasi `ai_level` nullable terbukti reversibel
+(`db:rollback STEP=1` → `db:migrate`).
 
 ## Navigasi
 

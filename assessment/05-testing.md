@@ -13,6 +13,17 @@
   mengabaikan `vite.config.ts` dan menghapus alias `@`).
 - `src/test/setup.ts`: matcher jest-dom + `cleanup()` per test.
 - Hasil akhir: **`Test Files 9 passed (9)` / `Tests 46 passed (46)`**, exit 0.
+  (Kini 47 — +1 test negatif `ai_level: null` dari jahitan perbaikan #3.)
+
+### 1b. Harness backend (dibootstrap di Docker — detail di [04 §2b](./04-implementation.md))
+
+- `spec/` di-bootstrap dari nol (D1): `spec_helper`, `rails_helper`, `spec/support/
+  factory_bot.rb`, `spec/factories.rb` — memakai `rspec-rails` + `factory_bot_rails`
+  yang **sudah dideklarasikan Gemfile sejak awal**.
+- Runtime: Ruby 3.3.2 di container (`api/Dockerfile.dev`), PostgreSQL 16 (`aiint-pg`)
+  dan Redis 7 (`aiint-redis`) sebagai container di network yang sama. Database test:
+  `rakamin_test` (schema `ai_interview` + `public`).
+- Hasil akhir: **`43 examples, 0 failures`** — detail per file di §4b dan §2b 04.
 
 ## 2. Apa yang dikunci tiap file test
 
@@ -102,24 +113,50 @@ dibalik dengan edit terbalik, dan working tree diverifikasi kembali hijau (46/46
 Di laporan, fault-nya cukup didokumentasikan dengan diff di atas + tiga screenshot
 (MERAH baseline → MERAH fault → HIJAU) — **jangan tinggalkan commit fault di branch final**.
 
-### 4b. Sisi backend (A1) — rencana, menunggu Ruby
+### 4b. Sisi backend (A1) — **sudah dijalankan** (output di bawah asli)
 
-Pakai temuan A1 (`state_engine.rb`). Prosedurnya:
+Prosedurnya dibalik dari FE: fault **di-commit** dulu, dirun merah, lalu di-revert —
+sehingga siklusnya terlihat di history branch (`git log`:
 
-1. Perbaiki `resolve_state` (maksimal satu state maju per panggilan — opsi B di [03](./03-options-tradeoffs.md)), jalankan `rspec` → **HIJAU**. Screenshot.
-2. Sengali rusak kembali: kembalikan loop-nya agar memakai `probe_count` yang sama di
-   setiap langkah (persis kode asli). `rspec` → **MERAH**; pastikan pesan gagal menyebut
-   skill naik ke `covered` padahal probe baru 2. Screenshot.
-3. Kembalikan perbaikan → **HIJAU** lagi. Screenshot.
+```
+20a47b0 Revert "test: seeded fault — kembalikan loop multi-rung StateEngine yang asli"
+52be6c3 test: seeded fault — kembalikan loop multi-rung StateEngine yang asli
+```
 
-Tiga screenshot masuk laporan berurutan. (Prasyaratnya sendiri sudah ada di repo:
-`Gemfile` sudah mendeklarasikan `rspec-rails ~> 6.0` +全套 dukungan — menambah test adalah
-mengaktifkan yang sudah dipilih tim, lihat temuan D1.)
+):
 
-## 5. AI Verification Moment (standar brief) — dua kasus yang benar-benar terjadi
+| Tahap | Perintah | Hasil |
+|---|---|---|
+| Baseline HIJAU | `RAILS_ENV=test bundle exec rspec` | **`43 examples, 0 failures`** |
+| **MERAH** (fault di-commit `52be6c3`) | `rspec spec/services/coverage/state_engine_spec.rb` | **`7 examples, 2 failures`** — persis dua kasus "melompat tangga": *hanya maju SATU state per panggilan* dan *tetap maju satu state yang sah* (loop asli mendorong `initiated → covered` dalam satu panggilan) |
+| HIJAU kembali (revert `20a47b0`) | `rspec` (suite penuh) | **`43 examples, 0 failures`** |
+
+**Bukti migrasi reversibel (#3)** — klaim di file migrasi diuji, bukan diasumsikan:
+
+```
+RAILS_ENV=test rails db:rollback STEP=1  →  "== RelaxPortfolioSkillsAiLevel: reverted =="
+grep schema.rb                          →  ai_level kembali null: false (2 kolom)
+RAILS_ENV=test rails db:migrate         →  "== RelaxPortfolioSkillsAiLevel: migrated =="
+schema.rb                               →  t.integer "ai_level" (nullable) + CHECK diperluas
+```
+
+Catatan jujur tentang dua kegagalan yang terjadi di perjalanan (bukan sesuatu yang
+disembunyikan): (1) `db:prepare` awal memuat schema dari `schema.rb` lama sehingga spec
+generator merah dengan `PG::NotNullViolation` — `db:migrate` menyelesaikannya; (2) versi
+pertama migrasi memakai `drop_check_constraint` — method yang **tidak ada** di Rails 7.0
+(yang benar `remove_check_constraint`), ketangkapannya langsung dari `db:migrate`, bukan
+dari test.
+
+**Environment backend yang dipakai:** Ruby 3.3.2 di Docker (`api/Dockerfile.dev`, gems
+di-bake, source di-mount), PostgreSQL 16 + Redis 7 sebagai container (`aiint-pg`,
+`aiint-redis`). RSpec: 5 file spec (StateEngine, LevelParser, Generator, model
+PortfolioSkill, worker CoverageAnalyzer) + 3 file bootstrap (spec_helper, rails_helper,
+factory_bot).
+
+## 5. AI Verification Moment (standar brief) — tiga kasus yang benar-benar terjadi
 
 Brief meminta momen di mana klaim AI diverifikasi sendiri dan **ternyata meleset**.
-Dua di bawah bukan rekonstruksi — keduanya tercatat saat kejadian.
+Tiga di bawah bukan rekonstruksi — semuanya tercatat saat kejadian.
 
 **Momen 1 — klaim audit yang salah (diubah oleh verifikasi):**
 
@@ -152,7 +189,24 @@ Dua di bawah bukan rekonstruksi — keduanya tercatat saat kejadian.
 Momen 2 bagus dipakai kalau interviewer bertanya "bagaimana kamu memverifikasi kerja
 AI?" — jawabannya konkret dan bisa ditunjukkan: isinya `ReferenceError`, bukan assertion.
 
-> **[PERLU SUARAMU:** ceritakan kedua momen ini dengan kalimatmu sendiri di video/defense —
+**Momen 3 — "hijau kemarin" bukan bukti hijau hari ini (environment bergeser):**
+
+> Saat verifikasi ulang sebelum submit, suite frontend yang sebelumnya tercatat hijau
+> 46/46 tiba-tiba gagal di-load: `TypeError: localStorage.getItem is not a function` di
+> `SkillPortfolioCard.test.tsx` — tanpa satu pun assertion yang berubah. Root cause bukan
+> di kode yang dites: Node ≥ 22 mengekspos global `localStorage` miliknya sendiri, dan di
+> environment jsdom versi Node yang baru menimpa `localStorage` jsdom dengan stub Node
+> yang kosong (diverifikasi dengan probe test kecil: `typeof localStorage.getItem →
+> "undefined"` + warning `--localstorage-file was provided without a valid path`).
+> Perbaikannya ada di test setup, bukan di kode aplikasi: `src/test/setup.ts` memasang
+> in-memory Storage hanya jika implementasi yang ada tidak benar — suite kembali 46/46.
+>
+> Pelajaran: **hasil test adalah fungsi dari environment-nya.** Suite yang "pernah hijau"
+> harus dirun ulang di environment aktual sebelum diklaim; dan fix yang benar untuk
+> kegagalan seperti ini ditaruh di sumber yang tepat (setup test), bukan mengejar error
+> di file yang kebetulan terderevensi.
+
+> **[PERLU SUARAMU:** ceritakan momen-momen ini dengan kalimatmu sendiri di video/defense —
 > struktur "AI bilang X → saya cek sendiri → ternyata Y → kesimpulan saya berubah". Kalau
 > kamu punya momen versimu sendiri, pakai yang itu; yang penting bentuknya, bukan kasusnya.]
 
@@ -162,18 +216,21 @@ AI?" — jawabannya konkret dan bisa ditunjukkan: isinya `ReferenceError`, bukan
 
 | Perintah | Hasil | Catatan |
 |---|---|---|
-| `npm test` (`vitest run`) | `Test Files 9 passed (9)` / `Tests 46 passed (46)` | naik dari 41 setelah #7; tidak ada spec lama yang diubah |
-| `npm run typecheck` (`tsc --noEmit`) | bersih, exit 0 | mengunci perbaikan #6 (semua konsumen `ai_level` dikompilasi ulang) |
+| `npm test` (`vitest run`) | `Test Files 9 passed (9)` / `Tests 47 passed (47)` | 46 setelah #7, +1 test negatif `ai_level: null` di DiscoveredSkillRow dari jahitan #3; tidak ada spec lama yang diubah |
+| `npm run typecheck` (`tsc --noEmit`) | bersih, exit 0 | mengunci perbaikan #6 + kontrak baru `ai_level: number \| null` |
 | `npm run lint` (`eslint .`) | exit 0 — **0 errors, 17 warnings** | sisa warning (unused var, `any`) di file di luar scope perbaikan; dirapikan bertahap |
 | `npm run build` (`tsc && vite build`) | bersih, exit 0 | 1844 modul, 579 kB JS total (4 chunk, gzip 186 kB) |
-| `rspec` / `rubocop` / `brakeman` | **belum dijalankan** | Ruby 3.3.2 + PostgreSQL belum terpasang — blocker #1–#3 |
-| CI GitHub Actions | workflow **sudah dibuat** di root repo; **belum pernah hijau** (belum di-push) | `typecheck → lint → test → build`; screenshot CI hijau masuk laporan setelah push |
+| `RAILS_ENV=test bundle exec rspec` | **`43 examples, 0 failures`** | 5 file spec; jalan di Docker ruby 3.3.2 + Postgres 16 + Redis 7 |
+| `rails db:rollback STEP=1` → `db:migrate` | reverted → migrated, schema.rb balik-benar | bukti reversibilitas migrasi #3 |
+| Seeded fault BE | MERAH `7 examples, 2 failures` → revert → HIJAU `43/0` | commit fault + revert terlihat di history |
+| `rubocop` / `brakeman` | **belum dijalankan** | lintas codebase lama = keputusan tim (lihat [06](./06-not-done-and-why.md)); bukan blocker yang tersisa |
+| CI GitHub Actions | workflow **sudah dibuat** di root repo: job `web` (typecheck → lint → test → build) + job `api` (Postgres/Redis services → `db:prepare` → `rspec`); **belum pernah jalan** (belum di-push) | screenshot CI hijau masuk laporan setelah push |
 
 Kolom "belum dijalankan" ditulis apa adanya: menuliskannya jauh lebih aman daripada
 mengklaim suite backend hijau. CI-nya adalah bukti No Regression yang *berkelanjutan* —
-setiap PR berikutnya harus melewati 4 step yang sama.
+setiap PR berikutnya harus melewati semua step yang sama.
 
-## 7. Observability — bagian yang sudah mendarat di frontend
+## 7. Observability — yang sudah mendarat di frontend dan backend
 
 Standar Observability brief: setiap kegagalan senyap yang diperbaiki harus meninggalkan
 sinyal yang bisa dilihat manusia.
@@ -186,18 +243,23 @@ sinyal yang bisa dilihat manusia.
 - **Sudah mendarat (#4/#5):** data hilang punya UI sendiri ("not available", kotak
   "Unknown", catatan "unverified") — integritas juga soal tidak menyembunyikan ketiadaan
   data.
-- **Masih rencana (butuh Ruby):** `Rails.logger.warn` terstruktur (`session_id`,
-  `skill_id`, alasan) di jalur A2/A3; ganti `retry: 0` di worker dengan retry terbatas
-  + jalur dead-letter yang tercatat; `config.filter_parameters` agar log baru tidak
-  menambah kebocoran PII (kaitan UU PDP → [06](./06-not-done-and-why.md)).
+- **Sudah mendarat (#2, backend):** skill partial yang keluar dari context window tidak
+  lagi dikarang jadi `covered` — kestagnannya dilaporkan lewat `Rails.logger.warn`
+  terstruktur (`session_id`, `coverage_map_id`, `skill_label`, `probe_count`) yang
+  dikunci oleh spec worker.
+- **Masih rencana:** ganti `retry: 0` di worker dengan retry terbatas + jalur
+  dead-letter yang tercatat; `config.filter_parameters` agar log baru tidak menambah
+  kebocoran PII (kaitan UU PDP → [06](./06-not-done-and-why.md)).
 
 ---
 
 > **[PERLU SUARAMU — sebelum submit, lakukan sendiri dan catat:**
 > 1. Jalankan `npm test` **sendiri sekali** (di mesinmu) dan baca outputnya — kamu akan
 >    ditanya "berapa test-mu, apa yang mengunci #7?" dan jawabannya harus terasa milikmu.
-> 2. Ulangi seeded fault §4a sendiri (1 baris, 2× `npm test`) supaya kamu bisa
->    menampilkannya live kalau diminta.
+> 2. Ulangi seeded fault §4a dan §4b sendiri supaya kamu bisa menampilkannya live kalau
+>    diminta (FE: 1 baris `toConfidenceLabel`; BE: revert commit fault `52be6c3`).
 > 3. Rekam 1–2 menit layar: suite hijau → tanam fault → merah → balik → hijau. Ini masuk
 >    video (slot 2:30–3:30 di struktur video, brief Step 6).
-> 4. Untuk #1–#3: siap ditebak "belum dites" — jawaban jujurnya sudah ada di [06](./06-not-done-and-why.md).]
+> 4. Untuk BE: bisa dijalankan ulang dengan `docker compose`-less setup di
+>    `api/Dockerfile.dev` — pahami urutannya (postgres/redis container →
+>    `db:prepare` → `rspec`) karena hampir pasti ditanya "spec-mu jalan di mana?".]
