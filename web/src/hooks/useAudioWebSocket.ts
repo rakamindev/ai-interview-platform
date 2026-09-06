@@ -103,7 +103,13 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              /**
+               * Cacat #7. Sebelumnya: `onStateChange("complete")`. Server
+               * melaporkan error yang tidak bisa dipulihkan, dan frontend
+               * menerjemahkannya menjadi layar "Interview Complete" — kandidat
+               * pulang yakin wawancaranya beres.
+               */
+              if (!msg.recoverable) onStateChange("error");
               break;
           }
         } catch {
@@ -127,10 +133,21 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        /**
+         * Cacat #7 / B2. Sebelumnya: `onStateChange("complete")`. Tiga percobaan
+         * dengan RECONNECT_DELAYS = [1000, 2000, 4000] habis dalam ~7 detik,
+         * lalu wawancara dinyatakan "selesai". WiFi rumah yang putus 10 detik
+         * cukup untuk menghanguskan sesi — dan kandidat melihat layar sukses,
+         * bukan peringatan.
+         *
+         * `connection_lost`, bukan `error`: wawancaranya sudah berjalan dan
+         * transkripnya ada di server. Yang hilang adalah sambungan, jadi
+         * tindakan yang benar adalah menyambung ulang, bukan mulai dari nol.
+         */
+        onStateChange("connection_lost");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onReconnected]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
