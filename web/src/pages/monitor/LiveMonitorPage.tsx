@@ -143,23 +143,23 @@ export default function LiveMonitorPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h1 className="text-lg font-semibold truncate">Live Monitor</h1>
           </div>
           {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
+            <p className="text-sm text-muted-foreground pl-6 truncate">{assessmentName}</p>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
           <span className={cn(
-            "flex items-center gap-1 text-xs",
+            "flex items-center gap-1 text-xs whitespace-nowrap",
             isConnected ? "text-green-600" : "text-muted-foreground"
           )}>
             <Radio className="h-3 w-3" />
@@ -170,9 +170,9 @@ export default function LiveMonitorPage() {
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3 flex-wrap">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-          <div>
+          <div className="min-w-0">
             <span className="font-medium">Session ended</span>
             {sessionEndReason && (
               <span className="text-muted-foreground ml-1.5">
@@ -183,7 +183,7 @@ export default function LiveMonitorPage() {
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto"
+            className="sm:ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
             View portfolio →
@@ -202,13 +202,13 @@ export default function LiveMonitorPage() {
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{skill.skill_label}</span>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="font-medium truncate min-w-0">{skill.skill_label}</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                     {skill.probe_count > 0 && (
-                      <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                      <span className="whitespace-nowrap">{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                     )}
-                    <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
+                    <span className="capitalize whitespace-nowrap">{COVERAGE_STATE_LABELS[skill.state]}</span>
                   </div>
                 </div>
                 <Progress
@@ -235,16 +235,16 @@ export default function LiveMonitorPage() {
                 </p>
                 {discoveredSkills.map((skill) => (
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
-                        {skill.skill_label}
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="flex items-center gap-1 truncate min-w-0">
+                        <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+                        <span className="truncate">{skill.skill_label}</span>
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                         {skill.probe_count > 0 && (
-                          <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                          <span className="whitespace-nowrap">{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                         )}
-                        <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
+                        <span className="capitalize whitespace-nowrap">{COVERAGE_STATE_LABELS[skill.state]}</span>
                       </div>
                     </div>
                     <Progress

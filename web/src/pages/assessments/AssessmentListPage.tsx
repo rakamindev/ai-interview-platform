@@ -43,7 +43,7 @@ export default function AssessmentListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-xl font-semibold">Assessments</h1>
         <Button onClick={() => navigate("/assessments/new")}>
           <Plus className="h-4 w-4 mr-1.5" /> New Assessment
@@ -75,10 +75,10 @@ export default function AssessmentListPage() {
               className="cursor-pointer hover:border-primary/40 transition-colors"
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+              <CardContent className="py-3 px-4 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{a.name}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {a.time_limit_min} min
@@ -91,7 +91,7 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </CardContent>
             </Card>
           ))}

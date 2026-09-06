@@ -42,23 +42,23 @@ export default function TranscriptPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold truncate">Interview Transcript</h1>
             {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
+              <p className="text-sm text-muted-foreground truncate">{candidateName}</p>
             )}
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleDownload}>
+          <Button variant="outline" size="sm" onClick={handleDownload} className="shrink-0">
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Download .txt
           </Button>

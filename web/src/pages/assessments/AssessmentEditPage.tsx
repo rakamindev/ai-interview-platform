@@ -149,7 +149,7 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
             </Button>
