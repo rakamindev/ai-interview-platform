@@ -52,9 +52,6 @@ export default function ConsentPage({ token, info, onConsented }: Props) {
       >
         {/* Header */}
         <motion.div variants={itemVariants} className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-4">
-            <Shield className="h-7 w-7 text-primary" />
-          </div>
           <h1 className="text-2xl font-bold tracking-tight mb-1">Persetujuan Data</h1>
           <p className="text-muted-foreground text-sm">
             <span className="font-medium">{info.organization_name}</span> menggunakan platform ini
@@ -125,7 +122,7 @@ export default function ConsentPage({ token, info, onConsented }: Props) {
             {loading ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan persetujuan...</>
             ) : (
-              'Saya Mengerti dan Menyetujui — Mulai Interview'
+              'Saya Mengerti dan Menyetujui'
             )}
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">

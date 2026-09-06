@@ -23,7 +23,7 @@ import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import ErrorState from "@/components/ui/ErrorState";
 import { parseApiError, type ApiError } from "@/utils/apiError";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, CheckCircle2, Mic, MicOff, Zap, X } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 import ConsentPage from "./ConsentPage";
 import { getCandidateInfo as getConsentInfo, type CandidateConsentInfo } from "@/services/candidateConsent";
@@ -260,7 +260,9 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-600 mx-auto shadow-xs">
+          <CheckCircle2 className="w-8 h-8 stroke-[2.2]" />
+        </div>
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
@@ -320,7 +322,9 @@ export default function InterviewPage() {
       {reconnectedPrompt && (
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0 p-0.5 rounded hover:bg-blue-100/60 transition-colors" onClick={() => setReconnectedPrompt(false)} aria-label="Dismiss">
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 
@@ -398,7 +402,7 @@ export default function InterviewPage() {
         {import.meta.env.DEV && (
           <Button variant="outline" size="sm" className="text-xs opacity-50"
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
+            <Zap className="h-3 w-3 mr-1" /> Force reconnect
           </Button>
         )}
         </div>

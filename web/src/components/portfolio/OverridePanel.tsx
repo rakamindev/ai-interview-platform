@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Check, ChevronDown } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -53,15 +53,17 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                <Check className="h-3 w-3" /> Overridden
+              </span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <Pencil className="h-3 w-3 mr-1" /> Edit override
             </Button>
           </>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            Override rating ▼
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="flex items-center gap-1">
+            Override rating <ChevronDown className="h-3.5 w-3.5 opacity-70" />
           </Button>
         )}
       </div>

@@ -49,7 +49,7 @@ describe('ConsentPage', () => {
     expect(screen.getByText('Mengakses data yang telah dikumpulkan tentang Anda')).toBeInTheDocument();
     expect(screen.getByText(/privacy@rakamin.com/)).toBeInTheDocument();
     expect(
-      screen.getByText('Saya Mengerti dan Menyetujui — Mulai Interview')
+      screen.getByText(/Saya Mengerti dan Menyetujui/)
     ).toBeInTheDocument();
   });
 
@@ -62,7 +62,7 @@ describe('ConsentPage', () => {
 
     render(<ConsentPage token="valid-token" info={mockInfo} onConsented={onConsented} />);
 
-    const button = screen.getByText('Saya Mengerti dan Menyetujui — Mulai Interview');
+    const button = screen.getByText(/Saya Mengerti dan Menyetujui/);
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -82,7 +82,7 @@ describe('ConsentPage', () => {
 
     render(<ConsentPage token="error-token" info={mockInfo} onConsented={onConsented} />);
 
-    const button = screen.getByText('Saya Mengerti dan Menyetujui — Mulai Interview');
+    const button = screen.getByText(/Saya Mengerti dan Menyetujui/);
     fireEvent.click(button);
 
     await waitFor(() => {
