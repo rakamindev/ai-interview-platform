@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_06_145705) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_06_152440) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -66,6 +66,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_06_145705) do
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
+  end
+
+  create_table "candidate_consents", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.bigint "tenant_id", null: false
+    t.string "status", default: "pending", null: false
+    t.string "disclosure_version", default: "1.0", null: false
+    t.datetime "granted_at"
+    t.datetime "revoked_at"
+    t.string "ip_address", limit: 45
+    t.string "user_agent", limit: 500
+    t.datetime "created_at", default: -> { "now()" }
+    t.index ["session_id"], name: "index_candidate_consents_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_candidate_consents_on_tenant_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'granted'::character varying, 'revoked'::character varying]::text[])", name: "chk_candidate_consents_status"
   end
 
   create_table "coverage_maps", force: :cascade do |t|

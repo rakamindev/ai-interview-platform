@@ -25,10 +25,14 @@ import ErrorState from "@/components/ui/ErrorState";
 import { parseApiError, type ApiError } from "@/utils/apiError";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import ConsentPage from "./ConsentPage";
+import { getCandidateInfo as getConsentInfo, type CandidateConsentInfo } from "@/services/candidateConsent";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [consentInfo, setConsentInfo] = useState<CandidateConsentInfo | null>(null);
+  const [consentGranted, setConsentGranted] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [interviewError, setInterviewError] = useState<ApiError | null>(null);
@@ -42,7 +46,7 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
-  // Fetch candidate info
+  // Fetch candidate info and consent status
   useEffect(() => {
     if (!token) return;
     sessionsApi.getCandidateInfo(token)
@@ -54,6 +58,15 @@ export default function InterviewPage() {
       .catch((err) => {
         setInterviewError(parseApiError(err));
         setInterviewState("error");
+      });
+
+    getConsentInfo(token)
+      .then((info) => {
+        setConsentInfo(info);
+        if (info.has_consent) setConsentGranted(true);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch consent info:", err);
       });
   }, [token]);
 
@@ -192,6 +205,17 @@ export default function InterviewPage() {
       : connectionState === "connected"
       ? "connected"
       : "reconnecting";
+
+  // ── Consent Gate (UU PDP No. 27 Tahun 2022) ─────────────────────────────
+  if (token && consentInfo && !consentGranted && interviewState !== "complete" && interviewState !== "error") {
+    return (
+      <ConsentPage
+        token={token}
+        info={consentInfo}
+        onConsented={() => setConsentGranted(true)}
+      />
+    );
+  }
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {

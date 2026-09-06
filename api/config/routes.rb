@@ -36,6 +36,14 @@ Rails.application.routes.draw do
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
 
+      # Candidate public consent & transcript endpoints (UU PDP compliance)
+      scope '/candidate/:token' do
+        get  '/',           to: 'candidates#show'
+        get  '',            to: 'candidates#show',          as: :candidate_info
+        post '/consent',    to: 'candidates#grant_consent', as: :candidate_consent
+        get  '/transcript', to: 'candidates#transcript',    as: :candidate_transcript
+      end
+
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do
         member do
