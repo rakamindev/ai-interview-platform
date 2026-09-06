@@ -1,11 +1,10 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { Loader2 } from "lucide-react";
 
-// Dynamic imports for route-level code splitting
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const AssessmentListPage = lazy(() => import("@/pages/assessments/AssessmentListPage"));
 const AssessmentNewPage = lazy(() => import("@/pages/assessments/AssessmentNewPage"));

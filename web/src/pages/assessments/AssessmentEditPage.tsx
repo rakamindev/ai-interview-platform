@@ -72,9 +72,11 @@ export default function AssessmentEditPage() {
   const deletedSkillIdsRef = useRef<number[]>([]);
 
   const handleRemoveSkill = (index: number) => {
-    const item = fields[index] as any;
-    if (item?.id) {
-      deletedSkillIdsRef.current.push(Number(item.id));
+    const currentSkills = form.getValues("skills") as any[];
+    const skillToRemove = currentSkills?.[index];
+    const realDbId = skillToRemove?.id;
+    if (realDbId && typeof realDbId === "number" && !isNaN(realDbId)) {
+      deletedSkillIdsRef.current.push(realDbId);
     }
     remove(index);
   };
@@ -84,9 +86,13 @@ export default function AssessmentEditPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const deletedAttrs = deletedSkillIdsRef.current
+        .filter((delId) => typeof delId === "number" && !isNaN(delId) && delId > 0)
+        .map((delId) => ({ id: delId, _destroy: true }));
+
       const skillsPayload = [
         ...data.skills.map((s, i) => ({ ...s, display_order: i })),
-        ...deletedSkillIdsRef.current.map((delId: number) => ({ id: delId, _destroy: true })),
+        ...deletedAttrs,
       ];
       await assessmentsApi.update(Number(id), {
         name: data.name,

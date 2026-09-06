@@ -47,7 +47,6 @@ module Api
           vacancy = report.vacancy
           next unless vacancy
 
-          # Selective regeneration: only queue worker for vacancies evaluating this skill
           has_skill = vacancy.vacancy_skills.any? do |vs|
             (skill_id.present? && vs.skill_id.to_s == skill_id.to_s) ||
               vs.skill_label.to_s.downcase == skill_label

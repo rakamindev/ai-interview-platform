@@ -24,6 +24,7 @@ module Current
     ensure
       RequestStore.store.replace(old_attributes)
     end
+    alias set using
 
     def clear
       RequestStore.clear!
