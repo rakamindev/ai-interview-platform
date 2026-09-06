@@ -44,14 +44,15 @@ jobs:
       RAILS_ENV: test
       DB_HOST: localhost
       DB_USERNAME: postgres
-      DB_PASSWORD: postgres
 
     services:
       postgres:
+        # Ephemeral CI container — trust auth, tanpa password sama sekali,
+        # supaya tidak ada pola "hardcoded password" di workflow.
         image: postgres:16
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
