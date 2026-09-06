@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ErrorState from "@/components/ui/ErrorState";
 import { assessmentsApi } from "@/services/assessments";
+import { parseApiError, type ApiError } from "@/utils/apiError";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
@@ -132,21 +134,31 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [pageError, setPageError] = useState<ApiError | null>(null);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
     setSessions(res.data.sessions);
   }, [id]);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true);
+    setPageError(null);
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    ])
+      .then(([aRes, sRes]) => {
+        setAssessment(aRes.data.assessment);
+        setSessions(sRes.data.sessions);
+      })
+      .catch((err) => setPageError(parseApiError(err)))
+      .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -197,6 +209,8 @@ export default function AssessmentInvitePage() {
       </div>
     );
   }
+
+  if (pageError) return <ErrorState error={pageError} onRetry={loadData} />;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

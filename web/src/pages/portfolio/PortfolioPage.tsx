@@ -5,9 +5,16 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import NotAssessedSkillCard from "@/components/portfolio/NotAssessedSkillCard";
+import HiringDecisionPanel from "@/components/portfolio/HiringDecisionPanel";
+import ErrorState from "@/components/ui/ErrorState";
+import { motion, type Variants } from "framer-motion";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
+import { getHiringDecision, type HiringDecision } from "@/services/hiringDecisions";
+import { parseApiError, type ApiError } from "@/utils/apiError";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
@@ -23,6 +30,30 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<ApiError | null>(null);
+  const [hiringDecision, setHiringDecision] = useState<HiringDecision | null>(null);
+
+  const reducedMotion = useReducedMotion();
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: reducedMotion ? 0 : 0.05,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] as const },
+    },
+  };
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -37,19 +68,26 @@ export default function PortfolioPage() {
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
         overrideMap[o.portfolio_skill_id] = o;
       });
-      setOverrides(overrideMap);
+      const decision = await getHiringDecision(data.portfolio.id).catch(() => null);
+      setHiringDecision(decision);
     }
   }, [sessionId]);
 
-  useEffect(() => {
+  const loadPortfolioData = useCallback(() => {
+    setLoading(true);
+    setPageError(null);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch((err) => setPageError(parseApiError(err)))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
+
+  useEffect(() => {
+    loadPortfolioData();
+  }, [loadPortfolioData]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -103,6 +141,8 @@ export default function PortfolioPage() {
       </div>
     );
   }
+
+  if (pageError) return <ErrorState error={pageError} onRetry={loadPortfolioData} />;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -186,48 +226,84 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
-          {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
-              ))}
-          </div>
+          {(() => {
+            const configuredSkills = portfolio.skills?.filter((s) => !s.is_discovered) ?? [];
+            const discoveredSkills = portfolio.skills?.filter((s) => s.is_discovered) ?? [];
+            const notAssessedSkills = configuredSkills.filter((s) => s.not_assessed);
+            const ratedSkills = configuredSkills.filter((s) => !s.not_assessed);
 
-          {/* Discovered skills */}
-          {portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
-                  </p>
+            return (
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="space-y-6"
+              >
+                {/* Configured skills */}
+                <div className="space-y-3">
+                  <h2 className="text-sm font-semibold">Configured Skills</h2>
+                  <div className="space-y-3">
+                    {ratedSkills.map((skill) => (
+                      <SkillPortfolioCard
+                        key={skill.id}
+                        skill={skill}
+                        override={overrides[skill.id]}
+                        onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                        customVariants={itemVariants}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Not assessed skills */}
+                  {notAssessedSkills.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                      <p className="text-xs text-muted-foreground/70">
+                        {notAssessedSkills.length} skill tidak mendapat cukup probe untuk dinilai:
+                      </p>
+                      <div className="space-y-2">
+                        {notAssessedSkills.map((skill) => (
+                          <NotAssessedSkillCard
+                            key={skill.id}
+                            skillLabel={skill.skill_label}
+                            customVariants={itemVariants}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {portfolio.skills
-                  .filter((s) => s.is_discovered)
-                  .map((skill) => (
-                    <SkillPortfolioCard
-                      key={skill.id}
-                      skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                    />
-                  ))}
-              </div>
-            </>
-          )}
+
+                {/* Discovered skills */}
+                {discoveredSkills.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <div>
+                        <h2 className="text-sm font-semibold flex items-center gap-1.5">
+                          <Zap className="h-4 w-4 text-amber-500" />
+                          Discovered Skills
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                          Skills the AI probed that were not in the original assessment
+                        </p>
+                      </div>
+                      <div className="space-y-3">
+                        {discoveredSkills.map((skill) => (
+                          <SkillPortfolioCard
+                            key={skill.id}
+                            skill={skill}
+                            override={overrides[skill.id]}
+                            onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                            customVariants={itemVariants}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            );
+          })()}
 
           <Separator />
 
@@ -248,6 +324,17 @@ export default function PortfolioPage() {
             <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
               Run Fit/Gap Analysis →
             </Button>
+          </div>
+
+          <Separator />
+
+          {/* Hiring Decision Panel */}
+          <div className="mt-6">
+            <HiringDecisionPanel
+              portfolioId={portfolio.id}
+              existing={hiringDecision}
+              onDecisionMade={(d) => setHiringDecision(d)}
+            />
           </div>
         </>
       )}

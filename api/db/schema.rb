@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_06_152440) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -68,6 +68,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
   end
 
+  create_table "candidate_consents", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.bigint "tenant_id", null: false
+    t.string "status", default: "pending", null: false
+    t.string "disclosure_version", default: "1.0", null: false
+    t.datetime "granted_at"
+    t.datetime "revoked_at"
+    t.string "ip_address", limit: 45
+    t.string "user_agent", limit: 500
+    t.datetime "created_at", default: -> { "now()" }
+    t.index ["session_id"], name: "index_candidate_consents_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_candidate_consents_on_tenant_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'granted'::character varying, 'revoked'::character varying]::text[])", name: "chk_candidate_consents_status"
+  end
+
   create_table "coverage_maps", force: :cascade do |t|
     t.bigint "session_id", null: false
     t.string "skill_id", limit: 50
@@ -89,9 +104,26 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.bigint "tenant_id", null: false
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
+    t.index ["tenant_id"], name: "index_fit_gap_reports_on_tenant_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+  end
+
+  create_table "hiring_decisions", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.bigint "decided_by", null: false
+    t.bigint "tenant_id", null: false
+    t.string "decision", limit: 20, null: false
+    t.text "rationale", null: false
+    t.string "ip_address", limit: 45
+    t.string "user_agent", limit: 500
+    t.datetime "decided_at", default: -> { "now()" }, null: false
+    t.index ["decided_by"], name: "index_hiring_decisions_on_decided_by"
+    t.index ["portfolio_id"], name: "index_hiring_decisions_on_portfolio_id", unique: true
+    t.index ["tenant_id"], name: "index_hiring_decisions_on_tenant_id"
+    t.check_constraint "decision::text = ANY (ARRAY['advance'::character varying, 'hold'::character varying, 'reject'::character varying]::text[])", name: "chk_hiring_decisions_decision"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -112,12 +144,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.boolean "not_assessed", default: false, null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -126,8 +159,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.bigint "tenant_id", null: false
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
   end
 
   create_table "sessions", force: :cascade do |t|
