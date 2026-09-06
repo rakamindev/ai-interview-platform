@@ -180,6 +180,23 @@ export default function InterviewPage() {
     setInterviewState("complete");
   }, [stopCapture, stopPlayback, sendJson, disconnect]);
 
+  // Guard against accidental tab closure, page reload, or navigation during active interview
+  useEffect(() => {
+    const isLive = interviewState === "active" || interviewState === "connecting" || interviewState === "draining_audio";
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isLive) {
+        e.preventDefault();
+        e.returnValue = "Wawancara sedang berlangsung. Anda yakin ingin meninggalkan sesi?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [interviewState]);
+
   const wsConnectionStatus =
     interviewState === "reconnecting"
       ? connectionLostLong ? "lost" : "reconnecting"
