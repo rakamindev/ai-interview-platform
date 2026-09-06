@@ -6,6 +6,7 @@ class Assessment < ApplicationRecord
   has_many :assessment_skills, dependent: :destroy, inverse_of: :assessment
   has_many :sessions, dependent: :restrict_with_error
   has_one  :latest_session, -> { order(created_at: :desc) }, class_name: 'Session'
+  belongs_to :organization, foreign_key: :tenant_id, optional: true
 
   SUPPORTED_LANGUAGES = { 'en' => 'English', 'id' => 'Bahasa Indonesia' }.freeze
 

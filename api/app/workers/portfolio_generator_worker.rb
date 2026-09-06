@@ -22,7 +22,8 @@ class PortfolioGeneratorWorker
       return
     end
 
-    Current.set(tenant_id: session.tenant_id, organization: session.assessment&.organization) do
+    org = session.assessment&.organization || Organization.find_by(id: session.tenant_id)
+    Current.set(tenant_id: session.tenant_id, organization: org) do
       Portfolios::Generator.new(session: session).call
     end
   rescue ActiveRecord::RecordNotFound

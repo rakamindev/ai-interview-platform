@@ -10,7 +10,8 @@ class CoverageAnalyzerWorker
     return unless session
     return if session.ended?
 
-    Current.set(tenant_id: session.tenant_id, organization: session.assessment&.organization) do
+    org = session.assessment&.organization || Organization.find_by(id: session.tenant_id)
+    Current.set(tenant_id: session.tenant_id, organization: org) do
       result = Coverage::Analyzer.new(session: session).call
 
       apply_updates(session, result[:skill_updates])

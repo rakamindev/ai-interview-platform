@@ -18,7 +18,7 @@ module Gemini
     class TimeoutError < ApiError; end
 
     def initialize(model: nil, api_key: nil, timeout: 60)
-      @model = model || ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash')
+      @model = model || ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.6-flash')
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
       @timeout = timeout
       @connection = build_connection
