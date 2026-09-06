@@ -12,6 +12,7 @@ class AudioWebSocketMiddleware
   BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
+  AUDIO_BUFFER_MAX_CHUNKS = 150   # ~4.5 seconds of audio buffer during reconnects
 
   SYSTEM_SIGNAL_TOKEN = 'SYS-TC-7x9k'
 
@@ -70,7 +71,7 @@ class AudioWebSocketMiddleware
     end
   end
 
-  # Forward audio frame to Gemini when ready; suppress while model is speaking to prevent echo loop.
+  # Forward audio frame to Gemini when ready; buffer during reconnects; suppress while model is speaking to prevent echo loop.
   def forward_audio_frame(data, state, session_id)
     if state.model_speaking
       # Server-side audio gate: suppress mic while model is speaking to prevent speaker echo loop.
@@ -82,9 +83,14 @@ class AudioWebSocketMiddleware
       state.logged_gate_suppressed = false
       state.gemini_client.send_audio(data)
     else
+      # Buffer audio chunks into ring buffer during reconnection / before Gemini is ready
+      if state.audio_buffer.size < AUDIO_BUFFER_MAX_CHUNKS
+        state.audio_buffer << data
+      end
+
       # Log once per gap to avoid spam (~33 chunks/s during reconnection).
       unless state.logged_not_ready
-        Rails.logger.warn("[AudioWS] Audio received but Gemini not ready — buffering (accepting=#{state.gemini_client&.accepting_audio?} connected=#{state.gemini_client&.connected})")
+        Rails.logger.warn("[AudioWS] Audio received but Gemini not ready — buffering (buffered=#{state.audio_buffer.size} accepting=#{state.gemini_client&.accepting_audio?} connected=#{state.gemini_client&.connected})")
         state.logged_not_ready = true
       end
     end
@@ -324,6 +330,16 @@ class AudioWebSocketMiddleware
   def build_on_ready(browser_ws, state, session)
     lambda {
       state.logged_not_ready = false
+
+      # Flush/replay buffered audio chunks to newly ready Gemini client
+      if state.audio_buffer.any?
+        Rails.logger.info("[AudioWS] Replaying #{state.audio_buffer.size} buffered audio chunks to Gemini (session=#{session.id})")
+        state.audio_buffer.each do |chunk|
+          state.gemini_client&.send_audio(chunk)
+        end
+        state.audio_buffer.clear
+      end
+
       if state.reconnecting
         Rails.logger.info("[AudioWS] Gemini reconnected for session #{session.id}")
         state.reconnecting = false
@@ -355,12 +371,6 @@ class AudioWebSocketMiddleware
     state.reconnecting = true
     send_json(browser_ws, type: 'reconnecting')
 
-    # Reset model_speaking so frontend doesn't stay stuck in muted/AI-speaking state post-reconnect.
-    if state.model_speaking
-      state.model_speaking = false
-      send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
-    end
-
     state.latest_resumption_token = resumption_token
     session.update_column(:gemini_resumption_token, resumption_token)
 
@@ -369,7 +379,9 @@ class AudioWebSocketMiddleware
 
     build_gemini_client(browser_ws, state)
     state.gemini_client.connect(resumption_handle: resumption_token)
-    old_client&.close
+
+    # Gracefully close old client after a short delay so any in-flight model audio can flush
+    EM.add_timer(1) { old_client&.close }
   end
 
   # Handles unexpected Gemini WebSocket close (not GoAway). Audio is buffered during the gap and replayed.
@@ -783,7 +795,8 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response,
+                  :audio_buffer
 
     def initialize
       @turn_counter = 0
@@ -794,6 +807,7 @@ class AudioWebSocketMiddleware
       @last_ai_turn_ends_with_question = false
       @waiting_for_candidate_response = false
       @sent_time_warnings = Set.new
+      @audio_buffer = []
     end
 
     def increment_turn!
