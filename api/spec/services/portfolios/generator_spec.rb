@@ -92,5 +92,57 @@ RSpec.describe Portfolios::Generator do
         expect(skill.evidence).to eq(['Kandidat menjelaskan load balancing dengan baik.'])
       end
     end
+
+    context 'ketika skill_id dari LLM melebihi batas 50 karakter (PG::StringDataRightTruncation)' do
+      let(:long_skill_id) { 'containerization-&-operations-(docker-engine,-image-optimization,-&-ecosystem)' }
+      let(:llm_response) do
+        {
+          'configured_skills' => [
+            {
+              'skill_id'           => long_skill_id,
+              'skill_label'        => 'Containerization & Operations',
+              'level'              => 2,
+              'not_assessed'       => false,
+              'confidence'         => 'medium',
+              'evidence'           => ['Docker quote'],
+              'competency_summary' => 'Understands containerization.'
+            }
+          ],
+          'discovered_skills' => []
+        }
+      end
+
+      it 'berhasil menyimpan tanpa error ValueTooLong dan memotong/menyesuaikan skill_id' do
+        expect {
+          generator.send(:save_skills, portfolio, llm_response)
+        }.not_to raise_error
+
+        skill = portfolio.portfolio_skills.find_by(skill_label: 'Containerization & Operations')
+        expect(skill).to be_present
+        expect(skill.skill_id.length).to be <= 50
+      end
+    end
+  end
+
+  describe '#call' do
+    subject(:generator) { described_class.new(session: session) }
+
+    context 'ketika interview session memiliki 0 transcript turns (kandidat tidak berinteraksi)' do
+      before do
+        create(:assessment_skill, assessment: assessment, skill_label: 'TypeScript', skill_id: 'SK-ENG-001')
+      end
+
+      it 'menghasilkan portfolio complete dengan semua skill not_assessed tanpa crash' do
+        result = generator.call
+        expect(result.generation_status).to eq('complete')
+        expect(result.portfolio_skills.count).to eq(1)
+        skill = result.portfolio_skills.first
+        expect(skill.not_assessed).to be(true)
+        expect(skill.ai_level).to be_nil
+        expect(skill.competency_summary).to include('0 turns')
+      end
+    end
   end
 end
+
+

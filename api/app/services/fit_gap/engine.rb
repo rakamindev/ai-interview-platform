@@ -35,8 +35,6 @@ module FitGap
       report
     end
 
-    private
-
     def build_skill_comparisons
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
       portfolio_skills = effective_portfolio_skills  # includes overrides
@@ -44,7 +42,11 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill && portfolio_skill[:effective_level].present?
+        is_unassessed = portfolio_skill.nil? ||
+                        (portfolio_skill[:not_assessed] && !portfolio_skill[:overridden]) ||
+                        portfolio_skill[:effective_level].blank?
+
+        if !is_unassessed
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
@@ -70,6 +72,8 @@ module FitGap
       comparisons
     end
 
+    private
+
     # Returns portfolio skills with overrides applied.
     def effective_portfolio_skills
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
@@ -81,7 +85,8 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          overridden:      override.present?,
+          not_assessed:    skill.not_assessed
         }
       end
     end

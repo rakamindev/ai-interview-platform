@@ -24,6 +24,7 @@ class PortfolioSkill < ApplicationRecord
   def normalize_attributes
     self.competency_summary ||= ''
     self.evidence ||= []
+    self.skill_id = skill_id.to_s.slice(0, 50) if skill_id.present?
   end
 
   def level_xor_not_assessed

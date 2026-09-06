@@ -22,11 +22,19 @@ module Portfolios
 
       portfolio.update!(generation_status: 'generating')
 
+      # If there are no transcript turns, candidate had no interview interaction
+      if @session.transcript_turns.empty?
+        save_unassessed_skills_for_empty_transcript(portfolio)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
+        Rails.logger.info("[N10] Portfolio generated for session #{@session.id} (empty transcript: all skills marked not_assessed)")
+        return portfolio
+      end
+
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
@@ -157,7 +165,7 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:            map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
+        id:            map.skill_id || "skill-#{map.id}",
         label:         map.skill_label,
         state:         map.state,
         probe_count:   map.probe_count,
@@ -171,11 +179,23 @@ module Portfolios
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
+      configured_skills = @session.assessment.assessment_skills.to_a
+      configured_by_id = configured_skills.index_by(&:skill_id).compact
+      configured_by_label = configured_skills.index_by { |s| s.skill_label.downcase }
+
       (data['configured_skills'] || []).each do |skill_data|
         attrs = extract_skill_attrs(skill_data)
+
+        original_skill = (skill_data['skill_id'].present? && configured_by_id[skill_data['skill_id']]) ||
+                         configured_by_label[skill_data['skill_label']&.downcase]
+
+        # Use canonical skill_id from assessment_skills if matched, otherwise sanitize to max 50 chars
+        canonical_skill_id = original_skill ? original_skill.skill_id : skill_data['skill_id']
+        canonical_skill_id = canonical_skill_id&.to_s&.slice(0, 50)
+
         portfolio.portfolio_skills.create!(
-          skill_id:      skill_data['skill_id'],
-          skill_label:   skill_data['skill_label'],
+          skill_id:      canonical_skill_id,
+          skill_label:   original_skill&.skill_label || skill_data['skill_label'],
           is_discovered: false,
           **attrs
         )
@@ -188,6 +208,22 @@ module Portfolios
           skill_label:   skill_data['skill_label'],
           is_discovered: true,
           **attrs
+        )
+      end
+    end
+
+    def save_unassessed_skills_for_empty_transcript(portfolio)
+      portfolio.portfolio_skills.destroy_all
+      @session.assessment.assessment_skills.order(:display_order).each do |skill|
+        portfolio.portfolio_skills.create!(
+          skill_id:           skill.skill_id&.slice(0, 50),
+          skill_label:        skill.skill_label,
+          is_discovered:      false,
+          not_assessed:       true,
+          ai_level:           nil,
+          ai_confidence:      nil,
+          evidence:           [],
+          competency_summary: 'Sesi interview tidak memiliki rekaman percakapan (0 turns). Skill tidak dapat dinilai.'
         )
       end
     end
