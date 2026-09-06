@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_05_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -18,6 +18,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "confidence_level", ["high", "medium", "low"]
+  create_enum "coverage_promotion_source", ["analyzer", "window_timeout"]
   create_enum "coverage_state", ["not_yet", "initiated", "partial", "covered"]
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
@@ -77,6 +78,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.integer "probe_count", default: 0, null: false
     t.text "last_signal"
     t.datetime "updated_at", default: -> { "now()" }
+    t.enum "covered_by", enum_type: "coverage_promotion_source"
     t.index ["session_id", "skill_label"], name: "index_coverage_maps_on_session_id_and_skill_label", unique: true
     t.index ["session_id"], name: "idx_coverage_session"
     t.index ["session_id"], name: "index_coverage_maps_on_session_id"
@@ -116,6 +118,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.enum "covered_by", enum_type: "coverage_promotion_source"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end

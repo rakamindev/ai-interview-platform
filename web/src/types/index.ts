@@ -85,6 +85,13 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+/**
+ * Which path promoted the skill's coverage map to `covered`.
+ * "analyzer" judged the evidence; "window_timeout" swept it forward on probe
+ * count alone; null means never covered, or covered before this was recorded.
+ */
+export type CoverageSource = "analyzer" | "window_timeout" | null;
+
 export interface PortfolioSkill {
   id: number;
   skill_id?: number;
@@ -92,6 +99,7 @@ export interface PortfolioSkill {
   is_discovered: boolean;
   ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
   ai_confidence: string;  // "high" | "medium" | "low"
+  covered_by: CoverageSource;
   evidence: string[];
   competency_summary: string;
 }

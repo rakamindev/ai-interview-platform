@@ -35,18 +35,28 @@ export default function SkillPortfolioCard({
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              <ConfidenceIndicator
+                confidence={skill.ai_confidence}
+                coveredBy={skill.covered_by}
+              />
             </div>
           </div>
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
         </div>
 
-        {/* Low confidence note */}
-        {skill.ai_confidence?.toLowerCase() === "low" && (
-          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+        {/* A swept skill was probed plenty, so "briefly explored" is wrong for it. */}
+        {skill.covered_by === "window_timeout" ? (
+          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            This skill was marked covered when it fell outside the analysis window, on probe
+            count alone. No evidence check ran against the transcript, so the level is
+            unverified. Read the evidence below before acting on it.
           </div>
-        )}
+        ) : skill.ai_confidence?.toLowerCase() === "low" ? (
+          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            Only briefly explored. Confidence is low, so this warrants a dedicated session if
+            the skill matters for the role.
+          </div>
+        ) : null}
 
         {/* Evidence */}
         {skill.evidence.length > 0 && (
