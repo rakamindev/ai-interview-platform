@@ -39,14 +39,28 @@ export default function VacancyEditPage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id, reset]);
 
+  const deletedSkillIdsRef = useRef<number[]>([]);
+
+  const handleRemoveSkill = (index: number) => {
+    const item = fields[index] as any;
+    if (item?.id) {
+      deletedSkillIdsRef.current.push(Number(item.id));
+    }
+    remove(index);
+  };
+
   const onSubmit = async (data: VacancyFormValues) => {
     setSubmitting(true);
     try {
+      const skillsPayload = [
+        ...data.skills,
+        ...deletedSkillIdsRef.current.map((delId) => ({ id: delId, _destroy: true })),
+      ];
       await vacanciesApi.update(Number(id), {
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
+        vacancy_skills_attributes: skillsPayload,
       });
       navigate("/vacancies");
     } finally {
@@ -75,7 +89,7 @@ export default function VacancyEditPage() {
             <div key={field.id} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
+                <button type="button" onClick={() => handleRemoveSkill(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
               </div>
               <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
             </div>
