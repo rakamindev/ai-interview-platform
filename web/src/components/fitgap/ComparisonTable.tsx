@@ -10,7 +10,7 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   const label = FIT_GAP_RESULT_LABELS[comparison.result];
   const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
 
-  let icon = "";
+  let icon: string;
   let suffix = "";
   if (comparison.result === "match") icon = "✅";
   else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }

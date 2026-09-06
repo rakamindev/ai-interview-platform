@@ -15,10 +15,10 @@ class CoverageAnalyzerWorker
     apply_updates(session, result[:skill_updates])
     create_discovered_skills(session, result[:discovered_skills])
 
-    # Pass the IDs of maps just updated this run so we never auto-advance a
-    # skill that was touched in the same job (it isn't stale yet).
+    # Pass the IDs of maps just updated this run so we never flag a skill that
+    # was touched in the same job (it isn't stale yet).
     updated_ids = result[:skill_updates].filter_map { |u| u[:coverage_map_id] }
-    advance_stale_partials(session, exclude_ids: updated_ids)
+    log_stale_partials(session, exclude_ids: updated_ids)
 
     publish_coverage_update(session)
     # Session-end detection removed from worker (H1 fix) — the middleware owns
@@ -81,22 +81,33 @@ class CoverageAnalyzerWorker
     Rails.logger.error("[N7] Failed to publish coverage update: #{e.message}")
   end
 
-  # Auto-advance skills that are partial but have fallen outside the analyzer's
-  # context window (last TURNS_CONTEXT turns). Once a skill leaves the window,
-  # Flash can't see it and will never promote it — so we promote here if there's
-  # enough evidence (probe_count >= 4).
+  # Flag skills that are partial but have fallen outside the analyzer's context
+  # window (last TURNS_CONTEXT turns). Once a skill leaves the window, Flash
+  # can't see it and will never promote it — that failure is real and must be
+  # visible, so we log it for ops.
+  #
+  # We deliberately do NOT write anything here. The previous version promoted
+  # these maps to covered and overwrote last_signal with a fixed robot string —
+  # but last_signal is quoted by the portfolio generator as *evidence* for the
+  # candidate's assessment, so the automation was fabricating both a verdict
+  # ("covered") and its justification. A skill stays partial until the AI
+  # actually assesses it; the structured log below keeps the staleness visible
+  # instead of burying it under invented data.
   #
   # exclude_ids: coverage_map IDs updated in this same job run — those were just
   # discussed and are NOT stale yet.
-  def advance_stale_partials(session, exclude_ids: [])
+  def log_stale_partials(session, exclude_ids: [])
     scope = session.coverage_maps
                    .where(state: 'partial')
                    .where('probe_count >= ?', 4)
     scope = scope.where.not(id: exclude_ids) if exclude_ids.any?
 
     scope.each do |map|
-      map.update!(state: 'covered', last_signal: 'Auto-advanced: outside context window with sufficient probes')
-      Rails.logger.info("[N7] Auto-advanced #{map.skill_label} to covered (probe_count=#{map.probe_count})")
+      Rails.logger.warn(
+        "[N7] stale partial — session_id=#{session.id} coverage_map_id=#{map.id} " \
+        "skill_label=#{map.skill_label} probe_count=#{map.probe_count}: outside " \
+        'analyzer context window, not promoted; leaving state=partial for AI assessment'
+      )
     end
   end
 

@@ -89,6 +89,7 @@ export default function VacancyNewPage() {
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Expected level:</span>
                     <LevelRadio
+                      label={watch(`skills.${index}.skill_label`)}
                       value={watch(`skills.${index}.expected_level`) ?? 3}
                       onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
                     />

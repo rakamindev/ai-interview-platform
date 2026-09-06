@@ -21,6 +21,13 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
   const { register, setValue, formState: { errors } } = form;
   const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
+  /**
+   * Namanya diambil dari field yang baru saja diisi assessor di atas, bukan dari
+   * konstanta. Kalau belum diisi, jangan mengarang nama: biarkan LevelRadio
+   * memakai nama grup generiknya. "Expected level" yang tidak jelas milik siapa
+   * masih lebih baik daripada nama yang salah.
+   */
+  const skillLabel = useWatch({ control: form.control, name: `skills.${index}.skill_label` });
 
   return (
     <div className="space-y-3 pt-1">
@@ -66,6 +73,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
       <div className="space-y-1.5">
         <Label>Expected level</Label>
         <LevelRadio
+          label={skillLabel}
           value={expectedLevel ?? 3}
           onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
         />

@@ -1,10 +1,43 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+/**
+ * Menerjemahkan nilai level yang tiba dari API menjadi integer 1..5 — atau
+ * `null` kalau nilainya tidak bisa dipertanggungjawabkan.
+ *
+ * Kontrak yang dijaga fungsi ini:
+ *   api/db/schema.rb:115                  t.integer "ai_level", null: false
+ *   api/db/schema.rb:120                  CHECK (ai_level >= 1 AND ai_level <= 5)
+ *   api/app/models/portfolio_skill.rb:10  numericality: { only_integer: true, in: 1..5 }
+ *
+ * Versi sebelumnya berbunyi `return isNaN(n) ? 1 : n`. Artinya kegagalan membaca
+ * data dibalas dengan L1 — dan L1 bukan nilai netral: menurut LEVEL_DESCRIPTIONS
+ * itu "Foundational", rating kompetensi TERENDAH yang bisa diberikan sistem ini
+ * kepada seorang kandidat. Kandidat itu tidak pernah memilih untuk berada di
+ * dalam kegagalan tersebut, dan tidak akan pernah tahu bahwa itu terjadi.
+ *
+ * Cabang `typeof level === "number"` juga meneruskan angka apa pun tanpa
+ * pemeriksaan: 0, -3, 7, 3.5 semuanya lolos, lalu dipakai mengindeks
+ * LEVEL_LABELS dan menghasilkan `undefined` — badge kosong tanpa penjelasan.
+ * Sejak `ai_level` dibetulkan menjadi `number` (types/index.ts), justru cabang
+ * inilah yang dilewati seluruh lalu lintas nyata.
+ *
+ * `null` berarti "saya tidak tahu", dan memaksa pemanggil memutuskan secara
+ * sadar apa yang ditampilkan. Pola `!= null` ini sudah dipakai di
+ * ComparisonTable.tsx:53 untuk `candidate_level`, jadi bukan konvensi baru.
+ *
+ * Parameter tetap menerima `string | null | undefined` walaupun tipe kontraknya
+ * `number`, karena tipe TypeScript hilang saat runtime dan tidak memvalidasi
+ * satu byte pun dari payload JSON yang benar-benar tiba.
+ */
+export function parseLevel(level: string | number | null | undefined): number | null {
+  if (level === null || level === undefined) return null;
+
+  const n = typeof level === "number" ? level : parseInt(level.replace(/\D/g, ""), 10);
+
+  if (!Number.isInteger(n)) return null;
+  if (n < 1 || n > 5) return null;
+
+  return n;
 }
 
 export const LEVEL_LABELS: Record<number, string> = {

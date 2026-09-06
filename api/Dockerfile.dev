@@ -1,0 +1,16 @@
+# Dev/test image: source is mounted in at runtime, gems are baked in.
+# Build:  docker build -f Dockerfile.dev -t aiint-api-dev .
+# Run:    see assessment/05-testing.md §7 (or README in api/)
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  libpq-dev \
+  tzdata \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4

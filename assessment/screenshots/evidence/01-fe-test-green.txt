@@ -1,0 +1,45 @@
+
+> ai-interview-web@0.0.0 test
+> vitest run --run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mD:/TraeRepo/rakamin-frontend-intern/ai-interview-platform/web[39m
+
+(node:12644) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15472) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4276) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/components/assessment/LevelRadio.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 736[2mms[22m[39m
+   [33m[2m✓[22m[39m LevelRadio[2m > [22mmenampilkan kelima pilihan L1..L5 [33m 311[2mms[22m[39m
+ [32m✓[39m src/components/assessment/LevelRadio.a11y.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 789[2mms[22m[39m
+   [33m[2m✓[22m[39m LevelRadio — pemakaian ganda di satu halaman[2m > [22mmengubah grup yang labelnya diklik, bukan grup pertama di halaman [33m 428[2mms[22m[39m
+ [32m✓[39m src/components/portfolio/OverridePanel.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 1852[2mms[22m[39m
+   [33m[2m✓[22m[39m OverridePanel[2m > [22mtidak bisa menyimpan ketika tidak ada level yang dipilih [33m 450[2mms[22m[39m
+   [33m[2m✓[22m[39m OverridePanel[2m > [22mbisa menyimpan setelah assessor memilih level, dan mengirim angka pilihannya [33m 540[2mms[22m[39m
+   [33m[2m✓[22m[39m OverridePanel[2m > [22mtidak menghalangi jalur normal ketika level AI-nya valid [33m 622[2mms[22m[39m
+(node:29168) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:25784) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11568) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/components/portfolio/LevelBadge.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 257[2mms[22m[39m
+ [32m✓[39m src/components/portfolio/SkillPortfolioCard.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 153[2mms[22m[39m
+ [32m✓[39m src/pages/interview/InterviewPage.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 467[2mms[22m[39m
+(node:20160) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15788) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/components/fitgap/DiscoveredSkillRow.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m✓[39m src/components/portfolio/ConfidenceIndicator.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 134[2mms[22m[39m
+(node:24968) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/utils/constants.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m47 passed[39m[22m[90m (47)[39m
+[2m   Start at [22m 10:25:32
+[2m   Duration [22m 20.91s[2m (transform 1.06s, setup 11.83s, collect 7.12s, tests 4.52s, environment 30.95s, prepare 3.50s)[22m
+

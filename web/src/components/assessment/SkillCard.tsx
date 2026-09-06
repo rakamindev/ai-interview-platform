@@ -101,6 +101,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             <div className="space-y-1.5">
               <span className="text-xs text-muted-foreground">Expected level:</span>
               <LevelRadio
+                label={skillLabel}
                 value={skill?.expected_level ?? 3}
                 onChange={(v) => form.setValue(`skills.${index}.expected_level`, v)}
               />

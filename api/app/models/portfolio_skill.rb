@@ -7,7 +7,10 @@ class PortfolioSkill < ApplicationRecord
   has_one :assessor_override, dependent: :destroy
 
   validates :skill_label, presence: true
-  validates :ai_level, numericality: { only_integer: true, in: 1..5 }
+  # nil ai_level is legitimate: it means "the AI never produced a usable level"
+  # (see Portfolios::LevelParser). The UI renders it as "Unknown", never as the
+  # worst rating. Values that ARE present must still be a real level.
+  validates :ai_level, numericality: { only_integer: true, in: 1..5, allow_nil: true }
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }
   validates :competency_summary, presence: true
 

@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { AlertTriangle, CheckCircle, Mic, MicOff, WifiOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -38,23 +38,87 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  /**
+   * Cacat #7. Alasan kegagalan disimpan supaya layar error bisa menyebutkannya.
+   * Backend sudah mengirim pesan yang enak dibaca manusia
+   * (`sessions_controller.rb:132-154` → "Invalid or expired invite token",
+   * "Assessment not found"), lalu `.catch(() => setInterviewState("complete"))`
+   * membuangnya dan menggantinya dengan ucapan terima kasih. Menyimpannya di
+   * state adalah setengah dari perbaikan; separuh lainnya adalah punya layar
+   * yang mau menampilkannya.
+   */
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fetch candidate info
-  useEffect(() => {
+  /**
+   * Fetch candidate info.
+   *
+   * Diangkat ke `useCallback` bukan demi rapi, tapi karena perbaikan cacat #7
+   * butuh tombol "Try again": kalau API-nya yang mati sebentar, kandidat harus
+   * bisa mencoba lagi tanpa menebak-nebak URL undangannya. Fungsi yang hanya
+   * hidup di dalam `useEffect` tidak bisa dipanggil ulang oleh tombol.
+   */
+  const fetchCandidateInfo = useCallback(() => {
     if (!token) return;
-    sessionsApi.getCandidateInfo(token)
+    setErrorMessage(null);
+    sessionsApi
+      .getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        /**
+         * `prev === "error" ? "idle"` — bukan `setInterviewState("idle")` tanpa
+         * syarat. Tombol coba lagi harus bisa memulihkan layar, tapi fetch yang
+         * resolve terlambat tidak boleh menarik wawancara yang sudah berjalan
+         * kembali ke layar pembuka.
+         */
+        setInterviewState((prev) =>
+          res.data.session_status === "ended" ? "complete" : prev === "error" ? "idle" : prev
+        );
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((e) => {
+        // Idiom yang sudah dipakai di repo ini (VacancyNewPage.tsx:46,
+        // AssessmentEditPage.tsx:84, AssessmentNewPage.tsx:103) — bukan pola
+        // baru yang bersaing dengan yang sudah ada.
+        setErrorMessage(
+          e?.response?.data?.errors?.[0]?.message ??
+            "We could not load your interview. Please check your connection and try again."
+        );
+        setInterviewState("error");
+      });
   }, [token]);
+
+  useEffect(() => {
+    fetchCandidateInfo();
+  }, [fetchCandidateInfo]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
 
-  const handleStateChange = useCallback((state: InterviewState) => {
+  const { playChunk, stop: stopPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
+const audioCompleteCalledRef = useRef(false);
+const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+const callAudioComplete = useCallback(async () => {
+  if (audioCompleteCalledRef.current || !token) return;
+  audioCompleteCalledRef.current = true;
+  cancelDrain();
+  if (audioCompleteSafetyTimerRef.current) {
+    clearTimeout(audioCompleteSafetyTimerRef.current);
+    audioCompleteSafetyTimerRef.current = null;
+  }
+  // Retry until success — endpoint now always returns ended:true or an error.
+  // ended:false is no longer a valid response; any success means the session ended.
+  const attempt = async (delay: number) => {
+    try {
+      await sessionsApi.audioComplete(token);
+    } catch {
+      setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
+    }
+  };
+  attempt(2000);
+}, [token, cancelDrain]);
+
+const handleStateChange = useCallback((state: InterviewState) => {
     setInterviewState(state);
 
     if (state === "draining_audio") {
@@ -74,6 +138,14 @@ export default function InterviewPage() {
       connectionLostTimerRef.current = setTimeout(() => {
         setConnectionLostLong(true);
       }, 60_000);
+    } else if (state === "connection_lost") {
+      // Mic dimatikan: tidak ada gunanya merekam ke socket yang sudah tutup,
+      // dan lampu mic yang tetap menyala adalah kebohongan kecil versi lain.
+      muteRef.current?.();
+      if (connectionLostTimerRef.current) {
+        clearTimeout(connectionLostTimerRef.current);
+        connectionLostTimerRef.current = null;
+      }
     } else {
       if (connectionLostTimerRef.current) {
         clearTimeout(connectionLostTimerRef.current);
@@ -82,7 +154,7 @@ export default function InterviewPage() {
       setConnectionLostLong(false);
       if (state === "active" && !micMutedRef.current) unmuteRef.current?.();
     }
-  }, []);
+  }, [callAudioComplete, waitForDrain]);
 
   const handleReconnected = useCallback(() => {
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
@@ -94,41 +166,9 @@ export default function InterviewPage() {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
 
-  const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
-  const audioCompleteCalledRef = useRef(false);
-  const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const callAudioComplete = useCallback(async () => {
-    if (audioCompleteCalledRef.current || !token) return;
-    audioCompleteCalledRef.current = true;
-    cancelDrain();
-    if (audioCompleteSafetyTimerRef.current) {
-      clearTimeout(audioCompleteSafetyTimerRef.current);
-      audioCompleteSafetyTimerRef.current = null;
-    }
-    // Retry until success — endpoint now always returns ended:true or an error.
-    // ended:false is no longer a valid response; any success means the session ended.
-    const attempt = async (delay: number) => {
-      try {
-        await sessionsApi.audioComplete(token);
-      } catch {
-        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
-      }
-    };
-    attempt(2000);
-  }, [token, cancelDrain]);
-
-  const handleSpeakerChange = useCallback((newSpeaker: InterviewSpeaker) => {
-    if (newSpeaker === "ai") {
-      setSpeaker("ai");
-      muteRef.current?.();
-    } else if (newSpeaker === "candidate") {
-      scheduleAfterPlayback(() => {
-        setSpeaker("candidate");
-        if (!micMutedRef.current) unmuteRef.current?.();
-      });
-    }
-  }, [scheduleAfterPlayback]);
+  const handleSpeakerChange = useCallback((s: InterviewSpeaker) => {
+    setSpeaker(s);
+  }, []);
 
   const { connect, send, sendJson, disconnect, connectionState } = useAudioWebSocket({
     sessionId: sessionId ?? 0,
@@ -222,6 +262,69 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State G: Error — wawancara tidak pernah bisa dimulai ────────────────
+  /**
+   * Cacat #7. Layar ini adalah alasan `.catch(() => setInterviewState("complete"))`
+   * dulu terasa masuk akal: tidak ada tempat lain untuk mendarat. Sekarang ada.
+   *
+   * `role="alert"` bukan hiasan — pembaca layar mengumumkannya tanpa perlu
+   * fokus berpindah, dan kandidat yang tidak melihat layar tetap tahu
+   * wawancaranya belum dimulai.
+   */
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="flex justify-center">
+          <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />
+        </div>
+        <h2 className="text-xl font-semibold">We could not start your interview</h2>
+        <p role="alert" className="text-sm text-muted-foreground">
+          {errorMessage ??
+            "We could not load your interview. Please check your connection and try again."}
+        </p>
+        <div className="space-y-2">
+          <Button className="w-full" size="lg" onClick={fetchCandidateInfo}>
+            Try again
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Your interview has not been recorded. If this keeps happening, contact the hiring
+            team for a new invite link.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── State H: Connection lost — wawancara berjalan, sambungan habis ──────
+  /**
+   * Dipisah dari State G karena pemulihannya berbeda. Di sini wawancara sudah
+   * berjalan dan transkripnya sudah ada di server, jadi kalimatnya harus
+   * menyebut itu: jawaban yang sudah diberikan tidak hilang. Tombolnya
+   * menyambung ulang (`startInterview`), bukan memuat ulang halaman.
+   */
+  if (interviewState === "connection_lost") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="flex justify-center">
+          <WifiOff className="h-10 w-10 text-destructive" aria-hidden="true" />
+        </div>
+        <h2 className="text-xl font-semibold">Connection lost</h2>
+        <p role="alert" className="text-sm text-muted-foreground">
+          Your connection dropped and we could not reconnect. Your answers so far have been
+          saved — this interview is not complete yet.
+        </p>
+        <div className="space-y-2">
+          <Button className="w-full" size="lg" onClick={startInterview}>
+            Reconnect
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Check your internet connection, then reconnect to continue where you left off.
+          </p>
+        </div>
       </div>
     );
   }

@@ -1,0 +1,74 @@
+WARNING: Skipping key "DB_HOST". Already set in ENV.
+WARNING: Skipping key "DB_PORT". Already set in ENV.
+WARNING: Skipping key "DB_NAME". Already set in ENV.
+WARNING: Skipping key "DB_USERNAME". Already set in ENV.
+WARNING: Skipping key "DB_PASSWORD". Already set in ENV.
+WARNING: Skipping key "REDIS_URL". Already set in ENV.
+
+PortfolioSkill
+  ai_level
+    menerima 1..5
+    menerima nil — belum dinilai bukan kesalahan data
+    menolak di luar rentang
+  ai_confidence
+    menolak nilai di luar enum
+
+Coverage::StateEngine
+  .resolve_state
+    tidak berubah ketika current == proposed
+    tidak berubah ketika proposed lebih rendah atau tidak dikenal
+    hanya maju SATU state per panggilan — tidak boleh melompati tangga
+    tetap maju satu state yang sah
+    HARD RULE: tidak boleh mencapai partial/covered dengan probe_count < 2
+  .valid_transition?
+    menolak transisi yang tidak berdekatan
+    menerapkan HARD RULE >= 2 probe untuk partial/covered
+
+Portfolios::Generator
+  menyimpan level yang valid, mengonversi "L3", dan memotong evidence ke 3
+  menyimpan ai_level NULL — bukan L1 — ketika level tidak dikirim
+  menyimpan ai_level NULL — bukan L5 — ketika level di luar rentang
+  menandai portfolio complete dan mengisi generated_at
+  idempoten: regenerasi tidak menduplikasi skill
+
+Portfolios::LevelParser
+  .parse
+    parse(1) → 1
+    parse(3) → 3
+    parse(5) → 5
+    parse("3") → 3
+    parse("L3") → 3
+    parse("L5") → 5
+    parse("Level 4") → 4
+    parse("05") → 5
+    parse(nil) → nil
+    parse("") → nil
+    parse("abc") → nil
+    parse("high") → nil
+    parse(0) → nil
+    parse(6) → nil
+    parse(99) → nil
+    parse(-1) → nil
+    parse("3.5") → nil
+    parse(2.5) → nil
+    parse(true) → nil
+
+CoverageAnalyzerWorker
+  dengan skill partial yang staleness-nya layak dilaporkan (probe_count >= 4)
+    TIDAK mengubah state menjadi covered — dulu di-sini pengarangan terjadi
+    TIDAK menimpa last_signal dengan string robot
+    melaporkan kestagnan lewat log terstruktur
+  dengan skill partial yang masih dalam jangkauan analyzer (probe_count < 4)
+    tidak dilaporkan stale dan tidak diubah
+  dengan skill yang baru saja dibahas di run yang sama (exclude_ids)
+    tidak dilaporkan stale
+  dengan skill covered dan not_yet
+    tidak menyentuh keduanya
+  ketika session sudah ended
+    berhenti tanpa memanggil analyzer
+  ketika session tidak ditemukan
+    tidak melempar — job ini non-kritis
+
+Finished in 2.79 seconds (files took 33.57 seconds to load)
+43 examples, 0 failures
+

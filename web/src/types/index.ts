@@ -1,3 +1,12 @@
+import type { Confidence } from "@/utils/confidence";
+
+/**
+ * Rumah kanonik `Confidence` ada di `@/utils/confidence` — bersama fungsi yang
+ * menerjemahkannya. Di-re-export di sini supaya konsumen tipe tidak perlu tahu
+ * dua lokasi, tapi definisinya tetap satu.
+ */
+export type { Confidence };
+
 export interface Assessment {
   id: number;
   name: string;
@@ -90,8 +99,34 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /**
+   * Integer 1..5, BUKAN string "L1" — atau `null` saat AI tidak pernah
+   * menghasilkan level yang bisa dipakai.
+   *
+   * Kontraknya bisa dibaca hitam-putih:
+   *   api/db/schema.rb                       t.integer "ai_level" — nullable sejak
+   *                                          migrasi relax_portfolio_skills_ai_level
+   *   api/db/schema.rb                       CHECK (ai_level IS NULL OR (ai_level >= 1 AND ai_level <= 5))
+   *   api/app/models/portfolio_skill.rb      numericality: { only_integer: true, in: 1..5, allow_nil: true }
+   *   api/app/services/portfolios/level_parser.rb  level hilang/rusak → nil, BUKAN L1
+   *   api/app/controllers/.../portfolios_controller.rb  ai_level: skill.ai_level
+   *
+   * Serializer meneruskan Integer atau null apa adanya. `null` = "belum dinilai"
+   * dan HARUS tampil sebagai ketiadaan (parseLevel → null, LevelBadge "Unknown") —
+   * bukan sebagai rating terendah. Prefiks "L" adalah bahasa presentasi
+   * (LEVEL_LABELS), bukan bahasa API.
+   */
+  ai_level: number | null;
+  /**
+   * Enum database, sudah dijamin NOT NULL di level tabel:
+   *   api/db/schema.rb:116                  t.enum "ai_confidence", null: false
+   *   api/app/models/portfolio_skill.rb:11  inclusion: { in: %w[high medium low] }
+   *
+   * Tipe ini menyatakan JANJI kontrak. Komponen tetap menerima
+   * `string | null | undefined` karena tipe TypeScript hilang saat runtime dan
+   * tidak memvalidasi apa pun atas payload JSON yang benar-benar tiba.
+   */
+  ai_confidence: Confidence;
   evidence: string[];
   competency_summary: string;
 }
@@ -182,7 +217,27 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  /**
+   * Cacat #7. Sebelum ini union-nya tidak punya satu pun anggota yang berarti
+   * "gagal", sehingga `InterviewPage.tsx:51` memakai `complete` untuk semua
+   * kelas kegagalan — dan `complete` adalah state yang layarnya mengucapkan
+   * terima kasih. Tipe yang tidak menyediakan cara mengatakan "gagal" akan
+   * dipenuhi dengan kebohongan yang paling mudah diucapkan.
+   *
+   * Dipisah dua, bukan satu, karena pemulihannya berbeda:
+   * - `error`: wawancara belum/tidak bisa berjalan (token kedaluwarsa,
+   *   assessment hilang, API mati, atau error server yang tidak bisa
+   *   dipulihkan). Tindakan yang masuk akal: tanya ulang ke server.
+   * - `connection_lost`: wawancara sedang berjalan lalu sambungannya habis
+   *   setelah semua percobaan reconnect gagal. Tindakan yang masuk akal:
+   *   sambungkan ulang, bukan mulai dari nol.
+   *
+   * Menyatukan keduanya berarti mengulangi kesalahan yang sama dalam skala
+   * lebih kecil: meruntuhkan dua keadaan berbeda ke satu layar.
+   */
+  | "error"
+  | "connection_lost";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- root element is guaranteed by Vite mount
 createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
         <JotaiProvider>
