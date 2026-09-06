@@ -5,9 +5,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import ErrorState from "@/components/ui/ErrorState";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
+import { parseApiError, type ApiError } from "@/utils/apiError";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
@@ -23,6 +25,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<ApiError | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -41,15 +44,21 @@ export default function PortfolioPage() {
     }
   }, [sessionId]);
 
-  useEffect(() => {
+  const loadPortfolioData = useCallback(() => {
+    setLoading(true);
+    setPageError(null);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch((err) => setPageError(parseApiError(err)))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
+
+  useEffect(() => {
+    loadPortfolioData();
+  }, [loadPortfolioData]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -103,6 +112,8 @@ export default function PortfolioPage() {
       </div>
     );
   }
+
+  if (pageError) return <ErrorState error={pageError} onRetry={loadPortfolioData} />;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ErrorState from "@/components/ui/ErrorState";
 import { vacanciesApi } from "@/services/vacancies";
+import { parseApiError, type ApiError } from "@/utils/apiError";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
@@ -26,18 +28,34 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pageError, setPageError] = useState<ApiError | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
-  useEffect(() => {
-    vacanciesApi.get(Number(id)).then((res) => {
-      const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
+  const loadVacancy = useCallback(() => {
+    setLoading(true);
+    setPageError(null);
+    vacanciesApi
+      .get(Number(id))
+      .then((res) => {
+        const v = res.data.vacancy;
+        reset({
+          role_title: v.role_title,
+          culture_dimensions: v.culture_dimensions,
+          competency_expectations: v.competency_expectations,
+          skills: v.skills,
+        });
+      })
+      .catch((err) => setPageError(parseApiError(err)))
+      .finally(() => setLoading(false));
   }, [id, reset]);
+
+  useEffect(() => {
+    loadVacancy();
+  }, [loadVacancy]);
 
   const onSubmit = async (data: VacancyFormValues) => {
     setSubmitting(true);
@@ -55,6 +73,8 @@ export default function VacancyEditPage() {
   };
 
   if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+
+  if (pageError) return <ErrorState error={pageError} onRetry={loadVacancy} />;
 
   return (
     <div className="max-w-2xl mx-auto">

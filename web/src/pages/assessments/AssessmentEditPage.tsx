@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -23,8 +23,10 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ErrorState from "@/components/ui/ErrorState";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { parseApiError, type ApiError } from "@/utils/apiError";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
@@ -36,6 +38,7 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<ApiError | null>(null);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -44,16 +47,22 @@ export default function AssessmentEditPage() {
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
-  useEffect(() => {
+  const loadAssessment = useCallback(() => {
+    setLoading(true);
+    setPageError(null);
     assessmentsApi
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch((err) => setPageError(parseApiError(err)))
       .finally(() => setLoading(false));
   }, [id, reset]);
+
+  useEffect(() => {
+    loadAssessment();
+  }, [loadAssessment]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -97,6 +106,8 @@ export default function AssessmentEditPage() {
       </div>
     );
   }
+
+  if (pageError) return <ErrorState error={pageError} onRetry={loadAssessment} />;
 
   return (
     <div className="max-w-2xl mx-auto">
