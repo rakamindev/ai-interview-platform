@@ -22,9 +22,33 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
-  const hasOverride = !!existingOverride;
+  /**
+   * Satu-satunya syarat untuk menyimpan: ada level yang benar-benar dipilih.
+   *
+   * `overrideLevel` bertipe `number | null` sejak parseLevel (utils/constants.ts)
+   * berhenti mengarang L1 untuk data yang tidak dikenalnya. `null` di sini punya
+   * arti yang tepat: belum ada manusia yang memilih. Baris override, menurut
+   * definisinya, adalah penilaian manusia yang menimpa penilaian AI — kolomnya
+   * `override_level` dan tetangganya `overridden_by` (schema.rb). Menyimpannya
+   * tanpa pilihan berarti menulis kesaksian atas nama assessor yang tidak
+   * pernah bersaksi, dan kesaksian itu ikut ke laporan fit/gap serta PDF ekspor.
+   */
+  const canSave = overrideLevel != null;
 
   const handleSave = async () => {
+    /**
+     * Dijaga di dalam handler, bukan hanya di atribut `disabled` tombol.
+     * `disabled` adalah presentasi, dan presentasi bisa dilanggar — autofill,
+     * ekstensi peramban, refactor tombol, atau pemanggil baru yang belum ada.
+     * Invarian ini menyangkut apa yang tersimpan permanen, jadi tempatnya di
+     * jalur yang menyimpan.
+     *
+     * Sekaligus inilah yang menyempitkan `number | null` → `number`, sehingga
+     * payload di bawah memenuhi kontrak services/portfolios.ts:5 tanpa cast.
+     * Kontrak itu tidak dilonggarkan: `override_level: number` memang benar.
+     */
+    if (overrideLevel == null) return;
+
     setSaving(true);
     setSaveError(false);
     try {
@@ -44,13 +68,13 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   if (!open) {
     return (
       <div className="flex items-center gap-2">
-        {hasOverride ? (
+        {existingOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
               <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
-              <LevelBadge level={existingOverride!.override_level} size="sm" />
+              <LevelBadge level={existingOverride.override_level} size="sm" />
               <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
@@ -74,7 +98,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
       <div className="space-y-1.5">
         <Label className="text-sm">Your rating:</Label>
-        <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
+        <LevelRadio label={skill.skill_label} value={overrideLevel} onChange={setOverrideLevel} />
       </div>
 
       <div className="space-y-1.5">
@@ -92,9 +116,23 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
       )}
 
+      {/*
+        Tombol mati tanpa penjelasan adalah cacat tersendiri: assessor
+        menyimpulkan aplikasinya rusak, lalu berhenti memakai fitur ini — dan
+        penilaian manusia yang seharusnya masuk tidak pernah masuk. Kalimat ini
+        menyebut penyebabnya (AI tidak memberi level yang bisa dipakai) dan
+        tindakannya (pilih sendiri), bukan sekadar melarang.
+      */}
+      {!canSave && (
+        <p className="text-xs text-muted-foreground">
+          Choose a level to save. The AI did not provide a usable rating for this skill, so there is
+          nothing to adjust — your override starts from scratch.
+        </p>
+      )}
+
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-        <Button size="sm" onClick={handleSave} disabled={saving}>
+        <Button size="sm" onClick={handleSave} disabled={saving || !canSave}>
           {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
           Save override
         </Button>
