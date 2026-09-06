@@ -87,7 +87,7 @@ export default function LoginPage() {
                   navigate("/assessments");
                 }}
               >
-                Developer Quick Login (Dev Token)
+                Quick Login (Dev Mode)
               </Button>
             </div>
           )}
