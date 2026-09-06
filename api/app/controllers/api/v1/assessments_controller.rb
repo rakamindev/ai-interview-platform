@@ -30,8 +30,8 @@ module Api
         assessment.created_by = current_user.id
 
         if assessment.save
-          SystemPromptGeneratorWorker.perform_async(assessment.id)
-          json_response({ assessment:, system_prompt_generated: true }, :created)
+          enqueue_prompt_generation(assessment)
+          json_response({ assessment: assessment_with_skills_json(assessment) }, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
         end
@@ -40,11 +40,22 @@ module Api
       # PUT /api/v1/assessments/:id
       def update
         if @assessment.update(assessment_params)
-          SystemPromptGeneratorWorker.perform_async(@assessment.id)
-          json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
+          @assessment.update(prompt_generation_status: 'pending', prompt_generation_error: nil)
+          enqueue_prompt_generation(@assessment)
+          json_response({ assessment: assessment_with_skills_json(@assessment) })
         else
           json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
         end
+      end
+
+      # POST /api/v1/assessments/:id/retry_prompt
+      def retry_prompt
+        set_assessment
+        return if performed?
+
+        @assessment.update(prompt_generation_status: 'pending', prompt_generation_error: nil)
+        enqueue_prompt_generation(@assessment)
+        json_response({ assessment: assessment_with_skills_json(@assessment) })
       end
 
       # DELETE /api/v1/assessments/:id
@@ -54,6 +65,10 @@ module Api
       end
 
       private
+
+      def enqueue_prompt_generation(assessment)
+        SystemPromptGeneratorWorker.perform_async(assessment.id)
+      end
 
       def set_assessment
         @assessment = Assessment.find(params[:id])
@@ -84,6 +99,8 @@ module Api
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
           system_prompt:  assessment.system_prompt,
+          prompt_generation_status: assessment.prompt_generation_status,
+          prompt_generation_error:  assessment.prompt_generation_error,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
