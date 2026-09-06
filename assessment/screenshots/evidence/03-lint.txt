@@ -1,0 +1,44 @@
+
+> ai-interview-web@0.0.0 lint
+> eslint .
+
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\components\HardwareCheck.tsx
+  72:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  89:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\components\assessment\CustomSkillForm.tsx
+  22:44  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\components\assessment\SkillCard.tsx
+  6:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\pages\assessments\AssessmentEditPage.tsx
+  29:15  warning  'AssessmentSkill' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  44:74  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  83:17  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\pages\assessments\AssessmentNewPage.tsx
+   17:3   warning  'arrayMove' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   53:54  warning  'watch' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  102:17  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\pages\fitgap\FitGapReportPage.tsx
+  35:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\pages\monitor\LiveMonitorPage.tsx
+  83:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\pages\portfolio\PortfolioPage.tsx
+  29:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\pages\vacancies\VacancyNewPage.tsx
+  28:74  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  45:17  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+D:\TraeRepo\rakamin-frontend-intern\ai-interview-platform\web\src\services\portfolios.ts
+  2:15  warning  'Portfolio' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 17 problems (0 errors, 17 warnings)
+
