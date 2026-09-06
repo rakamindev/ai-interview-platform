@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
 class Portfolio < ApplicationRecord
+  include TenantScoped
+
   GENERATION_STATUSES = %w[pending generating complete failed].freeze
 
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
+
+  before_validation :assign_tenant_from_session, on: :create
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
@@ -16,4 +20,10 @@ class Portfolio < ApplicationRecord
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
+
+  private
+
+  def assign_tenant_from_session
+    self.tenant_id ||= session&.tenant_id
+  end
 end
