@@ -143,7 +143,7 @@ export default function AssessmentNewPage() {
             defaultValue="45"
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -163,7 +163,7 @@ export default function AssessmentNewPage() {
             defaultValue="en"
             onValueChange={(v) => setValue("language", v as "en" | "id")}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

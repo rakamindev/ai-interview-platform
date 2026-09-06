@@ -48,7 +48,10 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        # `joins(:portfolio)` constrained nothing — it only made the query a join.
+        # Without the tenant predicate any authenticated assessor could override
+        # any organisation's candidate rating by guessing an id.
+        @portfolio_skill = PortfolioSkill.in_tenant(current_tenant_id)
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

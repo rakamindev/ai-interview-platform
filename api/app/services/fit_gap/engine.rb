@@ -24,10 +24,11 @@ module FitGap
       )
 
       report.update!(
-        skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        skill_comparisons:  skill_comparisons,
+        culture_narrative:  narratives[:culture],
+        overall_narrative:  narratives[:overall],
+        narrative_degraded: narratives[:degraded],
+        generated_at:       Time.current
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -55,6 +56,9 @@ module FitGap
           result          = 'not_assessed'
         end
 
+        # `result` answers "does the candidate meet the bar". These extra fields
+        # answer "how much should you trust that answer" — the presentation layer
+        # cannot calibrate what it is never told.
         {
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
@@ -62,7 +66,10 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          ai_level:        portfolio_skill&.dig(:ai_level),
+          is_override:     portfolio_skill ? portfolio_skill[:overridden] : false,
+          evidence_count:  portfolio_skill&.dig(:evidence_count).to_i
         }
       end
 
@@ -80,6 +87,7 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
+          evidence_count:  skill.evidence_quotes.size,
           overridden:      override.present?
         }
       end
@@ -91,6 +99,11 @@ module FitGap
     end
 
     def generate_narratives(skill_comparisons)
+      # Nothing to narrate, and no model call worth paying for. This is a
+      # reportable state (a vacancy with no skills defined), not a failure, so it
+      # must not be flagged as degraded.
+      return { culture: nil, overall: nil, degraded: false } if skill_comparisons.empty?
+
       gaps    = skill_comparisons.select { |c| c[:result] == 'gap' }
       matches = skill_comparisons.select { |c| c[:result] == 'match' }
       exceeds = skill_comparisons.select { |c| c[:result] == 'exceed' }
@@ -101,10 +114,14 @@ module FitGap
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        { culture: data['culture_narrative'], overall: data['overall_narrative'], degraded: false }
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}: #{e.message}")
+        {
+          culture:  nil,
+          overall:  generate_fallback_narrative(skill_comparisons),
+          degraded: true
+        }
       end
     end
 
@@ -138,12 +155,34 @@ module FitGap
       PROMPT
     end
 
+    # Used only when the narrative model call fails. It is a count, not an
+    # analysis, so it must read as one — and the report carries
+    # narrative_degraded: true so the UI can say the analysis did not run.
     def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      gaps         = comparisons.count { |c| c[:result] == 'gap' }
+      matches      = comparisons.count { |c| c[:result] == 'match' }
+      exceeds      = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      parts = [
+        "#{pluralize_count(matches, 'skill meets', 'skills meet')} the required level",
+        "#{pluralize_count(exceeds, 'skill exceeds', 'skills exceed')} it",
+        pluralize_count(gaps, 'gap')
+      ]
+      if not_assessed.positive?
+        parts << "#{pluralize_count(not_assessed, 'required skill was', 'required skills were')} not assessed"
+      end
+
+      "Rule-based summary only: #{parts.join(', ')}."
+    end
+
+    # The count selects the wording; nothing is inflected automatically. Naive
+    # suffixing produced "3 skill meetss" because the phrase being pluralised is
+    # a verb phrase, not a noun — so any phrase whose plural is not simply
+    # "+s" must pass its plural explicitly.
+    def pluralize_count(count, singular, plural = nil)
+      word = count == 1 ? singular : (plural || "#{singular}s")
+      "#{count} #{word}"
     end
   end
 end

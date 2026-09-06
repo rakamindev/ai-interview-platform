@@ -121,7 +121,7 @@ export default function AssessmentEditPage() {
             value={String(form.watch("time_limit_min"))}
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>{min} min</SelectItem>

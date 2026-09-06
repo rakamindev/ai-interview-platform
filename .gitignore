@@ -2,8 +2,13 @@
 **/node_modules/
 
 # Env / secrets
+# The wildcard covers editor and shell backups too (.env.bak, .env.save,
+# .env.old). A plain `.env` rule leaves those tracked, which is how a working
+# token reaches a commit: the file that gets committed is rarely the one you
+# were editing. The example file is exempt because it carries no values.
 **/.env
-**/.env.local
+**/.env.*
+!**/.env.example
 api/config/application.yml
 
 # Logs and temp

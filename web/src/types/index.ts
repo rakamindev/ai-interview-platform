@@ -87,11 +87,23 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  /**
+   * Taxonomy identifier such as "SK-ENG-001". `portfolio_skills.skill_id` is a
+   * varchar and is null for custom and discovered skills. This was previously
+   * declared `number`.
+   */
+  skill_id: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /**
+   * Integer 1-5 exactly as stored and serialised (`portfolio_skills.ai_level`
+   * is an integer with a 1..5 check constraint). This was previously declared
+   * `string` with a comment claiming values of "L1".."L5", which the API has
+   * never sent — so a level rendered without a lookup appeared as a bare "2"
+   * where "L2" belonged.
+   */
+  ai_level: number;
+  ai_confidence: ConfidenceLevel;
   evidence: string[];
   competency_summary: string;
 }
@@ -125,15 +137,45 @@ export interface VacancySkill {
   _destroy?: boolean;
 }
 
+/**
+ * Mirrors the PostgreSQL `confidence_level` enum. Previously expressed as a bare
+ * `string` with the allowed values written in a comment, which the compiler
+ * could not enforce — and a rendering path did in fact treat `medium` as a
+ * synonym for verified.
+ */
+export type ConfidenceLevel = "high" | "medium" | "low";
+
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+/**
+ * Mirrors the payload emitted by FitGap::Engine (api/app/services/fit_gap/engine.rb).
+ *
+ * `expected_level` is the field name the API and the database both use
+ * (`vacancy_skills.expected_level`); an earlier version of this interface
+ * declared `required_level`, which the API has never sent. Because responses are
+ * cast rather than validated at the axios boundary, the compiler reported no
+ * error and the "Required" column rendered blank in production. The display
+ * label stays "Required"; the field name follows the domain.
+ *
+ * `null` is used rather than `undefined` for the not-assessed case because that
+ * is what JSON carries — an unassessed requirement is an explicit absence, not a
+ * missing key.
+ */
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id: string | null;
+  expected_level: number;
+  candidate_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  /** How far the model trusted its own rating. Null when never assessed. */
+  confidence: ConfidenceLevel | null;
+  /** The model's level before any assessor correction. Null when never assessed. */
+  ai_level: number | null;
+  /** True when an assessor overrode the model's level for this skill. */
+  is_override: boolean;
+  /** Number of verbatim quotes supporting the rating. Zero when never assessed. */
+  evidence_count: number;
 }
 
 export interface FitGapReport {
@@ -141,8 +183,10 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  /** True when the narrative model call failed and a rule-based summary stands in. */
+  narrative_degraded: boolean;
   generated_at: string;
 }
 

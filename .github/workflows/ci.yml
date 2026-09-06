@@ -1,0 +1,131 @@
+name: CI
+
+# The repository had no continuous integration, no RSpec specs and no frontend
+# test runner. This workflow is the enforcement half of the harness added in this
+# change: without it the suites exist but nothing requires them to pass.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API — RSpec
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          # Trust auth rather than a password. The service is reachable only from
+          # this job's network namespace and is destroyed with the runner, so a
+          # password would add no protection — it would only put a
+          # credential-shaped literal in version control, which secret scanning
+          # correctly refuses to distinguish from a real one.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        # Without a health check the first migration can race the server's
+        # startup and fail with "the database system is starting up".
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      # Figaro reads config/application.yml, which is gitignored and absent in
+      # CI, so the same keys are supplied as environment variables instead.
+      # SECRET_KEY_BASE is generated per run in the step below rather than
+      # written here — see that step for why.
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_NAME: rakamin_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: ''
+      REDIS_URL: redis://localhost:6379/1
+      # No Gemini key is set on purpose. Every spec injects a test double for the
+      # client, so a suite that starts reaching the real API will fail here
+      # rather than silently spend quota.
+      APP_BASE_URL: http://localhost:3001
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          working-directory: api
+          # Reads api/.ruby-version so CI cannot drift from local development.
+          ruby-version-file: api/.ruby-version
+          bundler-cache: true
+
+      - name: Generate an ephemeral signing key
+        # SECRET_KEY_BASE only has to exist and be internally consistent for the
+        # length of this job — nothing in the suite verifies a token minted
+        # elsewhere. Generating it per run means no credential-shaped literal is
+        # committed, and no two runs share a key.
+        run: echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> "$GITHUB_ENV"
+
+      - name: Prepare database
+        run: bundle exec rails db:create db:migrate
+
+      - name: Verify the migration is reversible
+        # Step 5 requires migrations to be reversible. Asserting it here means a
+        # future irreversible migration fails review instead of production.
+        run: |
+          bundle exec rails db:rollback STEP=1
+          bundle exec rails db:migrate
+
+      - name: RSpec
+        run: bundle exec rspec
+
+  web:
+    name: Web — typecheck & Vitest
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        # `npm ci` installs exactly the locked tree and fails if package.json and
+        # the lockfile disagree, which `npm install` would silently repair.
+        run: npm ci
+
+      - name: Typecheck
+        # The contract defect this change fixes was invisible to the compiler
+        # because responses are cast rather than validated. Typechecking in CI at
+        # least stops the declared contract itself from drifting unnoticed.
+        run: npx tsc --noEmit
+
+      - name: Vitest
+        run: npm test

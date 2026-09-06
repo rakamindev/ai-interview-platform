@@ -55,6 +55,17 @@ export const COVERAGE_STATE_COLOR: Record<string, string> = {
 };
 
 // Fit/Gap result display
+/**
+ * Display labels for the `confidence_level` enum. Kept as a lookup rather than
+ * inlined conditionals so no rendering path can quietly reinterpret a value —
+ * one previously reported `medium` as "confirmed".
+ */
+export const CONFIDENCE_LABELS: Record<string, string> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
 export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   match: "Match",
   gap: "Gap",

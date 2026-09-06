@@ -352,6 +352,36 @@ B7_SKILLS = [
 ].freeze
 
 puts ""
+puts "== Seeding an assessor account =="
+
+# Without this, a fresh clone cannot be signed into at all: the seed created an
+# organisation and 22 taxonomy skills but no users, while
+# AuthenticationController requires a persisted user whose role is 'admin'. The
+# only documented way in was to mint a JWT by hand and paste it into
+# VITE_DEV_TOKEN, which skips the login screen rather than exercising it.
+#
+# Credentials are deliberately obvious and deliberately local. The account is
+# never created in production, and both values can be overridden by environment
+# variables so a shared staging box does not inherit a published password.
+if Rails.env.production?
+  puts "  Skipped — the demo account is not seeded in production."
+else
+  seed_email    = ENV.fetch("SEED_ADMIN_EMAIL", "assessor@test-corp.local")
+  seed_password = ENV.fetch("SEED_ADMIN_PASSWORD", "password123")
+
+  user = User.find_or_initialize_by(email: seed_email)
+  user.password = seed_password
+  user.role     = "admin"
+
+  if user.save
+    puts "  #{user.persisted? ? 'Ready' : 'Created'}: #{user.email} (role: #{user.role})"
+    puts "  Password: #{seed_password}   <- local development only"
+  else
+    puts "  ERROR: #{user.errors.full_messages.join(', ')}"
+  end
+end
+
+puts ""
 puts "== Seeding B7 Skill Taxonomy (22 pilot skills) =="
 
 B7_SKILLS.each do |attrs|
@@ -382,7 +412,12 @@ puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
+puts "Sign in at http://localhost:5173 with:"
+puts ""
+puts "  email    : #{seed_email}"        if defined?(seed_email)
+puts "  password : #{seed_password}"     if defined?(seed_password)
+puts ""
+puts "Or, to mint a JWT by hand instead (skips the login screen):"
 puts ""
 puts "  bundle exec rails console"
 puts ""

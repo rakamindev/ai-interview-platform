@@ -78,8 +78,8 @@ Runs on **port 3001** by default.
 ## 7. Start the frontend
 
 ```bash
-cd ../ai-interview-web
-npm install
+cd ../web
+npm ci
 npm run dev
 ```
 
@@ -94,4 +94,4 @@ Runs on **port 5173** by default.
 | Redis | `docker run -d -p 6379:6379 --name redis redis:alpine` | 6379 |
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
-| Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+| Frontend | `npm run dev` (in `web/`) | 5173 |

@@ -1,0 +1,44 @@
+SEEDED FAULT TEST
+date:            2026-09-06 20:10 WIB
+branch:          scratch/seeded-fault
+healthy parent:  c3df811
+
+Three faults introduced deliberately, one per class of fix in this change.
+Each is a minimal, plausible regression rather than a syntax error:
+
+  FAULT 1  api/app/services/fit_gap/engine.rb
+           drop `is_override` from the serialised comparison
+           -> restores the defect where a human override is applied but invisible
+
+  FAULT 2  web/src/components/fitgap/ComparisonTable.tsx
+           read `required_level` again instead of `expected_level`
+           -> restores the blank Required column (the original P0)
+
+  FAULT 3  web/src/utils/evidence.ts
+           remove the `break` so the loop strips one layer per quote pair
+           -> a quotation nested in two different pair types loses both
+
+NOTE: on the first attempt FAULT 3 was NOT caught. No example nested two
+different pair types, so the guard was untested. The missing example was
+added in the parent commit before this evidence was recorded.
+
+=================================== RSpec ===================================
+    reports a match when the candidate meets the expected level
+     Failure/Error: expect(c['is_override']).to be(true)
+       expected true
+     Failure/Error: expect(comparison_for('React / Frontend Development Core', run)['is_override']).to be(false)
+       expected false
+20 examples, 2 failures
+rspec ./spec/services/fit_gap/engine_spec.rb:123 # FitGap::Engine evidence provenance in the payload marks a comparison whose level came from a human override
+rspec ./spec/services/fit_gap/engine_spec.rb:136 # FitGap::Engine evidence provenance in the payload leaves is_override false when the level is the model's own
+
+=================================== Vitest ==================================
+     → expected 'we profiled it first' to be '“we profiled it first”' // Object.is equality
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/utils/evidence.test.ts > stripWrappingQuotes > strips only the outermost pair when two different pairs are nested
+AssertionError: expected 'we profiled it first' to be '“we profiled it first”' // Object.is equality
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable > the required level > renders the level the role requires for every row
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable > the required level > renders the required level even when the candidate was never assessed
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable > edge cases > renders a very long skill label without dropping the row
+ Test Files  2 failed (2)
+      Tests  4 failed | 21 passed (25)
