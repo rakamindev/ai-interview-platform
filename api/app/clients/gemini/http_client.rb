@@ -17,8 +17,9 @@ module Gemini
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
 
-    def initialize(model: nil, api_key: nil, timeout: 60)
-      @model = model
+    def initialize(model: nil, fallback_model: nil, api_key: nil, timeout: 60)
+      @model = model || ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001')
+      @fallback_model = fallback_model || ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-flash-latest')
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
       @timeout = timeout
       @connection = build_connection
@@ -27,7 +28,31 @@ module Gemini
     # Generates content using Gemini REST API.
     # Returns parsed JSON response body.
     def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
+      execute_generate_content(@model, prompt, temperature)
+    rescue Faraday::TimeoutError => e
+      handle_fallback_or_raise(prompt, temperature) { raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}") }
+    rescue Faraday::Error => e
+      handle_fallback_or_raise(prompt, temperature) { raise ApiError.new("Gemini API error: #{e.message}") }
+    rescue ApiError => e
+      handle_fallback_or_raise(prompt, temperature) { raise }
+    end
+
+    private
+
+    def handle_fallback_or_raise(prompt, temperature)
+      if @fallback_model.present? && @fallback_model != @model
+        Rails.logger.warn("[Gemini::HttpClient] Primary model #{@model} failed. Falling back to #{@fallback_model}")
+        begin
+          return execute_generate_content(@fallback_model, prompt, temperature)
+        rescue => fallback_error
+          Rails.logger.error("[Gemini::HttpClient] Fallback model #{@fallback_model} failed: #{fallback_error.message}")
+        end
+      end
+      yield
+    end
+
+    def execute_generate_content(model_name, prompt, temperature)
+      response = @connection.post(generate_url(model_name), request_body(prompt, temperature), request_headers)
       parse_response(response)
     rescue Faraday::TimeoutError => e
       raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
@@ -35,10 +60,8 @@ module Gemini
       raise ApiError.new("Gemini API error: #{e.message}")
     end
 
-    private
-
-    def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+    def generate_url(model_name = @model)
+      "#{BASE_URL}/models/#{model_name}:generateContent"
     end
 
     def request_headers

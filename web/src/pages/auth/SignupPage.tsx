@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2 } from "lucide-react";
+import { Loader2, LayoutDashboard } from "lucide-react";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -24,83 +24,106 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const res = await authApi.signup({ email, password, role });
-      const token = res.data.token;
+      const { token } = res.data;
       saveToken(token);
       setAuth({ token });
+
       navigate("/assessments");
     } catch {
-      setError("Signup failed. Please try again.");
+      setError("Signup failed. Please check your inputs and try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create an account</p>
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+      <div className="flex flex-col justify-between p-8 sm:p-12 lg:p-16">
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-6 w-6 text-primary" />
+          <span className="font-semibold text-lg tracking-tight">Rakamin AI Interview</span>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="w-full max-w-sm mx-auto space-y-6 my-auto py-12">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <h1 className="text-2xl font-bold tracking-tight">Create an account</h1>
+            <p className="text-sm text-muted-foreground">
+              Get started by filling out your information below
+            </p>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <Label>Role</Label>
-            <RadioGroup
-              value={role}
-              onValueChange={(v) => setRole(v as "admin" | "user")}
-              className="flex gap-4"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="user" id="role-user" />
-                <Label htmlFor="role-user" className="font-normal cursor-pointer">User</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>I want to join as</Label>
+              <RadioGroup
+                value={role}
+                onValueChange={(v) => setRole(v as "admin" | "user")}
+                className="grid grid-cols-2 gap-3"
+              >
+                <div className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-muted/50">
+                  <RadioGroupItem value="user" id="role-user" />
+                  <Label htmlFor="role-user" className="font-normal cursor-pointer text-sm">
+                    Candidate
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-muted/50">
+                  <RadioGroupItem value="admin" id="role-admin" />
+                  <Label htmlFor="role-admin" className="font-normal cursor-pointer text-sm">
+                    Assessor
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {error && (
+              <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
               </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="admin" id="role-admin" />
-                <Label htmlFor="role-admin" className="font-normal cursor-pointer">Admin</Label>
-              </div>
-            </RadioGroup>
-          </div>
+            )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full h-10" disabled={loading}>
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Create account
+            </Button>
+          </form>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign up
-          </Button>
-        </form>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary font-medium hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
 
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
       </div>
+
+      <div className="hidden lg:block bg-primary" />
     </div>
   );
 }
