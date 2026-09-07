@@ -10,7 +10,27 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @session && !@session.ended?
+          return render json: {
+            status: "session_not_ended",
+            session_status: @session.status,
+            message: "Session has not ended yet."
+          }, status: :ok
+        end
+
+        if @portfolio.nil?
+          if @session&.ended?
+            portfolio = @session.portfolio || @session.create_portfolio!(
+              candidate_id: @session.candidate_id,
+              generation_status: 'pending'
+            )
+            PortfolioGeneratorWorker.perform_async(@session.id)
+            return render json: { status: "generating" }, status: :accepted
+          end
+          return render json: { status: "not_found" }, status: :not_found
+        end
+
+        if @portfolio.generating? || @portfolio.pending?
           return render json: { status: "generating" }, status: :accepted
         end
 
@@ -26,15 +46,10 @@ module Api
 
       # POST /api/v1/sessions/:id/portfolio/regenerate
       def regenerate
-        portfolio = @session.portfolio
-
-        if portfolio.nil?
-          return json_error("No portfolio found for this session", :not_found)
-        end
-
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
-        end
+        portfolio = @session.portfolio || @session.create_portfolio!(
+          candidate_id: @session.candidate_id,
+          generation_status: 'pending'
+        )
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
         PortfolioGeneratorWorker.perform_async(@session.id)

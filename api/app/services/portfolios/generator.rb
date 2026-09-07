@@ -20,9 +20,19 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      turns = @session.transcript_turns.ordered
+      if turns.empty?
+        portfolio.update!(
+          generation_status: 'failed',
+          generation_error:  'Insufficient interview turns to conduct competency evaluation'
+        )
+        Rails.logger.warn("[N10] Portfolio generation skipped for session #{@session.id}: 0 transcript turns")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
-      prompt   = build_prompt
+      prompt   = build_prompt(turns)
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
@@ -38,11 +48,11 @@ module Portfolios
 
     private
 
-    def build_prompt
+    def build_prompt(turns = nil)
       assessment       = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
-      turns             = @session.transcript_turns.ordered
+      turns           ||= @session.transcript_turns.ordered
 
       skills_text = configured_skills.map { |s| skill_definition_block(s) }.join("\n\n")
 
