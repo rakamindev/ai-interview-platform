@@ -226,7 +226,7 @@ class AudioWebSocketMiddleware
     lambda { |text|
       next unless text.present?
 
-      text = sanitize_output_transcription(text)
+      text = sanitize_output_transcription(state, text)
       next unless text.present?
 
       turn_number = state.increment_turn!
@@ -269,17 +269,11 @@ class AudioWebSocketMiddleware
   end
 
   # Strips coverage/time metadata that leaks into output transcription via realtimeInput.text echoes.
-  def sanitize_output_transcription(text)
-    text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
-    text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
-    text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
-    # Skip up to the last }] (or }) immediately followed by an uppercase letter — covers partial JSON echoes.
-    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=\p{Lu})/m, '').strip
-    text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/m, '').strip
-    text = text.gsub(/pacing=\S+\s*priority_next=\S*/m, '').strip
-    text = text.gsub(/\[Start the interview[^\]]*\]/m, '').strip
-    text = text.gsub(/\[SESSION RESUME\][^\n]*/m, '').strip
-    text.gsub(/\[SISTEM\][^\n]*/m, '').strip
+  # The per-connection Stream also re-joins a payload that Gemini split across chunks —
+  # the fragment starting with a bare "," used to slip straight into the transcript.
+  def sanitize_output_transcription(state, text)
+    state.transcript_sanitizer ||= TranscriptSanitizer::Stream.new(logger: Rails.logger)
+    state.transcript_sanitizer.push(text)
   end
 
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.
@@ -783,7 +777,8 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response,
+                  :transcript_sanitizer
 
     def initialize
       @turn_counter = 0

@@ -1,0 +1,89 @@
+
+ RUN  v3.2.7 /tmp/faultcheck2/web
+
+ ❯ src/lib/__tests__/interviewOutcome.test.ts (8 tests | 2 failed) 9ms
+   ✓ outcomeFromEndReason > treats all_covered as a completed interview 1ms
+   ✓ outcomeFromEndReason > treats manual_candidate as a completed interview 0ms
+   ✓ outcomeFromEndReason > treats manual_assessor as a completed interview 0ms
+   ✓ outcomeFromEndReason > treats time_ceiling as its own timed-out outcome, not a plain success 0ms
+   ✓ outcomeFromEndReason > reports the backend's error reason as an error 0ms
+   × outcomeFromEndReason > never reads a missing reason as success 5ms
+     → expected 'completed' to be 'error' // Object.is equality
+   × outcomeFromEndReason > never reads an unrecognised future reason as success 1ms
+     → expected 'completed' to be 'error' // Object.is equality
+   ✓ outcomeFromEndReason > is tolerant of casing and stray whitespace from the wire 0ms
+ ❯ src/components/interview/__tests__/InterviewCompleteScreen.test.tsx (5 tests | 1 failed) 57ms
+   ✓ InterviewCompleteScreen > congratulates a candidate whose session actually completed 33ms
+   ✓ InterviewCompleteScreen > tells a candidate the truth when the session ended in error 7ms
+   ✓ InterviewCompleteScreen > surfaces the backend's own message when one is provided 4ms
+   ✓ InterviewCompleteScreen > shows a distinct screen when the time limit was reached 4ms
+   × InterviewCompleteScreen > defaults to the error screen when no reason reached the frontend 9ms
+     → [2mexpect([22m[31melement[39m[2m).toHaveAttribute([22m[32m[32m"data-outcome"[32m[39m[2m, [22m[32m[32m"error"[32m[39m[2m) // element.getAttribute("data-outcome") === "error"[22m
+
+Expected the element to have attribute:
+[32m  data-outcome="error"[39m
+Received:
+[31m  data-outcome="completed"[39m
+ ✓ src/components/interview/__tests__/ExitConfirmDialog.test.tsx (5 tests) 319ms
+ ✓ src/components/portfolio/__tests__/NotAssessedPanel.test.tsx (5 tests) 48ms
+ ✓ src/components/interview/__tests__/StatusBanner.test.tsx (3 tests) 171ms
+ ✓ src/components/interview/__tests__/InterviewTimer.test.tsx (5 tests) 47ms
+ ✓ src/hooks/__tests__/useExitGuard.test.ts (5 tests) 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/__tests__/interviewOutcome.test.ts > outcomeFromEndReason > never reads a missing reason as success
+AssertionError: expected 'completed' to be 'error' // Object.is equality
+
+Expected: [32m"error"[39m
+Received: [31m"completed"[39m
+
+ ❯ src/lib/__tests__/interviewOutcome.test.ts:24:45
+     22|   // ignored the reason entirely and always rendered success.
+     23|   it("never reads a missing reason as success", () => {
+     24|     expect(outcomeFromEndReason(undefined)).toBe("error");
+       |                                             ^
+     25|     expect(outcomeFromEndReason(null)).toBe("error");
+     26|     expect(outcomeFromEndReason("")).toBe("error");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/lib/__tests__/interviewOutcome.test.ts > outcomeFromEndReason > never reads an unrecognised future reason as success
+AssertionError: expected 'completed' to be 'error' // Object.is equality
+
+Expected: [32m"error"[39m
+Received: [31m"completed"[39m
+
+ ❯ src/lib/__tests__/interviewOutcome.test.ts:30:60
+     28| 
+     29|   it("never reads an unrecognised future reason as success", () => {
+     30|     expect(outcomeFromEndReason("gemini_quota_exhausted")).toBe("error…
+       |                                                            ^
+     31|     expect(outcomeFromEndReason("invalid_link")).toBe("error");
+     32|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/components/interview/__tests__/InterviewCompleteScreen.test.tsx > InterviewCompleteScreen > defaults to the error screen when no reason reached the frontend
+Error: [2mexpect([22m[31melement[39m[2m).toHaveAttribute([22m[32m[32m"data-outcome"[32m[39m[2m, [22m[32m[32m"error"[32m[39m[2m) // element.getAttribute("data-outcome") === "error"[22m
+
+Expected the element to have attribute:
+[32m  data-outcome="error"[39m
+Received:
+[31m  data-outcome="completed"[39m
+ ❯ src/components/interview/__tests__/InterviewCompleteScreen.test.tsx:45:61
+     43|     render(<InterviewCompleteScreen />);
+     44| 
+     45|     expect(screen.getByTestId("interview-complete-screen")).toHaveAttr…
+       |                                                             ^
+     46|   });
+     47| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed | 5 passed (7)
+      Tests  3 failed | 33 passed (36)
+   Start at  05:33:58
+   Duration  2.78s (transform 187ms, setup 651ms, collect 507ms, tests 667ms, environment 4.00s, prepare 676ms)
+

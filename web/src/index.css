@@ -30,6 +30,27 @@
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 98%;
 
+        /* Semantic status tokens. The candidate flow used to hardcode
+           green-600 / amber-500 / red-50 in half a dozen components, so the same
+           meaning looked slightly different on every screen and none of it
+           survived dark mode. One definition per meaning, here. */
+        --success: 152 61% 34%;
+        --success-foreground: 0 0% 100%;
+        --success-subtle: 149 60% 96%;
+        --success-border: 150 45% 84%;
+
+        --warning: 38 92% 40%;
+        --warning-foreground: 0 0% 100%;
+        --warning-subtle: 48 96% 95%;
+        --warning-border: 45 80% 80%;
+
+        --danger-subtle: 0 86% 97%;
+        --danger-border: 0 75% 88%;
+
+        --info: 217 91% 45%;
+        --info-subtle: 214 95% 96%;
+        --info-border: 213 80% 86%;
+
         --border: 214 32% 91%;
         --input: 214 32% 91%;
         --ring: 184 99% 31%;
@@ -62,6 +83,23 @@
         --destructive: 0 63% 31%;
         --destructive-foreground: 0 0% 98%;
 
+        --success: 150 55% 45%;
+        --success-foreground: 152 60% 8%;
+        --success-subtle: 152 35% 14%;
+        --success-border: 152 30% 24%;
+
+        --warning: 43 90% 58%;
+        --warning-foreground: 38 70% 10%;
+        --warning-subtle: 38 40% 15%;
+        --warning-border: 38 35% 26%;
+
+        --danger-subtle: 0 40% 16%;
+        --danger-border: 0 35% 28%;
+
+        --info: 213 90% 65%;
+        --info-subtle: 217 40% 17%;
+        --info-border: 217 35% 28%;
+
         --border: 217 33% 17%;
         --input: 217 33% 17%;
         --ring: 184 99% 31%;
@@ -75,5 +113,21 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+@layer utilities {
+    /* Keeps the interview action bar clear of the iOS home indicator. */
+    .pb-safe {
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Anyone who has set "reduce motion" should not be given a pulsing,
+       animating interview screen. */
+    @media (prefers-reduced-motion: reduce) {
+        .motion-safe-only {
+            animation: none !important;
+            transition: none !important;
+        }
     }
 }

@@ -74,6 +74,15 @@ export interface TranscriptTurn {
   created_at: string;
 }
 
+export interface NotAssessedSkill {
+  skill_id?: string | null;
+  skill_label: string;
+  expected_level?: number | null;
+  coverage_state: string;
+  /** not_discussed = the interview never reached it; no_rating = discussed, but the model gave nothing usable. */
+  reason: "not_discussed" | "no_rating";
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;
@@ -81,7 +90,10 @@ export interface Portfolio {
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
+  generation_attempts?: number;
   skills: PortfolioSkill[];
+  /** Configured skills that carry no score, with the reason why. */
+  not_assessed?: NotAssessedSkill[];
   overrides: AssessorOverride[];
 }
 
@@ -164,6 +176,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  /** Present once the session has ended — lets a returning candidate be told the truth. */
+  end_reason?: string | null;
 }
 
 export interface PaginationMeta {

@@ -1,0 +1,44 @@
+### Portfolios::SkillSelection rules, run against the seeded faults
+Run options: --seed 60322
+
+# Running:
+
+FF....F...F.
+
+Finished in 0.001252s, 9583.7077 runs/s, 22361.9846 assertions/s.
+
+  1) Failure:
+SelectionTest#test_non_numeric_level [/tmp/t_selection.rb:45]:
+unknown should be rejected.
+Expected [#<Portfolios::SkillPayload:0x0000c2d1c29017b0 @discovered=false, @skill_id="sk-eng-001", @skill_label="React / Frontend Development", @level=1, @confidence="high", @evidence=["q"], @competency_summary="Solid.", @rejection_reason=nil>] to be empty.
+
+  2) Failure:
+SelectionTest#test_drops_not_discussed [/tmp/t_selection.rb:32]:
+Expected: ["sk-eng-001"]
+  Actual: ["sk-eng-001", "sk-eng-002"]
+
+  3) Failure:
+SelectionTest#test_no_coverage_row_is_conservative [/tmp/t_selection.rb:93]:
+Expected [#<Portfolios::SkillPayload:0x0000c2d1c28c6908 @discovered=false, @skill_id="sk-eng-999", @skill_label="Kubernetes", @level=3, @confidence="high", @evidence=["q"], @competency_summary="Solid.", @rejection_reason=nil>] to be empty.
+
+  4) Failure:
+SelectionTest#test_missing_level_not_coerced [/tmp/t_selection.rb:38]:
+Expected [#<Portfolios::SkillPayload:0x0000c2d1c2857d78 @discovered=false, @skill_id="sk-eng-001", @skill_label="React / Frontend Development", @level=1, @confidence="high", @evidence=["q"], @competency_summary="Solid.", @rejection_reason=nil>] to be empty.
+
+12 runs, 28 assertions, 4 failures, 0 errors, 0 skips
+
+### Portfolios::NotAssessedSkills rules, run against the seeded faults
+Run options: --seed 26196
+
+# Running:
+
+...F.
+
+Finished in 0.000523s, 9563.2648 runs/s, 17213.8767 assertions/s.
+
+  1) Failure:
+NA#test_not_discussed [/tmp/t_notassessed.rb:20]:
+Expected: :not_discussed
+  Actual: :no_rating
+
+5 runs, 9 assertions, 1 failures, 0 errors, 0 skips

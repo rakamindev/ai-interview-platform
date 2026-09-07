@@ -5,11 +5,12 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import NotAssessedPanel from "@/components/portfolio/NotAssessedPanel";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -23,15 +24,19 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  // Server-computed: the portfolio claims to be generating but no worker is alive.
+  const [stalled, setStalled] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
+      setStalled(Boolean(data.stalled));
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
+      setStalled(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -51,8 +56,24 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  // Poll while generating — but stop once the server tells us nothing is running,
+  // otherwise the page spins forever against a dead job.
+  usePolling(fetchPortfolio, 5000, generating && !stalled);
+
+  const [retryError, setRetryError] = useState<string | null>(null);
+
+  const retryGeneration = useCallback(async () => {
+    setRetryError(null);
+    try {
+      await sessionsApi.regeneratePortfolio(Number(sessionId));
+      setStalled(false);
+      setGenerating(true);
+    } catch {
+      // The row can change state between a poll and the click, so this is a real
+      // case, not a theoretical one. Say so instead of looking like a no-op.
+      setRetryError("Couldn't start generation again. Refresh the page and try once more.");
+    }
+  }, [sessionId]);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -154,8 +175,8 @@ export default function PortfolioPage() {
       </div>
 
       {/* Generating state */}
-      {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
+      {generating && !stalled && (
+        <div className="border rounded-lg p-8 sm:p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
@@ -166,40 +187,81 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {/* Stalled state — status says "generating" but no worker is alive */}
+      {generating && stalled && (
+        <div className="rounded-lg border border-warning-border bg-warning-subtle p-6 space-y-3 text-center">
+          <AlertTriangle className="mx-auto h-6 w-6 text-warning" aria-hidden="true" />
+          <div>
+            <p className="font-medium">Generation stopped responding</p>
+            <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+              This portfolio has been stuck on "generating" for longer than expected, which
+              means the job did not finish. Nothing was saved — you can safely run it again.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={retryGeneration}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Run generation again
+          </Button>
+          {retryError && <p className="text-xs text-destructive">{retryError}</p>}
+        </div>
+      )}
+
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
-          >
+        <div className="rounded-lg border border-danger-border bg-danger-subtle p-6 space-y-3 text-center">
+          <AlertTriangle className="mx-auto h-6 w-6 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-destructive">Portfolio generation failed</p>
+            {portfolio.generation_error && (
+              /* break-words so a long error string wraps instead of stretching the card */
+              <p className="text-xs text-destructive/80 mt-1 max-w-md mx-auto break-words">
+                {portfolio.generation_error}
+              </p>
+            )}
+            {typeof portfolio.generation_attempts === "number" && portfolio.generation_attempts > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Attempt {portfolio.generation_attempts}
+              </p>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={retryGeneration}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
           </Button>
+          {retryError && <p className="text-xs text-destructive">{retryError}</p>}
         </div>
       )}
 
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          {/* Nothing was scored at all — a real outcome now that undiscussed
+              skills are no longer given an invented level. */}
+          {portfolio.skills.length === 0 && (
+            <div className="rounded-lg border border-dashed p-8 text-center" data-testid="portfolio-empty">
+              <p className="font-medium">No skills were scored in this interview</p>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+                The session ended before any skill was covered deeply enough to rate. There is
+                nothing to evaluate here yet — the sections below show what was configured, and
+                the transcript is still available.
+              </p>
+            </div>
+          )}
+
           {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
-              ))}
-          </div>
+          {portfolio.skills.some((s) => !s.is_discovered) && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold">Configured Skills</h2>
+              {portfolio.skills
+                .filter((s) => !s.is_discovered)
+                .map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))}
+            </div>
+          )}
 
           {/* Discovered skills */}
           {portfolio.skills.some((s) => s.is_discovered) && (
@@ -226,6 +288,13 @@ export default function PortfolioPage() {
                     />
                   ))}
               </div>
+            </>
+          )}
+
+          {portfolio.not_assessed && portfolio.not_assessed.length > 0 && (
+            <>
+              <Separator />
+              <NotAssessedPanel skills={portfolio.not_assessed} />
             </>
           )}
 

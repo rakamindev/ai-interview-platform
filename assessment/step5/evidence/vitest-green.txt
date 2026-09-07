@@ -1,0 +1,16 @@
+
+ RUN  v3.2.7 /tmp/aip/ai-interview-platform/web
+
+ ✓ src/components/interview/__tests__/InterviewTimer.test.tsx (5 tests) 65ms
+ ✓ src/components/interview/__tests__/StatusBanner.test.tsx (3 tests) 169ms
+ ✓ src/components/interview/__tests__/ExitConfirmDialog.test.tsx (5 tests) 331ms
+ ✓ src/components/portfolio/__tests__/NotAssessedPanel.test.tsx (5 tests) 56ms
+ ✓ src/components/interview/__tests__/InterviewCompleteScreen.test.tsx (5 tests) 71ms
+ ✓ src/hooks/__tests__/useExitGuard.test.ts (5 tests) 27ms
+ ✓ src/lib/__tests__/interviewOutcome.test.ts (8 tests) 3ms
+
+ Test Files  7 passed (7)
+      Tests  36 passed (36)
+   Start at  05:33:54
+   Duration  2.93s (transform 218ms, setup 727ms, collect 600ms, tests 721ms, environment 3.87s, prepare 800ms)
+

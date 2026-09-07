@@ -34,6 +34,27 @@ export default {
                     DEFAULT: "hsl(var(--card))",
                     foreground: "hsl(var(--card-foreground))",
                 },
+                success: {
+                    DEFAULT: "hsl(var(--success))",
+                    foreground: "hsl(var(--success-foreground))",
+                    subtle: "hsl(var(--success-subtle))",
+                    border: "hsl(var(--success-border))",
+                },
+                warning: {
+                    DEFAULT: "hsl(var(--warning))",
+                    foreground: "hsl(var(--warning-foreground))",
+                    subtle: "hsl(var(--warning-subtle))",
+                    border: "hsl(var(--warning-border))",
+                },
+                danger: {
+                    subtle: "hsl(var(--danger-subtle))",
+                    border: "hsl(var(--danger-border))",
+                },
+                info: {
+                    DEFAULT: "hsl(var(--info))",
+                    subtle: "hsl(var(--info-subtle))",
+                    border: "hsl(var(--info-border))",
+                },
                 popover: {
                     DEFAULT: "hsl(var(--popover))",
                     foreground: "hsl(var(--popover-foreground))",
@@ -57,11 +78,16 @@ export default {
                     "0%, 100%": { height: "4px" },
                     "50%": { height: "32px" },
                 },
+                "turn-in": {
+                    from: { opacity: "0", transform: "translateY(6px)" },
+                    to: { opacity: "1", transform: "translateY(0)" },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
                 "voice-bar": "voice-bar 0.8s ease-in-out infinite",
+                "turn-in": "turn-in 0.25s ease-out",
             },
         },
     },

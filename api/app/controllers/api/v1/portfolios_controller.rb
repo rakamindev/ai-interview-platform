@@ -11,7 +11,16 @@ module Api
       # GET /api/v1/sessions/:id/portfolio
       def show
         if @portfolio.nil? || @portfolio.generating?
-          return render json: { status: "generating" }, status: :accepted
+          # `stalled` lets the assessor screen stop polling a job that nothing is
+          # running. An ended session with no portfolio row at all is stalled too:
+          # EndHandler should have created one, so waiting will never resolve.
+          stalled = @portfolio ? @portfolio.generation_stale? : @session.ended?
+
+          return render json: {
+            status:   "generating",
+            stalled:  stalled,
+            attempts: @portfolio&.generation_attempts || 0
+          }, status: :accepted
         end
 
         if @portfolio.failed?
@@ -26,14 +35,22 @@ module Api
 
       # POST /api/v1/sessions/:id/portfolio/regenerate
       def regenerate
-        portfolio = @session.portfolio
+        # An ended session whose portfolio row was never created is recoverable too —
+        # create it here so the assessor's retry has something to work with.
+        portfolio = @session.portfolio || (@session.ended? && create_pending_portfolio)
 
-        if portfolio.nil?
+        if portfolio.blank?
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        # A portfolio stuck on `generating` (crashed worker) is just as regenerable as
+        # a failed one — that is the case the Step 3 evidence screenshot was showing.
+        unless portfolio.failed? || portfolio.generation_stale? || portfolio.generation_status == "pending"
+          return json_error(
+            "Portfolio can only be regenerated when generation has failed or stalled " \
+            "(status: #{portfolio.generation_status})",
+            :unprocessable_entity
+          )
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
@@ -159,6 +176,15 @@ module Api
         json_error("Portfolio not found", :not_found)
       end
 
+      def create_pending_portfolio
+        @session.create_portfolio!(
+          candidate_id:      @session.candidate_id,
+          generation_status: "pending"
+        )
+      rescue ActiveRecord::RecordNotUnique
+        @session.reload.portfolio
+      end
+
       def portfolio_json(portfolio)
         {
           id:                portfolio.id,
@@ -167,9 +193,31 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
+          generation_attempts: portfolio.generation_attempts,
+          not_assessed:      not_assessed_json(portfolio),
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
+      end
+
+      # Configured skills that carry no score, with the reason. Since the generator
+      # stopped fabricating a level for skills the interview never covered, they
+      # would otherwise just disappear from the assessor's screen.
+      def not_assessed_json(portfolio)
+        session = portfolio.session
+        Portfolios::NotAssessedSkills.call(
+          assessment_skills: session.assessment.assessment_skills.order(:display_order),
+          portfolio_skills:  portfolio.portfolio_skills,
+          coverage_maps:     session.coverage_maps
+        ).map do |entry|
+          {
+            skill_id:       entry.skill_id,
+            skill_label:    entry.skill_label,
+            expected_level: entry.expected_level,
+            coverage_state: entry.coverage_state,
+            reason:         entry.reason
+          }
+        end
       end
 
       def portfolio_skill_json(skill)

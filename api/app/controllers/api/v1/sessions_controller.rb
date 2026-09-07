@@ -149,7 +149,10 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          # The candidate is told the truth about how their own session ended.
+          # end_reason is an internal enum, not personal data — no PII is exposed here.
+          end_reason:      session.end_reason
         )
       end
 

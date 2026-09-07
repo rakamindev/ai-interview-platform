@@ -5,6 +5,12 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
+    class MalformedResponseError < StandardError; end
+
+    # Keep persisted error text short so a model error can never carry transcript
+    # content into the database or the logs.
+    MAX_ERROR_CHARS = 200
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
@@ -15,24 +21,31 @@ module Portfolios
 
     # Returns the Portfolio record with skills populated.
     def call
-      portfolio = @session.portfolio || @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
+      portfolio = find_or_create_portfolio
+
+      unless claim_for_generation(portfolio)
+        Rails.logger.info("[N10] Duplicate job ignored — portfolio #{portfolio.id} is already being generated")
+        return portfolio
+      end
+
+      response  = @gemini_client.generate_content(build_prompt, temperature: 0.2)
+      selection = save_skills(portfolio, response)
+
+      portfolio.update!(
+        generation_status: 'complete',
+        generated_at:      Time.current,
+        generation_error:  nil
       )
 
-      portfolio.update!(generation_status: 'generating')
+      Rails.logger.info(
+        "[N10] Portfolio #{portfolio.id} generated for session #{@session.id} " \
+        "(saved=#{selection.skills.size} skipped=#{selection.skipped.size})"
+      )
+      log_skipped(selection)
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
-
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
-
-      Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
-    rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+    rescue StandardError => e
+      mark_failed(portfolio, e)
       raise
     end
 
@@ -147,35 +160,90 @@ module Portfolios
       }
     end
 
+    def find_or_create_portfolio
+      @session.portfolio || @session.create_portfolio!(
+        candidate_id:      @session.candidate_id,
+        generation_status: 'pending'
+      )
+    rescue ActiveRecord::RecordNotUnique
+      # Two workers can reach this at the same time for a session that has no
+      # portfolio yet. portfolios.session_id is unique, so one of them loses the
+      # insert — it should pick up the winner's row, not fail the job.
+      @session.reload.portfolio
+    end
+
+    # Duplicate-job guard. Sidekiq retries, the EndHandler and a manual regenerate can
+    # all enqueue N10 for the same session; without this, two workers would race on
+    # destroy_all + create!. The row lock makes the claim atomic, and a `generating`
+    # row that is older than STALE_GENERATION_AFTER is reclaimable so a worker killed
+    # mid-run can never leave a portfolio stuck on "generating" forever.
+    def claim_for_generation(portfolio)
+      claimed = false
+
+      portfolio.with_lock do
+        if portfolio.generating? && !portfolio.generation_stale?
+          claimed = false
+        else
+          portfolio.update!(
+            generation_status:     'generating',
+            generation_started_at: Time.current,
+            generation_attempts:   portfolio.generation_attempts.to_i + 1,
+            generation_error:      nil
+          )
+          claimed = true
+        end
+      end
+
+      claimed
+    end
+
+    # Replaces the portfolio's skills in a single transaction. Previously the
+    # destroy_all and the create! loop ran unprotected, so a record failing halfway
+    # through left the portfolio marked `failed` on top of a half-written skill set.
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      selection = SkillSelection.call(parse_response(response), coverage_maps: @session.coverage_maps.to_a)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      portfolio.transaction do
+        portfolio.portfolio_skills.destroy_all
+        selection.skills.each { |payload| portfolio.portfolio_skills.create!(payload.to_attributes) }
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      selection
+    end
+
+    def parse_response(response)
+      return response if response.is_a?(Hash)
+
+      JSON.parse(response.to_s)
+    rescue JSON::ParserError
+      # The raw body can quote the candidate — never put it in the error we persist.
+      raise MalformedResponseError, 'Gemini returned a response that is not valid JSON'
+    end
+
+    def log_skipped(selection)
+      return if selection.skipped.empty?
+
+      # Skill labels are role metadata, not personal data — safe to log. Evidence
+      # quotes and the transcript are not logged anywhere in this class.
+      summary = selection.skipped.map { |entry| "#{entry[:skill_label] || '(unlabelled)'}=#{entry[:reason]}" }
+      Rails.logger.info("[N10] Skipped #{selection.skipped.size} skill(s) for session #{@session.id}: #{summary.join(', ')}")
+    end
+
+    # UU PDP: a raw exception message can embed transcript text or candidate quotes.
+    # Persist and log the exception class plus a truncated message only.
+    def mark_failed(portfolio, error)
+      return if portfolio.nil?
+
+      portfolio.update!(
+        generation_status: 'failed',
+        generation_error:  "#{error.class}: #{error.message.to_s[0, MAX_ERROR_CHARS]}"
+      )
+      Rails.logger.error(
+        "[N10] Portfolio generation failed session=#{@session.id} " \
+        "attempt=#{portfolio.generation_attempts} error=#{error.class}"
+      )
+    rescue StandardError => e
+      Rails.logger.error("[N10] Could not record failure state for session #{@session.id}: #{e.class}")
     end
   end
 end

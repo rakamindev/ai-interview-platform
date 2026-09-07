@@ -10,6 +10,12 @@ interface UseAudioWebSocketOptions {
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  /**
+   * Fired once, with the real reason the session ended. The backend already knows
+   * whether this was a clean finish or a failure; before this callback existed the
+   * hook threw that away and every session rendered as a success.
+   */
+  onSessionEnd?: (reason?: string, message?: string) => void;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -22,6 +28,7 @@ export function useAudioWebSocket({
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onSessionEnd,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -100,10 +107,16 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
+              // Report the reason BEFORE the state change so the completion screen
+              // never renders a frame with an unknown outcome.
+              onSessionEnd?.(msg.reason, msg.message);
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                onSessionEnd?.("error", msg.message);
+                onStateChange("complete");
+              }
               break;
           }
         } catch {
@@ -127,10 +140,22 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
+        // Out of reconnect attempts and the backend never said the session ended
+        // cleanly — that is a failure, not a completion.
+        onSessionEnd?.("error");
         onStateChange("complete");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [
+    sessionId,
+    token,
+    onAudioChunk,
+    onTranscript,
+    onStateChange,
+    onSpeakerChange,
+    onReconnected,
+    onSessionEnd,
+  ]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -147,6 +172,10 @@ export function useAudioWebSocket({
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
+    // Mark the close as intentional. Without this, onclose falls into the
+    // "out of reconnect attempts" branch and reports a candidate-initiated end
+    // as an error.
+    sessionEndedRef.current = true;
     wsRef.current?.close();
   }, []);
 
