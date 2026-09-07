@@ -1,10 +1,18 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
+/**
+ * "L3" or 3 becomes 3. Absence stays absent.
+ *
+ * This used to fall back to 1 for anything it could not read, which is the same
+ * fabrication the backend was making with `nil.to_i.clamp(1, 5)`: a skill with
+ * no rating rendered as "L1, Foundational" against a real person. A missing
+ * level is now null, and callers have to decide what to show for it.
+ */
+export function parseLevel(level: string | number | null | undefined): number | null {
+  if (level === null || level === undefined || level === "") return null;
+  if (typeof level === "number") return Number.isFinite(level) ? level : null;
   const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+  return Number.isNaN(n) ? null : n;
 }
 
 export const LEVEL_LABELS: Record<number, string> = {

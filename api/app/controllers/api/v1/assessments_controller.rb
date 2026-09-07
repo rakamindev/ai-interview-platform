@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(sessions: :portfolio).order(created_at: :desc)
         )
 
         json_response(
@@ -76,7 +76,8 @@ module Api
       end
 
       def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+        sessions = assessment.sessions.to_a
+        latest   = sessions.max_by(&:created_at)
 
         {
           id:             assessment.id,
@@ -87,10 +88,19 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          session_count:  sessions.size,
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,
-            end_reason: latest.end_reason
+            end_reason: latest.end_reason,
+            # The list could previously say only "Live now" or "Last: completed".
+            # A session that died mid-interview looked identical to one running
+            # right now, and a portfolio that failed to generate was invisible
+            # until you opened the session — so the one thing an assessor needs
+            # from a list, which of these needs me, was the one thing missing.
+            started_at:        latest.started_at,
+            ended_at:          latest.ended_at,
+            portfolio_status:  latest.portfolio&.generation_status
           }
         }
       end

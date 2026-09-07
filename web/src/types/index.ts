@@ -8,15 +8,23 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
+  session_count?: number;
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    id?: number;
+    status: "pending" | "active" | "ended" | "failed";
     end_reason?: string | null;
+    started_at?: string | null;
+    ended_at?: string | null;
+    portfolio_status?: "pending" | "generating" | "complete" | "failed" | null;
   };
 }
 
+// skill_id holds a B7 taxonomy code such as "SK-ENG-001", not a number. It was
+// declared numeric here, in CoverageSkill and in VacancySkill alike, which is
+// why the picker quietly dropped it rather than failing to compile.
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | null;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -49,7 +57,7 @@ export interface Session {
 
 export interface CoverageSkill {
   id: number;
-  skill_id: number;
+  skill_id?: string | null;
   skill_label: string;
   is_discovered: boolean;
   state: "not_yet" | "initiated" | "partial" | "covered";
@@ -85,13 +93,19 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+// Mirrors what PortfoliosController actually serialises. `ai_level` was
+// declared as a string annotated "L1" | "L2" | ... — the column is an integer,
+// the API sends an integer, and parseLevel() exists in this codebase to paper
+// over the mismatch at every call site rather than fixing it here.
+// `skill_id` is a taxonomy code such as "SK-ENG-001", not a number.
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  // null means the interview never reached this skill. Not a zero, not an L1.
+  ai_level: number | null;
+  ai_confidence: "high" | "medium" | "low" | null;
   evidence: string[];
   competency_summary: string;
 }
@@ -119,7 +133,7 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | null;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -127,12 +141,19 @@ export interface VacancySkill {
 
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+// Mirrors the payload FitGap::Engine actually stores in
+// fit_gap_reports.skill_comparisons. It previously declared `required_level`,
+// which the API has never sent — so the "Required" column rendered
+// LEVEL_LABELS[undefined] and sat permanently blank while TypeScript stayed
+// quiet, because the type described the component rather than the API.
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  expected_level: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: "high" | "medium" | "low" | null;
   is_override?: boolean;
 }
 

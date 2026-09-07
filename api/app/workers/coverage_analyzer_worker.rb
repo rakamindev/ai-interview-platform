@@ -3,7 +3,29 @@
 class CoverageAnalyzerWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :coverage, retry: 0  # non-critical — no retry
+  # Two retries, seconds apart — not zero, and not many.
+  #
+  # "Non-critical" was the wrong reading. A lost analysis is a lost probe: the
+  # coverage map under-counts, which under-states the confidence the portfolio
+  # may later claim, and mis-directs `priority_next` so the interviewer probes
+  # the wrong skill next. Nobody sees it happen. Measured against the live API,
+  # five of eleven calls returned 503 in a single session.
+  #
+  # It stays bounded because the result is only useful while the conversation is
+  # still near those turns. A stale map arriving four exchanges later is worse
+  # than no map, so this backs off quickly and then gives up rather than
+  # queueing work whose answer has expired.
+  sidekiq_options queue: :coverage, retry: 2
+
+  sidekiq_retry_in { |count, _exception| [3, 8][count] || 8 }
+
+  sidekiq_retries_exhausted do |msg, ex|
+    Rails.logger.error(
+      "[N7] Coverage analysis permanently failed for session #{msg['args'].first} " \
+      "turn #{msg['args'].second}: #{ex&.class} #{ex&.message}. " \
+      'Coverage map is now behind the transcript for this turn.'
+    )
+  end
 
   def perform(session_id, turn_number)
     session = Session.find(session_id)
@@ -28,10 +50,17 @@ class CoverageAnalyzerWorker
 
     Rails.logger.info("[N7] Coverage analyzed for session #{session_id}, turn #{turn_number}")
   rescue ActiveRecord::RecordNotFound
+    # The session is gone. Retrying cannot help, so swallow this one.
     Rails.logger.warn("[N7] Session #{session_id} not found — skipping")
-  rescue => e
-    # N7 failure is non-critical — log and let the interview continue
+  rescue StandardError => e
+    # Previously swallowed here, which is why the failure was invisible: the
+    # interview carried on against a coverage map that had quietly stopped
+    # advancing. Re-raise so Sidekiq can retry — the interview still carries on
+    # either way, because this worker runs asynchronously and never blocks a
+    # turn, but now a transient API error gets a second chance instead of
+    # costing a probe outright.
     Rails.logger.error("[N7] Coverage analyzer failed for session #{session_id}: #{e.class} #{e.message}")
+    raise
   end
 
   private

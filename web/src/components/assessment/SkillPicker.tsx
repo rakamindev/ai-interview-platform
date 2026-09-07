@@ -38,11 +38,17 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({
-      skill_id: undefined,
+      // Both of these were dropped on the way in. skill_id is the taxonomy code
+      // every downstream matcher tries first before falling back to comparing
+      // label strings, and scope_exclude is the "WHAT DOES NOT COUNT" line the
+      // system prompt is built to carry: without it the interviewer is never
+      // told the boundary of the skill it is assessing.
+      skill_id: s.skill_id,
       skill_label: s.skill_label,
       is_custom: false,
       expected_level: 3,
       scope_include: s.scope_include,
+      scope_exclude: s.scope_exclude,
       l1_anchor: s.l1_anchor,
       l2_anchor: s.l2_anchor,
       l3_anchor: s.l3_anchor,

@@ -29,6 +29,27 @@ export const sessionsApi = {
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
 
+  // Public, keyed by the invite token. A candidate has no account.
+  getDisclosure: (token: string) =>
+    api.get<{
+      disclosure: {
+        version: string;
+        recorded: string;
+        assessed_by_ai: string;
+        human_review: string;
+        third_party: string;
+        stored: string;
+        rights: string;
+      };
+      consent_granted: boolean;
+      granted_at: string | null;
+    }>(`/sessions/${token}/disclosure`),
+
+  grantConsent: (token: string) =>
+    api.post<{ consent: { id: number; disclosure_version: string; granted_at: string }; already_granted: boolean }>(
+      `/sessions/${token}/consent`
+    ),
+
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
 };

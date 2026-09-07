@@ -351,6 +351,34 @@ B7_SKILLS = [
   }
 ].freeze
 
+# ── Assessor account ─────────────────────────────────────────────────────────
+#
+# Without this the seed leaves zero users while AuthenticationController requires
+# an existing one with role 'admin'. There is no signup endpoint and SignupPage
+# is not routed, so a correctly followed setup ended at a login screen that could
+# not be passed, and the only way in was `rails console` on the server.
+#
+# Development and test only. In any other environment this is skipped, so a
+# production seed can never create a login.
+
+if Rails.env.development? || Rails.env.test?
+  email    = ENV.fetch('SEED_ADMIN_EMAIL', 'assessor@test-corp.local')
+  password = ENV.fetch('SEED_ADMIN_PASSWORD', 'password123')
+
+  admin = User.find_or_initialize_by(email: email)
+  admin.password              = password
+  admin.password_confirmation = password
+  admin.role                  = 'admin'
+
+  if admin.save
+    puts "  Assessor account ready: #{email} / #{password}"
+  else
+    puts "  ERROR creating assessor: #{admin.errors.full_messages.join(', ')}"
+  end
+else
+  puts "  Skipping assessor account (#{Rails.env} is not development or test)"
+end
+
 puts ""
 puts "== Seeding B7 Skill Taxonomy (22 pilot skills) =="
 

@@ -20,10 +20,39 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      # Claim the portfolio before doing any work, and refuse to start if
+      # someone else already holds it.
+      #
+      # save_skills begins with portfolio_skills.destroy_all, and PortfolioSkill
+      # has_one :assessor_override, dependent: :destroy — so a second run racing
+      # the first does not merely waste a Gemini call, it can delete an
+      # assessor's correction and their notes. That correction is the product's
+      # human-in-the-loop mechanism, and under UU PDP Art. 10 it is what makes a
+      # rating contestable rather than purely automated.
+      #
+      # Two concurrent runs were observed doing exactly this: portfolio_skill
+      # ids 1-5 replaced by 6-10 while both calls reported success.
+      claimed = Portfolio.where(id: portfolio.id)
+                         .where.not(generation_status: 'generating')
+                         .update_all(generation_status: 'generating')
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      if claimed.zero?
+        Rails.logger.info("[N10] Portfolio #{portfolio.id} is already being generated — skipping duplicate job")
+        return portfolio.reload
+      end
+
+      portfolio.reload
+
+      prompt = build_prompt
+
+      # temperature 0, not 0.2. This call reads fixed evidence — a finished
+      # transcript and a finished coverage map — and reports what is in it. It
+      # is not a creative task, and sampling made it disagree with itself: two
+      # consecutive runs over identical input returned Communication L3 and then
+      # L2. One level is the entire distance between `Match` and `Gap -1` in
+      # FitGap::Engine, so that variance decides hiring outcomes. Comparability
+      # between candidates is the premise of the whole product.
+      response = @gemini_client.generate_content(prompt, temperature: 0)
 
       save_skills(portfolio, response)
       portfolio.update!(generation_status: 'complete', generated_at: Time.current)
@@ -147,6 +176,18 @@ module Portfolios
       }
     end
 
+    # `nil.to_i` is 0 and `.clamp(1, 5)` lifts it to 1, so a skill the model did
+    # not probe was stored as "L1, Foundational": a rating on a real person
+    # invented by a type coercion, indistinguishable on screen from one the
+    # interview actually earned. An absent level stays absent.
+    def level_from(raw)
+      return nil if raw.nil? || raw.to_s.strip.empty?
+
+      Integer(raw).clamp(1, 5)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
@@ -158,7 +199,7 @@ module Portfolios
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           level_from(skill_data['level']),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
@@ -170,7 +211,7 @@ module Portfolios
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           level_from(skill_data['level']),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']

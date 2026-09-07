@@ -1,0 +1,22 @@
+# Development image — unlike the production Dockerfile, this KEEPS the
+# development and test gem groups so RSpec, factory_bot, and pry are available.
+# Source is bind-mounted; gems live in a named volume.
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  libpq-dev \
+  postgresql-client \
+  tzdata \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+ENV BUNDLE_PATH=/usr/local/bundle \
+    RAILS_ENV=development \
+    RAILS_LOG_TO_STDOUT=1
+
+EXPOSE 3001
+
+CMD ["bash", "-c", "bundle check || bundle install --jobs 4 && bundle exec rails server -b 0.0.0.0 -p 3001"]

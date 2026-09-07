@@ -44,6 +44,20 @@ export default function AssessmentEditPage() {
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
+  // Rails deletes a nested child only when the payload carries its id together
+  // with _destroy. A child that is merely absent is left untouched, so calling
+  // remove() alone dropped the card from the browser and left the skill on the
+  // assessment: Save succeeded, no error appeared, and the interview was still
+  // scoped to a skill the assessor believed they had taken out. Removed ids are
+  // held here and sent back explicitly.
+  const [removedIds, setRemovedIds] = useState<number[]>([]);
+
+  const removeSkill = (index: number) => {
+    const id = form.getValues(`skills.${index}.id`);
+    if (id) setRemovedIds((prev) => [...prev, id]);
+    remove(index);
+  };
+
   useEffect(() => {
     assessmentsApi
       .get(Number(id))
@@ -77,7 +91,12 @@ export default function AssessmentEditPage() {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: [
+          ...data.skills.map((s, i) => ({ ...s, display_order: i })),
+          // display_order is reassigned by position above, so a deletion can no
+          // longer leave two surviving rows sharing an index.
+          ...removedIds.map((id) => ({ id, _destroy: true })),
+        ],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -143,7 +162,7 @@ export default function AssessmentEditPage() {
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => removeSkill(index)} />
                   ))}
                 </div>
               </SortableContext>

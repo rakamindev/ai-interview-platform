@@ -4,28 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ChevronRight, Users } from "lucide-react";
+import SessionHealthBadge, { sessionHealth } from "@/components/assessment/SessionHealth";
 import type { Assessment } from "@/types";
-
-function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
-  if (!session) return null;
-
-  if (session.status === "active")
-    return (
-      <span className="flex items-center gap-1 text-xs text-primary">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        Live now
-      </span>
-    );
-
-  if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
-
-  if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
-
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
-}
 
 export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -76,22 +57,37 @@ export default function AssessmentListPage() {
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
             >
               <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-medium">{a.name}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
+                      <Clock className="h-3 w-3" aria-hidden="true" />
                       {a.time_limit_min} min
                     </span>
+                    {typeof a.session_count === "number" && a.session_count > 0 && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" aria-hidden="true" />
+                          {a.session_count} candidate{a.session_count !== 1 ? "s" : ""}
+                        </span>
+                      </>
+                    )}
                     {a.latest_session && (
                       <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
+                        <span aria-hidden="true">·</span>
+                        <SessionHealthBadge session={a.latest_session} timeLimitMin={a.time_limit_min} />
                       </>
                     )}
                   </div>
+                  {/* Only rows that need something say more than their status. */}
+                  {sessionHealth(a.latest_session, a.time_limit_min)?.detail && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      {sessionHealth(a.latest_session, a.time_limit_min)!.detail}
+                    </p>
+                  )}
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               </CardContent>
             </Card>
           ))}

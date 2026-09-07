@@ -9,6 +9,8 @@ import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
 import AssessmentInvitePage from "@/pages/assessments/AssessmentInvitePage";
 import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
+import ResultPage from "@/pages/result/ResultPage";
+import ResultsListPage from "@/pages/result/ResultsListPage";
 import FitGapReportPage from "@/pages/fitgap/FitGapReportPage";
 import TranscriptPage from "@/pages/transcript/TranscriptPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
@@ -38,6 +40,12 @@ export default function App() {
           path="/assessments/:id/sessions/:sessionId/portfolio"
           element={<PortfolioPage />}
         />
+        {/* The decision screen. A hiring manager is not a daily user and needs
+            one page, not three tabs. */}
+        <Route
+          path="/assessments/:id/sessions/:sessionId/result"
+          element={<ResultPage />}
+        />
         <Route
           path="/assessments/:id/sessions/:sessionId/transcript"
           element={<TranscriptPage />}
@@ -46,6 +54,8 @@ export default function App() {
           path="/assessments/:id/sessions/:sessionId/fitgap/:vacancyId"
           element={<FitGapReportPage />}
         />
+        {/* Every finished candidate, across every role. */}
+        <Route path="/results" element={<ResultsListPage />} />
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />

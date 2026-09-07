@@ -16,10 +16,27 @@ export interface SpeedThresholds {
     maxPingMs: number;
 }
 
+/**
+ * What the interview actually costs, measured from the code that runs it:
+ *
+ *   upload    useAudioCapture records 16 kHz mono 16-bit PCM
+ *             16000 x 2 bytes = 32 KB/s = 0.256 Mbps
+ *   download  Gemini Live returns 24 kHz mono 16-bit PCM
+ *             24000 x 2 bytes = 48 KB/s = 0.384 Mbps
+ *
+ * The previous thresholds asked for 4 Mbps up and 8 Mbps down — roughly 15x and
+ * 20x what the product consumes — and refused a real connection measured at
+ * 49.5 down / 2.2 up / 30 ms. Upload between 1 and 5 Mbps is ordinary on
+ * Indonesian cafe wifi, on tethering, and outside the largest cities, so that
+ * gate filtered out candidates for something unrelated to their ability.
+ *
+ * These leave roughly 3x headroom over the real cost, which covers WebSocket
+ * overhead and jitter without excluding people who can plainly hold the call.
+ */
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+    minDownloadMbps: 1.5,
+    minUploadMbps: 0.75,
+    maxPingMs: 500,
 };
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;

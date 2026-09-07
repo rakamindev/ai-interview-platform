@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import HiringDecisionPanel from "@/components/portfolio/HiringDecisionPanel";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
@@ -228,6 +229,11 @@ export default function PortfolioPage() {
               </div>
             </>
           )}
+
+          <Separator />
+
+          {/* Where the rating becomes something that happened to a person. */}
+          <HiringDecisionPanel portfolioId={portfolio.id} />
 
           <Separator />
 

@@ -6,6 +6,11 @@ class Portfolio < ApplicationRecord
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
+  has_one  :hiring_decision, dependent: :destroy
+  # Without this a candidate cannot be deleted once a fit/gap report exists:
+  # the FK on fit_gap_reports blocks it and the failure surfaces as a raw
+  # PG::ForeignKeyViolation. A record about a person has to be removable.
+  has_many :fit_gap_reports, dependent: :destroy
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 

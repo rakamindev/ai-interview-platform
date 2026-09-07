@@ -1,15 +1,16 @@
+import React from "react";
 import { LEVEL_LABELS, LEVEL_BADGE_CLASSES, LEVEL_DESCRIPTIONS } from "@/utils/constants";
 import { cn } from "@/lib/utils";
 
-interface LevelBadgeProps {
+interface LevelBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   level: number;
   size?: "sm" | "md";
-  className?: string;
 }
 
-export default function LevelBadge({ level, size = "md", className }: LevelBadgeProps) {
+export default function LevelBadge({ level, size = "md", className, ...rest }: LevelBadgeProps) {
   return (
     <div
+      {...rest}
       className={cn(
         "inline-flex flex-col items-center justify-center rounded font-semibold",
         size === "md" ? "px-3 py-2 min-w-14 text-base" : "px-2 py-1 min-w-10 text-sm",

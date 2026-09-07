@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete disclosure grant_consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete disclosure grant_consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -128,6 +128,47 @@ module Api
         json_response(ended: true, message: "Session ended")
       end
 
+      # GET /sessions/:token/disclosure  — no JWT, invite token in URL
+      #
+      # What this interview does to the candidate's data, and whether they have
+      # already agreed to it. A candidate has no account; the invite token is
+      # the only thing they hold, so it is the only thing this can key on.
+      def disclosure
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        json_response(
+          disclosure:      CandidateConsent::DISCLOSURE,
+          consent_granted: session.consented?,
+          granted_at:      session.candidate_consent&.granted_at
+        )
+      end
+
+      # POST /sessions/:token/consent  — no JWT, invite token in URL
+      #
+      # Idempotent on purpose. A candidate who reloads the page, or whose
+      # connection drops mid-request, must not be told they have done something
+      # wrong; they have already agreed, and saying so again is not an error.
+      def grant_consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        existing = session.candidate_consent
+        return json_response(consent: consent_json(existing), already_granted: true) if existing
+
+        consent = session.create_candidate_consent!(
+          disclosure_version: CandidateConsent::CURRENT_VERSION,
+          granted_at:         Time.current,
+          ip_address:         request.remote_ip,
+          user_agent:         request.user_agent.to_s[0, 255]
+        )
+
+        json_response({ consent: consent_json(consent), already_granted: false }, :created)
+      rescue ActiveRecord::RecordNotUnique
+        # Two tabs, one candidate. Treat the loser of the race as a success.
+        json_response(consent: consent_json(session.reload.candidate_consent), already_granted: true)
+      end
+
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
@@ -149,7 +190,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          consent_granted: session.consented?
         )
       end
 
@@ -176,6 +218,14 @@ module Api
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
           created_at:       session.created_at
+        }
+      end
+
+      def consent_json(consent)
+        {
+          id:                 consent.id,
+          disclosure_version: consent.disclosure_version,
+          granted_at:         consent.granted_at
         }
       end
 

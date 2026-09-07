@@ -42,19 +42,29 @@ module Coverage
       "[COVERAGE_MAP]\n#{payload.to_json}\n[/COVERAGE_MAP]"
     end
 
-    # Returns true when every configured skill is covered AND no discovered
-    # skill is still in initiated state. Used by the audio middleware to decide
-    # when it is safe to inject a wrap-up signal and end the session.
+    # Returns true when every configured skill is covered. Used by the audio
+    # middleware to decide when it is safe to inject a wrap-up signal and end
+    # the session.
+    #
+    # Discovered skills deliberately do not participate. PRD 01 defines a
+    # discovery as a brief courtesy probe — two or three exchanges, then back to
+    # the agenda — explicitly not part of what the assessor asked to measure.
+    #
+    # Letting one block the end was a deadlock, not a safeguard: a discovered
+    # skill is created `initiated` with probe_count 1, StateEngine refuses to
+    # let anything leave `initiated` below probe_count 2, and advance_stale_
+    # partials only rescues `partial` rows. So a skill the candidate mentioned
+    # in passing on their final answer could never advance, all_covered? could
+    # never return true again, and the session ran to its time ceiling — holding
+    # the candidate for another twenty-five minutes because they said a word.
+    # The agenda is what the assessor configured, and only the agenda decides
+    # when the interview is done.
     def all_covered?
-      maps       = @session.coverage_maps
-      configured = maps.configured
-      discovered = maps.discovered
+      configured = @session.coverage_maps.configured
 
       return false if configured.empty?
-      return false unless configured.all? { |m| m.state == 'covered' }
-      return false if discovered.any? { |m| m.state == 'initiated' }
 
-      true
+      configured.all? { |m| m.state == 'covered' }
     end
 
     private

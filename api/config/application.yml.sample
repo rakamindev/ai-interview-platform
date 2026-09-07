@@ -20,6 +20,9 @@ GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
 # App URL (for invite links)
 APP_BASE_URL: "http://localhost:3001"
 
+# Where the candidate opens their invite link. This is the React app, not this service.
+WEB_BASE_URL: "http://localhost:5173"
+
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds
 

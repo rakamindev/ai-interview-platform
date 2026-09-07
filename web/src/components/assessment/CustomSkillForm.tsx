@@ -47,6 +47,25 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
         />
       </div>
 
+      {/*
+        The prompt compiler emits "WHAT DOES NOT COUNT: {scope_exclude}" and no
+        screen could ever fill it, so every generated prompt omitted the line
+        entirely. Without a boundary the interviewer counts a story about the
+        backend as evidence of frontend skill. Optional, because an assessor who
+        has nothing to exclude should not be forced to invent something.
+      */}
+      <div className="space-y-1.5">
+        <Label htmlFor={`skills.${index}.scope_exclude`}>
+          What does not count <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <Textarea
+          id={`skills.${index}.scope_exclude`}
+          placeholder="Backend APIs, mobile, non-React frameworks..."
+          rows={2}
+          {...register(`skills.${index}.scope_exclude`)}
+        />
+      </div>
+
       <div className="space-y-2">
         {(["l1_anchor", "l2_anchor", "l3_anchor", "l4_anchor", "l5_anchor"] as const).map((key, i) => (
           <div key={key} className="space-y-1">

@@ -105,14 +105,26 @@ function SessionRow({
             </Button>
           )}
           {isEnded && session.end_reason !== "error" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
-            >
-              Results
-            </Button>
+            <>
+              {/* The decision screen leads, because that is what someone opening
+                  a finished candidate came to do. The full portfolio is one
+                  click further in for whoever needs the evidence itself. */}
+              <Button
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/result`)}
+              >
+                Result
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              >
+                Portfolio
+              </Button>
+            </>
           )}
         </div>
       </div>

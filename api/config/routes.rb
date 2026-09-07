@@ -34,6 +34,8 @@ Rails.application.routes.draw do
 
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
+      get  'sessions/:token/disclosure',     to: 'sessions#disclosure'
+      post 'sessions/:token/consent',        to: 'sessions#grant_consent'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
 
       # Portfolio skills overrides
@@ -47,11 +49,18 @@ Rails.application.routes.draw do
       get  'skill_taxonomies',          to: 'skill_taxonomies#index'
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
+      # Every finished candidate across every assessment, in one place.
+      resources :results, only: [:index]
+
       # Vacancies
       resources :vacancies
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do
+        # The decision a human made, and what they were looking at when they
+        # made it. Singular: one decision per candidate, enforced in the DB.
+        resource :hiring_decision, only: %i[show create], controller: 'hiring_decisions'
+
         member do
           post :fitgap
           post :regenerate_fitgap

@@ -1,0 +1,140 @@
+name: CI
+
+# The repository shipped with no continuous integration at all, so nothing
+# stopped a change that broke the suite — or, before this branch, a change to a
+# codebase that had no suite to break. Both services run here because the
+# defects that hurt most in this product live in the seam between them.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API · RSpec
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: rakamin_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_NAME: rakamin_test
+      DB_USERNAME: postgres
+      REDIS_URL: redis://localhost:6379/1
+      # Required at boot: cors.rb uses ENV.fetch with no default.
+      ALLOWED_ORIGINS: http://localhost:5173
+      APP_BASE_URL: http://localhost:5173
+      SECRET_KEY_BASE: ci-only-not-a-real-secret-ci-only-not-a-real-secret
+      # Never called — every spec injects a client double — but the constructor
+      # reads the key eagerly, so it has to be present.
+      GEMINI_API_KEY: ci-placeholder
+      GEMINI_LIVE_MODEL: ci-placeholder
+      GEMINI_FLASH_MODEL: ci-placeholder
+      GEMINI_PRO_MODEL: ci-placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: api
+          bundler-cache: true
+
+      - name: Prepare the test database
+        working-directory: api
+        run: bundle exec rails db:create db:schema:load
+
+      - name: RSpec
+        working-directory: api
+        run: bundle exec rspec --format progress
+
+  web:
+    name: Web · types, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        working-directory: web
+        run: npm ci
+
+      # Runs first: the fit/gap table sat blank for as long as it did because
+      # the type described the component instead of the API, so type checking
+      # is load-bearing here rather than ceremonial.
+      - name: Typecheck
+        working-directory: web
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        working-directory: web
+        run: npm run test -- --run
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+  secrets:
+    name: No secrets in the diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Committing a key or real candidate data is an outright disqualifier in
+      # this codebase's context, and it is the kind of mistake that is obvious
+      # only after it is public. Cheap to check on every push.
+      - name: Scan for keys and env files
+        run: |
+          set -euo pipefail
+          fail=0
+
+          if git ls-files | grep -E '(^|/)\.env($|\.)|application\.yml$' | grep -v '\.example$' | grep -v '\.sample$'; then
+            echo "::error::An environment file is tracked."
+            fail=1
+          fi
+
+          if git grep -nIE 'AIzaSy[A-Za-z0-9_-]{20,}|AQ\.Ab8[A-Za-z0-9_-]{20,}' -- . ':!*.lock'; then
+            echo "::error::A Google API key looks committed."
+            fail=1
+          fi
+
+          exit $fail

@@ -17,3 +17,13 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Local dev env for docker-compose.dev.yml
+api/.env.docker
+docker-compose.dev.yml
+
+# Local assessment artifacts
+assessment/
+
+# Frontend build output
+web/dist/

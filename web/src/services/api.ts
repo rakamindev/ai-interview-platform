@@ -27,10 +27,21 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const status = error.response?.status;
+    const isLoginAttempt = (error.config?.url ?? "").includes("/auth/login");
+
+    // The redirect exists to bounce an expired session back to the login
+    // screen. Applying it to the login request itself meant a wrong password
+    // triggered a full page navigation to /login — React remounted, the
+    // component's `error` state was destroyed with it, and the form simply
+    // cleared. LoginPage does set "Invalid email or password", and it could
+    // never be seen. Someone whose password is wrong, or who has no account
+    // because db:seed creates none, gets no explanation at all.
+    if ((status === 401 || status === 403) && !isLoginAttempt) {
       clearToken();
       window.location.href = "/login";
     }
+
     return Promise.reject(error);
   }
 );

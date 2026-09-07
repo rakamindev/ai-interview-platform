@@ -9,6 +9,17 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
 
 interface HardwareCheckProps {
@@ -43,20 +54,32 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         microphone: ProctoringState.WAITING,
     });
     const [allPassed, setAllPassed] = useState(false);
+    const [canProceed, setCanProceed] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
 
+    // Two different questions, previously collapsed into one.
+    //
+    // Blocking: without a microphone and a working speaker there is no voice
+    // interview to have, so these genuinely gate the session.
+    //
+    // Advisory: the connection. A slow line degrades the interview; it does not
+    // make it impossible. Treating it as a hard gate meant refusing to assess a
+    // candidate over something that has nothing to do with their ability, with
+    // no override and no one to appeal to.
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
-        setAllPassed(
+        const blockingPassed =
             osAndBrowser === ProctoringState.PASSED &&
-            internet === ProctoringState.PASSED &&
             camera === ProctoringState.PASSED &&
             audio === ProctoringState.PASSED &&
-            microphone === ProctoringState.PASSED
-        );
+            microphone === ProctoringState.PASSED;
+
+        setAllPassed(blockingPassed && internet === ProctoringState.PASSED);
+        setCanProceed(blockingPassed);
     }, [progress]);
 
     useEffect(() => {
@@ -122,14 +145,17 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         if (progress.internet !== ProctoringState.LOADING) return;
         testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
             setInternetResult(result);
+            // Carry on to the microphone and speaker checks whatever the
+            // connection measured. Those two decide whether a voice interview
+            // is possible at all; a slow line only decides how well it will go.
+            // Stopping the chain here left a candidate unable to complete —
+            // or even see — the checks that actually matter.
             setProgress((p) => ({
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
             }));
         });
     }, [progress.internet]);
@@ -199,6 +225,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     ];
 
     const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
+    const slowConnection = canProceed && progress.internet === ProctoringState.ERROR;
 
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
@@ -270,8 +297,21 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 ))}
             </div>
 
+            {/* Slow-connection notice — advisory, not a wall */}
+            {slowConnection && (
+                <div className="border-t bg-amber-50 px-4 py-3">
+                    <p className="text-sm font-medium text-amber-900">
+                        Your connection is slower than we recommend
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                        You can still take the interview. Audio may break up, and if it drops out
+                        entirely you can rejoin from the same link.
+                    </p>
+                </div>
+            )}
+
             {/* Footer */}
-            <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-4 py-3">
                 {hasError && (
                     <Button variant="outline" size="sm" onClick={retryAll}>
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
@@ -281,12 +321,75 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
-                    onClick={onStart}
+                    disabled={!canProceed}
+                    onClick={() => (allPassed ? onStart?.() : setConfirmOpen(true))}
                 >
                     Start Interview
                 </Button>
             </div>
+
+            {/*
+              Shown only when the blocking checks passed and the connection did
+              not. It gives the candidate the numbers rather than a verdict, so
+              the choice is theirs to make with the same information we have —
+              especially since the measurement itself is rough.
+            */}
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Start anyway on this connection?</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-3">
+                                <p>
+                                    Your microphone and speaker are working. Your connection measured
+                                    below what we recommend, which usually means audio that stutters
+                                    rather than an interview that fails.
+                                </p>
+
+                                {internetResult && (
+                                    <div className="rounded-md border bg-muted/40 p-3 text-xs">
+                                        <div className="mb-1.5 grid grid-cols-3 gap-2 font-medium text-foreground">
+                                            <span />
+                                            <span className="text-right">Measured</span>
+                                            <span className="text-right">Recommended</span>
+                                        </div>
+                                        {[
+                                            { label: "Upload", got: internetResult.upload, need: thresholds.minUploadMbps, unit: "Mbps" },
+                                            { label: "Download", got: internetResult.download, need: thresholds.minDownloadMbps, unit: "Mbps" },
+                                            { label: "Latency", got: internetResult.ping, need: thresholds.maxPingMs, unit: "ms", lowerIsBetter: true },
+                                        ].map((r) => {
+                                            const ok = r.lowerIsBetter ? r.got <= r.need : r.got >= r.need;
+                                            return (
+                                                <div key={r.label} className="grid grid-cols-3 gap-2 py-0.5">
+                                                    <span>{r.label}</span>
+                                                    <span className={cn("text-right font-medium", ok ? "text-emerald-700" : "text-amber-700")}>
+                                                        {r.got} {r.unit}
+                                                    </span>
+                                                    <span className="text-right text-muted-foreground">
+                                                        {r.lowerIsBetter ? "under " : ""}{r.need} {r.unit}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                <p>
+                                    If the audio drops, your progress is kept and you can rejoin from
+                                    the same link. Somewhere quieter with a stronger signal will give
+                                    you a better interview — but the choice is yours.
+                                </p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Not now</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onStart?.()}>
+                            Start the interview
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

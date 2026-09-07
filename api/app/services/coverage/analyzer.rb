@@ -23,8 +23,12 @@ module Coverage
 
       return { skill_updates: [], discovered_skills: [] } if turns.empty?
 
-      prompt   = build_prompt(turns, coverage_maps, skills)
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      prompt = build_prompt(turns, coverage_maps, skills)
+
+      # Same reasoning as Portfolios::Generator: classifying whether an exchange
+      # produced signal is a reading task, not a creative one, and its output
+      # feeds the confidence a rating claims.
+      response = @gemini_client.generate_content(prompt, temperature: 0)
 
       parse_response(response, coverage_maps)
     end
@@ -118,14 +122,20 @@ module Coverage
     end
 
     def parse_skill_updates(updates, coverage_maps)
+      probe_ceiling = candidate_turn_count
+
       updates.filter_map do |update|
         map = find_map(coverage_maps, update['id'])
         next unless map
 
-        # Skill is already covered — freeze it. Flash keeps seeing old turns
-        # in the sliding window and would keep incrementing probe_count.
-        next if map.state == 'covered'
-
+        # A covered skill keeps its state — the sliding window keeps showing old
+        # turns and would otherwise re-open something already settled. But the
+        # evidence count must keep climbing: `covered` is reached at the floor of
+        # probe_count 2, while `high` confidence needs 3, so freezing the count
+        # here made `high` unreachable and left every rating looking equally
+        # uncertain. Readiness to stop probing and depth of evidence are two
+        # different questions; StateEngine below refuses the state change on its
+        # own, so nothing needs to be skipped to keep `covered` terminal.
         new_state       = update['new_state']
         raw_probe_count = update['new_probe_count'].to_i
         reason          = update['reason']
@@ -136,6 +146,13 @@ module Coverage
         # one exchange = one probe. Apply this before the StateEngine gate check
         # so state advancement also uses the correct count.
         safe_probe = [[raw_probe_count, map.probe_count + 1].min, map.probe_count].max
+
+        # Now that a covered skill keeps counting, the sliding window could
+        # inflate it for the rest of the interview. Bound it by something true
+        # rather than by an arbitrary number: a skill cannot have been probed
+        # more times than the candidate has spoken.
+        safe_probe = [safe_probe, probe_ceiling].min if probe_ceiling.positive?
+        safe_probe = [safe_probe, map.probe_count].max
 
         # Enforce hard rules via StateEngine
         safe_state = StateEngine.resolve_state(
@@ -162,6 +179,12 @@ module Coverage
           first_mention: d['first_mention']
         }
       end
+    end
+
+    # Upper bound for probe_count: the candidate cannot have been probed on a
+    # skill more often than they have taken a turn.
+    def candidate_turn_count
+      @session.transcript_turns.where(speaker: 'candidate').count
     end
 
     def find_map(coverage_maps, id_or_label)

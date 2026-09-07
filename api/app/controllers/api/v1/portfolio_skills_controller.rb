@@ -47,9 +47,17 @@ module Api
         end
       end
 
+      # Neither PortfolioSkill nor Portfolio carries a tenant_id — only Session
+      # does, through TenantScoped. The previous `joins(:portfolio)` therefore
+      # constrained nothing: Rails does not apply a joined model's default_scope,
+      # so any authenticated assessor could reach any tenant's rating by id and
+      # overwrite it. Reaching the tenant column means joining all the way
+      # through to sessions and saying so explicitly.
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = PortfolioSkill
+                           .joins(portfolio: :session)
+                           .where(sessions: { tenant_id: current_tenant_id })
+                           .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

@@ -62,7 +62,11 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          # The comparison table marks rows an assessor corrected, but this was
+          # never sent — so the marker could never render and a reviewer could
+          # not tell a machine reading from a human one.
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
 

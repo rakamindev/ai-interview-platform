@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
+import ConfidenceIndicator from "@/components/portfolio/ConfidenceIndicator";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
@@ -190,12 +191,21 @@ export default function FitGapReportPage() {
                   {portfolio.skills
                     .filter((s) => s.is_discovered)
                     .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
+                      <div key={s.id} className="flex flex-wrap items-center gap-2 text-sm">
                         <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                        <span className="text-muted-foreground">L{s.ai_level}</span>
+                        {/* Anything that was not `low` used to be labelled
+                            "confirmed". Nothing about a medium reading is
+                            confirmed, and since `high` was unreachable this
+                            printed "confirmed" on every discovered skill in the
+                            product. Say the actual confidence instead. */}
+                        <ConfidenceIndicator
+                          confidence={s.ai_confidence}
+                          evidenceCount={s.evidence?.length}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          — Not required for this role, may be additive.
                         </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>
                     ))}
                 </CardContent>

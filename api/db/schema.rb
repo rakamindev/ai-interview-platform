@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_07_000200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -68,6 +68,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
   end
 
+  create_table "candidate_consents", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.string "disclosure_version", limit: 20, null: false
+    t.datetime "granted_at", default: -> { "now()" }, null: false
+    t.string "ip_address", limit: 45
+    t.string "user_agent", limit: 255
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_id"], name: "index_candidate_consents_on_session_id", unique: true
+  end
+
   create_table "coverage_maps", force: :cascade do |t|
     t.bigint "session_id", null: false
     t.string "skill_id", limit: 50
@@ -94,6 +105,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
   end
 
+  create_table "hiring_decisions", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.string "decision", limit: 20, null: false
+    t.text "rationale", null: false
+    t.jsonb "levels_at_decision", default: {}, null: false
+    t.bigint "decided_by", null: false
+    t.datetime "decided_at", default: -> { "now()" }, null: false
+    t.string "ip_address", limit: 45
+    t.string "user_agent", limit: 255
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["portfolio_id"], name: "index_hiring_decisions_on_portfolio_id", unique: true
+    t.check_constraint "char_length(btrim(rationale)) >= 20", name: "chk_hiring_decisions_rationale"
+    t.check_constraint "decision::text = ANY (ARRAY['advance'::character varying, 'hold'::character varying, 'reject'::character varying]::text[])", name: "chk_hiring_decisions_decision"
+  end
+
   create_table "organizations", force: :cascade do |t|
     t.string "name", limit: 255, null: false
     t.string "scheme", limit: 255, null: false
@@ -112,12 +139,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -207,9 +234,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
+  add_foreign_key "candidate_consents", "sessions"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "hiring_decisions", "portfolios"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"

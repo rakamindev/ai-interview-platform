@@ -24,11 +24,14 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
-function ElapsedTimer({ startedAt }: { startedAt: string }) {
+// The clock counted up with nothing to count against, so an assessor watching
+// it had no idea whether five minutes remained or fifty. The limit is the
+// number that decides whether to step in.
+function ElapsedTimer({ startedAt, limitMin }: { startedAt: string; limitMin?: number }) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -41,19 +44,36 @@ function ElapsedTimer({ startedAt }: { startedAt: string }) {
 
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
+
+  const limitSec = limitMin ? limitMin * 60 : null;
+  const nearLimit = limitSec !== null && elapsed > limitSec - 300;
+  const pastLimit = limitSec !== null && elapsed > limitSec;
+
   return (
-    <span className="flex items-center gap-1 text-sm tabular-nums text-muted-foreground">
-      <Clock className="h-3.5 w-3.5" />
+    <span
+      className={cn(
+        "flex items-center gap-1 text-sm tabular-nums",
+        pastLimit ? "text-destructive" : nearLimit ? "text-amber-700" : "text-muted-foreground"
+      )}
+      title={limitMin ? `Time limit ${limitMin} minutes` : undefined}
+    >
+      <Clock className="h-3.5 w-3.5" aria-hidden="true" />
       {mm}:{ss}
+      {limitMin && <span className="opacity-70">/ {limitMin}:00</span>}
     </span>
   );
 }
+
+// Long enough that a candidate giving one thorough answer does not trip it,
+// short enough that an assessor can still intervene inside a 45-minute session.
+const STALL_MINUTES = 6;
 
 export default function LiveMonitorPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [assessmentName, setAssessmentName] = useState<string>("");
+  const [timeLimitMin, setTimeLimitMin] = useState<number | undefined>(undefined);
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
@@ -64,6 +84,26 @@ export default function LiveMonitorPage() {
 
   const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
     useCoverageWebSocket(Number(sessionId));
+
+  // Fingerprint of the coverage map, so "did anything change" is a string
+  // comparison rather than a deep one.
+  const coverageFingerprint = JSON.stringify(
+    (coverageMap?.skills ?? []).concat(coverageMap?.discovered ?? []).map((sk) => [sk.state, sk.probe_count])
+  );
+  const [lastMovedAt, setLastMovedAt] = useState<number>(() => Date.now());
+  const [coverageStalled, setCoverageStalled] = useState(false);
+
+  useEffect(() => {
+    setLastMovedAt(Date.now());
+    setCoverageStalled(false);
+  }, [coverageFingerprint]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCoverageStalled(Date.now() - lastMovedAt > STALL_MINUTES * 60_000);
+    }, 15_000);
+    return () => clearInterval(timer);
+  }, [lastMovedAt]);
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {
@@ -83,6 +123,7 @@ export default function LiveMonitorPage() {
         const s = sRes.data.session as any;
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
+        setTimeLimitMin(s.assessment?.time_limit_min ?? undefined);
         if (s.status !== "active") setSessionActive(false);
 
         const turns = tRes.data.turns;
@@ -157,7 +198,7 @@ export default function LiveMonitorPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
+          {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} limitMin={timeLimitMin} />}
           <span className={cn(
             "flex items-center gap-1 text-xs",
             isConnected ? "text-green-600" : "text-muted-foreground"
@@ -191,6 +232,26 @@ export default function LiveMonitorPage() {
         </div>
       )}
 
+      {/*
+        A coverage analysis that keeps failing looks exactly like an interview
+        that has not moved on: the map simply stops changing, and nothing on
+        this screen says so. The assessor is the only person who can act on it,
+        so the silence is worth breaking.
+      */}
+      {sessionActive && coverageStalled && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-amber-900">Coverage has not moved in a while</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-amber-800">
+              The interview is still running, but no skill has changed state or gained a probe for
+              over {STALL_MINUTES} minutes. That usually means the coverage analysis is failing
+              rather than that the conversation has stalled.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Coverage map */}
       <Card>
         <CardHeader className="pb-3">
@@ -217,8 +278,12 @@ export default function LiveMonitorPage() {
                   className="h-2"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    "{skill.last_signal}"
+                  // Not truncated. This is the analyzer's stated reason for the
+                  // state it chose, and it is the only window an assessor has
+                  // into why a skill moved — or stalled. A single clipped line
+                  // showed the first few words and hid the reasoning.
+                  <p className="break-words text-xs leading-relaxed text-muted-foreground">
+                    {skill.last_signal}
                   </p>
                 )}
               </div>
@@ -253,8 +318,8 @@ export default function LiveMonitorPage() {
                       className="h-2"
                     />
                     {skill.last_signal && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        "{skill.last_signal}"
+                      <p className="break-words text-xs leading-relaxed text-muted-foreground">
+                        {skill.last_signal}
                       </p>
                     )}
                   </div>
