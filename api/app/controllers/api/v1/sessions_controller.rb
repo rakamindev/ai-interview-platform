@@ -3,10 +3,10 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info record_consent audio_complete]
+      skip_before_action :require_tenant!, only: %i[candidate_info record_consent audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session purge_data coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -77,6 +77,18 @@ module Api
         end
       end
 
+      # POST /api/v1/sessions/:id/purge_data (Right to Erasure / DPO On-Demand)
+      def purge_data
+        Sessions::DataRetentionPurger.new(@session).call
+        json_response(
+          success: true,
+          message: "Candidate transcripts and personal data have been permanently purged",
+          session: session_json(@session.reload)
+        )
+      rescue StandardError => e
+        json_error("Failed to purge session data: #{e.message}", :unprocessable_entity)
+      end
+
       # GET /api/v1/sessions/:id/coverage
       def coverage
         maps       = @session.coverage_maps.configured.order(:id)
@@ -128,6 +140,35 @@ module Api
         json_response(ended: true, message: "Session ended")
       end
 
+      # POST /sessions/:token/consent  — no JWT, invite token in URL
+      def record_consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.ended?
+          return json_error("Session is already ended", :unprocessable_entity)
+        end
+
+        version    = params[:version].presence || "v1.0"
+        user_agent = request.user_agent.to_s.truncate(255)
+        ip_address = request.remote_ip.to_s.truncate(45)
+
+        session.update!(
+          consented_at:       Time.current,
+          consent_version:    version,
+          consent_ip_address: ip_address,
+          consent_user_agent: user_agent
+        )
+
+        json_response(
+          consented:       true,
+          consented_at:    session.consented_at,
+          consent_version: session.consent_version
+        )
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.message, :unprocessable_entity)
+      end
+
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
@@ -146,10 +187,13 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:       session.id,
+          role_title:       assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          session_status:   session.status,
+          has_consented:    session.consented?,
+          consented_at:     session.consented_at,
+          consent_version:  session.consent_version
         )
       end
 
@@ -175,7 +219,10 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          created_at:       session.created_at,
+          consented_at:     session.consented_at,
+          consent_version:  session.consent_version,
+          anonymized_at:    session.anonymized_at
         }
       end
 

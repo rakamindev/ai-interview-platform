@@ -17,13 +17,18 @@ class Session < ApplicationRecord
 
   before_validation :generate_invite_token, on: :create
 
-  scope :active,  -> { where(status: 'active') }
-  scope :pending, -> { where(status: 'pending') }
-  scope :ended,   -> { where(status: 'ended') }
+  scope :active,             -> { where(status: 'active') }
+  scope :pending,            -> { where(status: 'pending') }
+  scope :ended,              -> { where(status: 'ended') }
+  scope :retention_expired,   ->(days = 30) { where('created_at <= ? AND anonymized_at IS NULL', days.days.ago) }
 
-  def active?  = status == 'active'
-  def ended?   = status == 'ended'
-  def pending? = status == 'pending'
+  alias_attribute :data_purged_at, :anonymized_at
+
+  def active?     = status == 'active'
+  def ended?      = status == 'ended'
+  def pending?    = status == 'pending'
+  def consented?  = consented_at.present?
+  def anonymized? = anonymized_at.present?
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')

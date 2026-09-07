@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -27,12 +27,14 @@ module Gemini
     # Generates content using Gemini REST API.
     # Returns parsed JSON response body.
     def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
-      parse_response(response)
+      url = generate_url
+      Rails.logger.info("[Gemini::HttpClient] Calling #{url} with model #{@model}")
+      response = @connection.post(url, request_body(prompt, temperature), request_headers)
+      parse_response(response, url)
     rescue Faraday::TimeoutError => e
       raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
     rescue Faraday::Error => e
-      raise ApiError.new("Gemini API error: #{e.message}")
+      raise ApiError.new("Gemini API connection error: #{e.message}")
     end
 
     private
@@ -72,11 +74,13 @@ module Gemini
       end
     end
 
-    def parse_response(response)
+    def parse_response(response, url = nil)
       unless response.success?
-        raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
-        raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
+        error_detail = "API returned #{response.status} for #{@model} (#{url || generate_url}): #{response.body}"
+        Rails.logger.error("[Gemini::HttpClient] #{error_detail}")
+        warn "[Gemini::HttpClient] #{error_detail}"
+        raise RateLimitError.new("Rate limited: #{response.body}", status: response.status, body: response.body) if response.status == 429
+        raise ApiError.new(error_detail, status: response.status, body: response.body)
       end
 
       data = JSON.parse(response.body)

@@ -25,6 +25,7 @@ Rails.application.routes.draw do
       resources :sessions, only: %i[show] do
         member do
           post :end_session
+          post :purge_data
           get  :coverage
           get  :transcript
           get  :portfolio, to: 'portfolios#show'
@@ -34,6 +35,7 @@ Rails.application.routes.draw do
 
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
+      post 'sessions/:token/consent',        to: 'sessions#record_consent'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
 
       # Portfolio skills overrides
@@ -49,6 +51,15 @@ Rails.application.routes.draw do
 
       # Vacancies
       resources :vacancies
+
+      # Admin endpoints (Right to Erasure / Biometrics Purge)
+      namespace :admin do
+        resources :candidates, only: [] do
+          member do
+            delete :biometrics, action: :purge_biometrics
+          end
+        end
+      end
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do

@@ -77,12 +77,13 @@ export function useAudioPlayback() {
     setTimeout(fn, remaining);
   }, []);
 
-  const stop = useCallback(() => {
-    cancelDrain();
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
-    nextPlayTimeRef.current = 0;
-  }, [cancelDrain]);
+  const resumeAudioContext = useCallback(async () => {
+    const ctx = getCtx();
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
+    return ctx;
+  }, []);
 
-  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain };
+  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain, resumeAudioContext };
 }
