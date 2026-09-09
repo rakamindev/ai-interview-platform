@@ -23,10 +23,12 @@ import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { getCandidateAccessState } from "./candidateAccessState";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [candidateInfoError, setCandidateInfoError] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
@@ -45,10 +47,11 @@ export default function InterviewPage() {
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
+        setCandidateInfoError(false);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setCandidateInfoError(true));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -187,6 +190,30 @@ export default function InterviewPage() {
       ? "connected"
       : "reconnecting";
 
+  const candidateAccessState = getCandidateAccessState(candidateInfo, candidateInfoError);
+
+  if (candidateAccessState === "loading") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-3" aria-live="polite">
+        <div className="h-7 w-7 mx-auto rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <h1 className="text-lg font-semibold">Preparing your interview</h1>
+        <p className="text-sm text-muted-foreground">Checking your invitation link…</p>
+      </div>
+    );
+  }
+
+  if (candidateAccessState === "unavailable") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-3">
+        <div className="text-4xl" aria-hidden="true">⚠️</div>
+        <h1 className="text-xl font-semibold">This interview link isn’t available</h1>
+        <p className="text-sm text-muted-foreground">
+          It may be invalid, expired, or no longer active. Please contact the person who sent you this invitation.
+        </p>
+      </div>
+    );
+  }
+
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
@@ -228,14 +255,17 @@ export default function InterviewPage() {
 
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
+    const alreadyCompleted = candidateAccessState === "completed";
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <h2 className="text-xl font-semibold">
+          {alreadyCompleted ? "Interview already completed" : "Interview Complete"}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
+          {alreadyCompleted
+            ? "This invitation has already been used. The hiring team will follow up with you."
+            : "Thank you. The interview has been recorded. The hiring team will review your results and follow up with you."}
         </p>
       </div>
     );
