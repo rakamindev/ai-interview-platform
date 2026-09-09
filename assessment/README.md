@@ -166,6 +166,20 @@ be defective.
 | Web production build | Passed |
 | Existing synthetic session after API restart | Returned a `localhost:5173/interview/...` URL; the frontend route returned HTTP 200; public metadata remained minimal. |
 
+### Visual evidence
+
+Both images below use only synthetic local data. The token itself is omitted
+from the screenshots.
+
+| Valid pending session | Invalid or unavailable session |
+| --- | --- |
+| ![Candidate readiness screen for a synthetic pending session](screenshots/candidate-ready.png) | ![Clear recovery screen for an unavailable interview invite](screenshots/candidate-unavailable.png) |
+
+The first image demonstrates that the repaired server-generated URL reaches
+the intended SPA and loads the pre-interview readiness screen. The second
+demonstrates the separate recovery state introduced for an unavailable token;
+it does not claim that an interview has been completed.
+
 ### Seeded-fault test
 
 The dedicated branch `scratch/seeded-invite-url-fault` records the required
