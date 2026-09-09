@@ -141,3 +141,47 @@ Option B preserves the existing capability-token model and avoids a data
 migration. It is reversible: reverting the environment variable and helper
 changes restores the prior contract, although that prior contract is known to
 be defective.
+
+## 9. Implementation and verification evidence
+
+### Shipped slice
+
+- `Session#invite_url` now uses `WEB_APP_BASE_URL` and normalizes trailing
+  slashes.
+- The environment template, Kubernetes config map, and API setup guide now
+  distinguish the public web origin from the API origin.
+- Candidate landing UI now has explicit loading, ready, already-completed, and
+  unavailable states. It does not request microphone access before public
+  session metadata is ready.
+- RSpec now has a working `spec_helper` and model tests for the URL contract.
+- The Vite project now has Vitest and a unit test for candidate access-state
+  mapping.
+
+### Test evidence
+
+| Check | Result |
+| --- | --- |
+| RSpec invite URL contract | 2 examples, 0 failures |
+| Vitest candidate access-state mapping | 3 tests, 0 failures |
+| Web production build | Passed |
+| Existing synthetic session after API restart | Returned a `localhost:5173/interview/...` URL; the frontend route returned HTTP 200; public metadata remained minimal. |
+
+### Seeded-fault test
+
+The dedicated branch `scratch/seeded-invite-url-fault` records the required
+proof without contaminating the feature branch:
+
+1. Commit `f401e21` deliberately switched invite generation back to the API
+   origin.
+2. The session URL spec failed twice: once for the wrong origin and once for
+   the wrong path.
+3. Commit `7274bc6` reverted that seeded defect.
+
+### AI verification note
+
+An initial AI-proposed assertion checked that the full URL did not contain
+`//interview`. It produced a false positive because every valid `https://`
+URL contains that character sequence before its host. The assertion was
+verified against the actual URL grammar and replaced with a `URI` path
+assertion. This is why the final test verifies `/candidate/interview/:token`,
+not a fragile substring of the serialized URL.
