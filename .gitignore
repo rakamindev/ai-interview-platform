@@ -15,5 +15,10 @@ api/storage/
 web/dist/
 web/.vite/
 
+# Local-only case-study submission artefacts
+assessment/CASE_STUDY_SUBMISSION_DRAFT.pdf
+assessment/DEMO_SCRIPT.md
+assessment/SUBMISSION_REPORT.html
+
 # OS
 .DS_Store
