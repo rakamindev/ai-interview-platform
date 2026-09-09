@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Interview Platform — Product Engineering Case Study</title>
+    <style>
+      @page { size: A4; margin: 16mm; }
+      * { box-sizing: border-box; }
+      body { color: #182235; font: 10.5pt/1.55 Arial, sans-serif; margin: 0; }
+      h1, h2, h3 { color: #102a56; line-height: 1.2; }
+      h1 { font-size: 25pt; margin: 0 0 8px; }
+      h2 { border-bottom: 1px solid #d9e2f0; font-size: 15pt; margin: 26px 0 10px; padding-bottom: 5px; }
+      h3 { font-size: 11pt; margin: 15px 0 5px; }
+      p { margin: 6px 0; }
+      ul, ol { margin: 6px 0; padding-left: 20px; }
+      li { margin: 3px 0; }
+      .eyebrow { color: #4970a7; font-size: 9pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+      .lede { color: #465a78; font-size: 13pt; max-width: 630px; }
+      .meta { background: #f4f7fb; border-left: 4px solid #3868ac; margin: 18px 0; padding: 11px 14px; }
+      .pending { background: #fff7e0; border: 1px solid #f0cf7a; border-radius: 4px; padding: 9px 11px; }
+      .callout { background: #edf6f2; border-left: 4px solid #308d6c; padding: 9px 12px; }
+      table { border-collapse: collapse; margin: 9px 0; width: 100%; }
+      th { background: #eaf0fa; color: #183967; text-align: left; }
+      th, td { border: 1px solid #d5deec; padding: 7px; vertical-align: top; }
+      code { background: #f0f3f8; border-radius: 3px; font: 9pt Menlo, monospace; padding: 1px 3px; }
+      .screens { display: flex; gap: 10px; margin: 10px 0; }
+      figure { flex: 1; margin: 0; }
+      figure img { border: 1px solid #d5deec; max-width: 100%; }
+      figcaption { color: #566981; font-size: 8.5pt; margin-top: 3px; }
+      .page-break { break-before: page; }
+      .footnote { color: #61718a; font-size: 8.5pt; }
+      a { color: #1857a7; }
+    </style>
+  </head>
+  <body>
+    <div class="eyebrow">Product Engineering Case Study</div>
+    <h1>Reliable candidate invitations for AI Interview Platform</h1>
+    <p class="lede">A focused full-stack revamp of the critical assessor-to-candidate handoff, designed around truthful failure states and a stable public URL contract.</p>
+
+    <div class="meta">
+      <strong>Repository branch:</strong> <code>feat/assessment-revamp</code><br />
+      <strong>Implementation commits:</strong> <code>df69b57</code>, <code>8df545c</code>, <code>29d9fca</code>, <code>c880b9d</code><br />
+      <strong>Evidence basis:</strong> local development environment; synthetic assessment and candidate only.
+    </div>
+
+    <div class="pending">
+      <strong>Complete before submitting:</strong> replace these two fields after publishing your own work.<br />
+      Pull request: <em>[insert open PR URL]</em><br />
+      Demo video (3–5 minutes): <em>[insert accessible video URL]</em>
+    </div>
+
+    <h2>1. Product understanding and research</h2>
+    <p>The product lets an assessor define role-specific skills, invite a candidate to an AI-led audio interview, collect adaptive evidence, and then review a portfolio and fit/gap result. Its value is not merely generating questions: it must produce defensible hiring signal through the complete journey below.</p>
+    <p><code>assessor configures skills → candidate opens invite → interview and transcript → portfolio → hiring review</code></p>
+    <p>Assessors, recruiters, and hiring managers operate the product. Candidates are a first-class affected user because a system failure can prevent their participation in an employment decision. Candidate name, audio, transcript, and competency assessment are personal data. The design therefore minimizes the public metadata response and avoids exposing internal failures, consistent with the limited, specific, and secure processing principles in Indonesia’s <a href="https://jdih.komdigi.go.id/produk_hukum/view/id/832/t/crc32/">UU No. 27 of 2022 on Personal Data Protection</a>.</p>
+
+    <h2>2. Discovery and prioritisation</h2>
+    <table>
+      <tr><th>Priority</th><th>Finding</th><th>Impact</th></tr>
+      <tr><td>P0</td><td><code>invite_url</code> used <code>APP_BASE_URL</code>, documented and deployed as the API origin. The public interview route exists on the SPA origin.</td><td>A valid recruiter invite can reach an API 404. The candidate cannot begin; no evidence or portfolio is produced.</td></tr>
+      <tr><td>P1</td><td>Any public metadata-load failure was rendered as “Interview Complete”.</td><td>An invalid or unavailable link could falsely tell a candidate their interview had been recorded.</td></tr>
+      <tr><td>P2</td><td>No working backend test harness, no frontend test runner, and setup documentation drift.</td><td>Candidate-critical regressions have little automated protection.</td></tr>
+      <tr><td>Signal</td><td>Default local multi-worker Puma accepted a health request but did not complete it.</td><td>Recorded for separate investigation; it was not silently bundled into this focused change.</td></tr>
+    </table>
+
+    <h2>3. Problem statement, options, and decision</h2>
+    <p><strong>An assessor can successfully create an invitation, but the product hands the candidate an API-host URL instead of the web application URL. The interview cannot begin, so the assessment produces no hiring signal.</strong></p>
+    <table>
+      <tr><th>Option</th><th>Decision</th><th>Reason</th></tr>
+      <tr><td>Change only <code>APP_BASE_URL</code></td><td>Rejected</td><td>Ambiguous configuration remains and candidate error handling remains false.</td></tr>
+      <tr><td>Use explicit <code>WEB_APP_BASE_URL</code>, generate server-side URL, add truthful candidate states</td><td>Chosen</td><td>Fixes the contract across environments without changing the existing capability-token data model.</td></tr>
+      <tr><td>Serve SPA from Rails/API host</td><td>Rejected</td><td>Broad deployment, cache, security-header, and release-process change for a narrow defect.</td></tr>
+    </table>
+
+    <div class="callout"><strong>Scope boundary:</strong> no database migration. Existing pending sessions derive their public URL at serialization time, so they benefit immediately from a corrected web-origin configuration.</div>
+
+    <h2>4. Delivered full-stack slice</h2>
+    <ul>
+      <li><strong>API contract:</strong> <code>Session#invite_url</code> derives from <code>WEB_APP_BASE_URL</code> and normalizes trailing slashes before appending <code>/interview/:invite_token</code>.</li>
+      <li><strong>Configuration:</strong> API sample configuration, Kubernetes config map, API documentation, and web example environment distinguish the SPA URL from the API URL.</li>
+      <li><strong>Candidate experience:</strong> the landing page has explicit loading, ready, completed, and unavailable states. It waits for public metadata before hardware checks or microphone permission.</li>
+      <li><strong>Privacy:</strong> the existing public metadata endpoint remains limited to session ID, role title, duration, and status; no transcript or assessor data was added.</li>
+      <li><strong>Quality infrastructure:</strong> RSpec bootstrapping plus URL contract specs; Vitest plus deterministic candidate access-state tests.</li>
+    </ul>
+
+    <h2>5. Acceptance criteria and edge cases</h2>
+    <ol>
+      <li>All invite URLs start from <code>WEB_APP_BASE_URL</code>, never the API origin, and contain exactly one slash before <code>interview</code>.</li>
+      <li>Pending and active sessions show pre-interview readiness; ended sessions communicate that they are already completed.</li>
+      <li>Invalid, expired, failed, or unavailable links show a neutral recovery message and no internal error details.</li>
+      <li>Loading cannot begin hardware checks or request microphone permission.</li>
+      <li>Configuration changes are reversible; no migration or new storage is required.</li>
+    </ol>
+
+    <div class="page-break"></div>
+    <h2>6. Verification evidence</h2>
+    <table>
+      <tr><th>Check</th><th>Result</th></tr>
+      <tr><td>RSpec public invite URL contract</td><td>2 examples, 0 failures</td></tr>
+      <tr><td>Vitest candidate access-state mapping</td><td>3 tests, 0 failures</td></tr>
+      <tr><td>Web production build</td><td>Passed: <code>tsc &amp;&amp; vite build</code></td></tr>
+      <tr><td>Manual synthetic integration</td><td>Existing session returned <code>localhost:5173/interview/…</code>; SPA route returned HTTP 200; public metadata remained minimal.</td></tr>
+    </table>
+
+    <h3>Valid pending candidate session</h3>
+    <figure>
+      <img src="screenshots/candidate-ready.png" alt="Candidate readiness screen for synthetic session" />
+      <figcaption>The repaired invite reaches the intended SPA and loads its pre-interview readiness flow. The screenshot contains synthetic role data only.</figcaption>
+    </figure>
+
+    <h3>Unavailable candidate invitation</h3>
+    <figure>
+      <img src="screenshots/candidate-unavailable.png" alt="Unavailable candidate invitation recovery screen" />
+      <figcaption>An invalid synthetic token receives actionable recovery copy, rather than an incorrect interview-complete state.</figcaption>
+    </figure>
+
+    <h2>7. Seeded-fault and AI verification</h2>
+    <p>The dedicated scratch branch <code>scratch/seeded-invite-url-fault</code> provides regression evidence without contaminating the feature branch. Commit <code>f401e21</code> deliberately reverted URL generation to the API origin; the URL spec failed on origin and path assertions. Commit <code>7274bc6</code> reverted that seeded defect.</p>
+    <p>An early AI-proposed assertion rejected the substring <code>//interview</code> anywhere in a full URL. It was invalid because every legitimate <code>https://</code> URL contains <code>//</code>. I checked the URL grammar and corrected the test to parse the URI and assert its path. This verification step is reflected in the final model spec.</p>
+
+    <h2>8. Risks and follow-up</h2>
+    <ul>
+      <li>Gemini live interview integration was not run: no development model key was used. Deterministic invitation and candidate-state paths are tested; external-model failure handling remains a follow-up integration test.</li>
+      <li>The observed multi-worker Puma behaviour warrants isolated investigation before production topology changes.</li>
+      <li>Deployment must set <code>WEB_APP_BASE_URL</code> to the public SPA origin. An environment-level smoke test should create an invite and follow the resulting URL after every deployment.</li>
+    </ul>
+
+    <h2>9. Reviewer walkthrough</h2>
+    <p>Use the 3–5 minute demo to show (1) the critical handoff and P0 impact, (2) the explicit web-origin contract in <code>Session#invite_url</code>, (3) the valid readiness and unavailable recovery screens, and (4) the RSpec, Vitest, and seeded-fault evidence. A recording script is included in <code>assessment/DEMO_SCRIPT.md</code>.</p>
+    <p class="footnote">Prepared from local repository evidence and synthetic development data. No real candidate personal data, production credentials, or model key is included.</p>
+  </body>
+</html>
