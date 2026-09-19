@@ -1,6 +1,15 @@
 import api from "./api";
 import type { Portfolio, AssessorOverride, FitGapReport } from "@/types";
 
+export interface FitGapMeta {
+  stale?: boolean;
+}
+
+export interface FitGapResponse {
+  report: FitGapReport;
+  meta?: FitGapMeta;
+}
+
 export const portfoliosApi = {
   getOverride: (portfolioSkillId: number, data: { override_level: number; assessor_notes: string }) =>
     api.post<{ override: AssessorOverride }>(`/portfolio_skills/${portfolioSkillId}/override`, {
@@ -8,12 +17,12 @@ export const portfoliosApi = {
     }),
 
   triggerFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ report: FitGapReport } | { status: string; message: string }>(`/portfolios/${portfolioId}/fitgap`, {
+    api.post<FitGapResponse | { status: string; message: string }>(`/portfolios/${portfolioId}/fitgap`, {
       fitgap: { vacancy_id: vacancyId },
     }),
 
   getFitGap: (portfolioId: number, vacancyId: number) =>
-    api.get<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
+    api.get<FitGapResponse>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
 
   regenerateFitGap: (portfolioId: number, vacancyId: number) =>
     api.post<{ status: string; message: string }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {

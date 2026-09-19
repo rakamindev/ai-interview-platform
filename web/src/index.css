@@ -4,67 +4,61 @@
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
+        /* Rakamin redesign brand tokens */
+        --teal: #01959f;
+        --teal-deep: #017a85;
+        --teal-deeper: #015f66;
+        --teal-soft: #e6f5f6;
+        --teal-softer: #f0f9fa;
+        --yellow: #fbc037;
+        --yellow-soft: #fdf3dd;
+        --brand-surface: #ffffff;
+        --surface-alt: #f1f4f6;
+        --border-strong: #cfd7dd;
+        --faint: #8a97a5;
+
+        /* Semantics: teal = progress/good · amber = caution · red = error */
+        --green: #1e9e63;
+        --green-soft: #e6f5ec;
+        --amber: #c77700;
+        --amber-soft: #fdf3e2;
+        --red: #d64545;
+        --red-soft: #fdecec;
+
+        --shadow-sm: 0 1px 2px rgba(20, 32, 44, 0.06);
+        --shadow-md: 0 10px 30px rgba(20, 32, 44, 0.09);
+        --shadow-lg: 0 18px 54px rgba(20, 32, 44, 0.14);
+
+        /* shadcn HSL tokens derived from the redesign palette */
+        --background: 200 20% 97%;
+        --foreground: 210 37% 13%;
 
         --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --card-foreground: 210 37% 13%;
 
         --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
-
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
-
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
-
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
-
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
-
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
-
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 184 99% 31%;
-
-        --radius: 0.5rem;
-    }
-
-    .dark {
-        --background: 222 47% 11%;
-        --foreground: 210 40% 98%;
-
-        --card: 222 47% 11%;
-        --card-foreground: 210 40% 98%;
-
-        --popover: 222 47% 11%;
-        --popover-foreground: 210 40% 98%;
+        --popover-foreground: 210 37% 13%;
 
         --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        --primary-foreground: 0 0% 100%;
 
         --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+        --secondary-foreground: 210 37% 13%;
 
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
+        --muted: 204 22% 95%;
+        --muted-foreground: 211 13% 41%;
 
-        --accent: 217 33% 17%;
-        --accent-foreground: 210 40% 98%;
+        --accent: 204 22% 95%;
+        --accent-foreground: 210 37% 13%;
 
-        --destructive: 0 63% 31%;
-        --destructive-foreground: 0 0% 98%;
+        --destructive: 0 64% 56%;
+        --destructive-foreground: 0 0% 100%;
 
-        --border: 217 33% 17%;
-        --input: 217 33% 17%;
+        --border: 207 19% 91%;
+        --input: 206 17% 84%;
         --ring: 184 99% 31%;
+
+        --radius: 0.875rem;
     }
 }
 

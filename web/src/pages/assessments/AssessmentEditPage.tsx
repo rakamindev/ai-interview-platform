@@ -26,6 +26,7 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import NotFoundPage from "@/pages/NotFoundPage";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
 
@@ -36,6 +37,7 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -51,11 +53,15 @@ export default function AssessmentEditPage() {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch((err) => {
+        if ((err as { response?: { status?: number } })?.response?.status === 404) {
+          setNotFound(true);
+        }
+      })
       .finally(() => setLoading(false));
   }, [id, reset]);
 
-  const sensors = useSensors(
+  const sensors = useSensors( 
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
@@ -87,6 +93,10 @@ export default function AssessmentEditPage() {
     }
   };
 
+  if (notFound) {
+    return <NotFoundPage />;
+  }
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
@@ -101,7 +111,7 @@ export default function AssessmentEditPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" aria-label="Back to assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>

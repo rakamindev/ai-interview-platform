@@ -1,9 +1,13 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-    darkMode: ["class"],
     content: ["./index.html", "./src/**/*.{ts,tsx}"],
     theme: {
         extend: {
+            fontFamily: {
+                display: ["Sora", "Segoe UI", "system-ui", "sans-serif"],
+                sans: ["Inter", "Segoe UI", "system-ui", "sans-serif"],
+                mono: ["JetBrains Mono", "SFMono-Regular", "Consolas", "monospace"],
+            },
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
@@ -38,6 +42,37 @@ export default {
                     DEFAULT: "hsl(var(--popover))",
                     foreground: "hsl(var(--popover-foreground))",
                 },
+                /* Redesign brand palette (named "brand"/"sun" to keep Tailwind's
+                   built-in teal/yellow scales intact for existing classes) */
+                brand: {
+                    DEFAULT: "var(--teal)",
+                    deep: "var(--teal-deep)",
+                    deeper: "var(--teal-deeper)",
+                    soft: "var(--teal-soft)",
+                    softer: "var(--teal-softer)",
+                },
+                sun: {
+                    DEFAULT: "var(--yellow)",
+                    soft: "var(--yellow-soft)",
+                },
+                surface: {
+                    DEFAULT: "var(--brand-surface)",
+                    alt: "var(--surface-alt)",
+                },
+                faint: "var(--faint)",
+                /* Redesign semantics (named to avoid clobbering Tailwind's green/amber/red scales) */
+                ok: {
+                    DEFAULT: "var(--green)",
+                    soft: "var(--green-soft)",
+                },
+                warn: {
+                    DEFAULT: "var(--amber)",
+                    soft: "var(--amber-soft)",
+                },
+                danger: {
+                    DEFAULT: "var(--red)",
+                    soft: "var(--red-soft)",
+                },
             },
             borderRadius: {
                 lg: "var(--radius)",
@@ -54,14 +89,14 @@ export default {
                     to: { height: "0" },
                 },
                 "voice-bar": {
-                    "0%, 100%": { height: "4px" },
-                    "50%": { height: "32px" },
+                    "0%, 100%": { height: "8px" },
+                    "50%": { height: "36px" },
                 },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
-                "voice-bar": "voice-bar 0.8s ease-in-out infinite",
+                "voice-bar": "voice-bar 0.9s ease-in-out infinite",
             },
         },
     },

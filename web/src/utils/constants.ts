@@ -68,3 +68,10 @@ export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   exceed: "text-green-700 bg-green-50",
   not_assessed: "text-neutral-500 bg-neutral-50",
 };
+
+// AI confidence display
+export const CONFIDENCE_LABELS: Record<string, string> = {
+  high: "High confidence",
+  medium: "Medium confidence",
+  low: "Low confidence",
+};

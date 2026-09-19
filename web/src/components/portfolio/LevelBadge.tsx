@@ -1,4 +1,4 @@
-import { LEVEL_LABELS, LEVEL_BADGE_CLASSES, LEVEL_DESCRIPTIONS } from "@/utils/constants";
+import { LEVEL_LABELS, LEVEL_DESCRIPTIONS } from "@/utils/constants";
 import { cn } from "@/lib/utils";
 
 interface LevelBadgeProps {
@@ -11,15 +11,16 @@ export default function LevelBadge({ level, size = "md", className }: LevelBadge
   return (
     <div
       className={cn(
-        "inline-flex flex-col items-center justify-center rounded font-semibold",
-        size === "md" ? "px-3 py-2 min-w-14 text-base" : "px-2 py-1 min-w-10 text-sm",
-        LEVEL_BADGE_CLASSES[level],
+        "inline-flex shrink-0 flex-col items-center justify-center rounded-md bg-brand-soft font-display font-semibold text-brand-deep",
+        size === "md" ? "min-w-14 px-3 py-2 text-base" : "h-[22px] min-w-8 px-2 text-[11.5px]",
         className
       )}
     >
       <span>{LEVEL_LABELS[level]}</span>
       {size === "md" && (
-        <span className="text-[10px] font-normal opacity-70">{LEVEL_DESCRIPTIONS[level]}</span>
+        <span className="font-sans text-[10px] font-normal opacity-70">
+          {LEVEL_DESCRIPTIONS[level]}
+        </span>
       )}
     </div>
   );

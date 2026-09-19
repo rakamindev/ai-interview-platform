@@ -110,7 +110,7 @@ export default function AssessmentNewPage() {
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" aria-label="Back to assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>

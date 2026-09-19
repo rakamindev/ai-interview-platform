@@ -6,6 +6,24 @@ const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
 
 export const WS_URL = WS_BASE_URL;
 
+// Pulls the API's human-readable error message out of an Axios failure. Export
+// requests use responseType "blob", so the error body is a Blob containing JSON.
+export async function extractExportError(error: unknown): Promise<string | null> {
+  if (!axios.isAxiosError(error)) return null;
+  const data = error.response?.data;
+  let parsed: { errors?: Array<{ message?: string }> } | null = null;
+  if (data instanceof Blob) {
+    try {
+      parsed = JSON.parse(await data.text());
+    } catch {
+      parsed = null;
+    }
+  } else if (data && typeof data === "object") {
+    parsed = data as { errors?: Array<{ message?: string }> };
+  }
+  return parsed?.errors?.[0]?.message ?? null;
+}
+
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },

@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -13,10 +11,39 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import BadgeDot, { type BadgeTone } from "@/components/design/BadgeDot";
+import LevelChip from "@/components/design/LevelChip";
+import Banner from "@/components/design/Banner";
+import NotFoundPage from "@/pages/NotFoundPage";
 import { assessmentsApi } from "@/services/assessments";
-import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  Link2,
+  Mic2,
+  ListTree,
+  TrendingUp,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
+
+interface SessionStatus {
+  tone: BadgeTone;
+  label: string;
+}
+
+function sessionStatus(session: Session): SessionStatus {
+  if (session.status === "active") return { tone: "live", label: "Live now" };
+  if (session.status === "ended" && session.end_reason === "error")
+    return { tone: "fail", label: "Failed" };
+  if (session.status === "ended") return { tone: "ok", label: "Completed" };
+  return { tone: "ready", label: "Not started" };
+}
 
 function SessionRow({
   session,
@@ -36,87 +63,53 @@ function SessionRow({
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
   const displayName = session.candidate_name || `Candidate ${index}`;
+  const status = sessionStatus(session);
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-          {index}
-        </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
-          {session.started_at && (
-            <div className="text-xs text-muted-foreground">
-              {new Date(session.started_at).toLocaleDateString()}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
+    <tr className="border-b border-border last:border-b-0">
+      <td className="px-3 py-3.5 align-middle">
+        <div className="text-sm font-semibold text-foreground">{displayName}</div>
+      </td>
+      <td className="px-3 py-3.5 align-middle font-mono text-xs text-muted-foreground">
+        {session.started_at ? new Date(session.started_at).toLocaleDateString() : "—"}
+      </td>
+      <td className="px-3 py-3.5 align-middle">
+        <BadgeDot tone={status.tone}>{status.label}</BadgeDot>
+      </td>
+      <td className="px-3 py-3.5 text-right align-middle">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Awaiting candidate
-          </span>
+          <Button variant="ghost" size="sm" onClick={() => onCopy(session.id)}>
+            {copiedId === session.id ? (
+              <>
+                <Check className="h-3 w-3" /> Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Copy link
+              </>
+            )}
+          </Button>
         )}
         {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Live
-          </span>
-        )}
-        {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
+          >
+            <Eye className="h-3 w-3" /> Monitor
+          </Button>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+          >
+            Results
+          </Button>
         )}
-
-        <div className="flex items-center gap-1.5">
-          {isPending && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(session.id)}
-            >
-              {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
-              ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
-              )}
-            </Button>
-          )}
-          {isLive && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
-            >
-              <Eye className="h-3 w-3 mr-1" /> Monitor
-            </Button>
-          )}
-          {isEnded && session.end_reason !== "error" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
-            >
-              Results
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -132,10 +125,17 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
+    try {
+      const res = await assessmentsApi.getSessions(Number(id));
+      setSessions(res.data.sessions);
+    } catch {
+      // Transient poll failure: keep the last known sessions.
+    }
   }, [id]);
 
   useEffect(() => {
@@ -143,9 +143,16 @@ export default function AssessmentInvitePage() {
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
     ]).then(([aRes, sRes]) => {
+      setLoadError(null);
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch((err) => {
+      if ((err as { response?: { status?: number } })?.response?.status === 404) {
+        setNotFound(true);
+        return;
+      }
+      setLoadError("We couldn't load this assessment. Please try again.");
+    }).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -163,21 +170,24 @@ export default function AssessmentInvitePage() {
 
   const handleInviteCandidate = async () => {
     setCreatingSession(true);
-    setShowInviteDialog(false);
-    setNewSession(null);
+    setInviteError(null);
     try {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+      setShowInviteDialog(false);
+      setCandidateNameInput("");
+    } catch {
+      setInviteError("Could not create the invite link. Please try again.");
     } finally {
       setCreatingSession(false);
     }
   };
 
-  const copyLink = (session: Session, id: number) => {
+  const copyLink = (session: Session, sessionId: number) => {
     navigator.clipboard.writeText(session.invite_url);
-    setCopiedId(id);
+    setCopiedId(sessionId);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -188,43 +198,52 @@ export default function AssessmentInvitePage() {
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 
+  if (notFound) {
+    return <NotFoundPage />;
+  }
+
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-32 w-full rounded-[14px]" />
+        <Skeleton className="h-48 w-full rounded-[14px]" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/assessments" aria-label="Back to assessments">
+            <ArrowLeft className="h-3.5 w-3.5" /> Assessments
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
-            </div>
-          </div>
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-xl font-semibold tracking-tight text-foreground">
+            {assessment?.name ?? "—"}
+          </h1>
+          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span className="font-mono">{assessment?.time_limit_min} min</span>
+            <span>·</span>
+            <span>{assessment?.skills?.length ?? 0} skills assessed</span>
+          </p>
         </div>
-
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+            <Pencil className="h-3.5 w-3.5" /> Edit
           </Button>
           <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            <Plus className="h-3.5 w-3.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
         </div>
       </div>
+
+      {loadError && <Banner tone="fail">{loadError}</Banner>}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -232,6 +251,7 @@ export default function AssessmentInvitePage() {
           <DialogHeader>
             <DialogTitle>Invite Candidate</DialogTitle>
           </DialogHeader>
+          {inviteError && <Banner tone="fail">{inviteError}</Banner>}
           <div className="space-y-2 py-2">
             <Label htmlFor="candidate-name">Candidate name</Label>
             <Input
@@ -251,93 +271,155 @@ export default function AssessmentInvitePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Newly created session invite link */}
-      {newSession && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="pt-4 space-y-2">
-            <p className="text-sm font-medium">
-              {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
-            </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
-              <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
-                {newSession.invite_url}
+      <div className="grid gap-[18px] lg:grid-cols-[1.4fr_1fr] lg:items-start">
+        <div className="space-y-5">
+          {/* Newly created session invite link */}
+          {newSession && (
+            <div className="flex items-center gap-3.5 rounded-[14px] border border-[#bfe3e5] bg-gradient-to-br from-brand-softer to-card px-4 py-4">
+              <span className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl bg-brand text-white">
+                <Link2 className="h-4 w-4" />
               </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">
+                  {newSession.candidate_name
+                    ? `Link for ${newSession.candidate_name} is ready`
+                    : "New invite link is ready"}
+                </p>
+                <div className="mt-1.5 truncate rounded-lg border border-border bg-white px-2.5 py-1.5 font-mono text-xs text-brand-deep">
+                  {newSession.invite_url}
+                </div>
+              </div>
+              <Button size="sm" onClick={copyNewSessionLink} className="shrink-0">
+                {newSessionCopied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5" /> Copy
+                  </>
+                )}
+              </Button>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
-              {newSessionCopied ? (
-                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+          )}
+
+          {/* Sessions */}
+          <div className="rounded-[14px] border border-border bg-card shadow-sm">
+            <div className="flex items-start justify-between gap-3 px-5 pt-4">
+              <div>
+                <div className="font-display text-sm font-semibold text-foreground">Candidates</div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {sessions.length} invite{sessions.length === 1 ? "" : "s"} sent
+                </p>
+              </div>
+            </div>
+            <div className="px-2 pb-2 pt-2">
+              {!loadError && sessions.length === 0 ? (
+                <div className="px-4 py-10 text-center">
+                  <span className="mx-auto mb-3 grid h-[52px] w-[52px] place-items-center rounded-full border border-dashed border-[var(--border-strong)] text-faint">
+                    <UserRound className="h-5 w-5" />
+                  </span>
+                  <p className="text-sm font-semibold text-foreground">No candidates yet</p>
+                  <p className="mx-auto mt-1 max-w-[340px] text-xs text-muted-foreground">
+                    Click "Invite Candidate" to generate an interview link.
+                  </p>
+                </div>
               ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="px-3 pb-2 text-left text-[11.5px] font-semibold uppercase tracking-wide text-faint">
+                        Candidate
+                      </th>
+                      <th className="px-3 pb-2 text-left text-[11.5px] font-semibold uppercase tracking-wide text-faint">
+                        Started
+                      </th>
+                      <th className="px-3 pb-2 text-left text-[11.5px] font-semibold uppercase tracking-wide text-faint">
+                        Status
+                      </th>
+                      <th className="px-3 pb-2 text-right text-[11.5px] font-semibold uppercase tracking-wide text-faint">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessions.map((session, i) => (
+                      <SessionRow
+                        key={session.id}
+                        session={session}
+                        index={sessions.length - i}
+                        assessmentId={id!}
+                        onCopy={(sid) => {
+                          const s = sessions.find((x) => x.id === sid);
+                          if (s) copyLink(s, sid);
+                        }}
+                        copiedId={copiedId}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               )}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          </div>
 
-      <Separator />
-
-      {/* Sessions list */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            Candidates
-            {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
-            )}
-          </h2>
+          {/* Skills assessed */}
+          {assessment?.skills && assessment.skills.length > 0 && (
+            <div className="rounded-[14px] border border-border bg-card shadow-sm">
+              <div className="px-5 pt-4">
+                <div className="font-display text-sm font-semibold text-foreground">
+                  Skills assessed
+                </div>
+              </div>
+              <div className="space-y-2.5 px-5 pb-5 pt-3">
+                {assessment.skills.map((s) => (
+                  <div key={s.id ?? s.skill_label} className="flex items-center gap-2.5">
+                    <LevelChip level={s.expected_level} />
+                    <span className="text-sm text-foreground">{s.skill_label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {sessions.length === 0 ? (
-          <div className="border rounded-lg p-10 text-center space-y-3">
-            <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
-            <div>
-              <p className="text-sm font-medium">No candidates yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click "Invite Candidate" to generate an interview link.
-              </p>
+        {/* Aside */}
+        <aside className="rounded-[14px] border border-border bg-card shadow-sm">
+          <div className="px-5 pt-4">
+            <div className="font-display text-sm font-semibold text-foreground">
+              What happens next
             </div>
           </div>
-        ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
-              {sessions.map((session, i) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  index={sessions.length - i}
-                  assessmentId={id!}
-                  onCopy={(sid) => {
-                    const s = sessions.find((x) => x.id === sid);
-                    if (s) copyLink(s, sid);
-                  }}
-                  copiedId={copiedId}
-                />
-              ))}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Assessment skills detail */}
-      {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-3 px-5 pb-5 pt-3 text-xs text-muted-foreground">
+            <div className="flex gap-3 border-b border-dashed border-border pb-3">
+              <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] bg-brand-soft text-brand-deep">
+                <Mic2 className="h-4 w-4" />
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground">Candidate speaks</strong> — the AI
+                conducts the interview conversationally, following up where needed.
+              </span>
+            </div>
+            <div className="flex gap-3 border-b border-dashed border-border pb-3">
+              <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] bg-brand-soft text-brand-deep">
+                <ListTree className="h-4 w-4" />
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground">Transcript &amp; coverage</strong>{" "}
+                update live — you can watch anytime from the Monitor screen.
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] bg-brand-soft text-brand-deep">
+                <TrendingUp className="h-4 w-4" />
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground">Skill portfolio</strong> is
+                generated after the session ends — roughly 2 minutes.
+              </span>
+            </div>
           </div>
-        </>
-      )}
+        </aside>
+      </div>
     </div>
   );
 }

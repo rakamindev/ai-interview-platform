@@ -5,6 +5,13 @@ interface TranscriptBubbleProps {
   text: string;
 }
 
+const speakerLabels: Record<TranscriptBubbleProps["speaker"], string> = {
+  candidate: "You",
+  ai: "AI",
+  assessor: "Assessor",
+  system: "System",
+};
+
 export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProps) {
   const isCandidate = speaker === "candidate";
 
@@ -12,14 +19,19 @@ export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProp
     <div className={cn("flex", isCandidate ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+          "max-w-[82%] rounded-[14px] border px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
           isCandidate
-            ? "bg-primary/10 text-foreground"
-            : "bg-muted text-foreground"
+            ? "rounded-br-[4px] border-brand-soft bg-brand-soft text-foreground"
+            : "rounded-bl-[4px] border-border bg-surface-alt text-foreground"
         )}
       >
-        <span className="block text-xs font-medium mb-0.5 text-muted-foreground">
-          {isCandidate ? "You" : "AI"}
+        <span
+          className={cn(
+            "mb-0.5 block text-[11px] font-semibold uppercase tracking-wide",
+            isCandidate ? "text-brand-deep" : "text-faint"
+          )}
+        >
+          {speakerLabels[speaker]}
         </span>
         {text}
       </div>

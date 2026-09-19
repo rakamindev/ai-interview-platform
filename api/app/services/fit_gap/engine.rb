@@ -27,11 +27,42 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        generated_at:      Time.current,
+        provenance_token:  self.class.fingerprint(@portfolio, @vacancy)
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
       report
+    end
+
+    # Computes a deterministic fingerprint of every input that affects a report's
+    # content (vacancy requirements + portfolio levels incl. overrides). Used to
+    # detect stale reports without requiring eager invalidation on every writer.
+    def self.fingerprint(portfolio, vacancy)
+      inputs = {
+        vacancy: {
+          role_title:              vacancy.role_title,
+          culture_dimensions:      vacancy.culture_dimensions,
+          competency_expectations: vacancy.competency_expectations,
+          skills: vacancy.vacancy_skills.order(:skill_id, :skill_label).map do |vs|
+            { skill_id: vs.skill_id, skill_label: vs.skill_label, expected_level: vs.expected_level }
+          end
+        },
+        portfolio: {
+          skills: portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
+            override = skill.assessor_override
+            {
+              skill_id:     skill.skill_id,
+              skill_label:  skill.skill_label,
+              ai_level:     skill.ai_level,
+              effective_level: override ? override.override_level : skill.ai_level,
+              overridden:   override.present?
+            }
+          end
+        }
+      }
+
+      Digest::SHA256.hexdigest(JSON.generate(inputs))
     end
 
     private

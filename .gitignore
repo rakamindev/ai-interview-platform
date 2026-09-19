@@ -1,5 +1,6 @@
 # Dependencies
 **/node_modules/
+web/package-lock.json
 
 # Env / secrets
 **/.env

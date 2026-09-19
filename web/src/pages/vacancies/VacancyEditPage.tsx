@@ -59,7 +59,7 @@ export default function VacancyEditPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to="/vacancies" aria-label="Back to vacancies" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
         <span className="text-sm font-medium">Edit Vacancy</span>
       </div>
 

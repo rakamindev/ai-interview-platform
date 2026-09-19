@@ -46,6 +46,7 @@ export default function TranscriptPage() {
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+            aria-label="Back to portfolio"
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />

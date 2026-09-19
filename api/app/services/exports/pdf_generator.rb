@@ -16,6 +16,36 @@ module Exports
       'not_assessed' => 'Not Assessed'
     }.freeze
 
+    # TrueType fonts (in priority order) that cover the full Unicode range used in
+    # live narratives/evidence (arrows, smart quotes, em dashes, …). Prawn's
+    # built-in Helvetica uses WinAnsi encoding and raises on characters like "→".
+    FONT_CANDIDATES = {
+      normal: [
+        'C:/Windows/Fonts/arial.ttf',
+        'C:/Windows/Fonts/segoeui.ttf',
+        '/System/Library/Fonts/Supplemental/Arial.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/TTF/DejaVuSans.ttf'
+      ],
+      bold: [
+        'C:/Windows/Fonts/arialbd.ttf',
+        'C:/Windows/Fonts/segoeuib.ttf',
+        '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf'
+      ]
+    }.freeze
+
+    # Fallback transliteration used only when no Unicode TTF is available, so the
+    # export can never crash on a non-WinAnsi character.
+    ASCII_MAP = {
+      '→' => '->', '←' => '<-', '↑' => '^', '↓' => 'v',
+      '≥' => '>=', '≤' => '<=', '≠' => '!=', '≈' => '~', '±' => '+/-',
+      '−' => '-', '×' => 'x', '÷' => '/',
+      '’' => "'", '‘' => "'", '“' => '"', '”' => '"',
+      '–' => '-', '—' => '-', '…' => '...', '•' => '-'
+    }.freeze
+
     def initialize(portfolio:, vacancy: nil)
       @portfolio   = portfolio
       @vacancy     = vacancy
@@ -27,6 +57,7 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        install_app_font(pdf)
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -37,7 +68,7 @@ module Exports
     private
 
     def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
+      pdf.font_size(22) { pdf.text safe_text(@assessment.name), style: :bold }
       pdf.move_down 4
       pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
       pdf.move_down 4
@@ -79,25 +110,25 @@ module Exports
       effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text safe_text(skill.skill_label), style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
         level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        pdf.text safe_text(level_text)
       end
 
       pdf.move_down 4
 
       if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
+        pdf.font_size(10) { pdf.text safe_text(skill.competency_summary) }
       end
 
       if skill.evidence.any?
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each { |quote| pdf.text "  • #{safe_text(quote)}" }
         end
       end
 
@@ -105,7 +136,7 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
+          pdf.text "  #{safe_text(override.assessor_notes)}"
         end
       end
 
@@ -116,7 +147,7 @@ module Exports
     def render_fit_gap_section(pdf)
       pdf.start_new_page
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{safe_text(@vacancy.role_title)}", style: :bold }
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
@@ -124,7 +155,7 @@ module Exports
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
         table_data << [
-          c['skill_label'],
+          safe_text(c['skill_label']),
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
           RESULT_LABELS[c['result']] || c['result'],
@@ -143,14 +174,14 @@ module Exports
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
+        pdf.font_size(10) { pdf.text safe_text(@fit_gap.culture_narrative) }
       end
 
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
         pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
+        pdf.font_size(10) { pdf.text safe_text(@fit_gap.overall_narrative) }
       end
     end
 
@@ -161,6 +192,36 @@ module Exports
                         align:  :center,
                         size:   9,
                         color:  '999999'
+    end
+
+    # Registers a Unicode TrueType font so every glyph in live narratives and
+    # evidence renders correctly. Returns +true+ when a font was installed, which
+    # disables the ASCII fallback transliteration for the rest of the document.
+    def install_app_font(pdf)
+      normal = FONT_CANDIDATES[:normal].find { |path| File.exist?(path) }
+      return false unless normal
+
+      bold = FONT_CANDIDATES[:bold].find { |path| File.exist?(path) } || normal
+      pdf.font_families.update(
+        'app_sans' => {
+          normal: normal,
+          bold:   bold
+        }
+      )
+      pdf.font('app_sans')
+      @font_installed = true
+    end
+
+    # Returns the text as-is when a Unicode font is used; otherwise transliterates
+    # it to plain ASCII so the built-in WinAnsi fonts can never raise.
+    def safe_text(value)
+      value = value.to_s
+      @font_installed ? value : sanitize_ascii(value)
+    end
+
+    def sanitize_ascii(text)
+      text.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
+          .gsub(/[^\x00-\x7F]/u) { |char| ASCII_MAP.fetch(char, '?') }
     end
 
     def format_duration(seconds)

@@ -246,7 +246,7 @@ export default function InterviewPage() {
   const candidateSpeaking = speaker === "candidate";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <div className="max-w-xl mx-auto w-full px-4 flex flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
         <span className="text-sm font-medium">AI Interview</span>
@@ -283,7 +283,7 @@ export default function InterviewPage() {
       )}
 
       {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
+      <div className="flex flex-col items-center gap-6 pt-8 pb-6">
         {interviewState === "connecting" ? (
           <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
         ) : interviewState === "draining_audio" ? (
@@ -309,7 +309,7 @@ export default function InterviewPage() {
 
             {/* Transcript */}
             {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
+              <div className="w-full space-y-2 overflow-y-auto max-h-[46vh]">
                 {transcript.map((turn, i) => (
                   <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
                 ))}
@@ -320,7 +320,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="mt-2 mb-6 flex items-center justify-between gap-3 rounded-[14px] border border-border bg-white/95 px-3.5 py-2.5 shadow-md backdrop-blur-sm">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
@@ -335,7 +335,7 @@ export default function InterviewPage() {
               <><Mic className="h-3.5 w-3.5 mr-1.5" /> Mic On</>
             )}
           </Button>
-
+            
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" size="sm">End Interview</Button>

@@ -9,10 +9,11 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.includes(:vacancy_skills).order(created_at: :desc))
+        taxonomy_map = skill_taxonomy_map_for(vacancies)
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
+          vacancies: vacancies.map { |vacancy| vacancy_with_skills_json(vacancy, taxonomy_map) },
           meta: pagination_meta(vacancies)
         )
       end
@@ -80,16 +81,22 @@ module Api
         }
       end
 
-      def vacancy_with_skills_json(vacancy)
+      def vacancy_with_skills_json(vacancy, taxonomy_map = nil)
         skills = vacancy.vacancy_skills
 
         # Preload taxonomy anchors in one query to avoid N+1
-        skill_ids    = skills.filter_map(&:skill_id).uniq
-        taxonomy_map = SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
+        taxonomy_map ||= skill_taxonomy_map_for([vacancy])
 
         vacancy_json(vacancy).merge(
           skills: skills.map { |s| vacancy_skill_json(s, taxonomy_map[s.skill_id]) }
         )
+      end
+
+      def skill_taxonomy_map_for(vacancies)
+        skill_ids = vacancies.flat_map { |v| v.vacancy_skills.filter_map(&:skill_id) }.uniq
+        return {} if skill_ids.empty?
+
+        SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
       end
 
       def vacancy_skill_json(skill, taxonomy)
