@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
+import PageHeader from "@/components/layout/PageHeader";
+import StatePanel from "@/components/layout/StatePanel";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import {
@@ -65,7 +65,6 @@ export default function LiveMonitorPage() {
   const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
     useCoverageWebSocket(Number(sessionId));
 
-  // On session_ended from WS — stop polling, update local state
   useEffect(() => {
     if (sessionEnded) {
       setSessionActive(false);
@@ -73,7 +72,6 @@ export default function LiveMonitorPage() {
     }
   }, [sessionEnded]);
 
-  // Initial load
   useEffect(() => {
     Promise.all([
       sessionsApi.get(Number(sessionId)),
@@ -94,7 +92,6 @@ export default function LiveMonitorPage() {
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  // Poll transcript every 3s while session is active
   const fetchNewTurns = useCallback(async () => {
     try {
       const res = await sessionsApi.getTranscript(
@@ -106,7 +103,7 @@ export default function LiveMonitorPage() {
         lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
       }
     } catch {
-      // transient poll failure — silently skip, retry on next interval
+      // transient
     }
   }, [sessionId]);
 
@@ -129,9 +126,9 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
+      <div className="max-w-3xl mx-auto space-y-4">
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-40 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
     );
@@ -141,49 +138,48 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <PageHeader
+        back={
+          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground mt-1.5">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+        title="Live Monitor"
+        subtitle={assessmentName || undefined}
+        actions={
+          <div className="flex items-center gap-3">
+            {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
+            <span
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-medium",
+                isConnected ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <Radio className={cn("h-3 w-3", isConnected && "animate-pulse")} />
+              {isConnected ? "Live" : "Reconnecting…"}
+            </span>
           </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-3">
-          {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
-            <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
-          </span>
-        </div>
-      </div>
-
-      {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-          <div>
-            <span className="font-medium">Session ended</span>
-            {sessionEndReason && (
-              <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
-              </span>
-            )}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 border border-primary/25 bg-accent/50 px-4 py-3">
+          <div className="flex items-start gap-2 text-sm flex-1 min-w-0">
+            <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div>
+              <span className="font-medium">Session ended</span>
+              {sessionEndReason && (
+                <span className="text-muted-foreground ml-1.5">
+                  — {sessionEndReason.replace(/_/g, " ")}
+                </span>
+              )}
+            </div>
           </div>
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto"
+            className="shrink-0 w-full sm:w-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
             View portfolio →
@@ -191,20 +187,18 @@ export default function LiveMonitorPage() {
         </div>
       )}
 
-      {/* Coverage map */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Coverage Status</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        {/* Coverage scoreboard */}
+        <section className="border border-foreground/10 bg-card/50 px-4 py-4 space-y-4 order-2 lg:order-1">
+          <h2 className="font-display text-lg font-semibold tracking-tight">Coverage</h2>
           {configuredSkills.length === 0 && discoveredSkills.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Waiting for interview to begin...</p>
+            <p className="text-sm text-muted-foreground">Waiting for interview to begin…</p>
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{skill.skill_label}</span>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="font-medium truncate">{skill.skill_label}</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                     {skill.probe_count > 0 && (
                       <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                     )}
@@ -214,88 +208,69 @@ export default function LiveMonitorPage() {
                 <Progress
                   value={COVERAGE_STATE_WIDTH[skill.state]}
                   indicatorClassName={COVERAGE_STATE_COLOR[skill.state]}
-                  className="h-2"
+                  className="h-1.5"
                 />
                 {skill.last_signal && (
                   <p className="text-xs text-muted-foreground truncate">
-                    "{skill.last_signal}"
+                    &ldquo;{skill.last_signal}&rdquo;
                   </p>
                 )}
               </div>
             ))
           )}
 
-          {/* Discovered skills */}
           {discoveredSkills.length > 0 && (
-            <>
-              {configuredSkills.length > 0 && <Separator />}
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Discovered
-                </p>
-                {discoveredSkills.map((skill) => (
-                  <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
-                        {skill.skill_label}
-                      </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {skill.probe_count > 0 && (
-                          <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
-                        )}
-                        <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
-                      </div>
-                    </div>
-                    <Progress
-                      value={COVERAGE_STATE_WIDTH[skill.state]}
-                      indicatorClassName="bg-amber-400"
-                      className="h-2"
-                    />
-                    {skill.last_signal && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        "{skill.last_signal}"
-                      </p>
-                    )}
+            <div className="space-y-3 border-t border-foreground/10 pt-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Discovered
+              </p>
+              {discoveredSkills.map((skill) => (
+                <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex items-center gap-1 truncate font-medium">
+                      <Zap className="h-3 w-3 shrink-0" />
+                      {skill.skill_label}
+                    </span>
+                    <span className="text-xs text-muted-foreground capitalize shrink-0">
+                      {COVERAGE_STATE_LABELS[skill.state]}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </>
+                  <Progress
+                    value={COVERAGE_STATE_WIDTH[skill.state]}
+                    indicatorClassName="bg-secondary"
+                    className="h-1.5"
+                  />
+                </div>
+              ))}
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Live transcript */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Live Transcript</CardTitle>
-        </CardHeader>
-        <CardContent>
+        {/* Live transcript */}
+        <section className="border border-foreground/10 bg-card/50 px-4 py-4 space-y-3 order-1 lg:order-2">
+          <h2 className="font-display text-lg font-semibold tracking-tight">Live transcript</h2>
           {transcript.length === 0 ? (
             <p className="text-sm text-muted-foreground">No transcript yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5 max-h-[28rem] overflow-y-auto pr-1">
               {transcript.map((turn) => (
                 <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </section>
+      </div>
 
       {endError && (
-        <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
-          Failed to end session. Please try again.
-        </div>
+        <StatePanel variant="error" title="Failed to end session" description="Please try again." />
       )}
 
-      {/* End Session */}
       <div className="flex justify-end">
         {sessionActive ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={ending}>
-                {ending ? "Ending..." : "End Session"}
+              <Button variant="destructive" disabled={ending} className="w-full sm:w-auto">
+                {ending ? "Ending…" : "End Session"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -314,6 +289,7 @@ export default function LiveMonitorPage() {
         ) : (
           <Button
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
             View portfolio →

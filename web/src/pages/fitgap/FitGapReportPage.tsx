@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
+import PageHeader from "@/components/layout/PageHeader";
+import StatePanel from "@/components/layout/StatePanel";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
@@ -96,111 +96,94 @@ export default function FitGapReportPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
-          </div>
-        </div>
+      <PageHeader
+        back={
+          <Link
+            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+            className="text-muted-foreground hover:text-foreground mt-1.5"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+        title="Fit/Gap Report"
+        subtitle="Vacancy requirements vs candidate portfolio"
+        actions={
+          portfolio ? (
+            <>
+              <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
+                {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                Regenerate
+              </Button>
+              {report && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
+                    {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                    PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
+                    {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                    JSON
+                  </Button>
+                </>
+              )}
+            </>
+          ) : undefined
+        }
+      />
 
-        {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
-            </Button>
-            {report && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Generating */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
-        </div>
+        <StatePanel
+          variant="generating"
+          title="Generating fit/gap report"
+          description="Comparing portfolio levels against vacancy expectations."
+        >
+          <Skeleton className="h-32 w-full" />
+        </StatePanel>
       )}
 
-      {/* Report ready */}
       {report && (
         <>
-          {/* Skill comparison */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <ComparisonTable comparisons={report.skill_comparisons} />
-            </CardContent>
-          </Card>
+          <section className="border border-foreground/10 bg-card/50 px-3 sm:px-4 py-4 space-y-3">
+            <h2 className="font-display text-lg font-semibold tracking-tight px-1">Skill comparison</h2>
+            <ComparisonTable comparisons={report.skill_comparisons} />
+          </section>
 
-          <Separator />
+          <section className="border border-foreground/10 bg-card/50 px-4 sm:px-5 py-5 space-y-3">
+            <h2 className="font-display text-lg font-semibold tracking-tight">Culture &amp; competency</h2>
+            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+              {report.culture_narrative || report.overall_narrative}
+            </p>
+          </section>
 
-          {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills (not in vacancy requirements)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-2">
-                  {portfolio.skills
-                    .filter((s) => s.is_discovered)
-                    .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
-                        <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
-                        </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
-            </>
+            <section className="border border-foreground/10 bg-card/50 px-4 sm:px-5 py-5 space-y-3">
+              <h2 className="font-display text-lg font-semibold tracking-tight flex items-center gap-1.5">
+                <Zap className="h-4 w-4" />
+                Discovered skills
+              </h2>
+              <p className="text-xs text-muted-foreground -mt-1">Not in vacancy requirements — may be additive.</p>
+              <ul className="space-y-2">
+                {portfolio.skills
+                  .filter((s) => s.is_discovered)
+                  .map((s) => (
+                    <li key={s.id} className="text-sm flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className="font-medium">{s.skill_label}</span>
+                      <span className="text-muted-foreground text-xs">
+                        L{s.ai_level}
+                        {s.ai_confidence?.toLowerCase() === "low" ? " · low confidence" : ""}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </section>
           )}
         </>
       )}
