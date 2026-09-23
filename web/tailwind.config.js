@@ -4,6 +4,10 @@ export default {
     content: ["./index.html", "./src/**/*.{ts,tsx}"],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+                display: ["var(--font-display)", "Georgia", "serif"],
+            },
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
@@ -41,8 +45,8 @@ export default {
             },
             borderRadius: {
                 lg: "var(--radius)",
-                md: "calc(var(--radius) - 2px)",
-                sm: "calc(var(--radius) - 4px)",
+                md: "calc(var(--radius) - 1px)",
+                sm: "calc(var(--radius) - 2px)",
             },
             keyframes: {
                 "accordion-down": {

@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
+import PageHeader from "@/components/layout/PageHeader";
+import StatePanel from "@/components/layout/StatePanel";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
@@ -36,7 +37,6 @@ export default function PortfolioPage() {
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
-      // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
         overrideMap[o.portfolio_skill_id] = o;
@@ -55,7 +55,6 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
@@ -101,173 +100,155 @@ export default function PortfolioPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-9 w-56" />
+        <Skeleton className="h-4 w-32" />
+        <div className="space-y-3">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+      <PageHeader
+        back={
+          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground mt-1.5">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
+        }
+        title="Portfolio Results"
+        subtitle={candidateName ?? undefined}
+        actions={
+          <>
+            <Link
+              to={`/assessments/${id}/sessions/${sessionId}/transcript`}
+              className="inline-flex items-center gap-1.5 text-sm border border-foreground/15 px-3 py-1.5 hover:bg-accent transition-colors"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Transcript
+            </Link>
+            {!generating && portfolio?.generation_status === "complete" && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
+                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                  PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
+                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                  JSON
+                </Button>
+              </>
             )}
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        <div className="flex gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            Transcript
-          </Link>
-          {!generating && portfolio?.generation_status === "complete" && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("pdf")}
-                disabled={!!exporting}
-              >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("json")}
-                disabled={!!exporting}
-              >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                JSON
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Generating state */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <div>
-            <p className="font-medium">Generating portfolio...</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Analyzing the saved interview transcript. If the primary model is busy,
-              a secondary model is tried once automatically.
-            </p>
+        <StatePanel
+          variant="generating"
+          title="Generating portfolio"
+          description="Analyzing the saved interview transcript. If the primary model is busy, a secondary model is tried once automatically."
+        >
+          <div className="space-y-3 pt-2">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-16 w-3/4" />
           </div>
-        </div>
+        </StatePanel>
       )}
 
-      {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 space-y-4">
-          <div className="space-y-2 text-center sm:text-left">
-            <p className="font-medium text-destructive">Portfolio result is not ready</p>
-            <p className="text-sm text-muted-foreground">
+        <StatePanel
+          variant="error"
+          title="Portfolio result is not ready"
+          description={
+            <>
               The interview itself is saved. Building the skill portfolio failed
               because the model service refused the request
               {isRateLimitedError(portfolio.generation_error)
                 ? " (rate limited on both the primary and fallback models)"
-                : ""}.
-              The candidate is not scored until generation succeeds.
+                : ""}
+              . The candidate is not scored until generation succeeds.
+            </>
+          }
+          actions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  await sessionsApi.regeneratePortfolio(Number(sessionId));
+                  setGenerating(true);
+                }}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry generation
+              </Button>
+              <Link
+                to={`/assessments/${id}/sessions/${sessionId}/transcript`}
+                className="text-sm text-primary hover:underline self-center"
+              >
+                Open saved transcript
+              </Link>
+            </>
+          }
+        >
+          {portfolio.generation_error && (
+            <p className="text-xs text-muted-foreground font-mono">
+              Reason: {portfolio.generation_error}
             </p>
-            {portfolio.generation_error && (
-              <p className="text-xs text-muted-foreground font-mono">
-                Reason: {portfolio.generation_error}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">
-              Retry is a manual second attempt. It may hit the same limit.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                await sessionsApi.regeneratePortfolio(Number(sessionId));
-                setGenerating(true);
-              }}
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry generation
-            </Button>
-          </div>
-          <div className="pt-1">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-              className="text-sm text-primary hover:underline"
-            >
-              Open saved transcript
-            </Link>
-          </div>
-        </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Retry is a manual second attempt. It may hit the same limit.
+          </p>
+        </StatePanel>
       )}
 
-      {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
-          {/* Configured skills */}
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
+            <h2 className="font-display text-lg font-semibold tracking-tight">Configured skills</h2>
             {portfolio.skills
               .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
+              .map((skill, i) => (
+                <div key={skill.id} className="animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
+                  <SkillPortfolioCard
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                </div>
               ))}
           </div>
 
-          {/* Discovered skills */}
           {portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
-                  </p>
-                </div>
-                {portfolio.skills
-                  .filter((s) => s.is_discovered)
-                  .map((skill) => (
-                    <SkillPortfolioCard
-                      key={skill.id}
-                      skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                    />
-                  ))}
+            <div className="space-y-3 border-t border-foreground/10 pt-6">
+              <div>
+                <h2 className="font-display text-lg font-semibold tracking-tight flex items-center gap-1.5">
+                  <Zap className="h-4 w-4 text-secondary-foreground" />
+                  Discovered skills
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Skills the AI probed that were not in the original assessment
+                </p>
               </div>
-            </>
+              {portfolio.skills
+                .filter((s) => s.is_discovered)
+                .map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))}
+            </div>
           )}
 
-          <Separator />
-
-          {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
+          <div className="border-t border-foreground/10 pt-6 flex flex-col sm:flex-row gap-3 sm:items-center">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-56 bg-card">
                 <SelectValue placeholder="Choose vacancy..." />
               </SelectTrigger>
               <SelectContent>
@@ -278,7 +259,7 @@ export default function PortfolioPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+            <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="w-full sm:w-auto">
               Run Fit/Gap Analysis →
             </Button>
           </div>

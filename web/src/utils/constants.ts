@@ -63,8 +63,8 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-primary bg-accent/60 border-primary/20",
+  gap: "text-amber-800 bg-secondary/25 border-secondary/40",
+  exceed: "text-primary bg-accent/60 border-primary/20",
+  not_assessed: "text-muted-foreground bg-muted/50 border-foreground/10",
 };

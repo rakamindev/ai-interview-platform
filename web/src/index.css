@@ -4,67 +4,71 @@
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
+        /* Cool ink on warm-neutral paper — assessment studio */
+        --background: 40 20% 97%;
+        --foreground: 210 25% 12%;
 
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --card: 40 25% 99%;
+        --card-foreground: 210 25% 12%;
 
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+        --popover: 40 25% 99%;
+        --popover-foreground: 210 25% 12%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
+        /* Rakamin teal: #01959f */
         --primary: 184 99% 31%;
         --primary-foreground: 0 0% 98%;
 
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
+        /* Rakamin yellow: #FBC037 */
         --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+        --secondary-foreground: 26 47% 18%;
 
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+        --muted: 40 14% 92%;
+        --muted-foreground: 210 10% 40%;
 
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
+        --accent: 184 30% 92%;
+        --accent-foreground: 184 99% 22%;
 
-        --destructive: 0 84% 60%;
+        --destructive: 4 72% 48%;
         --destructive-foreground: 0 0% 98%;
 
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
+        --border: 40 12% 84%;
+        --input: 40 12% 84%;
         --ring: 184 99% 31%;
 
-        --radius: 0.5rem;
+        --radius: 0.35rem;
+
+        --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+        --font-sans: "IBM Plex Sans", system-ui, sans-serif;
     }
 
     .dark {
-        --background: 222 47% 11%;
-        --foreground: 210 40% 98%;
+        --background: 210 20% 9%;
+        --foreground: 40 15% 94%;
 
-        --card: 222 47% 11%;
-        --card-foreground: 210 40% 98%;
+        --card: 210 18% 12%;
+        --card-foreground: 40 15% 94%;
 
-        --popover: 222 47% 11%;
-        --popover-foreground: 210 40% 98%;
+        --popover: 210 18% 12%;
+        --popover-foreground: 40 15% 94%;
 
-        --primary: 184 99% 31%;
+        --primary: 184 80% 42%;
         --primary-foreground: 0 0% 98%;
 
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+        --secondary: 43 90% 55%;
+        --secondary-foreground: 26 47% 12%;
 
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
+        --muted: 210 14% 16%;
+        --muted-foreground: 40 8% 65%;
 
-        --accent: 217 33% 17%;
-        --accent-foreground: 210 40% 98%;
+        --accent: 184 20% 18%;
+        --accent-foreground: 184 60% 75%;
 
-        --destructive: 0 63% 31%;
+        --destructive: 4 65% 42%;
         --destructive-foreground: 0 0% 98%;
 
-        --border: 217 33% 17%;
-        --input: 217 33% 17%;
-        --ring: 184 99% 31%;
+        --border: 210 12% 22%;
+        --input: 210 12% 22%;
+        --ring: 184 80% 42%;
     }
 }
 
@@ -74,6 +78,41 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-sans antialiased;
+        background-image:
+            radial-gradient(ellipse 120% 80% at 0% -20%, hsl(184 40% 90% / 0.45), transparent 55%),
+            radial-gradient(ellipse 90% 60% at 100% 0%, hsl(43 70% 90% / 0.35), transparent 50%),
+            linear-gradient(180deg, hsl(40 20% 97%) 0%, hsl(40 16% 95%) 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
     }
+
+    h1, h2, .font-display {
+        font-family: var(--font-display);
+    }
+}
+
+@layer utilities {
+    .ink-rule {
+        @apply border-t border-foreground/15;
+    }
+
+    .animate-progress-rule {
+        animation: progress-rule 2.4s ease-in-out infinite;
+    }
+
+    .animate-fade-in {
+        animation: fade-in 0.45s ease-out both;
+    }
+}
+
+@keyframes progress-rule {
+    0% { transform: scaleX(0.15); transform-origin: left; opacity: 0.5; }
+    50% { transform: scaleX(0.85); transform-origin: left; opacity: 1; }
+    100% { transform: scaleX(0.25); transform-origin: right; opacity: 0.6; }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
 }

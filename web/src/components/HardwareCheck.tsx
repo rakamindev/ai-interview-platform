@@ -201,36 +201,31 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
 
     return (
-        <div className="rounded-lg border bg-card overflow-hidden">
-            {/* Camera preview */}
-            {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
+        <div className="border border-foreground/15 bg-card/80 overflow-hidden">
+            {REQUIRE_CAMERA && <div className="relative bg-foreground aspect-video">
                 {videoStream ? (
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                        <svg className="w-10 h-10 opacity-30" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                        </svg>
-                        <p className="text-xs">Camera not active</p>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-primary-foreground/50 gap-2">
+                        <p className="text-xs tracking-wide uppercase">Camera not active</p>
                     </div>
                 )}
                 {progress.camera === ProctoringState.PASSED && videoStream && (
-                    <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
+                    <span className="absolute bottom-2 left-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider bg-destructive text-destructive-foreground px-2 py-0.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        LIVE
+                        Live
                     </span>
                 )}
             </div>}
 
-            {/* Checklist */}
-            <div className="divide-y">
+            <div className="divide-y divide-foreground/10">
                 {rows.map(({ key, label }) => (
-                    <div key={key} className="px-4 py-3">
-                        <div className="flex items-center justify-between">
+                    <div key={key} className="px-4 py-3.5">
+                        <div className="flex items-center justify-between gap-3">
                             <span className="text-sm font-medium">{label}</span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                                 <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
+                                <span className={`text-xs w-[4.5rem] text-right tabular-nums ${progress[key] === ProctoringState.PASSED ? "text-primary" :
                                     progress[key] === ProctoringState.ERROR ? "text-destructive" :
                                         "text-muted-foreground"
                                     }`}>
@@ -239,48 +234,47 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             </div>
                         </div>
 
-                        {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums">
+                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-primary" : "text-destructive"}>
                                     ↓ {internetResult.download} Mbps
                                 </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-primary" : "text-destructive"}>
                                     ↑ {internetResult.upload} Mbps
                                 </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-primary" : "text-destructive"}>
                                     {internetResult.ping} ms
                                 </span>
                             </div>
                         )}
 
-                        {/* Mic level bar */}
                         {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
                             <div className="mt-2 flex items-center gap-2">
-                                <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                                <div className="flex-1 bg-muted h-1 overflow-hidden">
                                     <div
-                                        className="h-full bg-green-500 transition-all duration-150"
+                                        className="h-full bg-primary transition-all duration-150"
                                         style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
                                     />
                                 </div>
-                                <span className="text-xs text-muted-foreground w-8 text-right">{audioLevel}</span>
+                                <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">{audioLevel}</span>
                             </div>
                         )}
                     </div>
                 ))}
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
-                {hasError && (
-                    <Button variant="outline" size="sm" onClick={retryAll}>
+            <div className="px-4 py-3 border-t border-foreground/10 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-muted/40">
+                {hasError ? (
+                    <Button variant="outline" size="sm" onClick={retryAll} className="w-full sm:w-auto">
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                         Retry
                     </Button>
+                ) : (
+                    <span className="hidden sm:block" />
                 )}
                 <Button
                     size="sm"
-                    className="ml-auto"
+                    className="w-full sm:w-auto sm:ml-auto"
                     disabled={!allPassed}
                     onClick={onStart}
                 >
