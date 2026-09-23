@@ -34,14 +34,11 @@ Rails.application.configure do
   # Raise an error on page load if there are pending migrations.
   config.active_record.migration_error = :page_load
 
-  # Highlight code that triggered database queries in logs.
-  config.active_record.verbose_query_logs = true
-
-  # Suppress logger output for asset requests.
-  # config.assets.quiet = true
-
-  # Log level
-  config.log_level = :debug
+  # SQL and caller annotations are debug-only.
+  # Normal local runs stay at info: one request line, no statement dump.
+  # Restore query logs with RAILS_LOG_LEVEL=debug when tracing a query.
+  config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info").to_sym
+  config.active_record.verbose_query_logs = (config.log_level == :debug)
 
   # Use an evented file watcher to asynchronously detect changes in source code,
   # routes, locales, etc. This feature depends on the listen gem.
