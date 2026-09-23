@@ -24,6 +24,8 @@
 config/application.yml
 vertex_ai_credentials.json
 
+/vendor
+
 
 # Ignore Public Docs
 /tech-docs

@@ -17,6 +17,8 @@ module Gemini
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
 
+    attr_reader :model
+
     def initialize(model: nil, api_key: nil, timeout: 60)
       @model = model
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
@@ -54,15 +56,16 @@ module Gemini
 
     def build_connection
       Faraday.new do |f|
+        # Retry transient server errors only. A 429 is a finished result for the
+        # caller (e.g. portfolio fallback to another model), not something to burn
+        # quota sleeping on.
         f.request :retry, {
-          max: 3,
+          max: 2,
           interval: 1,
           interval_randomness: 0.5,
           backoff_factor: 2,
-          retry_statuses: [429, 500, 502, 503],
-          retry_block: ->(env, _opts, retries, exc) {
-            retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
+          retry_statuses: [500, 502, 503],
+          retry_block: ->(_env, _opts, retries, exc) {
             Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
           }
         }
@@ -74,9 +77,16 @@ module Gemini
 
     def parse_response(response)
       unless response.success?
-        raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
-        raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
+        if response.status == 429
+          raise RateLimitError.new(
+            "Rate limited by model #{@model}",
+            status: response.status,
+            body: nil
+          )
+        end
+
+        Rails.logger.error("[Gemini::HttpClient] API error #{response.status} for #{@model}")
+        raise ApiError.new("API returned #{response.status}", status: response.status, body: nil)
       end
 
       data = JSON.parse(response.body)

@@ -10,7 +10,7 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @portfolio.nil? || @portfolio.generating? || @portfolio.generation_status == "pending"
           return render json: { status: "generating" }, status: :accepted
         end
 
@@ -30,6 +30,10 @@ module Api
 
         if portfolio.nil?
           return json_error("No portfolio found for this session", :not_found)
+        end
+
+        if portfolio.generating? || portfolio.generation_status == "pending"
+          return json_error("Portfolio generation is already in progress", :conflict)
         end
 
         unless portfolio.failed?

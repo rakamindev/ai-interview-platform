@@ -2,44 +2,127 @@
 
 module Portfolios
   # N10: Generates a structured skill portfolio from the full transcript
-  # and final coverage map using Gemini Pro.
+  # and final coverage map using Gemini.
+  # Primary model is Pro; on HTTP 429, one Flash attempt is used as fallback.
   # Runs post-session as a background job.
   class Generator
-    def initialize(session:, gemini_client: nil)
+    RATE_LIMITED_ERROR = 'rate_limited'
+    MODELS_EXHAUSTED_ERROR = 'rate_limited_all_models'
+
+    def initialize(session:, gemini_client: nil, fallback_client: :auto)
       @session = session
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
-      )
+      @primary_client = gemini_client || default_primary_client
+      @fallback_client = fallback_client
     end
 
-    # Returns the Portfolio record with skills populated.
+    # Returns the Portfolio record with skills populated, or the failed record
+    # when both models refuse the call. Does not re-raise RateLimitError so
+    # Sidekiq does not burn the quota with automatic retries.
     def call
+      portfolio = nil
       portfolio = @session.portfolio || @session.create_portfolio!(
         candidate_id:      @session.candidate_id,
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      portfolio.update!(generation_status: 'generating', generation_error: nil)
 
       prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      response = generate_with_fallback(prompt)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
-    rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+    rescue Gemini::HttpClient::RateLimitError
+      fail_portfolio!(portfolio, MODELS_EXHAUSTED_ERROR)
+      portfolio
+    rescue StandardError => e
+      fail_portfolio!(portfolio, safe_error_code(e))
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
     private
 
+    def default_primary_client
+      Gemini::HttpClient.new(
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        timeout: 180
+      )
+    end
+
+    def resolve_fallback_client
+      return nil if @fallback_client.nil?
+      return @fallback_client unless @fallback_client == :auto
+
+      primary_model = @primary_client.respond_to?(:model) ? @primary_client.model : nil
+      flash_model   = ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001')
+      return nil if flash_model.blank? || flash_model == primary_model
+
+      Gemini::HttpClient.new(model: flash_model, timeout: 180)
+    end
+
+    def generate_with_fallback(prompt)
+      @primary_client.generate_content(prompt, temperature: 0.2)
+    rescue Gemini::HttpClient::RateLimitError
+      fallback = resolve_fallback_client
+      primary_model = model_name(@primary_client)
+
+      if fallback.nil?
+        Rails.logger.warn(
+          "[N10] Primary model rate-limited for session #{@session.id} " \
+          "(model=#{primary_model}); no fallback configured"
+        )
+        raise
+      end
+
+      fallback_model = model_name(fallback)
+      Rails.logger.warn(
+        "[N10] Primary model rate-limited for session #{@session.id} " \
+        "(primary=#{primary_model}); trying fallback=#{fallback_model}"
+      )
+
+      begin
+        response = fallback.generate_content(prompt, temperature: 0.2)
+        Rails.logger.info(
+          "[N10] Portfolio fallback succeeded for session #{@session.id} " \
+          "(fallback=#{fallback_model})"
+        )
+        response
+      rescue Gemini::HttpClient::RateLimitError
+        Rails.logger.warn(
+          "[N10] Fallback model also rate-limited for session #{@session.id} " \
+          "(fallback=#{fallback_model})"
+        )
+        raise
+      end
+    end
+
+    def model_name(client)
+      client.respond_to?(:model) ? client.model.to_s : 'unknown'
+    end
+
+    def fail_portfolio!(portfolio, code)
+      portfolio&.update!(generation_status: 'failed', generation_error: code)
+      Rails.logger.error(
+        "[N10] Portfolio generation failed for session #{@session.id}: #{code}"
+      )
+    end
+
+    def safe_error_code(error)
+      case error
+      when Gemini::HttpClient::TimeoutError then 'model_timeout'
+      when Gemini::HttpClient::ApiError     then 'model_error'
+      when JSON::ParserError               then 'invalid_model_response'
+      else
+        'generation_failed'
+      end
+    end
+
     def build_prompt
-      assessment       = @session.assessment
+      assessment        = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
       turns             = @session.transcript_turns.ordered
@@ -139,10 +222,10 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
-        probe_count: map.probe_count,
+        id:            map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
+        label:         map.skill_label,
+        state:         map.state,
+        probe_count:   map.probe_count,
         is_discovered: map.is_discovered
       }
     end

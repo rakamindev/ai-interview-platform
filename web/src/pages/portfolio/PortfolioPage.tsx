@@ -12,6 +12,10 @@ import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
+function isRateLimitedError(error?: string | null) {
+  return error === "rate_limited" || error === "rate_limited_all_models";
+}
+
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
@@ -128,7 +132,7 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {!generating && portfolio?.generation_status === "complete" && (
             <>
               <Button
                 variant="outline"
@@ -160,7 +164,8 @@ export default function PortfolioPage() {
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              Analyzing the saved interview transcript. If the primary model is busy,
+              a secondary model is tried once automatically.
             </p>
           </div>
         </div>
@@ -168,18 +173,46 @@ export default function PortfolioPage() {
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-          </Button>
+        <div className="border border-destructive/40 rounded-lg p-6 space-y-4">
+          <div className="space-y-2 text-center sm:text-left">
+            <p className="font-medium text-destructive">Portfolio result is not ready</p>
+            <p className="text-sm text-muted-foreground">
+              The interview itself is saved. Building the skill portfolio failed
+              because the model service refused the request
+              {isRateLimitedError(portfolio.generation_error)
+                ? " (rate limited on both the primary and fallback models)"
+                : ""}.
+              The candidate is not scored until generation succeeds.
+            </p>
+            {portfolio.generation_error && (
+              <p className="text-xs text-muted-foreground font-mono">
+                Reason: {portfolio.generation_error}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Retry is a manual second attempt. It may hit the same limit.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await sessionsApi.regeneratePortfolio(Number(sessionId));
+                setGenerating(true);
+              }}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry generation
+            </Button>
+          </div>
+          <div className="pt-1">
+            <Link
+              to={`/assessments/${id}/sessions/${sessionId}/transcript`}
+              className="text-sm text-primary hover:underline"
+            >
+              Open saved transcript
+            </Link>
+          </div>
         </div>
       )}
 
