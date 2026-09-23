@@ -45,8 +45,11 @@ module Api
 
       # DELETE /api/v1/vacancies/:id
       def destroy
-        @vacancy.destroy
-        json_response(message: "Vacancy deleted")
+        if @vacancy.destroy
+          json_response(message: "Vacancy deleted")
+        else
+          json_error(@vacancy.errors.full_messages.first || "Could not delete vacancy", :unprocessable_entity)
+        end
       end
 
       private

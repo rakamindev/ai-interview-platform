@@ -4,7 +4,7 @@ class Assessment < ApplicationRecord
   include TenantScoped
 
   has_many :assessment_skills, dependent: :destroy, inverse_of: :assessment
-  has_many :sessions, dependent: :restrict_with_error
+  has_many :sessions, dependent: :destroy
 
   SUPPORTED_LANGUAGES = { 'en' => 'English', 'id' => 'Bahasa Indonesia' }.freeze
 
