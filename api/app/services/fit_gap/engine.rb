@@ -4,9 +4,10 @@ module FitGap
   # N13: Generates a fit/gap report comparing a portfolio against a vacancy.
   # Uses rule-based comparison for skill levels + Gemini Flash for culture narrative.
   class Engine
-    def initialize(portfolio:, vacancy:, gemini_client: nil)
+    def initialize(portfolio:, vacancy:, gemini_client: nil, generation_token: nil)
       @portfolio = portfolio
       @vacancy   = vacancy
+      @generation_token = generation_token
       @gemini_client = gemini_client || Gemini::HttpClient.new(
         model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
         timeout: 30
@@ -18,17 +19,30 @@ module FitGap
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
 
-      report = FitGapReport.find_or_initialize_by(
+      report = FitGapReport.unscoped.find_or_initialize_by(
         portfolio_id: @portfolio.id,
         vacancy_id:   @vacancy.id
       )
+      if report.new_record?
+        report.skill_comparisons = []
+        report.generation_status = 'generating'
+        report.save!
+      end
 
-      report.update!(
-        skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
-      )
+      report.with_lock do
+        if @generation_token.present? &&
+           (report.generation_token != @generation_token || !report.generating?)
+          return report
+        end
+        report.update!(
+          skill_comparisons: skill_comparisons,
+          culture_narrative: narratives[:culture],
+          overall_narrative: narratives[:overall],
+          generated_at:      Time.current,
+          generation_status: 'complete',
+          generation_error: nil
+        )
+      end
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
       report
@@ -42,15 +56,15 @@ module FitGap
 
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
+        expected_level = vacancy_skill.expected_level
 
-        if portfolio_skill
+        if portfolio_skill && portfolio_skill[:assessment_status] == 'assessed' &&
+           portfolio_skill[:effective_level].present? && expected_level.present?
           candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
           result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
           candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
         end
@@ -62,7 +76,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
 
@@ -80,7 +95,8 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          overridden:     override.present?,
+          assessment_status: skill.assessment_status
         }
       end
     end

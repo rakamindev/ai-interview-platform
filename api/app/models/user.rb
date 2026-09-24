@@ -4,6 +4,8 @@ class User < ApplicationRecord
   has_secure_password
 
   ROLES = %w[admin user].freeze
+  has_many :tenant_memberships, dependent: :destroy
+  has_many :organizations, through: :tenant_memberships
 
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },

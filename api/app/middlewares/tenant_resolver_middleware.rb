@@ -6,19 +6,15 @@
 #   Current.organization  → the Organization AR record
 #   Current.tenant_id     → organization.id (used to scope all AI interview queries)
 #
-# Resolution order:
-#   1. JWT Bearer token → decode → use `scheme` claim
-#   2. X-Tenant-Scheme request header (for non-JWT requests / candidate flows)
-#   3. Referer host (fallback, same as rakamin-api HostService approach)
-#
-# If no tenant can be resolved, the request continues with no tenant set.
+# The middleware provides a provisional tenant for candidate-token routes.
+# Authenticated REST actions replace it only after membership verification.
 # Individual controllers can enforce tenant presence via before_action.
 class TenantResolverMiddleware < ApplicationMiddleware
   def call(env)
     request = ActionDispatch::Request.new(env)
 
-    scheme = resolve_scheme(request)
-    organization = find_organization(scheme)
+    scheme = scheme_from_jwt(request) || request.headers['X-Tenant-Scheme'].presence
+    organization = scheme.present? ? Organization.find_by(scheme:) : nil
 
     if organization
       Current.organization = organization
@@ -31,12 +27,7 @@ class TenantResolverMiddleware < ApplicationMiddleware
   private
 
   def resolve_scheme(request)
-    # 1. Try JWT bearer token first
-    scheme_from_jwt(request) ||
-      # 2. Try explicit header
-      request.headers['X-Tenant-Scheme'].presence ||
-      # 3. Fall back to referer host
-      scheme_from_referer(request)
+    scheme_from_jwt(request) || request.headers['X-Tenant-Scheme'].presence
   end
 
   def scheme_from_jwt(request)
@@ -50,21 +41,4 @@ class TenantResolverMiddleware < ApplicationMiddleware
     nil
   end
 
-  def scheme_from_referer(request)
-    referer = request.referer.to_s
-    return if referer.blank?
-
-    host = URI.parse(referer).host.to_s
-    host.presence
-  rescue URI::InvalidURIError
-    nil
-  end
-
-  def find_organization(scheme)
-    return if scheme.blank?
-
-    Organization.identify(scheme)
-  rescue StandardError
-    nil
-  end
 end

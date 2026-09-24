@@ -27,7 +27,7 @@ Fill in the required values in `config/application.yml`:
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `FRONTEND_BASE_URL` | Candidate-facing web app URL used for interview invitations, e.g. `http://localhost:5173` (production must set the deployed frontend origin) |
 
 ---
 
@@ -46,6 +46,8 @@ rails db:create   # skip if DB already exists
 rails db:migrate
 rails db:seed
 ```
+
+Tenant access is membership-based. Development seeds provision the local test-corp admins and membership. Production user/tenant mappings must be explicitly provisioned by the tenant owner. Log in through POST /api/v1/auth/login with the X-Tenant-Scheme: test-corp header. Do not mint JWTs manually; candidate access uses the session invite token.
 
 ---
 

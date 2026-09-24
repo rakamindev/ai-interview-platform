@@ -6,6 +6,7 @@ class JsonWebToken
   TOKEN_EXPIRATION_TIME = ENV['TOKEN_EXPIRATION_TIME'].presence
 
   def self.encode(payload, expire_time = nil)
+    payload = payload.to_h.symbolize_keys
     if payload[:exp].blank?
       expire_time ||= TOKEN_EXPIRATION_TIME || 3.days
       payload[:exp] = Time.zone.now.to_i + expire_time.to_i

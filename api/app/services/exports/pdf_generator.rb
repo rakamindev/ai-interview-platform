@@ -81,9 +81,9 @@ module Exports
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
+        level_text = effective_level ? "Level: #{LEVEL_LABELS[effective_level]}" : 'Level: Not assessed'
         level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}" if skill.ai_confidence
         pdf.text level_text
       end
 
@@ -97,7 +97,10 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each do |evidence|
+            quote = evidence.is_a?(Hash) ? evidence['quote'] || evidence[:quote] : evidence
+            pdf.text "  • #{quote}"
+          end
         end
       end
 

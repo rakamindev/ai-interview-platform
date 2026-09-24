@@ -6,10 +6,8 @@
 # Usage:
 #   bundle exec rails db:seed
 #
-# After seeding, use the Rails console to mint a JWT for testing:
-#   bundle exec rails console
-#   > token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' })
-#   > puts token
+# Local development credentials are created only in development. Production
+# tenant memberships must be provisioned by the tenant owner.
 
 puts "== Seeding AI Interview development data =="
 
@@ -75,6 +73,27 @@ else
   SQL
 
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+end
+
+# Local development login. Keep this account out of production databases.
+if Rails.env.development?
+  organization_id = existing&.fetch('id') || result&.fetch('id')
+  raise 'Unable to find or create the test-corp organization' unless organization_id
+
+  [
+    { email: 'admin@test-corp.local', password: 'password123' },
+    { email: 'admin@gmail.com', password: 'password123' }
+  ].each do |credentials|
+    user = User.find_or_initialize_by(email: credentials[:email])
+    user.assign_attributes(password: credentials[:password], role: 'admin')
+    user.save!
+
+    membership = TenantMembership.find_or_initialize_by(user_id: user.id, organization_id:)
+    membership.update!(role: 'admin', active: true)
+    puts "  Ensured local admin login for #{user.email} on test-corp (user_id=#{user.id})"
+  end
+else
+  puts '  Skipped local development admin account outside development'
 end
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
@@ -382,24 +401,8 @@ puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
-puts ""
-puts "  bundle exec rails console"
-puts ""
-puts "Then run:"
-puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "Then hit the API:"
-puts ""
-puts "  curl -s http://localhost:3001/api/v1/health"
-puts ""
-puts "  curl -s -H 'Authorization: Bearer <your_token>' \\"
-puts "       http://localhost:3001/api/v1/assessments"
+puts "Local development admin: admin@test-corp.local (available only in development)." if Rails.env.development?
+puts "Use POST /api/v1/auth/login with X-Tenant-Scheme: #{TEST_ORG[:scheme]} to obtain an assessor token."
+puts "Candidate access uses the session invite token; do not mint candidate JWTs manually."
+puts "Health check: http://localhost:3001/api/v1/health"
 puts ""

@@ -7,6 +7,8 @@
 # Only includes the fields we need for tenant resolution.
 class Organization < ApplicationRecord
   self.table_name = 'organizations'
+  has_many :tenant_memberships, dependent: :restrict_with_error
+  has_many :users, through: :tenant_memberships
 
   # Mirrors rakamin-api Organisation.identify exactly.
   # Accepts identifier, name, scheme, or host.

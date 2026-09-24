@@ -15,11 +15,6 @@ class CoverageAnalyzerWorker
     apply_updates(session, result[:skill_updates])
     create_discovered_skills(session, result[:discovered_skills])
 
-    # Pass the IDs of maps just updated this run so we never auto-advance a
-    # skill that was touched in the same job (it isn't stale yet).
-    updated_ids = result[:skill_updates].filter_map { |u| u[:coverage_map_id] }
-    advance_stale_partials(session, exclude_ids: updated_ids)
-
     publish_coverage_update(session)
     # Session-end detection removed from worker (H1 fix) — the middleware owns
     # session lifecycle because it's the only component with access to both the
@@ -83,23 +78,6 @@ class CoverageAnalyzerWorker
 
   # Auto-advance skills that are partial but have fallen outside the analyzer's
   # context window (last TURNS_CONTEXT turns). Once a skill leaves the window,
-  # Flash can't see it and will never promote it — so we promote here if there's
-  # enough evidence (probe_count >= 4).
-  #
-  # exclude_ids: coverage_map IDs updated in this same job run — those were just
-  # discussed and are NOT stale yet.
-  def advance_stale_partials(session, exclude_ids: [])
-    scope = session.coverage_maps
-                   .where(state: 'partial')
-                   .where('probe_count >= ?', 4)
-    scope = scope.where.not(id: exclude_ids) if exclude_ids.any?
-
-    scope.each do |map|
-      map.update!(state: 'covered', last_signal: 'Auto-advanced: outside context window with sufficient probes')
-      Rails.logger.info("[N7] Auto-advanced #{map.skill_label} to covered (probe_count=#{map.probe_count})")
-    end
-  end
-
   def coverage_json(map)
     {
       id:            map.id,

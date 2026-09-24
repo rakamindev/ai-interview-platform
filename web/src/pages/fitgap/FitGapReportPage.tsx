@@ -10,6 +10,7 @@ import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+import { fitGapResponseSchema } from "@/types/contracts";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -24,21 +25,41 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
+      if ("report" in res.data) {
+        setReport(res.data.report);
+        setGenerating(false);
+        setGenerationError(null);
+      } else {
+        setGenerating(res.data.status === "generating");
+        setGenerationError(res.data.status === "failed" ? res.data.error ?? "Generation failed" : null);
+      }
     } catch (e: any) {
-      if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
+      if (e?.response?.status === 503) {
+        const previous = fitGapResponseSchema.safeParse(e.response.data);
+        if (previous.success && "stale_report" in previous.data && previous.data.stale_report) {
+          setReport(previous.data.stale_report);
         }
+        setGenerating(false);
+        setGenerationError(e?.response?.data?.error ?? "Fit/gap generation failed.");
+      } else if (e?.response?.status === 404) {
+        try {
+          const result = await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+          setGenerating(!("report" in result.data) && result.data.status === "generating");
+          if ("report" in result.data) setReport(result.data.report);
+          setGenerationError(null);
+        } catch (triggerError: any) {
+          setGenerating(false);
+          setGenerationError(triggerError?.response?.data?.error ?? "Fit/gap generation could not be started.");
+        }
+      } else {
+        setGenerating(false);
+        setGenerationError(e?.response?.data?.error ?? "Could not load the fit/gap report.");
       }
     }
   }, [portfolio, vacancyId]);
@@ -66,10 +87,28 @@ export default function FitGapReportPage() {
     setRegenerating(true);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
       setGenerating(true);
+      setGenerationError(null);
+    } catch (error: any) {
+      setGenerationError(error?.response?.data?.error ?? "Could not regenerate the report.");
     } finally {
       setRegenerating(false);
+    }
+  };
+
+  const handleRetryGeneration = async () => {
+    if (!portfolio) return;
+    try {
+      const result = await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+      if ("report" in result.data) {
+        setReport(result.data.report);
+        setGenerating(false);
+      } else {
+        setGenerating(result.data.status === "generating");
+      }
+      setGenerationError(null);
+    } catch (error: any) {
+      setGenerationError(error?.response?.data?.error ?? "Fit/gap generation could not be started.");
     }
   };
 
@@ -145,6 +184,16 @@ export default function FitGapReportPage() {
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+          {report && <p className="text-xs text-muted-foreground">The previous completed report is retained while this revision is generated.</p>}
+        </div>
+      )}
+
+      {generationError && !generating && (
+        <div role="alert" className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">{generationError}</p>
+          <Button variant="outline" size="sm" onClick={() => { setGenerationError(null); void handleRetryGeneration(); }}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+          </Button>
         </div>
       )}
 
@@ -193,7 +242,9 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {s.assessment_status === "not_assessed" || s.ai_level == null
+                            ? "Not assessed"
+                            : `L${s.ai_level} (${s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})`}
                         </span>
                         <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>

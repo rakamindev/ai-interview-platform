@@ -1,9 +1,9 @@
 import axios from "axios";
 import { getStoredToken, clearToken } from "@/stores/authAtom";
+import { getTenantScheme } from "@/stores/tenantAtom";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1";
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
-
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api/v1";
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3001";
 export const WS_URL = WS_BASE_URL;
 
 export const api = axios.create({
@@ -14,6 +14,7 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = getStoredToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers["X-Tenant-Scheme"] ??= getTenantScheme();
   return config;
 });
 
@@ -29,7 +30,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
       clearToken();
-      window.location.href = "/login";
+      window.location.href = "/login?reason=tenant";
     }
     return Promise.reject(error);
   }

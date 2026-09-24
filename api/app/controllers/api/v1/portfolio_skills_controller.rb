@@ -9,6 +9,8 @@ module Api
 
       # POST /api/v1/portfolio-skills/:id/override
       def override
+        return json_error('A skill without a verified AI assessment cannot be overridden yet', :unprocessable_entity) unless @portfolio_skill.assessed?
+
         existing = @portfolio_skill.assessor_override
 
         if existing
@@ -40,16 +42,13 @@ module Api
 
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+        FitGapReport.for_tenant(current_tenant_id).where(portfolio_id: portfolio.id).includes(:vacancy).each do |report|
+          FitGap::Generation.enqueue(portfolio:, vacancy: report.vacancy, force: true)
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = PortfolioSkill.for_tenant(current_tenant_id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

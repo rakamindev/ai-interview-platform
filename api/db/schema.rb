@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_24_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -89,6 +89,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.enum "generation_status", default: "complete", null: false, enum_type: "generation_status"
+    t.string "generation_error", limit: 80
+    t.string "generation_token", limit: 36
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -112,12 +115,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.string "assessment_status", limit: 20, default: "assessed", null: false
+    t.string "assessment_reason", limit: 80
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "assessment_status::text = 'assessed'::text AND ai_level >= 1 AND ai_level <= 5 AND ai_confidence IS NOT NULL OR assessment_status::text = 'not_assessed'::text AND ai_level IS NULL AND ai_confidence IS NULL", name: "chk_portfolio_skill_assessment_state"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -162,6 +167,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "l5_anchor", null: false
     t.index ["category"], name: "idx_skill_taxonomies_category"
     t.index ["skill_id"], name: "idx_skill_taxonomies_skill_id", unique: true
+  end
+
+  create_table "tenant_memberships", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "organization_id", null: false
+    t.string "role", limit: 20, default: "assessor", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "active"], name: "idx_tenant_memberships_org_active"
+    t.index ["user_id", "organization_id"], name: "idx_tenant_memberships_user_org", unique: true
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'assessor'::character varying, 'user'::character varying]::text[])", name: "chk_tenant_memberships_role"
   end
 
   create_table "transcript_turns", force: :cascade do |t|
@@ -213,6 +230,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
+  add_foreign_key "tenant_memberships", "organizations", name: "fk_memberships_organizations"
+  add_foreign_key "tenant_memberships", "users"
   add_foreign_key "transcript_turns", "sessions"
   add_foreign_key "vacancy_skills", "vacancies"
 end

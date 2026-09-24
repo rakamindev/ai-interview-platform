@@ -55,6 +55,8 @@ class ApplicationController < ActionController::API
     roles = roles.flatten.map(&:to_s)
     result = AuthorizeApiRequest.new(request.headers, roles).call
     Current.user = result[:user]
+    Current.organization = result[:organization]
+    Current.tenant_id = result[:organization].id
   end
 
   # ── Params ──────────────────────────────────────────────────────────────────

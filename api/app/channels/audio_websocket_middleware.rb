@@ -4,7 +4,7 @@ require 'faye/websocket'
 
 # Rack middleware that proxies a WebSocket at /ws/sessions/:id/audio between the browser (16kHz PCM)
 # and Gemini Live (24kHz PCM). Audio is buffered in a ring buffer for reconnection replay.
-class AudioWebSocketMiddleware
+class AudioWebsocketMiddleware
   AUDIO_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/audio\z}
 
   MAX_RECONNECT_ATTEMPTS = 3
@@ -744,10 +744,13 @@ class AudioWebSocketMiddleware
 
         token = auth_header.split(' ').last
         payload = JsonWebToken.decode(token)
-        tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
-        return [nil, 'Invalid tenant'] unless tenant_id
+        organization = Organization.find_by(scheme: payload[:scheme])
+        return [nil, 'Authentication failed'] unless organization
+        user = User.find_by(id: payload[:user_id])
+        membership = user && TenantMembership.active.find_by(user_id: user.id, organization_id: organization.id)
+        return [nil, 'Authentication failed'] unless membership && AuthorizeApiRequest::ASSESSOR_ROLES.include?(membership.role)
 
-        Session.unscoped.where(tenant_id: tenant_id).find_by(id: session_id)
+        Session.unscoped.where(tenant_id: organization.id).find_by(id: session_id)
       end
     rescue StandardError => e
       return [nil, "Authentication failed: #{e.message}"]

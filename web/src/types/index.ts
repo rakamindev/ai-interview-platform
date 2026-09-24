@@ -90,9 +90,11 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
-  evidence: string[];
+  assessment_status: "assessed" | "not_assessed";
+  assessment_reason?: string | null;
+  ai_level: number | null;
+  ai_confidence: "high" | "medium" | "low" | null;
+  evidence: Array<string | { turn_id: number; quote: string }>;
   competency_summary: string;
 }
 
@@ -129,11 +131,12 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  expected_level: number | null;
+  candidate_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  is_override: boolean;
+  confidence?: "high" | "medium" | "low" | null;
 }
 
 export interface FitGapReport {
@@ -141,8 +144,8 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
   generated_at: string;
 }
 

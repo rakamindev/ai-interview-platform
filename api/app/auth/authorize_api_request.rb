@@ -4,8 +4,7 @@ require 'ostruct'
 
 # Extracted and simplified from rakamin-api.
 # Bearer token only (no basic auth — AI interview has no whitelist-key consumers).
-# Returns { user_id:, role:, scheme: } from the decoded JWT.
-# Does NOT hit the database for user lookup — trusts the JWT claims.
+# Resolves the signed-in user and tenant membership from persisted records.
 class AuthorizeApiRequest
   # Roles that map to "assessor" permission in the AI interview context.
   # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
@@ -16,26 +15,44 @@ class AuthorizeApiRequest
     @required_roles = Array(required_roles)
   end
 
-  # Returns an OpenStruct with :id, :role, :scheme
+  # Returns a user context and the authorized organization.
   def call
     claims = decoded_auth_token
-    user_struct = build_user_struct(claims)
+    user, membership = resolve_membership!(claims)
+    user_struct = build_user_struct(user, membership)
 
     check_role!(user_struct) if @required_roles.any?
 
-    { user: user_struct, claims: }
+    { user: user_struct, organization: membership.organization, claims: }
   end
 
   private
 
   attr_reader :headers
 
-  def build_user_struct(claims)
+  def build_user_struct(user, membership)
     OpenStruct.new(
-      id:     claims[:user_id],
-      role:   claims[:role].to_s,
-      scheme: claims[:scheme].to_s
+      id:     user.id,
+      role:   membership.role,
+      scheme: membership.organization.scheme
     )
+  end
+
+  def resolve_membership!(claims)
+    user = User.find_by(id: claims[:user_id])
+    raise(ExceptionHandler::Unauthorized, Message.unauthorized) unless user
+
+    scheme = claims[:scheme].to_s
+    requested_scheme = headers['X-Tenant-Scheme'].to_s
+    if requested_scheme.present? && requested_scheme != scheme
+      raise(ExceptionHandler::Unauthorized, 'Tenant selector does not match authenticated context')
+    end
+
+    organization = Organization.find_by(scheme:)
+    membership = organization && TenantMembership.active.find_by(user_id: user.id, organization_id: organization.id)
+    raise(ExceptionHandler::Unauthorized, 'Active tenant membership required') unless membership
+
+    [user, membership]
   end
 
   def check_role!(user)
@@ -44,10 +61,8 @@ class AuthorizeApiRequest
     # :any means no role restriction
     return if allowed.include?('any')
 
-    # Support logical grouping: :assessor_or_admin
     effective_role = user.role
     if allowed.include?('assessor')
-      # Allow anyone whose role is in ASSESSOR_ROLES
       return if ASSESSOR_ROLES.include?(effective_role)
     end
 
