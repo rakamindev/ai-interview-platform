@@ -30,6 +30,9 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
 
+  const notAssessedCount = comparisons.filter((c) => c.result === "not_assessed").length;
+  if (comparisons.length === 0) return <p className="p-4 text-sm text-muted-foreground">No skills are configured for this vacancy.</p>;
+
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto rounded-lg border">
@@ -45,9 +48,9 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
           <tbody>
             {comparisons.map((c, i) => (
               <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
+                <td className="px-4 py-2.5 break-words min-w-32">{c.skill_label}</td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+                  {LEVEL_LABELS[c.expected_level]}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
@@ -69,10 +72,11 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
+        <span>Not assessed: {notAssessedCount}</span>
         <span className="ml-auto">✏ = human override applied</span>
       </div>
     </div>

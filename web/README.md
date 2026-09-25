@@ -2,9 +2,9 @@
 
 ## Prerequisites
 
-- **Node.js** (v18+ recommended)
+- **Node.js** (v22 recommended; required for the test toolchain)
 - **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
+- A running backend API server (default: `http://localhost:3001`)
 
 ## Quick Start
 
@@ -57,8 +57,8 @@ The app will be available at **http://localhost:5173**.
 | `VITE_DEV_TOKEN`           | Yes      | JWT for authenticating in local development         |
 | `VITE_DEV_TENANT_ID`       | Yes      | Tenant ID for multi-tenant context                  |
 | `VITE_DEV_TENANT_NAME`     | Yes      | Tenant display name                                 |
-| `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint for hardware check speed test  |
-| `VITE_SPEED_TEST_UPLOAD_URL`| No      | Custom upload endpoint for speed test               |
+| `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint; defaults to the configured API health endpoint |
+| `VITE_SPEED_TEST_UPLOAD_URL`| No      | Custom upload endpoint; defaults to the configured API speed-test endpoint |
 | `VITE_REQUIRE_CAMERA`      | No       | Set to `"true"` to enforce camera check (default: `"false"`) |
 
 ## Tech Stack
@@ -97,3 +97,13 @@ public/
 - The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
 - Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
 - The backend must be running for authentication, session management, and real-time audio streaming to work.
+
+## Tests
+
+```bash
+npm ci
+npm test
+npm run build
+```
+
+Vitest covers rating states, API field rendering, override prerequisites, report retry behavior, and non-overlapping polling. Use Node 22, also used by CI.

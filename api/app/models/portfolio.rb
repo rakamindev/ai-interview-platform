@@ -3,6 +3,8 @@
 class Portfolio < ApplicationRecord
   GENERATION_STATUSES = %w[pending generating complete failed].freeze
 
+  scope :for_tenant, ->(tenant_id) { joins(:session).where(sessions: { tenant_id: tenant_id }) }
+
   belongs_to :session
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills

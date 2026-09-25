@@ -10,10 +10,24 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
+      # Speed tests target the application itself, avoiding third-party CORS and
+      # measuring the same network path used by the interview.
+      get 'speed_test', to: proc { |env|
+        bytes = [[Rack::Request.new(env).params.fetch('bytes', 262_144).to_i, 1].max, 524_288].min
+        [200, {
+          'Content-Type' => 'application/octet-stream',
+          'Content-Length' => bytes.to_s,
+          'Cache-Control' => 'no-store'
+        }, ['0' * bytes]]
+      }
+
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
-        bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+        request = Rack::Request.new(env)
+        bytes = request.body.read(524_289).bytesize
+        status = bytes > 524_288 ? 413 : 200
+        [status, { 'Content-Type' => 'application/json', 'Cache-Control' => 'no-store' },
+         [{ received_bytes: [bytes, 524_288].min }.to_json]]
       }
 
       # Assessments

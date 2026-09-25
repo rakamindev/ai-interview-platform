@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
-import { usePolling } from "@/hooks/usePolling";
+
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
 
@@ -20,54 +20,44 @@ export default function FitGapReportPage() {
 
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
-  const fetchReport = useCallback(async () => {
-    if (!portfolio) return;
-    try {
-      const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
-    } catch (e: any) {
-      if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
-        }
-      }
+  const loadReport = useCallback(async () => {
+    const res = await sessionsApi.getPortfolio(Number(sessionId));
+    const data = res.data as { portfolio?: Portfolio };
+    if (!data.portfolio || data.portfolio.generation_status !== "complete") {
+      throw new Error("The portfolio is not ready. Return to the portfolio to check its status.");
     }
-  }, [portfolio, vacancyId]);
+    const result = await portfoliosApi.getFitGap(data.portfolio.id, Number(vacancyId));
+    return { portfolio: data.portfolio, report: result.data.report };
+  }, [sessionId, vacancyId]);
 
   useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (portfolio) fetchReport();
-  }, [portfolio, fetchReport]);
-
-  usePolling(fetchReport, 5000, generating && !!portfolio);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setReport(null);
+    setPortfolio(null);
+    loadReport().then((data) => {
+      if (!cancelled) { setPortfolio(data.portfolio); setReport(data.report); }
+    }).catch(() => {
+      if (!cancelled) setError("The report could not be loaded. Check that the portfolio is ready and try again.");
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [loadReport]);
 
   const handleRegenerate = async () => {
-    if (!portfolio) return;
     setRegenerating(true);
+    setError(null);
     try {
-      await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
-      setGenerating(true);
+      const data = await loadReport();
+      setPortfolio(data.portfolio);
+      setReport(data.report);
+    } catch {
+      setError("Could not refresh the report. Any result shown below is the previous snapshot.");
     } finally {
       setRegenerating(false);
     }
@@ -88,6 +78,8 @@ export default function FitGapReportPage() {
       a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setError("Export failed. Please retry.");
     } finally {
       setExporting(null);
     }
@@ -105,7 +97,7 @@ export default function FitGapReportPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link
@@ -119,10 +111,10 @@ export default function FitGapReportPage() {
         </div>
 
         {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
+              Refresh
             </Button>
             {report && (
               <>
@@ -140,13 +132,16 @@ export default function FitGapReportPage() {
         )}
       </div>
 
-      {/* Generating */}
-      {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+      {error && (
+        <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+          <p className="text-sm">{error}</p>
+          <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>Try again</Button>
         </div>
       )}
+      <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+        Ratings are compared with the vacancy requirements. Unassessed skills are not gaps.
+        Review candidate evidence and assessor overrides before making a hiring decision.
+      </div>
 
       {/* Report ready */}
       {report && (
@@ -166,11 +161,11 @@ export default function FitGapReportPage() {
           {/* Culture & competency */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+              <CardTitle className="text-sm">Assessment summary</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
+                {report.overall_narrative}
               </p>
             </CardContent>
           </Card>
@@ -193,7 +188,7 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {s.ai_level == null ? "Not assessed" : `L${s.ai_level} (${s.ai_confidence} confidence)`}
                         </span>
                         <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>

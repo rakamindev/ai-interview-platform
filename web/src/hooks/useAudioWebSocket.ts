@@ -1,6 +1,11 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
-import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker } from "@/types";
+import type {
+  WsControlMessage,
+  TranscriptTurn,
+  InterviewState,
+  InterviewSpeaker,
+} from "@/types";
 
 interface UseAudioWebSocketOptions {
   sessionId: number;
@@ -10,6 +15,7 @@ interface UseAudioWebSocketOptions {
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  onError?: (message: string) => void;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -22,30 +28,48 @@ export function useAudioWebSocket({
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onError,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
-  const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
-    "disconnected"
-  );
+  const [connectionState, setConnectionState] = useState<
+    "disconnected" | "connecting" | "connected"
+  >("disconnected");
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    // Guard against both OPEN and CONNECTING to avoid spawning duplicate sockets
+    // when connect() is called again before the previous handshake finishes.
+    if (
+      wsRef.current?.readyState === WebSocket.OPEN ||
+      wsRef.current?.readyState === WebSocket.CONNECTING
+    ) {
+      return;
+    }
 
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     sessionEndedRef.current = false;
     setConnectionState("connecting");
     const url = token
-      ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
+      ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${encodeURIComponent(token)}`
       : `${WS_URL}/ws/sessions/${sessionId}/audio`;
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (wsRef.current !== ws) return;
       setConnectionState("connected");
-      reconnectAttemptsRef.current = 0;
+      // NOTE: reconnectAttemptsRef is intentionally NOT reset here.
+      // onopen only confirms the TCP/WS handshake succeeded — it does not
+      // confirm the backend session/auth is actually valid. Resetting the
+      // counter here caused an infinite reconnect loop whenever the backend
+      // opened then immediately closed the socket (e.g. auth failure,
+      // upstream Gemini connect failure): the delay never escalated past
+      // 1000ms and the "connection could not be restored" error never fired.
+      // The counter is reset only once the backend confirms the session
+      // via "session_started" below.
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
     };
 
@@ -54,6 +78,7 @@ export function useAudioWebSocket({
     let aiSpeakingSignalled = false;
 
     ws.onmessage = (event) => {
+      if (wsRef.current !== ws) return;
       if (event.data instanceof ArrayBuffer) {
         onAudioChunk(event.data);
         if (!aiSpeakingSignalled) {
@@ -65,12 +90,17 @@ export function useAudioWebSocket({
           const msg = JSON.parse(event.data) as WsControlMessage;
           switch (msg.type) {
             case "session_started":
+              reconnectAttemptsRef.current = 0; // reset here — session is confirmed live
               onStateChange("active");
               break;
             case "transcription":
             case "transcript":
               if (msg.speaker && msg.text) {
-                onTranscript({ speaker: msg.speaker === "candidate" ? "candidate" : "assessor", text: msg.text });
+                onTranscript({
+                  speaker:
+                    msg.speaker === "candidate" ? "candidate" : "assessor",
+                  text: msg.text,
+                });
               }
               break;
             case "speaker_changed":
@@ -94,16 +124,29 @@ export function useAudioWebSocket({
               onStateChange("reconnecting");
               break;
             case "reconnected":
+              reconnectAttemptsRef.current = 0;
               onStateChange("active");
               onReconnected?.();
               break;
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              if (msg.reason === "error") {
+                onError?.(msg.message || "The interview was interrupted. Please contact the interviewer.");
+                onStateChange("error");
+              } else {
+                onStateChange("complete");
+              }
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                onError?.(
+                  msg.message ||
+                    "The interview could not be started. Please try again.",
+                );
+                onStateChange("error");
+              }
               break;
           }
         } catch {
@@ -113,10 +156,12 @@ export function useAudioWebSocket({
     };
 
     ws.onerror = () => {
+      if (wsRef.current !== ws) return;
       setConnectionState("disconnected");
     };
 
     ws.onclose = () => {
+      if (wsRef.current !== ws) return;
       setConnectionState("disconnected");
       if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
       const attempt = reconnectAttemptsRef.current;
@@ -127,10 +172,22 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onError?.(
+          "The interview connection could not be restored. Please contact the interviewer.",
+        );
+        onStateChange("error");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [
+    sessionId,
+    token,
+    onAudioChunk,
+    onTranscript,
+    onStateChange,
+    onSpeakerChange,
+    onReconnected,
+    onError,
+  ]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -146,16 +203,17 @@ export function useAudioWebSocket({
 
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
-    wsRef.current?.close();
+    sessionEndedRef.current = true;
+    reconnectAttemptsRef.current = 0;
+    const ws = wsRef.current;
+    wsRef.current = null;
+    ws?.close();
+    setConnectionState("disconnected");
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      wsRef.current?.close();
-    };
-  }, []);
+    return () => disconnect();
+  }, [disconnect]);
 
   return { connect, send, sendJson, disconnect, connectionState };
 }

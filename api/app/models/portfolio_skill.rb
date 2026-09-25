@@ -7,7 +7,7 @@ class PortfolioSkill < ApplicationRecord
   has_one :assessor_override, dependent: :destroy
 
   validates :skill_label, presence: true
-  validates :ai_level, numericality: { only_integer: true, in: 1..5 }
+  validates :ai_level, allow_nil: true, numericality: { only_integer: true, in: 1..5 }
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }
   validates :competency_summary, presence: true
 

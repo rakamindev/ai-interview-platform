@@ -23,12 +23,12 @@ export default function SkillPortfolioCard({
     <Card>
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <LevelBadge level={effectiveLevel} />
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
+                <span className="font-semibold break-words">{skill.skill_label}</span>
                 {skill.is_discovered && (
                   <span className="flex items-center gap-0.5 text-xs text-amber-600">
                     <Zap className="h-3 w-3" /> Discovered
@@ -41,6 +41,11 @@ export default function SkillPortfolioCard({
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
         </div>
 
+        {effectiveLevel == null && (
+          <p className="rounded border bg-muted/30 px-3 py-2 text-sm">
+            Insufficient evidence to assign a level. This is not a low rating or a skill gap.
+          </p>
+        )}
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
           <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
@@ -56,7 +61,7 @@ export default function SkillPortfolioCard({
             </span>
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
+                <li key={i} className="text-sm text-foreground break-words">
                   • "{quote}"
                 </li>
               ))}

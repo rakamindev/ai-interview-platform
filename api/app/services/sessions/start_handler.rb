@@ -9,7 +9,9 @@ module Sessions
     end
 
     def call
-      ActiveRecord::Base.transaction do
+      @session.with_lock do
+        return @session if @session.active?
+        raise ArgumentError, 'Session cannot be restarted' unless @session.pending?
         @session.update!(status: 'active', started_at: Time.current)
         initialize_coverage_maps
       end

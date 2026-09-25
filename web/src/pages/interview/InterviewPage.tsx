@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { AlertCircle, CheckCircle, Mic, MicOff, RefreshCw } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -37,6 +37,7 @@ export default function InterviewPage() {
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
+  const [interviewError, setInterviewError] = useState<string | null>(null);
   const micMutedRef = useRef(false);
 
   // Fetch candidate info
@@ -46,9 +47,17 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") {
+          if (res.data.end_reason === "error") {
+            setInterviewError("The interview was interrupted. Please contact the interviewer to arrange a new session.");
+            setInterviewState("error");
+          } else setInterviewState("complete");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => {
+        setInterviewError("Unable to load this invitation. Check your connection or contact the interviewer.");
+        setInterviewState("error");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -71,6 +80,7 @@ export default function InterviewPage() {
 
     if (state === "reconnecting") {
       muteRef.current?.();
+      if (connectionLostTimerRef.current) clearTimeout(connectionLostTimerRef.current);
       connectionLostTimerRef.current = setTimeout(() => {
         setConnectionLostLong(true);
       }, 60_000);
@@ -138,6 +148,7 @@ export default function InterviewPage() {
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onError: setInterviewError,
   });
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
@@ -161,14 +172,27 @@ export default function InterviewPage() {
 
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
+    setInterviewError(null);
     setInterviewState("connecting");
-    connect();
-    await startCapture();
-    // Start muted — only unmute when backend sends speaker_changed: candidate.
-    // This prevents mic audio from being sent during AI speech, since separate
-    // AudioContexts for capture/playback break the browser's echo cancellation.
-    muteRef.current?.();
-  }, [sessionId, connect, startCapture]);
+    try {
+      await startCapture();
+      connect();
+      // Start muted — only unmute when backend sends speaker_changed: candidate.
+      muteRef.current?.();
+    } catch {
+      disconnect();
+      setInterviewError("Microphone access failed. Check browser permission and try again.");
+      setInterviewState("error");
+    }
+  }, [sessionId, connect, disconnect, startCapture]);
+
+  useEffect(() => {
+    if (interviewState === "error" || interviewState === "complete") {
+      disconnect();
+      stopCapture();
+      stopPlayback();
+    }
+  }, [interviewState, disconnect, stopCapture, stopPlayback]);
 
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
@@ -237,6 +261,23 @@ export default function InterviewPage() {
           <br />
           The hiring team will review your results and follow up with you.
         </p>
+      </div>
+    );
+  }
+
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-5">
+        <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Interview unavailable</h2>
+          <p role="alert" className="text-sm text-muted-foreground">
+            {interviewError || "The interview service is unavailable. Please contact the interviewer."}
+          </p>
+        </div>
+        <Button onClick={startInterview} disabled={!sessionId || candidateInfo?.session_status === "ended"}>
+          <RefreshCw className="h-4 w-4 mr-2" /> Try again
+        </Button>
       </div>
     );
   }

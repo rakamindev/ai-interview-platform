@@ -12,29 +12,23 @@ module Sessions
     end
 
     def call(reason: 'manual_assessor')
-      # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
-      if @session.ended?
-        manual = %w[manual_candidate manual_assessor]
-        if manual.include?(reason.to_s) && @session.end_reason == 'error'
-          @session.update_column(:end_reason, reason.to_s)
+      transitioned = false
+      @session.with_lock do
+        if @session.ended?
+          if %w[manual_candidate manual_assessor].include?(reason.to_s) && @session.end_reason == 'error'
+            @session.update_column(:end_reason, reason.to_s)
+          end
+          next
         end
-        return @session
-      end
-
-      reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
-
-      ActiveRecord::Base.transaction do
+        reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
-
-        @session.update!(
-          status:           'ended',
-          end_reason:       reason.to_s,
-          ended_at:         Time.current,
-          duration_seconds: duration
-        )
-
+        @session.update!(status: 'ended', end_reason: reason.to_s,
+                         ended_at: Time.current, duration_seconds: duration)
         create_portfolio
+        transitioned = true
       end
+
+      return @session unless transitioned
 
       enqueue_portfolio_generation
       publish_status_update
@@ -70,6 +64,9 @@ module Sessions
 
       PortfolioGeneratorWorker.perform_async(@session.id)
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+    rescue StandardError => e
+      portfolio&.update!(generation_status: 'failed', generation_error: 'Could not queue assessment. Please retry.')
+      Rails.logger.error("[N9] Queue unavailable for session #{@session.id}: #{e.class}")
     end
   end
 end

@@ -10,7 +10,14 @@ export function usePolling(
 
   useEffect(() => {
     if (!active) return;
-    const id = setInterval(() => fnRef.current(), intervalMs);
-    return () => clearInterval(id);
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try { await fnRef.current(); }
+      catch { /* The caller owns its visible error state. Keep the retry loop alive. */ }
+      finally { if (!stopped) timer = setTimeout(tick, intervalMs); }
+    };
+    timer = setTimeout(tick, intervalMs);
+    return () => { stopped = true; clearTimeout(timer); };
   }, [intervalMs, active]);
 }

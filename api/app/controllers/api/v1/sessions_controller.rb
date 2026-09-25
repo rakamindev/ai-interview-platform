@@ -121,9 +121,10 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
+        unless session.active? && session.preparing_to_end_at.present?
+          return json_error('Session is not ready to finish', :conflict)
+        end
+
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
       end
@@ -149,7 +150,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason
         )
       end
 

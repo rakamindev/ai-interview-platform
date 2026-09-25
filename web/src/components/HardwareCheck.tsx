@@ -102,10 +102,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         } catch { /* silent */ }
     };
 
-    // Step 1: OS & browser
+    // Step 1: OS & browser. Watching this state also makes Retry restart the
+    // complete state machine instead of getting stuck at "Checking...".
     useEffect(() => {
-        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        if (progress.osAndBrowser !== ProctoringState.LOADING) return;
+        const timer = window.setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -115,6 +116,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
+        return () => window.clearTimeout(timer);
+    }, [progress.osAndBrowser]);
+
+    useEffect(() => {
+        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
     }, []);
 
     // Step 2: Internet

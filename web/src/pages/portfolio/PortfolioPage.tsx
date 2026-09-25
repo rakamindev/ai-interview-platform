@@ -15,6 +15,8 @@ import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,9 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
+    try {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
+    setError(null);
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
@@ -39,6 +43,9 @@ export default function PortfolioPage() {
       });
       setOverrides(overrideMap);
     }
+    } catch {
+      setError("Could not load the portfolio. Please retry.");
+    }
   }, [sessionId]);
 
   useEffect(() => {
@@ -47,7 +54,7 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setError("Some details could not be loaded. Refresh to try again."))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -89,6 +96,8 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch {
+      setError("Export failed. Please retry.");
     } finally {
       setExporting(null);
     }
@@ -107,7 +116,7 @@ export default function PortfolioPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -120,7 +129,7 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -128,7 +137,7 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {!generating && portfolio?.generation_status === "complete" && (
             <>
               <Button
                 variant="outline"
@@ -153,6 +162,10 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {error && <div role="alert" className="rounded-lg border border-destructive/30 p-4 space-y-2">
+        <p className="text-sm">{error}</p>
+        <Button variant="outline" size="sm" onClick={fetchPortfolio}>Retry loading</Button>
+      </div>}
       {/* Generating state */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
@@ -160,7 +173,7 @@ export default function PortfolioPage() {
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              The AI is analyzing the interview transcript. Results appear here when processing finishes.
             </p>
           </div>
         </div>
@@ -173,9 +186,15 @@ export default function PortfolioPage() {
           <Button
             variant="outline"
             size="sm"
+            disabled={retrying}
             onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
+              setRetrying(true);
+              try {
+                await sessionsApi.regeneratePortfolio(Number(sessionId));
+                setGenerating(true);
+                setError(null);
+              } catch { setError("Could not queue the assessment. Please retry."); }
+              finally { setRetrying(false); }
             }}
           >
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
@@ -183,8 +202,11 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {!generating && portfolio?.generation_status === "failed" && portfolio.skills.length > 0 && (
+        <p className="text-sm rounded-lg border bg-amber-50 p-4">Previous results were preserved. Retry generation before exporting or comparing this portfolio.</p>
+      )}
       {/* Ready state */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {!generating && portfolio && (portfolio.generation_status === "complete" || portfolio.skills.length > 0) && (
         <>
           {/* Configured skills */}
           <div className="space-y-3">
@@ -232,7 +254,7 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Choose vacancy..." />
@@ -245,7 +267,7 @@ export default function PortfolioPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+            <Button onClick={handleRunFitGap} disabled={!selectedVacancy || portfolio.generation_status !== "complete"}>
               Run Fit/Gap Analysis →
             </Button>
           </div>

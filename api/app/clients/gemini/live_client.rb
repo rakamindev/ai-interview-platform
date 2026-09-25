@@ -3,6 +3,7 @@
 require 'faye/websocket'
 require 'json'
 require 'base64'
+require 'uri'
 
 module Gemini
   # Manages a persistent WebSocket connection to Gemini Live API.
@@ -37,7 +38,7 @@ module Gemini
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.8-live')
       @voice = voice
       @resumption_token = nil
       @connected = false
@@ -63,10 +64,16 @@ module Gemini
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
       @setup_complete = false
+      @intentional_close = false
+      @setup_timer = EM::Timer.new(15) do
+        next if @setup_complete || @superseded || @intentional_close
+
+        supersede!
+        close
+        @on_close&.call(code: 1011, reason: 'Setup timed out')
+      end
       @ws = Faye::WebSocket::Client.new(
-        GEMINI_WS_URL,
-        nil,
-        headers: { 'x-goog-api-key' => @api_key }
+        "#{GEMINI_WS_URL}?#{URI.encode_www_form(key: @api_key)}"
       )
 
       @ws.on(:open)    { |_event| handle_ws_open(resumption_handle) }
@@ -115,6 +122,8 @@ module Gemini
 
     # Gracefully closes the connection.
     def close
+      @intentional_close = true
+      @setup_timer&.cancel
       @inactivity_timer&.cancel
       @gate_timer&.cancel
       stop_silence_pump
@@ -125,6 +134,7 @@ module Gemini
     # Silences callbacks before this client is replaced on GoAway reconnect, preventing event bleed.
     def supersede!
       @superseded = true
+      @setup_timer&.cancel
       @inactivity_timer&.cancel
       @gate_timer&.cancel
       stop_silence_pump
@@ -139,13 +149,17 @@ module Gemini
 
     def handle_ws_close(event)
       @connected = false
+      @setup_timer&.cancel
+      @inactivity_timer&.cancel
+      @gate_timer&.cancel
+      stop_silence_pump
       Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{event.code} reason=#{event.reason} superseded=#{@superseded}")
       # Skip on_close for superseded clients to avoid duplicate reconnect from the replaced instance.
-      @on_close&.call(code: event.code, reason: event.reason) unless @superseded
+      @on_close&.call(code: event.code, reason: event.reason) unless @superseded || @intentional_close
     end
 
     def handle_ws_error(event)
-      Rails.logger.error("[Gemini::LiveClient] WebSocket error: #{event.message}")
+      Rails.logger.error('[Gemini::LiveClient] WebSocket transport error')
       @on_error&.call(event.message) unless @superseded
     end
 
@@ -446,7 +460,6 @@ module Gemini
       resumption = data['sessionResumption'] || data['sessionResumptionUpdate']
       return unless resumption
 
-      Rails.logger.debug("[Gemini::LiveClient] Resumption data: #{resumption.to_json}")
       handle = resumption['newHandle'] || resumption['handle'] || resumption['token']
       return unless handle.present?
 
@@ -459,6 +472,7 @@ module Gemini
       return unless data['setupComplete']
 
       @setup_complete = true
+      @setup_timer&.cancel
       @connected_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       activate_connection!
     end

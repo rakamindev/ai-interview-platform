@@ -13,7 +13,8 @@ module Api
 
         return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
 
-        scheme = resolve_scheme
+        scheme = resolve_scheme(user)
+        return json_error('Account has no organization assigned', :forbidden) unless scheme
         token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
 
         json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
@@ -21,11 +22,15 @@ module Api
 
       private
 
-      def resolve_scheme
-        request.headers['X-Tenant-Scheme'].presence ||
-          ActiveRecord::Base.connection.select_value(
-            'SELECT scheme FROM organizations LIMIT 1'
-          ) || 'test-corp'
+      def resolve_scheme(user)
+        user.with_lock do
+          if user.organization_id.nil?
+            organizations = Organization.limit(2).to_a
+            return unless organizations.one?
+            user.update!(organization_id: organizations.first.id)
+          end
+          Organization.find_by(id: user.organization_id)&.scheme
+        end
       end
     end
   end

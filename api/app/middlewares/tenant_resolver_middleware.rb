@@ -44,7 +44,7 @@ class TenantResolverMiddleware < ApplicationMiddleware
     return unless auth_header.start_with?('Bearer ', 'bearer ')
 
     token = auth_header.split(' ').last
-    claims = JsonWebToken.decode_without_verification(token)
+    claims = JsonWebToken.decode(token)
     claims[:scheme].presence
   rescue StandardError
     nil

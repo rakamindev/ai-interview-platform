@@ -1,0 +1,65 @@
+name: Test
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - '5432:5432'
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: api
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres@localhost:5432/ai_interview_test
+      SECRET_KEY_BASE: test-only-not-a-production-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.2'
+          bundler-cache: true
+          working-directory: api
+
+      - run: bundle exec rails db:create db:migrate
+      - run: bundle exec rails zeitwerk:check
+      - run: bundle exec rspec
+
+  web:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

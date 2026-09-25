@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_23_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -58,7 +58,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
@@ -112,7 +112,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
@@ -143,6 +143,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "preparing_to_end_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
@@ -182,7 +183,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "role", limit: 20, default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "organization_id"
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
+    t.index ["organization_id"], name: "index_users_on_organization_id"
   end
 
   create_table "vacancies", force: :cascade do |t|
@@ -214,5 +217,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
+  add_foreign_key "users", "organizations"
   add_foreign_key "vacancy_skills", "vacancies"
 end
