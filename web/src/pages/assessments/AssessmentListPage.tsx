@@ -32,6 +32,42 @@ export default function AssessmentListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const isMassDeleteActive = selectedIds.length > 0;
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds((prev) => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(assessments.map(a => a.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleMassDelete = async () => {
+    if (!window.confirm(`Sikat bersih ${selectedIds.length} data terpilih?`)) return;
+    
+    setIsDeleting(true);
+    try {
+      // Tembak API delete pake Promise.all
+      await Promise.all(selectedIds.map(id => assessmentsApi.delete(id)));
+      
+      // Update state UI tanpa refresh page
+      setAssessments(prev => prev.filter(a => !selectedIds.includes(a.id)));
+      setSelectedIds([]); 
+    } catch (error) {
+      console.error("Gagal menghapus:", error);
+      alert("Terjadi kesalahan saat menghapus data.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     assessmentsApi
@@ -44,11 +80,38 @@ export default function AssessmentListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Assessment
-        </Button>
-      </div>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold">Assessments</h1>
+            {/* Checkbox Select All */}
+            {assessments.length > 0 && (
+              <label className="flex items-center gap-2 text-sm cursor-pointer text-muted-foreground hover:text-primary">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 cursor-pointer"
+                  onChange={handleSelectAll} 
+                  checked={assessments.length > 0 && selectedIds.length === assessments.length}
+                />
+                Pilih Semua
+              </label>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {/* Tombol Delete Muncul Kalau Ada Centangan */}
+            {isMassDeleteActive && (
+              <Button 
+                variant="destructive" 
+                onClick={handleMassDelete} 
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Menghapus..." : `Hapus (${selectedIds.length})`}
+              </Button>
+            )}
+            <Button onClick={() => navigate("/assessments/new")}>
+              <Plus className="h-4 w-4 mr-1.5" /> New Assessment
+            </Button>
+          </div>
+        </div>
 
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
@@ -70,30 +133,39 @@ export default function AssessmentListPage() {
       ) : (
         <div className="space-y-2">
           {assessments.map((a) => (
-            <Card
-              key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/assessments/${a.id}/invite`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {a.time_limit_min} min
-                    </span>
-                    {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
-                    )}
+            <div key={a.id} className="flex items-center gap-3">
+              {/* Checkbox Individual */}
+              <input 
+                type="checkbox"
+                className="w-5 h-5 cursor-pointer"
+                checked={selectedIds.includes(a.id)}
+                onChange={() => handleToggleSelect(a.id)}
+              />
+              
+              <Card
+                className="flex-1 cursor-pointer hover:border-primary/40 transition-colors"
+                onClick={() => navigate(`/assessments/${a.id}/invite`)}
+              >
+                <CardContent className="py-3 px-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">{a.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {a.time_limit_min} min
+                      </span>
+                      {a.latest_session && (
+                        <>
+                          <span>·</span>
+                          <SessionSummary session={a.latest_session} />
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </div>
           ))}
         </div>
       )}
