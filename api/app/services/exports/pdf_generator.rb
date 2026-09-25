@@ -27,6 +27,7 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        setup_fonts(pdf)
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -36,6 +37,26 @@ module Exports
 
     private
 
+    def setup_fonts(pdf)
+      font_path = Rails.root.join('app', 'services', 'exports', 'fonts', 'DejaVuSans.ttf').to_s
+      bold_path = Rails.root.join('app', 'services', 'exports', 'fonts', 'DejaVuSans-Bold.ttf').to_s
+
+      unless File.exist?(font_path) && File.exist?(bold_path)
+        font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+        bold_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+      end
+
+      if File.exist?(font_path) && File.exist?(bold_path)
+        pdf.font_families.update(
+          'DejaVuSans' => {
+            normal: font_path,
+            bold:   bold_path
+          }
+        )
+        pdf.font('DejaVuSans')
+      end
+    end
+
     def render_header(pdf)
       pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
       pdf.move_down 4
@@ -43,6 +64,7 @@ module Exports
       pdf.move_down 4
 
       pdf.font_size(10) do
+        pdf.text "Candidate: #{@session.candidate_name.presence || 'Candidate'}", style: :bold
         pdf.text "Session: #{@session.id}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
         pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"

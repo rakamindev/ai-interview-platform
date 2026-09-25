@@ -270,11 +270,14 @@ class AudioWebSocketMiddleware
 
   # Strips coverage/time metadata that leaks into output transcription via realtimeInput.text echoes.
   def sanitize_output_transcription(text)
+    return '' unless text.present?
+
     text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
     text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
-    text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
-    # Skip up to the last }] (or }) immediately followed by an uppercase letter — covers partial JSON echoes.
-    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=\p{Lu})/m, '').strip
+    text = text.gsub(/\{\s*"skills"\s*:[\s\S]*?"discovered"[\s\S]*?\}\s*/m, '').strip
+    text = text.gsub(/\{\s*"skills"\s*:[\s\S]*?\]\s*\}\s*/m, '').strip
+    text = text.sub(/\A\s*\{.*?\bdiscovered\b.*?\}/m, '').strip
+    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=[A-Za-z\p{Lu}])/m, '').strip
     text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/m, '').strip
     text = text.gsub(/pacing=\S+\s*priority_next=\S*/m, '').strip
     text = text.gsub(/\[Start the interview[^\]]*\]/m, '').strip

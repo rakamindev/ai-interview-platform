@@ -5,10 +5,12 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
+    FALLBACK_MODELS = %w[gemini-3.5-flash-lite gemini-3.1-flash-lite gemini-3.5-flash].freeze
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.6-flash'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -17,16 +19,17 @@ module Portfolios
     def call
       portfolio = @session.portfolio || @session.create_portfolio!(
         candidate_id:      @session.candidate_id,
+        tenant_id:         @session.tenant_id,
         generation_status: 'pending'
       )
 
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      response = generate_with_fallback(prompt)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
@@ -37,6 +40,24 @@ module Portfolios
     end
 
     private
+
+    def generate_with_fallback(prompt)
+      models_to_try = ([@gemini_client.instance_variable_get(:@model)] + FALLBACK_MODELS).compact.uniq
+
+      last_error = nil
+      models_to_try.each do |model_name|
+        client = Gemini::HttpClient.new(model: model_name, timeout: 180)
+        begin
+          Rails.logger.info("[N10] Attempting portfolio generation with model: #{model_name}")
+          return client.generate_content(prompt, temperature: 0.2)
+        rescue Gemini::HttpClient::RateLimitError, Gemini::HttpClient::ApiError => e
+          Rails.logger.warn("[N10] Model #{model_name} failed with #{e.message}, trying fallback...")
+          last_error = e
+        end
+      end
+
+      raise last_error if last_error
+    end
 
     def build_prompt
       assessment       = @session.assessment
@@ -155,6 +176,7 @@ module Portfolios
 
       (data['configured_skills'] || []).each do |skill_data|
         portfolio.portfolio_skills.create!(
+          tenant_id:          portfolio.tenant_id,
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
@@ -167,6 +189,7 @@ module Portfolios
 
       (data['discovered_skills'] || []).each do |skill_data|
         portfolio.portfolio_skills.create!(
+          tenant_id:          portfolio.tenant_id,
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,

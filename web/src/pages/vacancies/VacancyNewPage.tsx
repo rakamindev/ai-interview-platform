@@ -51,13 +51,16 @@ export default function VacancyNewPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
+      <div className="flex items-center gap-2 text-sm mb-6">
+        <Link
+          to="/vacancies"
+          className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors font-medium cursor-pointer"
+        >
           <ArrowLeft className="h-4 w-4" />
+          <span>Vacancies</span>
         </Link>
-        <span className="text-sm text-muted-foreground">Vacancies</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Vacancy</span>
+        <span className="text-muted-foreground/60">/</span>
+        <span className="font-semibold text-foreground">New Vacancy</span>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_25_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -52,7 +52,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.bigint "vacancy_id"
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
+    t.index ["vacancy_id"], name: "index_assessments_on_vacancy_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
 
@@ -89,9 +91,24 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.bigint "tenant_id", null: false
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
+    t.index ["tenant_id"], name: "index_fit_gap_reports_on_tenant_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+  end
+
+  create_table "organizations", force: :cascade do |t|
+    t.string "name", limit: 255, null: false
+    t.string "scheme", limit: 255, null: false
+    t.string "identifier", limit: 255, null: false
+    t.string "host", limit: 255, null: false
+    t.string "alias_hosts", default: [], null: false, array: true
+    t.jsonb "config", default: {}, null: false
+    t.timestamptz "created_at", default: -> { "now()" }, null: false
+    t.timestamptz "updated_at", default: -> { "now()" }, null: false
+    t.index ["host"], name: "index_organizations_on_host"
+    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -116,7 +133,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.bigint "tenant_id", null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
+    t.index ["tenant_id"], name: "index_portfolio_skills_on_tenant_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
@@ -126,8 +145,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.bigint "tenant_id", null: false
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -206,6 +227,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   end
 
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessments", "vacancies"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"

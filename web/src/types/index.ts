@@ -3,6 +3,11 @@ export interface Assessment {
   name: string;
   time_limit_min: number;
   language?: "en" | "id";
+  vacancy_id?: number | null;
+  vacancy?: {
+    id: number;
+    role_title: string;
+  } | null;
   system_prompt?: string;
   created_by?: number;
   created_at?: string;
@@ -78,6 +83,7 @@ export interface Portfolio {
   id: number;
   session_id: number;
   candidate_id?: number;
+  candidate_name?: string;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
@@ -119,9 +125,14 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: number | string;
   skill_label: string;
   expected_level: number;
+  l1_anchor?: string;
+  l2_anchor?: string;
+  l3_anchor?: string;
+  l4_anchor?: string;
+  l5_anchor?: string;
   _destroy?: boolean;
 }
 
@@ -129,7 +140,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;

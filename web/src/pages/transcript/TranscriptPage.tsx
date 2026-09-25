@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
 import { ArrowLeft, Download } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
+import { cleanTranscriptText } from "@/utils/transcript";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -29,7 +30,7 @@ export default function TranscriptPage() {
   const handleDownload = () => {
     const lines = turns.map((t) => {
       const label = t.speaker === "ai" ? "AI" : "Candidate";
-      return `[${label}]\n${t.text}`;
+      return `[${label}]\n${cleanTranscriptText(t.text)}`;
     });
     const blob = new Blob([lines.join("\n\n")], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -105,7 +106,9 @@ export default function TranscriptPage() {
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>
-                <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {cleanTranscriptText(turn.text)}
+                </p>
               </div>
             );
           })}

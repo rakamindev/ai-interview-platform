@@ -47,4 +47,8 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Disable HostAuthorization in test environment
+  config.hosts << "www.example.com"
+  config.hosts << "example.com"
 end

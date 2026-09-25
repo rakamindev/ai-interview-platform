@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show update end_session coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -54,6 +54,15 @@ module Api
             }
           )
         )
+      end
+
+      # PATCH/PUT /api/v1/sessions/:id
+      def update
+        if @session.update(session_update_params)
+          json_response(session: session_json(@session))
+        else
+          json_error(@session.errors.full_messages.first, :unprocessable_entity)
+        end
       end
 
       # POST /api/v1/sessions/:id/end
@@ -190,6 +199,10 @@ module Api
           last_signal:   map.last_signal,
           updated_at:    map.updated_at
         }
+      end
+
+      def session_update_params
+        params.require(:session).permit(:candidate_name, :candidate_id)
       end
     end
   end

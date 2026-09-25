@@ -5,6 +5,7 @@ export interface AssessmentPayload {
   name: string;
   time_limit_min: number;
   language?: "en" | "id";
+  vacancy_id?: number | null;
   assessment_skills_attributes: Partial<AssessmentSkill>[];
 }
 

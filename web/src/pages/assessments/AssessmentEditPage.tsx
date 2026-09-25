@@ -100,13 +100,17 @@ export default function AssessmentEditPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+      <div className="flex items-center gap-2 text-sm mb-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors font-medium cursor-pointer"
+        >
           <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Edit Assessment</span>
+          <span>Back</span>
+        </button>
+        <span className="text-muted-foreground/60">/</span>
+        <span className="font-semibold text-foreground">Edit Assessment</span>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -164,7 +168,11 @@ export default function AssessmentEditPage() {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="bg-[#01959F] hover:bg-[#007E86] text-white font-semibold shadow-md shadow-[#01959F]/20 transition-all hover:shadow-lg hover:shadow-[#01959F]/30"
+          >
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Changes
           </Button>

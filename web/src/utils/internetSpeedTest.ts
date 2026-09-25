@@ -17,9 +17,9 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+    minDownloadMbps: Number(import.meta.env.VITE_MIN_DOWNLOAD_MBPS) || 1,
+    minUploadMbps: Number(import.meta.env.VITE_MIN_UPLOAD_MBPS) || 0.5,
+    maxPingMs: Number(import.meta.env.VITE_MAX_PING_MS) || 500,
 };
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;

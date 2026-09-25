@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { cleanTranscriptText } from "@/utils/transcript";
 
 interface TranscriptBubbleProps {
   speaker: "candidate" | "assessor" | "system" | "ai";
@@ -7,6 +8,9 @@ interface TranscriptBubbleProps {
 
 export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProps) {
   const isCandidate = speaker === "candidate";
+  const displayText = cleanTranscriptText(text);
+
+  if (!displayText) return null;
 
   return (
     <div className={cn("flex", isCandidate ? "justify-end" : "justify-start")}>
@@ -21,7 +25,7 @@ export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProp
         <span className="block text-xs font-medium mb-0.5 text-muted-foreground">
           {isCandidate ? "You" : "AI"}
         </span>
-        {text}
+        {displayText}
       </div>
     </div>
   );

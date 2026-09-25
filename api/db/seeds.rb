@@ -369,6 +369,14 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Admin User ────────────────────────────────────────────────────────────────
+User.find_or_create_by!(email: 'admin@rakamin.com') do |u|
+  u.password = 'password123'
+  u.role = 'admin'
+end
+puts "  Admin user ready: admin@rakamin.com / password123"
+puts ""
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

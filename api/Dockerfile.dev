@@ -1,0 +1,26 @@
+FROM ruby:3.3.2
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  libpq-dev \
+  tzdata \
+  libjemalloc2 \
+  curl \
+  postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4 --retry 3
+
+COPY . .
+
+RUN mkdir -p tmp/pids tmp/cache tmp/sockets log
+
+EXPOSE 3001
+
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]

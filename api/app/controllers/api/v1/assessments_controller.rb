@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(:sessions, :vacancy).order(created_at: :desc)
         )
 
         json_response(
@@ -66,6 +66,7 @@ module Api
           :name,
           :time_limit_min,
           :language,
+          :vacancy_id,
           assessment_skills_attributes: %i[
             id skill_id skill_label is_custom
             scope_include scope_exclude
@@ -83,6 +84,11 @@ module Api
           name:           assessment.name,
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
+          vacancy_id:     assessment.vacancy_id,
+          vacancy:        assessment.vacancy && {
+            id:         assessment.vacancy.id,
+            role_title: assessment.vacancy.role_title
+          },
           system_prompt:  assessment.system_prompt,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,

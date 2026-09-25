@@ -5,6 +5,7 @@ class Vacancy < ApplicationRecord
 
   has_many :vacancy_skills, dependent: :destroy
   has_many :fit_gap_reports, dependent: :destroy
+  has_many :assessments, dependent: :nullify
 
   validates :role_title, presence: true
 

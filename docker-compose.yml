@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ai_interview_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: rakamin_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: ai_interview_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    container_name: ai_interview_api
+    restart: unless-stopped
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p 3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/ai-interview
+      - bundle_cache:/usr/local/bundle
+    environment:
+      RAILS_ENV: development
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: rakamin_development
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+      REDIS_URL: redis://redis:6379/1
+      APP_BASE_URL: http://localhost:5173
+      ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,*"
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_LIVE_MODEL: gemini-3.1-flash-live-preview
+      GEMINI_FLASH_MODEL: gemini-3.6-flash
+      GEMINI_PRO_MODEL: gemini-3.6-flash
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    container_name: ai_interview_sidekiq
+    restart: unless-stopped
+    command: bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+    volumes:
+      - ./api:/ai-interview
+      - bundle_cache:/usr/local/bundle
+    environment:
+      RAILS_ENV: development
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: rakamin_development
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+      REDIS_URL: redis://redis:6379/1
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_LIVE_MODEL: gemini-3.1-flash-live-preview
+      GEMINI_FLASH_MODEL: gemini-3.6-flash
+      GEMINI_PRO_MODEL: gemini-3.6-flash
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  bundle_cache:

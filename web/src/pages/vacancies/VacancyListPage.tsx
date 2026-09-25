@@ -22,9 +22,14 @@ export default function VacancyListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Vacancies</h1>
-        <Button onClick={() => navigate("/vacancies/new")}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Vacancies</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage target roles and benchmark expectations for AI interviews.
+          </p>
+        </div>
+        <Button onClick={() => navigate("/vacancies/new")} className="self-start sm:self-auto font-medium">
           <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
         </Button>
       </div>

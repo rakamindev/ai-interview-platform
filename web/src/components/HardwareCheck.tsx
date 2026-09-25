@@ -9,26 +9,28 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, AlertTriangle } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
 }
 
-function StateIcon({ state }: { state: ProctoringState }) {
+function StateIcon({ state, isInternet }: { state: ProctoringState; isInternet?: boolean }) {
     if (state === ProctoringState.LOADING)
         return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
     if (state === ProctoringState.PASSED)
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-    if (state === ProctoringState.ERROR)
+    if (state === ProctoringState.ERROR) {
+        if (isInternet) return <AlertTriangle className="h-4 w-4 text-amber-500" />;
         return <XCircle className="h-4 w-4 text-destructive" />;
+    }
     return <Circle className="h-4 w-4 text-muted-foreground/40" />;
 }
 
-function stateLabel(state: ProctoringState) {
+function stateLabel(state: ProctoringState, isInternet?: boolean) {
     if (state === ProctoringState.LOADING) return "Checking...";
     if (state === ProctoringState.PASSED) return "Passed";
-    if (state === ProctoringState.ERROR) return "Failed";
+    if (state === ProctoringState.ERROR) return isInternet ? "Slow (Warning)" : "Failed";
     return "Waiting";
 }
 
@@ -42,22 +44,19 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         audio: ProctoringState.WAITING,
         microphone: ProctoringState.WAITING,
     });
-    const [allPassed, setAllPassed] = useState(false);
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
 
-    useEffect(() => {
-        const { osAndBrowser, internet, camera, audio, microphone } = progress;
-        setAllPassed(
-            osAndBrowser === ProctoringState.PASSED &&
-            internet === ProctoringState.PASSED &&
-            camera === ProctoringState.PASSED &&
-            audio === ProctoringState.PASSED &&
-            microphone === ProctoringState.PASSED
-        );
-    }, [progress]);
+    const essentialChecksPassed =
+        progress.osAndBrowser === ProctoringState.PASSED &&
+        progress.microphone === ProctoringState.PASSED &&
+        progress.audio === ProctoringState.PASSED &&
+        (!REQUIRE_CAMERA || progress.camera === ProctoringState.PASSED);
+
+    const internetOk = progress.internet === ProctoringState.PASSED;
+    const canStart = essentialChecksPassed;
 
     useEffect(() => {
         if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
@@ -125,11 +124,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             setProgress((p) => ({
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
             }));
         });
     }, [progress.internet]);
@@ -229,12 +226,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">{label}</span>
                             <div className="flex items-center gap-2">
-                                <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
-                                    progress[key] === ProctoringState.ERROR ? "text-destructive" :
+                                <StateIcon state={progress[key]} isInternet={key === "internet"} />
+                                <span className={`text-xs w-28 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
+                                    progress[key] === ProctoringState.ERROR ? (key === "internet" ? "text-amber-600 font-medium" : "text-destructive") :
                                         "text-muted-foreground"
                                     }`}>
-                                    {stateLabel(progress[key])}
+                                    {stateLabel(progress[key], key === "internet")}
                                 </span>
                             </div>
                         </div>
@@ -270,21 +267,34 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 ))}
             </div>
 
+            {/* Warning notice if internet is below threshold but microphone & audio are ready */}
+            {essentialChecksPassed && !internetOk && progress.internet !== ProctoringState.LOADING && (
+                <div className="px-4 py-3 bg-amber-50 border-t border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                        <p className="font-semibold text-amber-800">Koneksi Internet Kurang Optimal</p>
+                        <p className="text-amber-700 leading-relaxed">
+                            Kecepatan upload di bawah rekomendasi, namun mikrofon dan audio Anda siap. Anda tetap dapat melanjutkan wawancara.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Footer */}
             <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
                 {hasError && (
                     <Button variant="outline" size="sm" onClick={retryAll}>
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Retry
+                        Retry Check
                     </Button>
                 )}
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!canStart}
                     onClick={onStart}
                 >
-                    Start Interview
+                    {internetOk ? "Start Interview" : "Continue Anyway"}
                 </Button>
             </div>
         </div>

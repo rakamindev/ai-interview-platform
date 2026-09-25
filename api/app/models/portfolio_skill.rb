@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PortfolioSkill < ApplicationRecord
+  include TenantScoped
+
   CONFIDENCE_LEVELS = %w[high medium low].freeze
 
   belongs_to :portfolio
@@ -14,5 +16,11 @@ class PortfolioSkill < ApplicationRecord
   # evidence is stored as JSONB array of quote strings
   def evidence_quotes
     Array(evidence)
+  end
+
+  private
+
+  def assign_tenant_id
+    self.tenant_id ||= (Current.tenant_id rescue nil) || portfolio&.tenant_id
   end
 end

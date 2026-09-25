@@ -6,7 +6,7 @@
 #
 # Only includes the fields we need for tenant resolution.
 class Organization < ApplicationRecord
-  self.table_name = 'organizations'
+  self.table_name = 'public.organizations'
 
   # Mirrors rakamin-api Organisation.identify exactly.
   # Accepts identifier, name, scheme, or host.

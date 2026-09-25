@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.6-flash'),
         timeout: 30
       )
     end
@@ -22,6 +22,7 @@ module FitGap
         portfolio_id: @portfolio.id,
         vacancy_id:   @vacancy.id
       )
+      report.tenant_id = @portfolio.tenant_id
 
       report.update!(
         skill_comparisons: skill_comparisons,
@@ -62,7 +63,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
 
@@ -90,6 +92,8 @@ module FitGap
         portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
     end
 
+    FALLBACK_MODELS = %w[gemini-3.5-flash-lite gemini-3.1-flash-lite gemini-3.5-flash].freeze
+
     def generate_narratives(skill_comparisons)
       gaps    = skill_comparisons.select { |c| c[:result] == 'gap' }
       matches = skill_comparisons.select { |c| c[:result] == 'match' }
@@ -98,14 +102,20 @@ module FitGap
 
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
 
-      begin
-        response = @gemini_client.generate_content(prompt, temperature: 0.4)
-        data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
-      rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+      models_to_try = ([@gemini_client.instance_variable_get(:@model)] + FALLBACK_MODELS).compact.uniq
+
+      models_to_try.each do |model_name|
+        begin
+          client = Gemini::HttpClient.new(model: model_name, timeout: 30)
+          response = client.generate_content(prompt, temperature: 0.4)
+          data = response.is_a?(Hash) ? response : JSON.parse(response)
+          return { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        rescue => e
+          Rails.logger.warn("[N13] Narrative model #{model_name} failed: #{e.message}")
+        end
       end
+
+      { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
     end
 
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed)
