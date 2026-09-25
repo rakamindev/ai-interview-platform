@@ -5,14 +5,21 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface LoginResponse {
+export interface AuthResponse {
   token: string;
+  user: { id: number; email: string; role: string };
+  organization: { id: number; name: string; scheme: string };
 }
 
 export const authApi = {
-  login: (data: LoginPayload) =>
-    api.post<LoginResponse>("/auth/login", data),
+  login: (data: LoginPayload) => api.post<AuthResponse>("/auth/login", data),
 
-  signup: (data: { email: string; password: string; role: "admin" | "user" }) =>
-    api.post<LoginResponse>("/signup", data),
+  signup: (data: { organization_name: string; email: string; password: string }) =>
+    api.post<AuthResponse>("/auth/register", data),
+
+  forgotPassword: (email: string) =>
+    api.post<{ message: string; dev_reset_token?: string }>("/auth/forgot_password", { email }),
+
+  resetPassword: (data: { token: string; password: string; password_confirmation: string }) =>
+    api.post<{ message: string }>("/auth/reset_password", data),
 };

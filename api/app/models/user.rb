@@ -3,6 +3,8 @@
 class User < ApplicationRecord
   has_secure_password
 
+  belongs_to :organization, optional: true
+
   ROLES = %w[admin user].freeze
 
   validates :email, presence: true,
@@ -15,6 +17,6 @@ class User < ApplicationRecord
   private
 
   def downcase_email
-    self.email = email.downcase
+    self.email = email.to_s.downcase
   end
 end

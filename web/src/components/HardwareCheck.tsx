@@ -36,7 +36,8 @@ const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
-        osAndBrowser: ProctoringState.WAITING,
+        // Start the first check immediately. Keeping this state-driven also makes Retry deterministic.
+        osAndBrowser: ProctoringState.LOADING,
         internet: ProctoringState.WAITING,
         camera: ProctoringState.WAITING,
         audio: ProctoringState.WAITING,
@@ -103,9 +104,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     };
 
     // Step 1: OS & browser
+    // This effect is state-driven instead of mount-only so Retry can restart the pipeline.
     useEffect(() => {
-        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        if (progress.osAndBrowser !== ProctoringState.LOADING) return;
+
+        const timer = window.setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -114,8 +117,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 osAndBrowser: ProctoringState.PASSED,
                 internet: ProctoringState.LOADING,
             }));
-        }, 800);
-    }, []);
+        }, 500);
+
+        return () => window.clearTimeout(timer);
+    }, [progress.osAndBrowser]);
 
     // Step 2: Internet
     useEffect(() => {
@@ -125,11 +130,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             setProgress((p) => ({
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                // Continue checking local hardware even when the network threshold fails.
+                // The failed internet row still prevents Start Interview, but candidates
+                // can see whether microphone/audio are healthy before retrying the network.
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
             }));
         });
     }, [progress.internet]);

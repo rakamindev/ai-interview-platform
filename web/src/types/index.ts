@@ -129,21 +129,33 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string;
+  expected_level: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta?: number | null;
+  confidence?: "high" | "medium" | "low" | null;
+  overridden?: boolean;
+  evidence_count?: number;
+  competency_summary?: string | null;
 }
+
+export type FitGapGenerationStatus = "pending" | "generating" | "complete" | "failed";
 
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative?: string | null;
+  overall_narrative?: string | null;
   generated_at: string;
+  generation_status: FitGapGenerationStatus;
+}
+
+export interface FitGapStatusResponse {
+  status: FitGapGenerationStatus;
+  message: string;
 }
 
 export interface SkillTaxonomy {

@@ -369,6 +369,21 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Development admin user ───────────────────────────────────────────────────
+
+seed_org = Organization.find_by(scheme: TEST_ORG[:scheme])
+if seed_org
+  admin = User.find_or_initialize_by(email: "test@test.com")
+  admin.assign_attributes(
+    password: "test1234",
+    password_confirmation: "test1234",
+    role: "admin",
+    organization: seed_org
+  )
+  admin.save!
+  puts "  Development admin ready: test@test.com / test1234"
+end
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(
@@ -382,21 +397,11 @@ puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
+puts "Development login:"
+puts "  email    : test@test.com"
+puts "  password : test1234"
 puts ""
-puts "  bundle exec rails console"
-puts ""
-puts "Then run:"
-puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "Then hit the API:"
+puts "You can sign in from the web app or POST /api/v1/auth/login."
 puts ""
 puts "  curl -s http://localhost:3001/api/v1/health"
 puts ""

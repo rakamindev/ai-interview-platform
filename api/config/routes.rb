@@ -7,6 +7,9 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      post 'auth/register', to: 'authentication#register'
+      post 'auth/forgot_password', to: 'authentication#forgot_password'
+      post 'auth/reset_password', to: 'authentication#reset_password'
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 

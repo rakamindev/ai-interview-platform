@@ -4,7 +4,7 @@
 
 - **Node.js** (v18+ recommended)
 - **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
+- A running backend API server (default: `http://localhost:3001`)
 
 ## Quick Start
 
@@ -26,7 +26,7 @@ VITE_API_BASE_URL=http://localhost:3001/api/v1
 VITE_WS_BASE_URL=ws://localhost:3001
 
 # Dev auth token — replace with a real JWT from Rakamin platform
-VITE_DEV_TOKEN=<your-jwt-here>
+VITE_DEV_TOKEN=
 
 # Dev tenant context
 VITE_DEV_TENANT_ID=1
@@ -54,7 +54,7 @@ The app will be available at **http://localhost:5173**.
 | --------------------------- | -------- | --------------------------------------------------- |
 | `VITE_API_BASE_URL`        | Yes      | Backend REST API base URL                           |
 | `VITE_WS_BASE_URL`         | Yes      | WebSocket server URL (used for live audio streaming)|
-| `VITE_DEV_TOKEN`           | Yes      | JWT for authenticating in local development         |
+| `VITE_DEV_TOKEN`           | No       | Optional dev bypass; leave blank to test real login |
 | `VITE_DEV_TENANT_ID`       | Yes      | Tenant ID for multi-tenant context                  |
 | `VITE_DEV_TENANT_NAME`     | Yes      | Tenant display name                                 |
 | `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint for hardware check speed test  |
@@ -97,3 +97,14 @@ public/
 - The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
 - Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
 - The backend must be running for authentication, session management, and real-time audio streaming to work.
+
+
+## Seeded demo account
+
+After `bundle exec rails db:migrate && bundle exec rails db:seed` in `api/`:
+
+```text
+test@test.com / test1234
+```
+
+The app also exposes organization registration and development-only password reset token delivery so the recovery flow can be demonstrated locally without an external email provider.
