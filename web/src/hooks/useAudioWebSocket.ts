@@ -100,10 +100,10 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              onStateChange(msg.reason === "error" ? "fatal_error" : "complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) onStateChange("fatal_error");
               break;
           }
         } catch {
@@ -127,7 +127,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("fatal_error");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);

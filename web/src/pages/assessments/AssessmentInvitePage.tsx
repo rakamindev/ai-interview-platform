@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, RefreshCcw } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -23,12 +24,14 @@ function SessionRow({
   index,
   assessmentId,
   onCopy,
+  onReset,
   copiedId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onReset: (id: number) => void;
   copiedId: number | null;
 }) {
   const navigate = useNavigate();
@@ -67,9 +70,9 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
+          <span className="flex items-center gap-1 text-xs text-destructive" title="Connection to Gemini failed">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
+            Failed (Connection)
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
@@ -112,6 +115,16 @@ function SessionRow({
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
             >
               Results
+            </Button>
+          )}
+          {isEnded && session.end_reason === "error" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onReset(session.id)}
+            >
+              <RefreshCcw className="h-3 w-3 mr-1" /> Reset
             </Button>
           )}
         </div>
@@ -179,6 +192,20 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(session.invite_url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleResetSession = async (id: number) => {
+    try {
+      const res = await sessionsApi.resetSession(id);
+      if (!res || !res.data || !res.data.session) {
+        alert("Unexpected API response format.");
+        return;
+      }
+      setSessions((prev) => prev.map((s) => (s.id === id ? res.data.session : s)));
+    } catch (err: any) {
+      console.error("Failed to reset session:", err);
+      alert(`Failed to reset session. Error: ${err.message}`);
+    }
   };
 
   const copyNewSessionLink = () => {
@@ -312,6 +339,7 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onReset={handleResetSession}
                   copiedId={copiedId}
                 />
               ))}
