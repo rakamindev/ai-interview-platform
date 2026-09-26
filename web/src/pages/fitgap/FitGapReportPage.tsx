@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,9 +21,11 @@ export default function FitGapReportPage() {
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const pollCountRef = useRef(0);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -31,17 +33,33 @@ export default function FitGapReportPage() {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
+      setGenerationError(null);
+      pollCountRef.current = 0;
     } catch (e: any) {
       if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
+        if (!generating) {
+          try {
+            await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+            setGenerating(true);
+            setGenerationError(null);
+            pollCountRef.current = 0;
+          } catch {
+            setGenerating(false);
+            setGenerationError("Failed to start fit/gap report generation.");
+          }
+        } else {
+          pollCountRef.current += 1;
+          if (pollCountRef.current > 12) {
+            setGenerating(false);
+            setGenerationError("Fit/gap report generation timed out. Please try again.");
+          }
         }
+      } else {
+        setGenerating(false);
+        setGenerationError("An error occurred while loading the report.");
       }
     }
-  }, [portfolio, vacancyId]);
+  }, [portfolio, vacancyId, generating]);
 
   useEffect(() => {
     sessionsApi
@@ -64,10 +82,14 @@ export default function FitGapReportPage() {
   const handleRegenerate = async () => {
     if (!portfolio) return;
     setRegenerating(true);
+    setGenerationError(null);
+    pollCountRef.current = 0;
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+    } catch {
+      setGenerationError("Failed to trigger regeneration. Please try again.");
     } finally {
       setRegenerating(false);
     }
@@ -104,43 +126,43 @@ export default function FitGapReportPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+      <div>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+              <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+            </div>
           </div>
-        </div>
 
-        {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
-            </Button>
-            {report && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
-                </Button>
-              </>
-            )}
-          </div>
-        )}
+          {portfolio && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
+                {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                Regenerate
+              </Button>
+              {report && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
+                    {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                    PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
+                    {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                    JSON
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Generating */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
@@ -148,10 +170,18 @@ export default function FitGapReportPage() {
         </div>
       )}
 
-      {/* Report ready */}
+      {generationError && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">{generationError}</p>
+          <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+            {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+            Retry Generation
+          </Button>
+        </div>
+      )}
+
       {report && (
         <>
-          {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Skill Comparison</CardTitle>
@@ -163,7 +193,6 @@ export default function FitGapReportPage() {
 
           <Separator />
 
-          {/* Culture & competency */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
@@ -175,7 +204,6 @@ export default function FitGapReportPage() {
             </CardContent>
           </Card>
 
-          {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
             <>
               <Separator />

@@ -14,9 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import Pagination from "@/components/common/Pagination";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
-import type { Assessment, Session } from "@/types";
+import type { Assessment, Session, PaginationMeta } from "@/types";
 
 function SessionRow({
   session,
@@ -125,6 +126,8 @@ export default function AssessmentInvitePage() {
   const navigate = useNavigate();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
@@ -133,28 +136,36 @@ export default function AssessmentInvitePage() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
-  const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
-  }, [id]);
+  const loadSessions = useCallback(async (targetPage = page) => {
+    try {
+      const res = await assessmentsApi.getSessions(Number(id), targetPage);
+      setSessions(res.data.sessions);
+      if (res.data.meta) {
+        setMeta(res.data.meta);
+      }
+    } catch {}
+  }, [id, page]);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
       assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
+      assessmentsApi.getSessions(Number(id), page),
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
+      if (sRes.data.meta) {
+        setMeta(sRes.data.meta);
+      }
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
+  }, [id, page]);
 
-  // Poll while any session is live or pending
   useEffect(() => {
     const hasActive = sessions.some((s) => s.status !== "ended");
     if (!hasActive) return;
-    const interval = setInterval(loadSessions, 5000);
+    const interval = setInterval(() => loadSessions(page), 5000);
     return () => clearInterval(interval);
-  }, [sessions, loadSessions]);
+  }, [sessions, loadSessions, page]);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
@@ -169,7 +180,11 @@ export default function AssessmentInvitePage() {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
-      setSessions((prev) => [created, ...prev]);
+      if (page === 1) {
+        loadSessions(1);
+      } else {
+        setPage(1);
+      }
     } finally {
       setCreatingSession(false);
     }
@@ -278,14 +293,15 @@ export default function AssessmentInvitePage() {
 
       <Separator />
 
-      {/* Sessions list */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">
             Candidates
-            {sessions.length > 0 && (
+            {meta?.total_count !== undefined ? (
+              <span className="ml-1.5 text-muted-foreground font-normal">({meta.total_count})</span>
+            ) : sessions.length > 0 ? (
               <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
-            )}
+            ) : null}
           </h2>
         </div>
 
@@ -306,7 +322,7 @@ export default function AssessmentInvitePage() {
                 <SessionRow
                   key={session.id}
                   session={session}
-                  index={sessions.length - i}
+                  index={(meta?.total_count ?? sessions.length) - ((page - 1) * (meta?.per_page ?? 20) + i)}
                   assessmentId={id!}
                   onCopy={(sid) => {
                     const s = sessions.find((x) => x.id === sid);
@@ -318,9 +334,19 @@ export default function AssessmentInvitePage() {
             </CardContent>
           </Card>
         )}
+
+        {meta && (
+          <Pagination
+            currentPage={meta.current_page}
+            totalPages={meta.total_pages}
+            totalCount={meta.total_count}
+            perPage={meta.per_page}
+            onPageChange={(newPage) => setPage(newPage)}
+            disabled={loading}
+          />
+        )}
       </div>
 
-      {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (
         <>
           <Separator />

@@ -14,6 +14,11 @@ export const vacanciesApi = {
       params: { page },
     }),
 
+  listAll: () =>
+    api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
+      params: { all: true },
+    }),
+
   get: (id: number) =>
     api.get<{ vacancy: Vacancy }>(`/vacancies/${id}`),
 

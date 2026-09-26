@@ -60,6 +60,7 @@ module FitGap
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          required_level:  expected_level,
           result:          result,
           delta:           delta,
           confidence:      portfolio_skill&.dig(:confidence)
@@ -91,6 +92,13 @@ module FitGap
     end
 
     def generate_narratives(skill_comparisons)
+      if skill_comparisons.empty?
+        return {
+          culture: nil,
+          overall: 'This vacancy has no required skills configured to evaluate against.'
+        }
+      end
+
       gaps    = skill_comparisons.select { |c| c[:result] == 'gap' }
       matches = skill_comparisons.select { |c| c[:result] == 'match' }
       exceeds = skill_comparisons.select { |c| c[:result] == 'exceed' }

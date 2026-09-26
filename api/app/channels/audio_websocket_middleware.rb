@@ -50,8 +50,13 @@ class AudioWebSocketMiddleware
     session, error = authenticate_and_load(env, session_id)
 
     if error
-      browser_ws.send({ type: 'error', code: 'auth_failed', message: error, recoverable: false }.to_json)
-      browser_ws.close
+      reject_with_error(browser_ws, code: 'auth_failed', message: error)
+      return
+    end
+
+    unless session.consent_given?
+      reject_with_error(browser_ws, code: 'consent_required',
+                                    message: 'Candidate consent is required before connecting to the interview session.')
       return
     end
 
@@ -102,12 +107,17 @@ class AudioWebSocketMiddleware
   def connect_to_gemini(browser_ws, state)
     session = state.session
 
+    unless session.consent_given?
+      reject_with_error(browser_ws, code: 'consent_required',
+                                    message: 'Candidate consent is required before connecting to the interview session.')
+      return
+    end
+
     ensure_system_prompt(session)
 
     unless session.assessment.system_prompt.present?
-      send_json(browser_ws, type: 'error', code: 'no_system_prompt',
-                            message: 'Assessment configuration is incomplete.', recoverable: false)
-      browser_ws.close
+      reject_with_error(browser_ws, code: 'no_system_prompt',
+                                    message: 'Assessment configuration is incomplete.')
       return
     end
 
@@ -766,6 +776,17 @@ class AudioWebSocketMiddleware
     # speaker_changed / session_ended failures are critical for frontend state — log at WARN.
     level = %w[speaker_changed session_started session_ended].include?(payload[:type]) ? :warn : :debug
     Rails.logger.public_send(level, "[AudioWS] Failed to send JSON (type=#{payload[:type]}): #{e.message}")
+  end
+
+  def reject_with_error(browser_ws, code:, message:)
+    send_json(browser_ws, type: 'error', code: code, message: message, recoverable: false)
+    EM.add_timer(0.3) do
+      begin
+        browser_ws.close
+      rescue StandardError
+        nil
+      end
+    end
   end
 
   # Per-connection state shared across callbacks.

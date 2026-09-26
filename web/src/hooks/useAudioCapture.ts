@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
 interface UseAudioCaptureOptions {
   onFrame: (buffer: ArrayBuffer) => void;
@@ -10,8 +10,6 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  // Mute gate — mic stays hot, we just skip sending frames.
-  // Avoids AudioContext.suspend/resume async state issues entirely.
   const mutedRef = useRef(false);
 
   const start = useCallback(async () => {
@@ -65,6 +63,12 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
     mutedRef.current = false;
     setIsCapturing(false);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [stop]);
 
   return { start, stop, mute, unmute, isCapturing };
 }

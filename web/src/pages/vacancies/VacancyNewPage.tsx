@@ -81,7 +81,9 @@ export default function VacancyNewPage() {
               {fields.map((field, index) => (
                 <div key={field.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
+                    </div>
                     <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
                       <X className="h-4 w-4" />
                     </button>
@@ -91,6 +93,7 @@ export default function VacancyNewPage() {
                     <LevelRadio
                       value={watch(`skills.${index}.expected_level`) ?? 3}
                       onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
+                      idPrefix={`vacancy-skill-${index}`}
                     />
                   </div>
                 </div>
@@ -139,7 +142,23 @@ export default function VacancyNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        onSelect={(s) => {
+          const isDuplicate = fields.some(
+            (f) => (f.skill_id && f.skill_id === s.skill_id) || f.skill_label?.toLowerCase() === s.skill_label?.toLowerCase()
+          );
+          if (isDuplicate) return;
+          append({
+            skill_id: s.skill_id,
+            skill_label: s.skill_label,
+            expected_level: 3,
+            l1_anchor: s.l1_anchor,
+            l2_anchor: s.l2_anchor,
+            l3_anchor: s.l3_anchor,
+            l4_anchor: s.l4_anchor,
+            l5_anchor: s.l5_anchor,
+          });
+        }}
+        existingSkillIds={fields.map((f) => f.skill_id).filter(Boolean) as string[]}
       />
     </div>
   );

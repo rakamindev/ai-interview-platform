@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import CustomSkillDialog from "@/components/assessment/CustomSkillDialog";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
@@ -39,6 +40,8 @@ export default function AssessmentNewPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+  const [editingCustomIndex, setEditingCustomIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
@@ -67,16 +70,35 @@ export default function AssessmentNewPage() {
     }
   };
 
-  const addCustomSkill = () => {
-    append({
-      skill_label: "",
-      is_custom: true,
-      expected_level: 3,
-      display_order: fields.length,
-    });
+  const handleOpenCustomDialog = (index?: number) => {
+    if (typeof index === "number") {
+      setEditingCustomIndex(index);
+    } else {
+      setEditingCustomIndex(null);
+    }
+    setCustomDialogOpen(true);
+  };
+
+  const handleSaveCustomSkill = (skill: Partial<AssessmentSkill>) => {
+    if (editingCustomIndex !== null) {
+      const current = form.getValues(`skills.${editingCustomIndex}`);
+      form.setValue(`skills.${editingCustomIndex}`, {
+        ...current,
+        ...skill,
+      });
+    } else {
+      append({
+        ...skill,
+        display_order: fields.length,
+      });
+    }
   };
 
   const addB7Skill = (skill: Partial<AssessmentSkill>) => {
+    const isDuplicate = fields.some(
+      (f) => (f.skill_id && f.skill_id === skill.skill_id) || (f.skill_label && f.skill_label.toLowerCase() === skill.skill_label?.toLowerCase())
+    );
+    if (isDuplicate) return;
     append({ ...skill, display_order: fields.length });
   };
 
@@ -98,24 +120,25 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
-      navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+      const created = res.data.assessment;
+      navigate(`/assessments/${created.id}/invite`);
+    } catch (err: any) {
+      setError(err?.response?.data?.errors?.[0]?.message || "Failed to create assessment");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+    <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
+      <div className="flex items-center gap-2">
+        <Link
+          to="/assessments"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Assessment</span>
+        <h1 className="text-xl font-bold">New Assessment</h1>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -202,6 +225,7 @@ export default function AssessmentNewPage() {
                       index={index}
                       form={form}
                       onRemove={() => remove(index)}
+                      onEdit={() => handleOpenCustomDialog(index)}
                     />
                   ))}
                 </div>
@@ -223,7 +247,7 @@ export default function AssessmentNewPage() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={addCustomSkill}
+              onClick={() => handleOpenCustomDialog()}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add custom skill
@@ -248,7 +272,7 @@ export default function AssessmentNewPage() {
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            Save Assessment
           </Button>
         </div>
       </form>
@@ -257,6 +281,14 @@ export default function AssessmentNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
+        existingSkillIds={fields.map((f) => f.skill_id).filter(Boolean) as string[]}
+      />
+
+      <CustomSkillDialog
+        open={customDialogOpen}
+        onOpenChange={setCustomDialogOpen}
+        onSave={handleSaveCustomSkill}
+        initialSkill={editingCustomIndex !== null ? watch(`skills.${editingCustomIndex}`) : null}
       />
     </div>
   );

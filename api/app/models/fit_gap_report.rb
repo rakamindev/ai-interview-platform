@@ -6,5 +6,11 @@ class FitGapReport < ApplicationRecord
   belongs_to :portfolio
   belongs_to :vacancy
 
-  validates :skill_comparisons, presence: true
+  validate :skill_comparisons_must_be_array
+
+  private
+
+  def skill_comparisons_must_be_array
+    errors.add(:skill_comparisons, "must be an array") unless skill_comparisons.is_a?(Array)
+  end
 end

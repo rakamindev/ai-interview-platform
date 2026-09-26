@@ -25,7 +25,14 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
 }
 
 export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
+  if (comparisons.length === 0) {
+    return (
+      <div className="text-center py-6 text-sm text-muted-foreground border rounded-lg">
+        No required skills are configured for this vacancy.
+      </div>
+    );
+  }
+
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
@@ -47,12 +54,12 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
               <tr key={i} className="border-b last:border-0">
                 <td className="px-4 py-2.5">{c.skill_label}</td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+                  {LEVEL_LABELS[(c.required_level ?? c.expected_level) as 1 | 2 | 3 | 4 | 5] ?? "—"}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
                     <span>
-                      {LEVEL_LABELS[c.candidate_level]}
+                      {LEVEL_LABELS[c.candidate_level as 1 | 2 | 3 | 4 | 5]}
                       {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
                     </span>
                   ) : (
@@ -68,7 +75,6 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
         </table>
       </div>
 
-      {/* Summary */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}

@@ -3,9 +3,10 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import { ClipboardList, Briefcase, LogOut, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
+import rakaminSymbol from "@/assets/images/rakamin-symbol.webp";
 
 const navItems = [
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
@@ -14,13 +15,14 @@ const navItems = [
 
 export default function AssessorLayout() {
   const tenant = useAtomValue(tenantAtom);
+  const auth = useAtomValue(authAtom);
   const setAuth = useSetAtom(authAtom);
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = () => {
     clearToken();
-    setAuth({ token: null });
+    setAuth({ token: null, user: null });
     navigate("/login");
   };
 
@@ -31,7 +33,7 @@ export default function AssessorLayout() {
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
+              <img src={rakaminSymbol} alt="Rakamin Logo" className="h-6 w-auto object-contain" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
             <nav className="flex items-center gap-1">
@@ -53,6 +55,15 @@ export default function AssessorLayout() {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            {auth.user?.email && (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 bg-muted/30">
+                <UserIcon className="h-3.5 w-3.5 text-primary" />
+                <span className="font-medium text-foreground">{auth.user.email}</span>
+                <span className="text-[10px] uppercase font-semibold text-primary bg-primary/10 rounded px-1">
+                  {auth.user.role}
+                </span>
+              </span>
+            )}
             {tenant.name && (
               <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
                 Tenant: {tenant.name}

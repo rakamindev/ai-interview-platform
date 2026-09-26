@@ -42,9 +42,12 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
+    Promise.all([fetchPortfolio(), vacanciesApi.listAll(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies);
+        const sortedVacancies = [...vRes.data.vacancies].sort((a, b) =>
+          a.role_title.localeCompare(b.role_title)
+        );
+        setVacancies(sortedVacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
       .catch(() => {})
