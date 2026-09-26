@@ -24,7 +24,7 @@ pidfile ENV.fetch('PIDFILE', 'tmp/pids/server.pid')
 
 preload_app!
 
-on_worker_boot do
+before_worker_boot do
   ActiveRecord::Base.establish_connection if defined?(ActiveRecord)
 
   # Restart the EventMachine reactor in each forked worker — preload_app! forks

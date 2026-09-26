@@ -5,6 +5,12 @@ class SystemPromptGeneratorWorker
 
   sidekiq_options queue: :default, retry: 3
 
+  # Terminal state for a job that ran out of retries — logged at error level
+  # (id and count only, never the raw message) so it is visible, not silent.
+  sidekiq_retries_exhausted do |msg, _ex|
+    Rails.logger.error("[N2] System prompt generation permanently failed for assessment=#{msg['args'].first} after #{msg['retry_count']} retries")
+  end
+
   def perform(assessment_id)
     assessment = Assessment.find(assessment_id)
     prompt = Assessments::SystemPromptCompiler.new(assessment).call

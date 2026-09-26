@@ -22,6 +22,7 @@ class AuthorizeApiRequest
     user_struct = build_user_struct(claims)
 
     check_role!(user_struct) if @required_roles.any?
+    raise(ExceptionHandler::Unauthorized, Message.unauthorized) unless account_active?(user_struct)
 
     { user: user_struct, claims: }
   end
@@ -29,6 +30,25 @@ class AuthorizeApiRequest
   private
 
   attr_reader :headers
+
+  # Only locally-issued admin tokens can be checked against this app's own
+  # `users` table — 'assessor' tokens are minted by the sister rakamin-api app
+  # for accounts that don't exist here at all, so there's nothing local to
+  # check them against yet (see assessment/gap-analysis.md Constraint Signal).
+  # Cached briefly so a deactivation still applies without a DB hit on every
+  # single authenticated request — the JWT itself is still what's trusted for
+  # everything else per-request; this only gates the rare "has this specific
+  # account been shut off" case.
+  def account_active?(user)
+    return true unless user.role == 'admin'
+
+    # Also bound to the tenant the token names: a token minted for tenant B
+    # must not work for an admin that belongs to tenant A (or to none).
+    Rails.cache.fetch("auth/user_active/#{user.id}/#{user.scheme}", expires_in: 60.seconds) do
+      org_id = Organization.identify(user.scheme)&.id
+      org_id.present? && User.where(id: user.id, active: true, organization_id: org_id).exists?
+    end
+  end
 
   def build_user_struct(claims)
     OpenStruct.new(

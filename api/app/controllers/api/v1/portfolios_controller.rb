@@ -115,7 +115,7 @@ module Api
 
         # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
+        if existing && !existing.failed?
           return json_response(report: fit_gap_json(existing))
         end
 
@@ -168,7 +168,8 @@ module Api
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides:         portfolio.assessor_overrides.map(&method(:override_json))
+          overrides:         portfolio.assessor_overrides.map(&method(:override_json)),
+          fit_gap_reports:   portfolio.fit_gap_reports.order(generated_at: :desc).map(&method(:fit_gap_json))
         }
       end
 
@@ -178,6 +179,7 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
+          status:            skill.status,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
           evidence:          skill.evidence_quotes,
@@ -205,7 +207,9 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          generated_at:      report.generated_at,
+          status:            report.status,
+          error:             report.error
         }
       end
 

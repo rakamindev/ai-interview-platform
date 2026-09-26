@@ -1,0 +1,17 @@
+# Known, accepted-for-now advisories. Every entry below is fixed only by leaving
+# Rails 7.0 (EOL since 2025-04) for 7.2+, which is a framework upgrade, not a
+# patch bump. Tracked as an escalation in assessment/be-hardening.md.
+# Anything NOT listed here fails CI, so new vulnerabilities are still caught.
+ignore:
+  - GHSA-v55j-83pf-r9cq   # actionview
+  - GHSA-76r7-hhxj-r776   # activerecord
+  - GHSA-p9fm-f462-ggrg   # activestorage
+  - GHSA-r4mg-4433-c7g3   # activestorage
+  - GHSA-qcfx-2mfw-w4cg   # activestorage
+  - GHSA-r46p-8f7g-vvvg   # activestorage
+  - GHSA-9xrj-h377-fr87   # activestorage
+  - GHSA-73f9-jhhh-hr5m   # activestorage
+  - GHSA-xr9x-r78c-5hrm   # activestorage
+  - GHSA-cg4j-q9v8-6v38   # activesupport
+  - GHSA-89vf-4333-qx8v   # activesupport
+  - GHSA-2j26-frm8-cmj9   # activesupport

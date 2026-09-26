@@ -1,10 +1,24 @@
 # frozen_string_literal: true
 
 class FitGapReport < ApplicationRecord
+  include TenantScoped
+
   FIT_RESULTS = %w[match gap exceed not_assessed].freeze
+  STATUSES    = %w[complete failed].freeze
 
   belongs_to :portfolio
   belongs_to :vacancy
 
-  validates :skill_comparisons, presence: true
+  validates :skill_comparisons, presence: true, allow_blank: true
+  validates :status, inclusion: { in: STATUSES }
+
+  def failed? = status == "failed"
+
+  private
+
+  # See Portfolio#assign_tenant_id — must be `=`, not `||=`, because Rails
+  # pre-populates tenant_id from the active default_scope before this runs.
+  def assign_tenant_id
+    self.tenant_id = portfolio&.tenant_id
+  end
 end

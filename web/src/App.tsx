@@ -15,6 +15,7 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import CandidateListPage from "@/pages/candidates/CandidateListPage";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/assessments/new" element={<AssessmentNewPage />} />
         <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
         <Route path="/assessments/:id/invite" element={<AssessmentInvitePage />} />
+        <Route path="/candidates" element={<CandidateListPage />} />
         <Route
           path="/assessments/:id/sessions/:sessionId/monitor"
           element={<LiveMonitorPage />}

@@ -6,7 +6,7 @@
 #
 # Only includes the fields we need for tenant resolution.
 class Organization < ApplicationRecord
-  self.table_name = 'organizations'
+  self.table_name = 'public.organizations'
 
   # Mirrors rakamin-api Organisation.identify exactly.
   # Accepts identifier, name, scheme, or host.
@@ -18,8 +18,22 @@ class Organization < ApplicationRecord
       (alias_hosts && ARRAY[?]::varchar[])
     SQL
 
-    where(sql_string, identifier, Array(identifier)).first ||
-      default_organization
+    # The same string can match several columns (and several orgs). Without an
+    # ORDER BY, `.first` picks an arbitrary row, so the tenant could change
+    # between calls. Fixed priority: scheme, identifier, host, alias, name.
+    priority = <<~SQL.squish
+      CASE
+        WHEN scheme = ? THEN 0
+        WHEN identifier = ? THEN 1
+        WHEN host = ? THEN 2
+        WHEN alias_hosts && ARRAY[?]::varchar[] THEN 3
+        ELSE 4
+      END, id
+    SQL
+
+    where(sql_string, identifier, Array(identifier))
+      .order(Arel.sql(sanitize_sql_array([priority, identifier, identifier, identifier, Array(identifier)])))
+      .first || default_organization
   end
 
   def self.default_organization

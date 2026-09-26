@@ -8,6 +8,9 @@ class AudioWebSocketMiddleware
   AUDIO_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/audio\z}
 
   MAX_RECONNECT_ATTEMPTS = 3
+  # Browser chunks are ~1 KB (16 kHz PCM at ~33/s); 1 MB is far above any real message
+  # but stops a single connection from making the server buffer websocket-driver's 64 MB default.
+  MAX_MESSAGE_BYTES = 1 * 1024 * 1024
   RECONNECT_BACKOFF = [1, 2, 4].freeze
   BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
@@ -36,7 +39,7 @@ class AudioWebSocketMiddleware
   private
 
   def handle_audio_websocket(env, session_id)
-    browser_ws = Faye::WebSocket.new(env, nil, ping: 30)
+    browser_ws = Faye::WebSocket.new(env, nil, ping: 30, max_length: MAX_MESSAGE_BYTES)
     state = ConnectionState.new
 
     browser_ws.on(:open)    { |_event| handle_browser_open(env, session_id, browser_ws, state) }
@@ -56,6 +59,19 @@ class AudioWebSocketMiddleware
     end
 
     state.session = session
+
+    lock = AudioConnectionLock.new(session.id)
+    unless lock.acquire
+      # recoverable: a page refresh can reconnect before the old socket's close is processed;
+      # the client's backoff retry succeeds once the lock frees. A real second tab gives up.
+      send_json(browser_ws, type: 'error', code: 'already_connected',
+                            message: 'This interview is already open in another tab or window.', recoverable: true)
+      browser_ws.close
+      return
+    end
+    state.connection_lock = lock
+    state.lock_timer = EM.add_periodic_timer(AudioConnectionLock::RENEW_EVERY) { lock.renew }
+
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
@@ -94,6 +110,8 @@ class AudioWebSocketMiddleware
     Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code}")
     state.browser_disconnected_at = Time.current
     state.proactive_reconnect_timer&.cancel
+    state.lock_timer&.cancel
+    state.connection_lock&.release
 
     # Keep Gemini alive during grace period in case candidate reconnects via page refresh.
     schedule_graceful_end(browser_ws, state)
@@ -125,12 +143,8 @@ class AudioWebSocketMiddleware
   end
 
   def ensure_system_prompt(session)
-    return if session.assessment.system_prompt.present?
-
-    Rails.logger.warn("[AudioWS] system_prompt missing for assessment #{session.assessment.id} — regenerating")
-    Assessments::SystemPromptCompiler.new(session.assessment).call.tap do |prompt|
-      session.assessment.update_column(:system_prompt, prompt)
-    end
+    prompt = Assessments::SystemPromptCompiler.new(session.assessment).call
+    session.assessment.update_column(:system_prompt, prompt)
   end
 
   def build_gemini_client(browser_ws, state)
@@ -270,16 +284,24 @@ class AudioWebSocketMiddleware
 
   # Strips coverage/time metadata that leaks into output transcription via realtimeInput.text echoes.
   def sanitize_output_transcription(text)
-    text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
-    text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
-    text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
-    # Skip up to the last }] (or }) immediately followed by an uppercase letter — covers partial JSON echoes.
-    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=\p{Lu})/m, '').strip
-    text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/m, '').strip
-    text = text.gsub(/pacing=\S+\s*priority_next=\S*/m, '').strip
-    text = text.gsub(/\[Start the interview[^\]]*\]/m, '').strip
-    text = text.gsub(/\[SESSION RESUME\][^\n]*/m, '').strip
-    text.gsub(/\[SISTEM\][^\n]*/m, '').strip
+    text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/mi, '').strip
+    text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/mi, '').strip
+    text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/mi, '').strip
+    text = text.gsub(/\[SISTEM\][^\n]*/mi, '').strip
+    text = text.gsub(/\[Start the interview[^\]]*\]/mi, '').strip
+    text = text.gsub(/\[SESSION RESUME\][^\n]*/mi, '').strip
+
+    # Strip full or partial JSON objects containing coverage/pacing keys
+    text = text.gsub(/\{[^{}]*"(?:discovered|pacing|time_remaining_minutes|skills|probe_count)"[^{}]*\}/mi, '').strip
+    # Strip any dangling JSON remnants at the start (e.g. , "discovered": [] ... } ] —)
+    text = text.sub(/\A[\s,\[\]\{\}'"\w\d\n:\-]+(?:discovered|pacing|time_remaining_minutes)[^—\n]*[\}\]]*[\s—\-:]*/mi, '').strip
+    # Strip any leading dangling closing brackets/JSON artifacts (e.g. "}\n]\n\n")
+    text = text.sub(/\A[\s,\[\]\{\}'"\\`\n:\-]+/, '').strip
+    # Strip leading punctuation/dashes left over from prompt delimiters
+    text = text.sub(/\A[\s—\-:]+/, '').strip
+
+    text = text.gsub(/pacing=\S+\s*priority_next=\S*/mi, '').strip
+    text
   end
 
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.
@@ -733,9 +755,9 @@ class AudioWebSocketMiddleware
   def authenticate_and_load(env, session_id)
     request = Rack::Request.new(env)
 
-    session = begin
-      invite_token = request.params['token']
+    invite_token = request.params['token']
 
+    session = begin
       if invite_token.present?
         Session.unscoped.find_by(invite_token: invite_token)
       else
@@ -743,18 +765,22 @@ class AudioWebSocketMiddleware
         return [nil, 'Missing authorization'] unless auth_header.present?
 
         token = auth_header.split(' ').last
-        payload = JsonWebToken.decode(token)
+        # Same rules as the HTTP API: signed token, assessor/admin role, account not deactivated.
+        payload = AuthorizeApiRequest.new({ 'Authorization' => "Bearer #{token}" }, %w[assessor]).call[:claims]
         tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
         return [nil, 'Invalid tenant'] unless tenant_id
 
         Session.unscoped.where(tenant_id: tenant_id).find_by(id: session_id)
       end
     rescue StandardError => e
-      return [nil, "Authentication failed: #{e.message}"]
+      Rails.logger.info("[AudioWS] auth rejected (#{e.class})")
+      return [nil, 'Authentication failed']
     end
 
     return [nil, 'Session not found'] unless session
     return [nil, 'Session has ended'] if session.ended?
+    # Same expiry rule as GET /sessions/:token/candidate — the WS must not be a way around it.
+    return [nil, 'Invite expired'] if invite_token.present? && session.invite_expired?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 
     [session, nil]
@@ -783,7 +809,8 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response,
+                  :connection_lock, :lock_timer
 
     def initialize
       @turn_counter = 0

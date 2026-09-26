@@ -146,9 +146,14 @@ export default function LiveMonitorPage() {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center"
+              title="Kembali ke Halaman Sebelumnya"
+            >
               <ArrowLeft className="h-4 w-4" />
-            </Link>
+            </button>
             <h1 className="text-lg font-semibold">Live Monitor</h1>
           </div>
           {assessmentName && (

@@ -15,7 +15,7 @@ class JsonWebToken
   end
 
   def self.decode(token, options = {})
-    body = JWT.decode(token, hmac_secret, true, options.merge(algorithms: ['HS256']))[0]
+    body = JWT.decode(token, hmac_secret, true, options.merge(algorithms: ['HS256'], required_claims: ['exp']))[0]
     HashWithIndifferentAccess.new(body)
   rescue JWT::DecodeError => e
     raise ExceptionHandler::InvalidToken, e.message

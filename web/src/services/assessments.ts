@@ -4,7 +4,7 @@ import type { Assessment, AssessmentSkill, PaginationMeta, Session } from "@/typ
 export interface AssessmentPayload {
   name: string;
   time_limit_min: number;
-  language?: "en" | "id";
+  language?: "id" | "en";
   assessment_skills_attributes: Partial<AssessmentSkill>[];
 }
 

@@ -13,9 +13,9 @@ data:
   WEB_CONCURRENCY: "2"
   RAILS_MAX_THREADS: "16"
   RAILS_MIN_THREADS: "16"
-  GEMINI_LIVE_MODEL: gemini-2.0-flash-live-preview
-  GEMINI_FLASH_MODEL: gemini-2.5-flash
-  GEMINI_PRO_MODEL: gemini-2.5-pro
+  GEMINI_LIVE_MODEL: gemini-3.1-flash-live-preview
+  GEMINI_FLASH_MODEL: gemini-3.5-flash
+  GEMINI_PRO_MODEL: gemini-3.5-flash
   PROACTIVE_RECONNECT_AFTER: "510"
   APP_BASE_URL: https://ai-interview-api.rakamin.com
   ALLOWED_ORIGINS: "https://<your-frontend-domain>"

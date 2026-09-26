@@ -16,13 +16,21 @@ Rails.application.routes.draw do
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
       }
 
+      # Download speed test — fixed-size payload so candidates measure against
+      # this platform's own infrastructure instead of third-party CDNs whose
+      # uptime/blocking has nothing to do with the candidate's real connection.
+      # See assessment/gap-analysis.md P0-5.
+      get 'speed_test/download', to: proc { |_env|
+        [200, { 'Content-Type' => 'application/octet-stream' }, [SecureRandom.random_bytes(500_000)]]
+      }
+
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
       end
 
       # Sessions
-      resources :sessions, only: %i[show] do
+      resources :sessions, only: %i[index show] do
         member do
           post :end_session
           get  :coverage

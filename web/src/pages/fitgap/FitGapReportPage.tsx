@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -8,7 +8,7 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
@@ -17,10 +17,12 @@ export default function FitGapReportPage() {
     sessionId: string;
     vacancyId: string;
   }>();
+  const navigate = useNavigate();
 
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
@@ -29,7 +31,10 @@ export default function FitGapReportPage() {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
+      // A job that ran out of retries is stored as a terminal "failed" report.
+      const isFailed = res.data.report.status === "failed";
+      setReport(isFailed ? null : res.data.report);
+      setFailed(isFailed);
       setGenerating(false);
     } catch (e: any) {
       if (e?.response?.status === 404) {
@@ -38,7 +43,12 @@ export default function FitGapReportPage() {
           setGenerating(true);
         } catch {
           setGenerating(false);
+          setFailed(true);
         }
+      } else {
+        // Don't keep polling a request that keeps erroring.
+        setGenerating(false);
+        setFailed(true);
       }
     }
   }, [portfolio, vacancyId]);
@@ -67,7 +77,10 @@ export default function FitGapReportPage() {
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
+      setFailed(false);
       setGenerating(true);
+    } catch {
+      setFailed(true);
     } finally {
       setRegenerating(false);
     }
@@ -108,12 +121,14 @@ export default function FitGapReportPage() {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center"
+              title="Kembali ke Halaman Sebelumnya"
             >
               <ArrowLeft className="h-4 w-4" />
-            </Link>
+            </button>
             <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
           </div>
         </div>
@@ -145,6 +160,21 @@ export default function FitGapReportPage() {
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+        </div>
+      )}
+
+      {/* Failed */}
+      {failed && !generating && (
+        <div role="alert" className="border border-destructive/30 bg-destructive/5 rounded-lg p-8 text-center space-y-3">
+          <AlertTriangle className="h-7 w-7 text-destructive mx-auto" />
+          <p className="text-sm font-medium">Fit/gap report couldn't be generated</p>
+          <p className="text-xs text-muted-foreground">
+            The assessment model didn't respond. Your portfolio is unaffected.
+          </p>
+          <Button size="sm" onClick={handleRegenerate} disabled={regenerating}>
+            {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+            Try again
+          </Button>
         </div>
       )}
 

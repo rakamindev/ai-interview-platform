@@ -35,6 +35,10 @@ ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
 
 RUN mkdir -p tmp/pids tmp/cache tmp/sockets log
 
+# Don't run the app as root: a compromised process shouldn't own the container.
+RUN useradd --system --create-home --uid 10001 app && chown -R app:app /ai-interview
+USER app
+
 EXPOSE 3001
 
 CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]

@@ -8,10 +8,14 @@ module Api
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
-      # GET /api/v1/assessments/:assessment_id/sessions
+      # GET /api/v1/assessments/:assessment_id/sessions OR GET /api/v1/sessions
       def index
-        assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        if params[:assessment_id].present?
+          assessment = Assessment.find(params[:assessment_id])
+          sessions = assessment.sessions.includes(:assessment).order(created_at: :desc)
+        else
+          sessions = Session.includes(:assessment).order(created_at: :desc)
+        end
 
         json_response(sessions: sessions.map(&method(:session_json)))
       rescue ActiveRecord::RecordNotFound
@@ -118,8 +122,13 @@ module Api
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Invalid or expired invite token", :gone) if session.invite_expired?
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
+
+        # Only a session the candidate actually started can be auto-ended here;
+        # otherwise anyone holding an unused invite link could burn the interview.
+        return json_error("Session has not started", :conflict) unless session.active?
 
         # No coverage re-check here. The backend WS already verified all_covered
         # before sending preparing_to_end. Re-checking here caused false negatives
@@ -136,6 +145,10 @@ module Api
           return json_error("Invalid or expired invite token", :not_found)
         end
 
+        if session.invite_expired?
+          return json_error("Invalid or expired invite token", :gone)
+        end
+
         # Resolve tenant from the session's own tenant_id so we can load the assessment
         assessment = Assessment.unscoped
                                .where(tenant_id: session.tenant_id)
@@ -149,7 +162,10 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          candidate_name:  session.candidate_name,
+          started_at:      session.started_at&.iso8601,
+          elapsed_seconds: session.started_at ? (Time.current - session.started_at).to_i : nil
         )
       end
 
@@ -165,6 +181,8 @@ module Api
         {
           id:               session.id,
           assessment_id:    session.assessment_id,
+          assessment_name:  session.assessment&.name,
+          role_title:       session.assessment&.name,
           tenant_id:        session.tenant_id,
           candidate_id:     session.candidate_id,
           candidate_name:   session.candidate_name,

@@ -11,6 +11,10 @@
 #   > token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' })
 #   > puts token
 
+# Seeds create a known admin (admin@example.com / password) and a demo tenant. Never run them
+# against a production database.
+abort "Refusing to seed development data in production." if Rails.env.production?
+
 puts "== Seeding AI Interview development data =="
 
 # ── Organization ─────────────────────────────────────────────────────────────
@@ -76,6 +80,17 @@ else
 
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
+
+# ── Admin User ────────────────────────────────────────────────────────────────
+user = User.find_or_initialize_by(email: "admin@example.com")
+user.password = "password"
+user.role = "admin"
+# Admins are bound to one tenant; login is refused for an unbound admin.
+user.organization_id = ActiveRecord::Base.connection.select_value(
+  "SELECT id FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
+)
+user.save!
+puts "  Created/Updated default admin user: admin@example.com (password: password)"
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
