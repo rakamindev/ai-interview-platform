@@ -34,16 +34,15 @@ module Sessions
       # Only initialize if no coverage maps exist yet (idempotent)
       return if @session.coverage_maps.exists?
 
-      skills = @session.assessment.assessment_skills.order(:display_order)
+      skills = @session.assessment.assessment_skills.order(:display_order).to_a.uniq { |s| s.skill_label.downcase.strip }
 
       skills.each do |skill|
-        @session.coverage_maps.create!(
-          skill_id:      skill.skill_id,
-          skill_label:   skill.skill_label,
-          is_discovered: false,
-          state:         'not_yet',
-          probe_count:   0
-        )
+        @session.coverage_maps.find_or_create_by!(skill_label: skill.skill_label) do |cm|
+          cm.skill_id      = skill.skill_id
+          cm.is_discovered = false
+          cm.state         = 'not_yet'
+          cm.probe_count   = 0
+        end
       end
 
       Rails.logger.info("[N5/StartHandler] Initialized #{skills.count} coverage map entries for session #{@session.id}")

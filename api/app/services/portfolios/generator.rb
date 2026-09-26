@@ -7,8 +7,9 @@ module Portfolios
   class Generator
     def initialize(session:, gemini_client: nil)
       @session = session
+      model = ENV['GEMINI_PRO_MODEL'].presence || ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.6-flash')
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   model,
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -23,10 +24,12 @@ module Portfolios
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      response = generate_with_fallback(prompt)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      ActiveRecord::Base.transaction do
+        save_skills(portfolio, response)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
@@ -37,6 +40,25 @@ module Portfolios
     end
 
     private
+
+    def generate_with_fallback(prompt)
+      initial_model = @gemini_client.instance_variable_get(:@model)
+      models_to_try = [initial_model, ENV['GEMINI_FLASH_MODEL'], 'gemini-3.6-flash', 'gemini-flash-latest'].compact.uniq
+
+      last_error = nil
+      models_to_try.each_with_index do |model_name, idx|
+        client = (idx == 0) ? @gemini_client : Gemini::HttpClient.new(model: model_name, timeout: 180)
+        begin
+          return client.generate_content(prompt, temperature: 0.2)
+        rescue Gemini::HttpClient::RateLimitError, Gemini::HttpClient::ApiError => e
+          last_error = e
+          Rails.logger.warn("[N10] Model #{model_name} failed (#{e.message}), trying next fallback...")
+          sleep 1 if idx < models_to_try.length - 1
+        end
+      end
+
+      raise last_error if last_error
+    end
 
     def build_prompt
       assessment       = @session.assessment
@@ -148,32 +170,70 @@ module Portfolios
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      data = if response.is_a?(Hash)
+               response
+             else
+               cleaned = response.to_s.strip.sub(/\A```(?:json)?\s*/i, '').sub(/\s*```\z/, '')
+               JSON.parse(cleaned)
+             end
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      coverage_by_label = @session.coverage_maps.index_by { |m| m.skill_label.downcase }
+      configured_from_ai = (data['configured_skills'] || []).index_by { |s| s['skill_label']&.downcase }
+
+      # 1. Process all configured skills from assessment
+      @session.assessment.assessment_skills.order(:display_order).each do |assessment_skill|
+        skill_data = configured_from_ai[assessment_skill.skill_label.downcase] || {}
+        map = coverage_by_label[assessment_skill.skill_label.downcase]
+
+        # Check if skill was unassessed: probe_count 0 or state not_yet or no level provided
+        is_unassessed = map.nil? || map.state == 'not_yet' || map.probe_count.to_i == 0 || skill_data['level'].blank?
+
+        if is_unassessed
+          portfolio.portfolio_skills.create!(
+            skill_id:           assessment_skill.skill_id,
+            skill_label:        assessment_skill.skill_label,
+            is_discovered:      false,
+            ai_level:           nil,
+            ai_confidence:      nil,
+            evidence:           [],
+            competency_summary: skill_data['competency_summary'].presence || "Skill was not covered during this interview session."
+          )
+        else
+          raw_level = skill_data['level'].to_i
+          level = raw_level.between?(1, 5) ? raw_level : 1
+          raw_conf = skill_data['confidence'].to_s.downcase.strip
+          confidence = PortfolioSkill::CONFIDENCE_LEVELS.include?(raw_conf) ? raw_conf : 'low'
+
+          portfolio.portfolio_skills.create!(
+            skill_id:           assessment_skill.skill_id || skill_data['skill_id'],
+            skill_label:        assessment_skill.skill_label,
+            is_discovered:      false,
+            ai_level:           level,
+            ai_confidence:      confidence,
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary'].presence || "Assessed at #{confidence} confidence."
+          )
+        end
       end
 
+      # 2. Process discovered skills
       (data['discovered_skills'] || []).each do |skill_data|
+        raw_level = skill_data['level'].to_i
+        level = raw_level.between?(1, 5) ? raw_level : 1
+        raw_conf = skill_data['confidence'].to_s.downcase.strip
+        confidence = PortfolioSkill::CONFIDENCE_LEVELS.include?(raw_conf) ? raw_conf : 'low'
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level,
+          ai_confidence:      confidence,
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'].presence || "Discovered competency."
         )
       end
     end

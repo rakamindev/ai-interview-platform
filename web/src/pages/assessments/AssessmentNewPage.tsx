@@ -85,6 +85,21 @@ export default function AssessmentNewPage() {
       setError("Add at least one skill to continue.");
       return;
     }
+
+    const hasEmpty = data.skills.some((s) => !s.skill_label?.trim());
+    if (hasEmpty) {
+      setError("All skills must have a valid skill name.");
+      return;
+    }
+
+    const labels = data.skills.map((s) => s.skill_label?.trim().toLowerCase());
+    const duplicate = labels.find((lbl, idx) => labels.indexOf(lbl) !== idx);
+    if (duplicate) {
+      const originalLabel = data.skills.find((s) => s.skill_label?.trim().toLowerCase() === duplicate)?.skill_label;
+      setError(`Duplicate skill detected: "${originalLabel}". Each skill to assess must be unique.`);
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
     try {
@@ -257,6 +272,7 @@ export default function AssessmentNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
+        selectedSkillLabels={watch("skills")?.map((s) => s.skill_label).filter(Boolean) as string[]}
       />
     </div>
   );

@@ -17,9 +17,9 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+    minDownloadMbps: 3,
+    minUploadMbps: 1.0,
+    maxPingMs: 350,
 };
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
@@ -89,7 +89,7 @@ async function measureUploadSpeed(): Promise<number> {
     });
     const endpoints = SPEED_TEST_UPLOAD_URL
         ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        : ["/api/v1/speed_test", "https://httpbin.org/post", "https://postman-echo.com/post"];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();

@@ -26,6 +26,7 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -40,6 +41,15 @@ export default function VacancyEditPage() {
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
+    const labels = data.skills.map((s) => s.skill_label?.trim().toLowerCase()).filter(Boolean);
+    const duplicate = labels.find((lbl, idx) => labels.indexOf(lbl) !== idx);
+    if (duplicate) {
+      const originalLabel = data.skills.find((s) => s.skill_label?.trim().toLowerCase() === duplicate)?.skill_label;
+      setError(`Duplicate skill detected: "${originalLabel}". Each vacancy skill must be unique.`);
+      return;
+    }
+
+    setError(null);
     setSubmitting(true);
     try {
       await vacanciesApi.update(Number(id), {
@@ -49,6 +59,8 @@ export default function VacancyEditPage() {
         vacancy_skills_attributes: data.skills,
       });
       navigate("/vacancies");
+    } catch (e: any) {
+      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
     } finally {
       setSubmitting(false);
     }
@@ -93,13 +105,19 @@ export default function VacancyEditPage() {
           <Label>Competency expectations</Label>
           <Textarea rows={3} {...register("competency_expectations")} />
         </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
           <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        selectedSkillLabels={watch("skills")?.map((s) => s.skill_label).filter(Boolean) as string[]}
+      />
     </div>
   );
 }

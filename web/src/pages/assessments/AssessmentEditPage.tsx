@@ -41,7 +41,7 @@ export default function AssessmentEditPage() {
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
   });
 
-  const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
+  const { register, handleSubmit, control, setValue, reset, watch, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
@@ -70,7 +70,25 @@ export default function AssessmentEditPage() {
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) { setError("Add at least one skill."); return; }
+    if (data.skills.length === 0) {
+      setError("Add at least one skill.");
+      return;
+    }
+
+    const hasEmpty = data.skills.some((s) => !s.skill_label?.trim());
+    if (hasEmpty) {
+      setError("All skills must have a valid skill name.");
+      return;
+    }
+
+    const labels = data.skills.map((s) => s.skill_label?.trim().toLowerCase());
+    const duplicate = labels.find((lbl, idx) => labels.indexOf(lbl) !== idx);
+    if (duplicate) {
+      const originalLabel = data.skills.find((s) => s.skill_label?.trim().toLowerCase() === duplicate)?.skill_label;
+      setError(`Duplicate skill detected: "${originalLabel}". Each skill to assess must be unique.`);
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
     try {
@@ -171,7 +189,12 @@ export default function AssessmentEditPage() {
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ ...s, display_order: fields.length })}
+        selectedSkillLabels={watch("skills")?.map((s) => s.skill_label).filter(Boolean) as string[]}
+      />
     </div>
   );
 }

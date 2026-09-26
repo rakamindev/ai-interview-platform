@@ -52,12 +52,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
         setAllPassed(
             osAndBrowser === ProctoringState.PASSED &&
-            internet === ProctoringState.PASSED &&
+            (internet === ProctoringState.PASSED || internetResult !== null) &&
             camera === ProctoringState.PASSED &&
             audio === ProctoringState.PASSED &&
             microphone === ProctoringState.PASSED
         );
-    }, [progress]);
+    }, [progress, internetResult]);
 
     useEffect(() => {
         if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
@@ -125,11 +125,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             setProgress((p) => ({
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
             }));
         });
     }, [progress.internet]);

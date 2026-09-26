@@ -10,8 +10,29 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
-          return render json: { status: "generating" }, status: :accepted
+        if @portfolio.nil?
+          if @session&.ended?
+            @portfolio = @session.portfolio || @session.create_portfolio!(
+              candidate_id: @session.candidate_id,
+              generation_status: "pending"
+            )
+          else
+            return render json: { status: "generating" }, status: :accepted
+          end
+        end
+
+        if @portfolio.pending? || @portfolio.generating?
+          has_workers = defined?(Sidekiq::ProcessSet) && (Sidekiq::ProcessSet.new.size > 0 rescue false)
+          if has_workers
+            return render json: { status: "generating" }, status: :accepted
+          else
+            begin
+              @portfolio = Portfolios::Generator.new(session: @session).call
+            rescue => e
+              Rails.logger.error("[PortfoliosController#show] Synchronous generation failed: #{e.message}")
+              @portfolio.reload
+            end
+          end
         end
 
         if @portfolio.failed?
@@ -37,12 +58,29 @@ module Api
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
-        PortfolioGeneratorWorker.perform_async(@session.id)
 
-        json_response(
-          message:   "Portfolio generation queued",
-          portfolio: portfolio_json(portfolio)
-        )
+        has_workers = defined?(Sidekiq::ProcessSet) && (Sidekiq::ProcessSet.new.size > 0 rescue false)
+        if has_workers
+          PortfolioGeneratorWorker.perform_async(@session.id)
+          json_response(
+            message:   "Portfolio generation queued",
+            portfolio: portfolio_json(portfolio)
+          )
+        else
+          begin
+            portfolio = Portfolios::Generator.new(session: @session).call
+            json_response(
+              message:   "Portfolio generated",
+              portfolio: portfolio_json(portfolio)
+            )
+          rescue => e
+            portfolio.reload
+            json_response(
+              portfolio: portfolio_json(portfolio),
+              error: portfolio.generation_error
+            )
+          end
+        end
       end
 
       # GET /api/v1/portfolios/:id/export
@@ -92,9 +130,15 @@ module Api
         end
 
         FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
-        render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+        has_workers = defined?(Sidekiq::ProcessSet) && (Sidekiq::ProcessSet.new.size > 0 rescue false)
+        if has_workers
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+          render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+        else
+          report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+          json_response(report: fit_gap_json(report))
+        end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
@@ -119,8 +163,14 @@ module Api
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        has_workers = defined?(Sidekiq::ProcessSet) && (Sidekiq::ProcessSet.new.size > 0 rescue false)
+        if has_workers
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+          render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        else
+          report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+          json_response(report: fit_gap_json(report))
+        end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
@@ -131,6 +181,11 @@ module Api
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
+          vacancy = Vacancy.find_by(id: params[:vacancy_id])
+          if vacancy && portfolio.complete?
+            report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+            return json_response(report: fit_gap_json(report))
+          end
           return json_error("Fit/gap report not found", :not_found)
         end
 

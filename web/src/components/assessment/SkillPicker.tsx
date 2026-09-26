@@ -7,20 +7,32 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
-
 
 interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (skill: Partial<AssessmentSkill>) => void;
+  selectedSkillLabels?: string[];
 }
 
-export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
+export default function SkillPicker({
+  open,
+  onOpenChange,
+  onSelect,
+  selectedSkillLabels = [],
+}: SkillPickerProps) {
   const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+
+  const isSelected = (label: string) => {
+    if (!selectedSkillLabels || selectedSkillLabels.length === 0) return false;
+    const normalized = label.trim().toLowerCase();
+    return selectedSkillLabels.some((l) => l.trim().toLowerCase() === normalized);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -37,6 +49,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
   );
 
   const handleSelect = (s: SkillTaxonomy) => {
+    if (isSelected(s.skill_label)) return;
     onSelect({
       skill_id: undefined,
       skill_label: s.skill_label,
@@ -79,16 +92,30 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
           ) : (
-            filtered.map((s) => (
-              <button
-                key={s.skill_id}
-                type="button"
-                onClick={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
-              >
-                {s.skill_label}
-              </button>
-            ))
+            filtered.map((s) => {
+              const added = isSelected(s.skill_label);
+              return (
+                <button
+                  key={s.skill_id}
+                  type="button"
+                  disabled={added}
+                  onClick={() => !added && handleSelect(s)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-md transition-colors text-sm flex items-center justify-between",
+                    added
+                      ? "opacity-50 cursor-not-allowed bg-muted/40 text-muted-foreground"
+                      : "hover:bg-muted text-foreground"
+                  )}
+                >
+                  <span className="truncate">{s.skill_label}</span>
+                  {added && (
+                    <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded shrink-0">
+                      Already added
+                    </span>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </DialogContent>

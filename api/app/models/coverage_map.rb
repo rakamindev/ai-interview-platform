@@ -5,7 +5,8 @@ class CoverageMap < ApplicationRecord
 
   belongs_to :session
 
-  validates :skill_label, presence: true
+  validates :skill_label, presence: true,
+                          uniqueness: { scope: :session_id, case_sensitive: false }
   validates :state, inclusion: { in: STATES }
   validates :probe_count, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 

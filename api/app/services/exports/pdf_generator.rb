@@ -3,6 +3,8 @@
 require 'prawn'
 require 'prawn/table'
 
+Prawn::Fonts::AFM.hide_m17n_warning = true
+
 module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
@@ -37,12 +39,13 @@ module Exports
     private
 
     def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
+      pdf.font_size(22) { pdf.text sanitize(@assessment.name), style: :bold }
       pdf.move_down 4
       pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
       pdf.move_down 4
 
       pdf.font_size(10) do
+        pdf.text "Candidate: #{sanitize(@session.candidate_name.presence || 'Anonymous Candidate')}"
         pdf.text "Session: #{@session.id}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
         pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
@@ -79,25 +82,31 @@ module Exports
       effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text sanitize(skill.skill_label), style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        level_text = if skill.unassessed? && override.nil?
+                       "Status: Not Assessed (Skill not covered during session)"
+                     else
+                       current_lvl = effective_level ? LEVEL_LABELS[effective_level] : 'N/A'
+                       txt = "Level: #{current_lvl}"
+                       txt += " (AI: #{LEVEL_LABELS[skill.ai_level] || 'Unassessed'} -> Override: #{LEVEL_LABELS[override.override_level]})" if override
+                       txt += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence || 'N/A'}"
+                       txt
+                     end
+        pdf.text sanitize(level_text)
       end
 
       pdf.move_down 4
 
       if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
+        pdf.font_size(10) { pdf.text sanitize(skill.competency_summary) }
       end
 
       if skill.evidence.any?
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each { |quote| pdf.text "  - #{sanitize(quote)}" }
         end
       end
 
@@ -105,7 +114,7 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
+          pdf.text "  #{sanitize(override.assessor_notes)}"
         end
       end
 
@@ -116,7 +125,7 @@ module Exports
     def render_fit_gap_section(pdf)
       pdf.start_new_page
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      pdf.font_size(16) { pdf.text "Fit/Gap Analysis - #{sanitize(@vacancy.role_title)}", style: :bold }
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
@@ -124,11 +133,11 @@ module Exports
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
         table_data << [
-          c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
-          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
+          sanitize(c['skill_label']),
+          c['expected_level'] ? "L#{c['expected_level']}" : '-',
+          c['candidate_level'] ? "L#{c['candidate_level']}" : '-',
+          RESULT_LABELS[c['result']] || sanitize(c['result']),
+          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '-'
         ]
       end
 
@@ -143,24 +152,24 @@ module Exports
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
+        pdf.font_size(10) { pdf.text sanitize(@fit_gap.culture_narrative) }
       end
 
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
         pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
+        pdf.font_size(10) { pdf.text sanitize(@fit_gap.overall_narrative) }
       end
     end
 
     def render_footer(pdf)
-      pdf.number_pages "Page <page> of <total>",
+      pdf.number_pages "Page <page> of <total>  |  Confidential Candidate Record (UU PDP No. 27/2022 Compliant)",
                         at:     [pdf.bounds.left, 0],
                         width:  pdf.bounds.right,
                         align:  :center,
-                        size:   9,
-                        color:  '999999'
+                        size:   8,
+                        color:  '777777'
     end
 
     def format_duration(seconds)
@@ -168,6 +177,26 @@ module Exports
       mins = seconds / 60
       secs = seconds % 60
       "#{mins}m #{secs}s"
+    end
+
+    # Sanitizes input strings to ensure full compatibility with Prawn's AFM built-in fonts (Windows-1252).
+    # Replaces special unicode arrows, smart quotes, dashes, and unmappable characters.
+    def sanitize(text)
+      return '' if text.nil?
+
+      text.to_s
+          .gsub(/[→⇒➜➝]/, '->')
+          .gsub(/[←⇐]/, '<-')
+          .gsub(/[“”«»]/, '"')
+          .gsub(/[‘’`]/, "'")
+          .gsub(/[—–−]/, '-')
+          .gsub(/[•·▪▫]/, '-')
+          .gsub('…', '...')
+          .gsub(/[✓✔]/, '[v]')
+          .gsub(/[✕✗❌]/, '[x]')
+          .gsub(/\u00A0/, ' ')
+          .encode('Windows-1252', invalid: :replace, undef: :replace, replace: '')
+          .encode('UTF-8')
     end
   end
 end

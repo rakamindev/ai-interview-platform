@@ -15,8 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, ExternalLink } from "lucide-react";
 import type { Assessment, Session } from "@/types";
+
+function getInviteUrl(session?: Session | null): string {
+  if (!session) return "";
+  if (session.invite_token) {
+    return `${window.location.origin}/interview/${session.invite_token}`;
+  }
+  return session.invite_url ? session.invite_url.replace(/http:\/\/localhost:3001/, window.location.origin) : "";
+}
 
 function SessionRow({
   session,
@@ -81,18 +89,29 @@ function SessionRow({
 
         <div className="flex items-center gap-1.5">
           {isPending && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(session.id)}
-            >
-              {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
-              ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
-              )}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => onCopy(session.id)}
+              >
+                {copiedId === session.id ? (
+                  <><Check className="h-3 w-3 mr-1" /> Copied</>
+                ) : (
+                  <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                )}
+              </Button>
+              <a
+                href={getInviteUrl(session)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center h-7 px-2 text-xs text-muted-foreground hover:text-foreground border rounded bg-background"
+                title="Open candidate interview in new tab"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
           )}
           {isLive && (
             <Button
@@ -176,14 +195,14 @@ export default function AssessmentInvitePage() {
   };
 
   const copyLink = (session: Session, id: number) => {
-    navigator.clipboard.writeText(session.invite_url);
+    navigator.clipboard.writeText(getInviteUrl(session));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const copyNewSessionLink = () => {
-    if (!newSession?.invite_url) return;
-    navigator.clipboard.writeText(newSession.invite_url);
+    if (!newSession) return;
+    navigator.clipboard.writeText(getInviteUrl(newSession));
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
@@ -262,8 +281,16 @@ export default function AssessmentInvitePage() {
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
-                {newSession.invite_url}
+                {getInviteUrl(newSession)}
               </span>
+              <a
+                href={getInviteUrl(newSession)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-primary font-medium hover:underline flex items-center gap-1 shrink-0"
+              >
+                Open <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
             <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
               {newSessionCopied ? (

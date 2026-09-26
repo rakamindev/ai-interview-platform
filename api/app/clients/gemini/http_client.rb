@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = ENV.fetch('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta')
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -59,11 +59,14 @@ module Gemini
           interval: 1,
           interval_randomness: 0.5,
           backoff_factor: 2,
+          methods: %i[get post],
           retry_statuses: [429, 500, 502, 503],
-          retry_block: ->(env, _opts, retries, exc) {
+          retry_block: proc { |params = {}|
+            env = params.is_a?(Hash) ? params[:env] : nil
+            retry_count = params.is_a?(Hash) ? params[:retry_count] : nil
             retry_after = env&.response_headers&.[]('retry-after')&.to_i
             sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
+            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retry_count} for #{@model}: status #{env&.status}")
           }
         }
         f.options.timeout = @timeout
@@ -80,7 +83,9 @@ module Gemini
       end
 
       data = JSON.parse(response.body)
-      text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
+      parts = data.dig('candidates', 0, 'content', 'parts') || []
+      text_part = parts.reverse.find { |p| p['text'].present? && !p['thought'] } || parts.find { |p| p['text'].present? }
+      text = text_part&.[]('text')
 
       raise ApiError.new("No content in Gemini response") unless text
 

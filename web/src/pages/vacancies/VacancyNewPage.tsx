@@ -32,6 +32,14 @@ export default function VacancyNewPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   const onSubmit = async (data: VacancyFormValues) => {
+    const labels = data.skills.map((s) => s.skill_label?.trim().toLowerCase()).filter(Boolean);
+    const duplicate = labels.find((lbl, idx) => labels.indexOf(lbl) !== idx);
+    if (duplicate) {
+      const originalLabel = data.skills.find((s) => s.skill_label?.trim().toLowerCase() === duplicate)?.skill_label;
+      setError(`Duplicate skill detected: "${originalLabel}". Each vacancy skill must be unique.`);
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
     try {
@@ -140,6 +148,7 @@ export default function VacancyNewPage() {
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        selectedSkillLabels={watch("skills")?.map((s) => s.skill_label).filter(Boolean) as string[]}
       />
     </div>
   );
