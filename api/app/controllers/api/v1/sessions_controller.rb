@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session reset coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -75,6 +75,29 @@ module Api
         else
           json_error("Failed to end session", :unprocessable_entity)
         end
+      end
+
+      # POST /api/v1/sessions/:id/reset
+      def reset
+        unless @session.ended? && @session.end_reason == 'error'
+          return json_error("Only failed sessions can be reset", :unprocessable_entity)
+        end
+
+        ActiveRecord::Base.transaction do
+          @session.update!(
+            status: 'pending',
+            end_reason: nil,
+            started_at: nil,
+            ended_at: nil,
+            gemini_resumption_token: nil,
+            duration_seconds: nil
+          )
+          @session.transcript_turns.destroy_all
+          @session.coverage_maps.destroy_all
+          @session.portfolio&.destroy
+        end
+
+        json_response(session: session_json(@session.reload))
       end
 
       # GET /api/v1/sessions/:id/coverage
@@ -147,9 +170,11 @@ module Api
 
         json_response(
           session_id:      session.id,
+          candidate_name:  session.candidate_name,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason
         )
       end
 

@@ -27,6 +27,7 @@ import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [candidateInfoLoading, setCandidateInfoLoading] = useState(true);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
@@ -42,13 +43,17 @@ export default function InterviewPage() {
   // Fetch candidate info
   useEffect(() => {
     if (!token) return;
+    setCandidateInfoLoading(true);
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") {
+          setInterviewState(res.data.end_reason === "error" ? "fatal_error" : "complete");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("complete"))
+      .finally(() => setCandidateInfoLoading(false));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -192,11 +197,21 @@ export default function InterviewPage() {
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
-          {candidateInfo && (
-            <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
-            </p>
+          {candidateInfoLoading ? (
+            <>
+              <div className="h-6 w-48 bg-muted animate-pulse rounded mx-auto" />
+              <div className="h-4 w-24 bg-muted animate-pulse rounded mx-auto" />
+            </>
+          ) : (
+            <>
+              <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
+              {candidateInfo?.candidate_name && (
+                <p className="text-sm text-muted-foreground">Hi, {candidateInfo.candidate_name} 👋</p>
+              )}
+              {candidateInfo && (
+                <p className="text-sm text-muted-foreground">{candidateInfo.time_limit_min} minutes</p>
+              )}
+            </>
           )}
         </div>
 
@@ -208,7 +223,11 @@ export default function InterviewPage() {
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            {/* sessionReady gates the Start button — prevents silent no-op when sessionId hasn't loaded yet */}
+            <HardwareCheck
+              sessionReady={!candidateInfoLoading && !!sessionId}
+              onStart={() => { setHardwareCheckDone(true); startInterview(); }}
+            />
           </div>
         ) : (
           <div className="space-y-4">
@@ -236,6 +255,21 @@ export default function InterviewPage() {
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State G: Fatal Error ────────────────────────────────────────────────
+  if (interviewState === "fatal_error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold text-destructive">Connection Failed</h2>
+        <p className="text-sm text-muted-foreground">
+          Kami kehilangan koneksi ke sistem wawancara (technical error).
+          <br />
+          Jangan khawatir, silakan hubungi tim rekruter untuk me-reset sesi kamu ya.
         </p>
       </div>
     );
