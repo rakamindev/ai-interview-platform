@@ -8,8 +8,10 @@ module Response
     render json: object, status: status
   end
 
-  def json_error(message, status = :unprocessable_entity, details: nil)
+  # code: a stable name the web can branch on (e.g. "not_retryable"). The message may change.
+  def json_error(message, status = :unprocessable_entity, details: nil, code: nil)
     payload = { errors: [{ status: Rack::Utils.status_code(status), message: }] }
+    payload[:errors][0][:code] = code if code
     payload[:errors][0][:detail] = details if details
     render json: payload, status:
   end

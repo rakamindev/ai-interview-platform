@@ -16,14 +16,26 @@ export interface SpeedThresholds {
     maxPingMs: number;
 }
 
-export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+// Sized for a voice interview, not for video: the microphone sends 16 kHz mono
+// audio (about 0.25 Mbps) and the AI's voice comes back at about 0.4 Mbps.
+// The old 8 / 4 Mbps bar blocked many candidates who could interview fine.
+// Each value can be tuned per deployment.
+const envNumber = (value: unknown, fallback: number) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 && value !== undefined && value !== "" ? n : fallback;
 };
 
-const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+export const DEFAULT_THRESHOLDS: SpeedThresholds = {
+    minDownloadMbps: envNumber(import.meta.env.VITE_MIN_DOWNLOAD_MBPS, 1),
+    minUploadMbps: envNumber(import.meta.env.VITE_MIN_UPLOAD_MBPS, 0.5),
+    maxPingMs: envNumber(import.meta.env.VITE_MAX_PING_MS, 500),
+};
+
+// Measure the path the interview really uses: our own API, not third-party
+// servers that may be slow or blocked on the candidate's network.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:3001/api/v1";
+const SPEED_TEST_PING_URL = (import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined) ?? `${API_BASE_URL}/health`;
+const SPEED_TEST_UPLOAD_URL = (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) ?? `${API_BASE_URL}/speed_test`;
 
 async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {

@@ -16,6 +16,22 @@ module Gemini
 
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
+    # The call worked, but the answer had no text in it.
+    class EmptyResponseError < ApiError; end
+
+    # generateContent is a POST, but calling it again changes nothing, so short
+    # errors (rate limit, "busy", a dropped connection) are safe to retry.
+    # Slow answers (timeouts) are not retried here; the job queue retries those.
+    RETRY_OPTIONS = {
+      max: 3,
+      interval: 1,
+      interval_randomness: 0.5,
+      backoff_factor: 2,
+      max_interval: 10,
+      methods: %i[post],
+      retry_statuses: [429, 500, 502, 503, 504],
+      exceptions: [Faraday::ConnectionFailed, Faraday::RetriableResponse]
+    }.freeze
 
     def initialize(model: nil, api_key: nil, timeout: 60)
       @model = model
@@ -54,18 +70,16 @@ module Gemini
 
     def build_connection
       Faraday.new do |f|
-        f.request :retry, {
-          max: 3,
-          interval: 1,
-          interval_randomness: 0.5,
-          backoff_factor: 2,
-          retry_statuses: [429, 500, 502, 503],
-          retry_block: ->(env, _opts, retries, exc) {
-            retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
+        f.request :retry, RETRY_OPTIONS.merge(
+          # faraday-retry passes keyword arguments. It also waits for Retry-After
+          # when Google sends one, up to max_interval; longer waits go to the job queue.
+          retry_block: lambda { |env:, retry_count:, will_retry_in:, **|
+            Rails.logger.warn(
+              "[Gemini::HttpClient] #{@model} answered #{env&.status || 'no response'}; " \
+              "retry #{retry_count + 1} in #{will_retry_in.round(1)}s"
+            )
           }
-        }
+        )
         f.options.timeout = @timeout
         f.options.open_timeout = 10
         f.adapter Faraday.default_adapter
@@ -82,7 +96,7 @@ module Gemini
       data = JSON.parse(response.body)
       text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
 
-      raise ApiError.new("No content in Gemini response") unless text
+      raise EmptyResponseError.new("No content in Gemini response") unless text
 
       # Strip markdown code fences if present (e.g. ```json ... ```)
       cleaned = text.strip.sub(/\A```(?:json)?\s*/, '').sub(/\s*```\z/, '')

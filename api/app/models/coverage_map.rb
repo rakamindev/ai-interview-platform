@@ -11,4 +11,10 @@ class CoverageMap < ApplicationRecord
 
   scope :configured,  -> { where(is_discovered: false) }
   scope :discovered,  -> { where(is_discovered: true) }
+
+  # The coverage worker writes this signal when it marks a skill covered by
+  # itself, without the conversation confirming it.
+  def auto_advanced?
+    last_signal.to_s.start_with?('Auto-advanced')
+  end
 end

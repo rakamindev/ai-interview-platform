@@ -3,17 +3,33 @@
 require 'prawn'
 require 'prawn/table'
 
+# We replace what the built-in font can't draw (see #printable), so Prawn's
+# warning about international text would only be noise in the logs.
+Prawn::Fonts::AFM.hide_m17n_warning = true
+
 module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
   class PdfGenerator
-    LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
     RESULT_LABELS = {
       'match'        => 'Match',
       'gap'          => 'Gap',
       'exceed'       => 'Exceeds',
-      'not_assessed' => 'Not Assessed'
+      'not_assessed' => 'Not assessed'
+    }.freeze
+
+    # The design's words for a skill without a level, and for thin evidence.
+    ABSENCE = {
+      'not_assessed' => 'Not assessed. The interview did not reach this skill, so no level is given.',
+      'unavailable'  => "Could not be evaluated. The AI's answer for this skill couldn't be used, so no level " \
+                        'is shown. This is a system problem, not a judgement of the candidate.'
+    }.freeze
+    CAVEATS = {
+      'low_probe_count' => 'Needs a human look. One probe is not enough to confirm a level. ' \
+                           'Treat it as a lead, not a finding.',
+      'auto_advanced'   => 'Needs a human look. Coverage was advanced automatically, not observed in ' \
+                           'conversation. Check the transcript before relying on it.'
     }.freeze
 
     def initialize(portfolio:, vacancy: nil)
@@ -22,6 +38,8 @@ module Exports
       @session     = portfolio.session
       @assessment  = @session.assessment
       @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
+      # The same data the results page reads, so the PDF can't say more than the page.
+      @report      = Portfolios::ReportPresenter.new(portfolio).as_json
     end
 
     # Returns PDF binary string.
@@ -37,86 +55,90 @@ module Exports
     private
 
     def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
+      write(pdf, @assessment.name, size: 22, style: :bold)
       pdf.move_down 4
-      pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
+      write(pdf, 'Skill Portfolio Report', size: 12)
       pdf.move_down 4
 
-      pdf.font_size(10) do
-        pdf.text "Session: #{@session.id}"
-        pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
-        pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
-      end
+      write(pdf, "Session: #{@session.id}", size: 10)
+      write(pdf, "Duration: #{format_duration(@session.duration_seconds)}", size: 10)
+      write(pdf, "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}", size: 10)
+      pdf.move_down 8
 
+      # What the report rests on comes first, before any rating.
+      honesty = Portfolios::HonestySentence.new(@report[:summary])
+      write(pdf, honesty.sentence, size: 11)
+      write(pdf, honesty.counts, size: 10, color: '555555')
+
+      pdf.move_down 6
       pdf.stroke_horizontal_rule
       pdf.move_down 10
     end
 
     def render_portfolio_section(pdf)
-      pdf.font_size(16) { pdf.text "Skill Portfolio", style: :bold }
+      write(pdf, "Skill Portfolio", size: 16, style: :bold)
       pdf.move_down 8
 
-      skills = @portfolio.portfolio_skills.includes(:assessor_override)
-      configured = skills.reject(&:is_discovered)
-      discovered = skills.select(&:is_discovered)
+      overrides = @report[:overrides].index_by { |override| override[:portfolio_skill_id] }
+      configured, discovered = @report[:skills].partition { |skill| !skill[:is_discovered] }
 
       if configured.any?
-        pdf.font_size(13) { pdf.text "Assessed Skills", style: :bold }
+        write(pdf, 'Configured skills', size: 13, style: :bold)
         pdf.move_down 6
-        configured.each { |skill| render_skill_card(pdf, skill) }
+        configured.each { |skill| render_skill_card(pdf, skill, overrides[skill[:id]]) }
       end
 
       if discovered.any?
         pdf.move_down 6
-        pdf.font_size(13) { pdf.text "Discovered Skills", style: :bold }
+        write(pdf, 'Discovered skills', size: 13, style: :bold)
         pdf.move_down 6
-        discovered.each { |skill| render_skill_card(pdf, skill) }
+        discovered.each { |skill| render_skill_card(pdf, skill, overrides[skill[:id]]) }
       end
     end
 
-    def render_skill_card(pdf, skill)
-      override = skill.assessor_override
-      effective_level = override ? override.override_level : skill.ai_level
+    def render_skill_card(pdf, skill, override)
+      write(pdf, skill[:skill_label], size: 11, style: :bold)
 
-      pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
-
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
-      end
-
-      pdf.move_down 4
-
-      if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
-      end
-
-      if skill.evidence.any?
-        pdf.move_down 4
-        pdf.font_size(10) do
-          pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
-        end
-      end
-
-      if override&.assessor_notes.present?
-        pdf.move_down 4
-        pdf.font_size(10) do
-          pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
-        end
+      if skill[:ai_level]
+        render_rating(pdf, skill, override)
+      else
+        # A skill without a level says why, and nothing else.
+        write(pdf, ABSENCE[skill[:status]], size: 10)
       end
 
       pdf.stroke { pdf.stroke_color 'CCCCCC'; pdf.horizontal_rule }
       pdf.move_down 8
     end
 
+    def render_rating(pdf, skill, override)
+      level = override ? override[:override_level] : skill[:ai_level]
+      line = "Level: L#{level}"
+      line += " (the AI gave L#{skill[:ai_level]}; a reviewer changed it to L#{level})" if override
+      line += "  |  Confidence: #{CONFIDENCE_LABELS[skill[:ai_confidence]]}"
+      write(pdf, line, size: 11)
+      write(pdf, CAVEATS[skill[:caveat]], size: 10) if skill[:caveat]
+      write(pdf, "What L#{skill[:ai_level]} means here: #{skill[:anchor]}", size: 10) if skill[:anchor]
+      pdf.move_down 4
+
+      write(pdf, skill[:competency_summary], size: 10) if skill[:competency_summary].present?
+
+      if skill[:evidence].any?
+        pdf.move_down 4
+        write(pdf, 'Evidence:', size: 10, style: :bold)
+        skill[:evidence].each { |quote| write(pdf, "  • #{quote}", size: 10) }
+      end
+
+      return if override.nil? || override[:assessor_notes].blank?
+
+      pdf.move_down 4
+      write(pdf, 'Assessor Note:', size: 10, style: :bold)
+      write(pdf, "  #{override[:assessor_notes]}", size: 10)
+    end
+
     def render_fit_gap_section(pdf)
       pdf.start_new_page
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      write(pdf, "Fit/Gap Analysis — #{@vacancy.role_title}", size: 16, style: :bold)
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
@@ -124,10 +146,10 @@ module Exports
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
         table_data << [
-          c['skill_label'],
+          printable(c['skill_label']),
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
+          result_label(c),
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
         ]
       end
@@ -141,17 +163,24 @@ module Exports
 
       if @fit_gap.culture_narrative.present?
         pdf.move_down 12
-        pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
+        write(pdf, 'Culture & Competency Fit', size: 12, style: :bold)
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
+        write(pdf, @fit_gap.culture_narrative, size: 10)
       end
 
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
-        pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
+        write(pdf, 'Overall Assessment', size: 12, style: :bold)
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
+        write(pdf, @fit_gap.overall_narrative, size: 10)
       end
+    end
+
+    # An absent skill is "Not assessed" or "Could not be evaluated", never a gap.
+    def result_label(comparison)
+      return 'Could not be evaluated' if comparison['skill_status'] == 'unavailable'
+
+      RESULT_LABELS[comparison['result']] || comparison['result']
     end
 
     def render_footer(pdf)
@@ -161,6 +190,17 @@ module Exports
                         align:  :center,
                         size:   9,
                         color:  '999999'
+    end
+
+    def write(pdf, value, size:, **options)
+      pdf.font_size(size) { pdf.text(printable(value), **options) }
+    end
+
+    # The built-in PDF font only has Windows-1252 characters. Anything else
+    # (an arrow, an emoji, another script) would stop the whole export, so it
+    # is replaced with "?".
+    def printable(value)
+      value.to_s.encode('Windows-1252', invalid: :replace, undef: :replace, replace: '?').encode('UTF-8')
     end
 
     def format_duration(seconds)

@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/platform-improvements]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web · tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  api:
+    name: API · migrations and specs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          # Throwaway test database that only this job can reach, so no password is needed.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      REDIS_URL: redis://localhost:6379/1
+      ALLOWED_ORIGINS: http://localhost:5173
+      # Test-only values. Specs never call real services, so no real secret is needed.
+      SECRET_KEY_BASE: ci-test-only-not-a-secret
+      GEMINI_API_KEY: test-key
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: api
+          bundler-cache: true
+      - name: Build the test database with migrations
+        run: bundle exec rails db:create db:migrate
+      - name: Roll back every migration added after main, then migrate again
+        run: |
+          bundle exec rails db:migrate VERSION=20260505000002
+          bundle exec rails db:migrate
+      - name: Check the app can eager load
+        run: bundle exec rails zeitwerk:check
+      - name: Boot the app the way production does
+        env:
+          RAILS_ENV: production
+          GEMINI_LIVE_MODEL: test-live-model
+          GEMINI_FLASH_MODEL: test-flash-model
+          GEMINI_PRO_MODEL: test-pro-model
+        run: bundle exec rails runner 'puts "Booted with eager loading"'
+      - name: Run specs
+        run: bundle exec rspec

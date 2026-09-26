@@ -18,7 +18,7 @@ export default function VoiceBars({ active, label, variant = "ai", className }: 
             key={i}
             className={cn(
               "w-1.5 rounded-full transition-all",
-              variant === "ai" ? "bg-primary" : "bg-secondary",
+              variant === "ai" ? "bg-primary" : "bg-primary-strong",
               active
                 ? "animate-voice-bar"
                 : "h-1 opacity-30"

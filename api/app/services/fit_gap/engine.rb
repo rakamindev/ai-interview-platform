@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   Gemini::Models.flash,
         timeout: 30
       )
     end
@@ -42,17 +42,16 @@ module FitGap
 
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
+        candidate_level = portfolio_skill&.dig(:effective_level)
+        expected_level  = vacancy_skill.expected_level
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        if candidate_level
+          delta  = candidate_level - expected_level
+          result = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
+          # Not in the report, never discussed, or unusable: not assessed, never a gap.
+          delta  = nil
+          result = 'not_assessed'
         end
 
         {
@@ -62,24 +61,27 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          skill_status:    portfolio_skill&.dig(:status), # which kind of absence; nil when the report lacks the skill
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
 
       comparisons
     end
 
-    # Returns portfolio skills with overrides applied.
+    # Returns portfolio skills with overrides applied. Only a rated skill has a
+    # level to compare: rated_level is nil for absence, even on an older row.
     def effective_portfolio_skills
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
-        override = skill.assessor_override
+        override = skill.assessor_override if skill.rated?
         {
           id:              skill.id,
           skill_id:        skill.skill_id,
           skill_label:     skill.skill_label,
-          ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
-          confidence:      skill.ai_confidence,
+          status:          skill.status,
+          effective_level: override ? override.override_level : skill.rated_level,
+          confidence:      (skill.ai_confidence if skill.rated?),
           overridden:      override.present?
         }
       end
@@ -142,8 +144,10 @@ module FitGap
       gaps    = comparisons.count { |c| c[:result] == 'gap' }
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements. " \
+        "#{not_assessed} required skills were not assessed."
     end
   end
 end

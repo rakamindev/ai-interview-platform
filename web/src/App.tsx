@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -8,6 +8,7 @@ import AssessmentNewPage from "@/pages/assessments/AssessmentNewPage";
 import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
 import AssessmentInvitePage from "@/pages/assessments/AssessmentInvitePage";
 import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
+import HomePage from "@/pages/home/HomePage";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
 import FitGapReportPage from "@/pages/fitgap/FitGapReportPage";
 import TranscriptPage from "@/pages/transcript/TranscriptPage";
@@ -25,7 +26,7 @@ export default function App() {
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>
       <Route element={<AssessorLayout />}>
-        <Route path="/" element={<Navigate to="/assessments" replace />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/assessments" element={<AssessmentListPage />} />
         <Route path="/assessments/new" element={<AssessmentNewPage />} />
         <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />

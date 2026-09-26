@@ -4,37 +4,54 @@
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
-
+        /* Accessible colours, checked against WCAG 2.2 AA (ratios in comments).
+           Neutrals lean slightly green, towards Rakamin teal. */
+        --background: 0 0% 100%;               /* #FFFFFF page */
+        --foreground: 162.9 26.9% 10.2%;       /* #13211D ink, 16.63:1 */
         --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
-
+        --card-foreground: 162.9 26.9% 10.2%;
         --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+        --popover-foreground: 162.9 26.9% 10.2%;
+        --muted: 156 17.2% 94.3%;              /* #EEF3F1 panels, tracks, skeletons */
+        --muted-foreground: 157.5 9.3% 33.7%;  /* #4E5E58, 6.85:1 on page, 6.11:1 on muted */
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        /* Rakamin teal, darkened so white text and teal links pass (#01959F is only 3.62:1) */
+        --primary: 184.4 100% 26.7%;           /* #007E88, white label 4.84:1 */
+        --primary-foreground: 0 0% 100%;
+        --primary-strong: 184.8 100% 24.3%;    /* #00727C hover and pressed; teal text on tints */
+        --primary-soft: 183.8 40% 92.2%;       /* #E3F2F3 selected and active backgrounds */
 
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+        /* secondary and accent are neutral fills in shadcn, never the brand yellow */
+        --secondary: 156 17.2% 94.3%;          /* #EEF3F1 */
+        --secondary-foreground: 162.9 26.9% 10.2%;
+        --accent: 156 17.2% 94.3%;
+        --accent-foreground: 162.9 26.9% 10.2%;
 
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+        /* Destructive: workspace only, never on candidate screens */
+        --destructive: 358.1 62.2% 39.4%;      /* #A3262A, white label 7.32:1 */
+        --destructive-foreground: 0 0% 100%;
 
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
+        --border: 153.3 13% 86.5%;             /* #D8E1DD decorative lines only */
+        --input: 160 6% 51.2%;                 /* #7B8A85 control borders, 3.61:1 */
+        --ring: 184.4 100% 26.7%;              /* focus ring = primary, 4.84:1 */
 
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
+        /* Status colours. "attention" is how we say "our fault" or "needs a human look" */
+        --success: 150.4 52.4% 28.8%;          /* #23704A */
+        --success-soft: 147.7 30.2% 91.6%;     /* #E3F0E9 */
+        --attention: 36.1 100% 27.1%;          /* #8A5300 */
+        --attention-line: 35.5 71% 42%;        /* #B7791F borders and lines only */
+        --attention-soft: 40.6 79.5% 92.4%;    /* #FBF1DC */
+        --critical: 358.1 62.2% 39.4%;         /* #A3262A workspace only */
+        --critical-soft: 0 69.2% 94.9%;        /* #FBE9E9 */
+        --info: 206.9 59.8% 35.1%;             /* #245F8F */
+        --info-soft: 210 47.1% 93.3%;          /* #E6EEF6 */
 
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+        /* Brand colours for non-interactive use */
+        --brand: 183.8 98.8% 31.4%;            /* #01959F logo, decoration, large display text */
+        --brand-accent: 41.9 96.1% 60%;        /* #FBC037 Rakamin yellow, logo only */
 
         --radius: 0.5rem;
+        --app-header-h: 3.5rem;                /* sticky offsets read this, never a fixed top-12 */
     }
 
     .dark {

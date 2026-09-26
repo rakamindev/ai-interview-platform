@@ -188,7 +188,7 @@ export default function FitGapReportPage() {
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-2">
                   {portfolio.skills
-                    .filter((s) => s.is_discovered)
+                    .filter((s) => s.is_discovered && s.ai_level !== null) // a skill without a level has nothing to add here
                     .map((s) => (
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>

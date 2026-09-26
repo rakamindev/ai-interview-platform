@@ -16,6 +16,9 @@ Rails.application.routes.draw do
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
       }
 
+      # The review desk (assessor home)
+      get 'home', to: 'home#show'
+
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]

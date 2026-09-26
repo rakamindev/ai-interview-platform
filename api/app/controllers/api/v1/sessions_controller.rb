@@ -133,7 +133,7 @@ module Api
         session = Session.unscoped.find_by(invite_token: params[:token])
 
         unless session
-          return json_error("Invalid or expired invite token", :not_found)
+          return json_error("Invalid or expired invite token", :not_found, code: "invalid_link")
         end
 
         # Resolve tenant from the session's own tenant_id so we can load the assessment
@@ -146,10 +146,16 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:       session.id,
+          reference:        session.reference,
+          role_title:       assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          language:         assessment.language,
+          session_status:   session.status,
+          outcome:          session.outcome,
+          started_at:       session.started_at,
+          ended_at:         session.ended_at,
+          duration_seconds: session.duration_seconds
         )
       end
 
@@ -172,6 +178,8 @@ module Api
           invite_url:       session.invite_url,
           status:           session.status,
           end_reason:       session.end_reason,
+          outcome:          session.outcome,
+          reference:        session.reference,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,

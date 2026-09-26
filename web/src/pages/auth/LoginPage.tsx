@@ -25,9 +25,11 @@ export default function LoginPage() {
       const token = res.data.token;
       saveToken(token);
       setAuth({ token });
-      navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
+      navigate("/");
+    } catch (err) {
+      // No response means we never reached the server: that is not a wrong password.
+      const reached = typeof err === "object" && err !== null && "response" in err && (err as { response?: unknown }).response;
+      setError(reached ? "Invalid email or password." : "We couldn't reach the server. Check your connection and try again.");
     } finally {
       setLoading(false);
     }

@@ -7,10 +7,10 @@ import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, Pencil } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
-import type { PortfolioSkill, AssessorOverride } from "@/types";
+import type { RatedSkill, AssessorOverride } from "@/types";
 
 interface OverridePanelProps {
-  skill: PortfolioSkill;
+  skill: RatedSkill; // only a skill with a level can be reviewed
   existingOverride?: AssessorOverride;
   onSaved: (override: AssessorOverride) => void;
 }

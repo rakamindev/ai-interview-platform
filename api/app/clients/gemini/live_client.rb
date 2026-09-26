@@ -37,7 +37,7 @@ module Gemini
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @model = model || Models.live
       @voice = voice
       @resumption_token = nil
       @connected = false
@@ -283,13 +283,14 @@ module Gemini
         parts = []
         parts << 'interrupted' if interrupted
         parts << 'audio' if has_audio
+        # Log only how long the speech is, never the words: they are personal data.
         if has_input_tx
           input_tx_text = sc.dig('inputTranscription', 'parts', 0, 'text') || sc.dig('inputTranscription', 'text')
-          parts << "inputTx=#{input_tx_text.truncate(50)}" if input_tx_text.present?
+          parts << "inputTx=#{input_tx_text.length} chars" if input_tx_text.present?
         end
         if has_output_tx
           output_tx_text = sc.dig('outputTranscription', 'parts', 0, 'text') || sc.dig('outputTranscription', 'text')
-          parts << "outputTx=#{output_tx_text.truncate(50)}" if output_tx_text.present?
+          parts << "outputTx=#{output_tx_text.length} chars" if output_tx_text.present?
         end
         parts << 'turnComplete' if turn_complete
         parts << 'generationComplete' if gen_complete
