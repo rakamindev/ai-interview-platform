@@ -10,12 +10,14 @@ interface SkillPortfolioCardProps {
   skill: PortfolioSkill;
   override?: AssessorOverride;
   onOverrideSaved: (override: AssessorOverride) => void;
+  onQuoteClick?: (quote: string) => void;
 }
 
 export default function SkillPortfolioCard({
   skill,
   override,
   onOverrideSaved,
+  onQuoteClick,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
 
@@ -56,8 +58,13 @@ export default function SkillPortfolioCard({
             </span>
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
+                <li key={i} className="text-sm">
+                  <button 
+                    onClick={() => onQuoteClick?.(quote)}
+                    className="text-left hover:text-blue-600 hover:underline transition-colors focus:outline-none"
+                  >
+                    • "{quote}"
+                  </button>
                 </li>
               ))}
             </ul>

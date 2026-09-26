@@ -31,6 +31,7 @@ export default function InterviewPage() {
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
+  const [consentAgreed, setConsentAgreed] = useState(false);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
@@ -208,7 +209,35 @@ export default function InterviewPage() {
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-900 space-y-3">
+              <p className="font-semibold flex items-center gap-2">
+                <span className="text-xl">🛡️</span> Data Protection Consent (UU PDP)
+              </p>
+              <p>
+                By proceeding, you consent to have your voice recorded and transcribed by our 
+                third-party AI processor (Google Gemini) for the sole purpose of evaluating 
+                your fit for this role. Your data is processed securely and is only accessible 
+                by our hiring team.
+              </p>
+              <label className="flex items-start gap-2 cursor-pointer pt-1">
+                <input 
+                  type="checkbox" 
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={consentAgreed}
+                  onChange={(e) => setConsentAgreed(e.target.checked)}
+                />
+                <span className="font-medium">I understand and agree to the data processing terms.</span>
+              </label>
+            </div>
+
+            {consentAgreed ? (
+              <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            ) : (
+              <Button disabled className="w-full" size="lg">
+                Agree to continue
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
