@@ -4,6 +4,7 @@ export enum ProctoringState {
     WAITING = "waiting",
     LOADING = "loading",
     PASSED = "passed",
+    WARNING = "warning",
     ERROR = "error",
 }
 
