@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +10,9 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import TranscriptBubble from "@/components/interview/TranscriptBubble";
+import type { Portfolio, AssessorOverride, Vacancy, TranscriptTurn } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -23,6 +25,12 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+
+  // Transcript verification state
+  const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
+  const [selectedQuote, setSelectedQuote] = useState<string | null>(null);
+  const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -56,6 +64,20 @@ export default function PortfolioPage() {
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
+  };
+
+  const handleQuoteClick = async (quote: string) => {
+    setSelectedQuote(quote);
+    setIsTranscriptModalOpen(true);
+    // Fetch transcript if not already loaded
+    if (transcript.length === 0) {
+      try {
+        const res = await sessionsApi.getTranscript(Number(sessionId));
+        setTranscript(res.data.turns);
+      } catch (err) {
+        console.error("Failed to load transcript", err);
+      }
+    }
   };
 
   const handleRunFitGap = () => {
@@ -197,6 +219,7 @@ export default function PortfolioPage() {
                   skill={skill}
                   override={overrides[skill.id]}
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  onQuoteClick={handleQuoteClick}
                 />
               ))}
           </div>
@@ -223,6 +246,7 @@ export default function PortfolioPage() {
                       skill={skill}
                       override={overrides[skill.id]}
                       onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      onQuoteClick={handleQuoteClick}
                     />
                   ))}
               </div>
@@ -251,6 +275,42 @@ export default function PortfolioPage() {
           </div>
         </>
       )}
+
+      {/* Transcript Verification Modal */}
+      <Dialog open={isTranscriptModalOpen} onOpenChange={setIsTranscriptModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" /> 
+              Transcript Verification
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="bg-muted/50 p-4 rounded-md text-sm italic mb-2 border">
+            <span className="font-semibold not-italic block mb-1">Verifying Quote:</span>
+            "{selectedQuote}"
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2" ref={scrollRef}>
+            {transcript.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground flex flex-col items-center">
+                <Loader2 className="h-6 w-6 animate-spin mb-2" />
+                Loading transcript...
+              </div>
+            ) : (
+              transcript.map((turn) => {
+                // simple fuzzy match to highlight the block containing the quote
+                const isMatch = selectedQuote && turn.text.toLowerCase().includes(selectedQuote.toLowerCase().substring(0, 20));
+                return (
+                  <div key={turn.id} className={isMatch ? "ring-2 ring-blue-500 bg-blue-50/50 rounded-lg p-1 transition-all" : ""}>
+                    <TranscriptBubble speaker={turn.speaker} text={turn.text} />
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

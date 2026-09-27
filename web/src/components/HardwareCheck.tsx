@@ -36,7 +36,7 @@ const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
-        osAndBrowser: ProctoringState.WAITING,
+        osAndBrowser: ProctoringState.LOADING,
         internet: ProctoringState.WAITING,
         camera: ProctoringState.WAITING,
         audio: ProctoringState.WAITING,
@@ -104,8 +104,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     // Step 1: OS & browser
     useEffect(() => {
-        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        if (progress.osAndBrowser !== ProctoringState.LOADING) return;
+        const timer = setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -115,7 +115,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
-    }, []);
+        return () => clearTimeout(timer);
+    }, [progress.osAndBrowser]);
 
     // Step 2: Internet
     useEffect(() => {
@@ -151,8 +152,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 setProgress((p) => ({
                     ...p,
                     ...(REQUIRE_CAMERA ? { camera: ProctoringState.PASSED } : {}),
-                    microphone: ProctoringState.PASSED,
-                    audio: ProctoringState.LOADING,
+                    microphone: ProctoringState.LOADING,
                 }));
             } else {
                 setProgress((p) => ({
@@ -162,7 +162,18 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 }));
             }
         });
-    }, [progress.camera, progress.microphone]);
+    }, [progress.camera]);
+
+    // Step 3b: Wait for physical audio input (Microphone check)
+    useEffect(() => {
+        if (progress.microphone === ProctoringState.LOADING && audioLevel > 5) {
+            setProgress((p) => ({
+                ...p,
+                microphone: ProctoringState.PASSED,
+                audio: ProctoringState.LOADING,
+            }));
+        }
+    }, [progress.microphone, audioLevel]);
 
     // Step 4: Audio output
     useEffect(() => {
@@ -255,7 +266,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         )}
 
                         {/* Mic level bar */}
-                        {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
+                        {key === "microphone" && (progress.microphone === ProctoringState.PASSED || progress.microphone === ProctoringState.LOADING) && (
                             <div className="mt-2 flex items-center gap-2">
                                 <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
                                     <div
@@ -264,6 +275,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                                     />
                                 </div>
                                 <span className="text-xs text-muted-foreground w-8 text-right">{audioLevel}</span>
+                            </div>
+                        )}
+                        {key === "microphone" && progress.microphone === ProctoringState.LOADING && (
+                            <div className="mt-1 text-xs text-blue-600 animate-pulse">
+                                Please say something into your mic...
                             </div>
                         )}
                     </div>
