@@ -7,7 +7,10 @@ require 'base64'
 module Gemini
   # Manages a persistent WebSocket connection to Gemini Live API.
   class LiveClient
-    GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
+    GEMINI_WS_URL = ENV.fetch(
+      'GEMINI_WS_URL',
+      'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
+    )
 
     INACTIVITY_TIMEOUT = 30 # reconnect if Gemini produces no meaningful response
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
@@ -18,10 +21,12 @@ module Gemini
     SILENCE_FRAME_SAMPLES = 640
     SILENCE_FRAME = ("\x00" * (SILENCE_FRAME_SAMPLES * 2)).freeze
 
-    attr_reader :resumption_token, :connected, :connected_at, :inactivity_close
+    attr_reader :resumption_token, :connected, :connected_at, :inactivity_close, :session_id, :token
 
     def initialize(
       system_prompt:,
+      session_id: nil,
+      token: nil,
       api_key: nil,
       model: nil,
       voice: 'Puck',
@@ -36,7 +41,9 @@ module Gemini
       on_resumption_token_update: nil
     )
       @system_prompt = system_prompt
-      @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
+      @session_id = session_id
+      @token = token
+      @api_key = api_key || ENV['GEMINI_API_KEY'] || 'test-key'
       @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
       @voice = voice
       @resumption_token = nil
@@ -63,8 +70,23 @@ module Gemini
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
       @setup_complete = false
+      target_url = ENV.fetch('GEMINI_WS_URL', GEMINI_WS_URL)
+      params = []
+      # session_id/token query params are a mock-Gemini E2E seam. The real Gemini
+      # endpoint rejects unknown query params (close code 1007), so only append
+      # them when the mock override is active and not targeting Google's real API.
+      if ENV['GEMINI_WS_URL'].present? && !target_url.include?('generativelanguage.googleapis.com')
+        params << "session_id=#{@session_id}" if @session_id.present?
+        params << "token=#{@token}" if @token.present?
+      end
+
+      if params.any?
+        separator = target_url.include?('?') ? '&' : '?'
+        target_url = "#{target_url}#{separator}#{params.join('&')}"
+      end
+
       @ws = Faye::WebSocket::Client.new(
-        GEMINI_WS_URL,
+        target_url,
         nil,
         headers: { 'x-goog-api-key' => @api_key }
       )

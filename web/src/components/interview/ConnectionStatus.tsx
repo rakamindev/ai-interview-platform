@@ -15,9 +15,9 @@ export default function ConnectionStatus({ state }: ConnectionStatusProps) {
   }
   if (state === "reconnecting") {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-amber-600">
+      <div className="flex items-center gap-1.5 text-xs text-amber-600" data-testid="connection-status">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Reconnecting...
+        Menghubungkan kembali...
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 module Api
   module V1
+    # Handles user authentication and JWT minting for assessors and admins.
     class AuthenticationController < ApiController
       skip_before_action :require_tenant!
 
@@ -9,11 +10,9 @@ module Api
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
-        return json_error('Invalid email or password', :unauthorized) unless user&.authenticate(params[:password])
+        return json_error('Invalid email or password', :unauthorized) unless valid_credentials?(user)
 
-        return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
-
-        scheme = resolve_scheme
+        scheme = resolve_scheme(user)
         token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
 
         json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
@@ -21,11 +20,12 @@ module Api
 
       private
 
-      def resolve_scheme
-        request.headers['X-Tenant-Scheme'].presence ||
-          ActiveRecord::Base.connection.select_value(
-            'SELECT scheme FROM organizations LIMIT 1'
-          ) || 'test-corp'
+      def valid_credentials?(user)
+        user&.authenticate(params[:password]) && user.role.in?(%w[admin assessor])
+      end
+
+      def resolve_scheme(user)
+        user.organization&.scheme || Organization.first&.scheme || 'test-corp'
       end
     end
   end

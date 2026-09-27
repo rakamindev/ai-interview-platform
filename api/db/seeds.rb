@@ -369,6 +369,44 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Users ─────────────────────────────────────────────────────────────────────
+
+test_org_id = ActiveRecord::Base.connection.select_value(
+  "SELECT id FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
+) || 1
+
+admin_user = User.find_or_initialize_by(email: 'admin@test.com')
+admin_user.assign_attributes(
+  password: 'password123',
+  password_confirmation: 'password123',
+  role: 'admin',
+  organization_id: test_org_id
+)
+
+if admin_user.save
+  action = admin_user.previously_new_record? ? 'Created' : 'Updated'
+  puts "  #{action} admin user: #{admin_user.email} (password: password123, org_id: #{test_org_id})"
+else
+  puts "  ERROR admin user: #{admin_user.errors.full_messages.join(', ')}"
+end
+
+assessor_user = User.find_or_initialize_by(email: 'assessor@test.com')
+assessor_user.assign_attributes(
+  password: 'password123',
+  password_confirmation: 'password123',
+  role: 'assessor',
+  organization_id: test_org_id
+)
+
+if assessor_user.save
+  action = assessor_user.previously_new_record? ? 'Created' : 'Updated'
+  puts "  #{action} assessor user: #{assessor_user.email} (password: password123, org_id: #{test_org_id})"
+else
+  puts "  ERROR assessor user: #{assessor_user.errors.full_messages.join(', ')}"
+end
+
+puts ""
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

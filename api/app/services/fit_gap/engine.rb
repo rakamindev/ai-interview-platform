@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.5-flash'),
         timeout: 30
       )
     end
@@ -59,10 +59,31 @@ module FitGap
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
+          required_level:  expected_level,
           expected_level:  expected_level,
+          is_override:     portfolio_skill&.dig(:overridden) || false,
           result:          result,
           delta:           delta,
           confidence:      portfolio_skill&.dig(:confidence)
+        }
+      end
+
+      # Discovered skills in portfolio not mapped to vacancy skills
+      discovered_skills = portfolio_skills.select do |ps|
+        ps[:is_discovered] && comparisons.none? { |c| c[:skill_label].downcase == ps[:skill_label].downcase }
+      end
+
+      discovered_skills.each do |ds|
+        comparisons << {
+          skill_label:     ds[:skill_label],
+          skill_id:        ds[:skill_id],
+          candidate_level: ds[:effective_level],
+          required_level:  nil,
+          expected_level:  nil,
+          is_override:     ds[:overridden] || false,
+          result:          'exceed',
+          delta:           nil,
+          confidence:      ds[:confidence]
         }
       end
 
@@ -74,13 +95,16 @@ module FitGap
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
         override = skill.assessor_override
         {
-          id:              skill.id,
-          skill_id:        skill.skill_id,
-          skill_label:     skill.skill_label,
-          ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
-          confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          id:                 skill.id,
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          is_discovered:      skill.is_discovered,
+          ai_level:           skill.ai_level,
+          effective_level:    override ? override.override_level : skill.ai_level,
+          confidence:         skill.ai_confidence,
+          evidence:           Array(skill.evidence).first(2),
+          competency_summary: skill.competency_summary,
+          overridden:         override.present?
         }
       end
     end
@@ -112,6 +136,20 @@ module FitGap
       vacancy = @vacancy
       portfolio_session = @portfolio.session
       assessment = portfolio_session.assessment
+      skills_data = effective_portfolio_skills
+
+      evidence_section = skills_data.map do |s|
+        quotes = s[:evidence].presence || []
+        quote_text = quotes.any? ? quotes.map { |q| "    - \"#{q}\"" }.join("\n") : "    - None"
+        summary_text = s[:competency_summary].presence ? "    Summary: #{s[:competency_summary]}" : ""
+
+        <<~SKILL_INFO.strip
+          * #{s[:skill_label]} (Level #{s[:effective_level]}#{s[:overridden] ? ' - Overridden' : ''}):
+          #{summary_text}
+              Evidence:
+          #{quote_text}
+        SKILL_INFO
+      end.join("\n\n")
 
       <<~PROMPT
         You are writing a fit/gap analysis narrative for a candidate evaluation.
@@ -120,6 +158,9 @@ module FitGap
         #{vacancy.culture_dimensions.present? ? "CULTURE EXPECTATIONS:\n#{vacancy.culture_dimensions}\n" : ""}
         #{vacancy.competency_expectations.present? ? "COMPETENCY EXPECTATIONS:\n#{vacancy.competency_expectations}\n" : ""}
 
+        CANDIDATE PORTFOLIO EVIDENCE & SUMMARIES:
+        #{evidence_section}
+
         SKILL COMPARISON RESULTS:
         - Matches (#{matches.count}): #{matches.map { |c| "#{c[:skill_label]} (L#{c[:candidate_level]})" }.join(', ')}
         - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (delta #{c[:delta]})" }.join(', ')}
@@ -127,8 +168,8 @@ module FitGap
         - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
 
         Write two short narrative paragraphs:
-        1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
-        2. overall_narrative: 2-3 sentence overall hiring recommendation summary.
+        1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns and evidence quotes.
+        2. overall_narrative: 2-3 sentence overall hiring recommendation summary citing key evidence.
 
         OUTPUT (JSON only):
         {

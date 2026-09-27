@@ -146,10 +146,19 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:       session.id,
+          role_title:       assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          session_status:   session.status,
+          resumption_token: session.gemini_resumption_token,
+          turns:            session.transcript_turns.ordered.map do |t|
+            {
+              speaker:     t.speaker,
+              text:        t.text,
+              turn_number: t.turn_number
+            }
+          end,
+          turn_count:       session.transcript_turns.maximum(:turn_number).to_i
         )
       end
 

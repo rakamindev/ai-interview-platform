@@ -21,6 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import PreFlightConsentModal from "@/components/interview/PreFlightConsentModal";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -31,6 +32,8 @@ export default function InterviewPage() {
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
+  const [consentGranted, setConsentGranted] = useState(false);
+  const [consentDeclined, setConsentDeclined] = useState(false);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
@@ -39,6 +42,8 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
+  const autoResumedRef = useRef(false);
+
   // Fetch candidate info
   useEffect(() => {
     if (!token) return;
@@ -46,7 +51,28 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (typeof window !== "undefined") {
+          (window as any).__candidateInfoLoaded = res.data;
+        }
+
+        if (res.data.turns && res.data.turns.length > 0) {
+          setTranscript(res.data.turns);
+        }
+
+        if (res.data.resumption_token) {
+          sessionStorage.setItem(`resumption_token_${token}`, res.data.resumption_token);
+          if (typeof window !== "undefined") {
+            (window as any).__latestResumptionToken = res.data.resumption_token;
+          }
+        }
+
+        if (res.data.session_status === "ended") {
+          setInterviewState("complete");
+        } else if (res.data.session_status === "active") {
+          setConsentGranted(true);
+          setHardwareCheckDone(true);
+          setInterviewState("connecting");
+        }
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
@@ -71,6 +97,9 @@ export default function InterviewPage() {
 
     if (state === "reconnecting") {
       muteRef.current?.();
+      if (typeof window !== "undefined") {
+        (window as any).__audioMutedDuringReconnect = true;
+      }
       connectionLostTimerRef.current = setTimeout(() => {
         setConnectionLostLong(true);
       }, 60_000);
@@ -87,14 +116,27 @@ export default function InterviewPage() {
   const handleReconnected = useCallback(() => {
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
     setReconnectedPrompt(true);
-    reconnectedPromptTimerRef.current = setTimeout(() => setReconnectedPrompt(false), 10_000);
+    reconnectedPromptTimerRef.current = setTimeout(() => setReconnectedPrompt(false), 5_000);
   }, []);
+
+  const handleResumptionToken = useCallback((resToken: string) => {
+    if (token) sessionStorage.setItem(`resumption_token_${token}`, resToken);
+    if (typeof window !== "undefined") (window as any).__latestResumptionToken = resToken;
+  }, [token]);
 
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
 
-  const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
+  const {
+    playChunk,
+    stop: stopPlayback,
+    scheduleAfterPlayback,
+    waitForDrain,
+    cancelDrain,
+    init: initPlayback,
+    analyserNode: playbackAnalyser,
+  } = useAudioPlayback();
   const audioCompleteCalledRef = useRef(false);
   const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -133,19 +175,46 @@ export default function InterviewPage() {
   const { connect, send, sendJson, disconnect, connectionState } = useAudioWebSocket({
     sessionId: sessionId ?? 0,
     token,
+    resumptionToken: candidateInfo?.resumption_token,
     onAudioChunk: playChunk,
     onTranscript: handleTranscript,
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onResumptionToken: handleResumptionToken,
   });
 
-  const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
+  const {
+    start: startCapture,
+    stop: stopCapture,
+    mute,
+    unmute,
+    analyserNode: captureAnalyser,
+  } = useAudioCapture({
     onFrame: send,
   });
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+
+  useEffect(() => {
+    if (
+      sessionId &&
+      candidateInfo?.session_status === "active" &&
+      !autoResumedRef.current
+    ) {
+      autoResumedRef.current = true;
+      (async () => {
+        try {
+          await initPlayback();
+          connect();
+          await startCapture();
+        } catch (err) {
+          console.error("[InterviewPage] Failed to resume session:", err);
+        }
+      })();
+    }
+  }, [sessionId, candidateInfo, initPlayback, connect, startCapture]);
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
@@ -162,13 +231,15 @@ export default function InterviewPage() {
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
     setInterviewState("connecting");
+    // Explicit candidate user gesture initializes live capture & playback AudioContexts (ADR 0005)
+    await initPlayback();
     connect();
     await startCapture();
     // Start muted — only unmute when backend sends speaker_changed: candidate.
     // This prevents mic audio from being sent during AI speech, since separate
     // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
-  }, [sessionId, connect, startCapture]);
+  }, [sessionId, connect, startCapture, initPlayback]);
 
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
@@ -189,6 +260,20 @@ export default function InterviewPage() {
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
+    if (consentDeclined) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="text-4xl">🛡️</div>
+          <h2 className="text-xl font-semibold">Consent Declined / Persetujuan Ditolak</h2>
+          <p className="text-sm text-muted-foreground">
+            Under Indonesian UU PDP No. 27/2022, affirmative consent is required to process biometric voice data for this interview.
+            <br />
+            If you have questions or concerns about data privacy, please contact your recruiter.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
@@ -200,7 +285,13 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {!consentGranted ? (
+          <PreFlightConsentModal
+            isOpen={true}
+            onConsent={() => setConsentGranted(true)}
+            onDecline={() => setConsentDeclined(true)}
+          />
+        ) : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
@@ -216,9 +307,9 @@ export default function InterviewPage() {
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
+            <Button className="w-full" size="lg" data-testid="start-interview-button" onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
-              Start Interview
+              Mulai Wawancara / Start Interview
             </Button>
           </div>
         )}
@@ -262,22 +353,22 @@ export default function InterviewPage() {
       {/* Reconnecting banner */}
       {interviewState === "reconnecting" && (
         connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
+          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2" data-testid="reconnecting-banner">
             <span className="animate-pulse">●</span>
-            <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
+            <span>Koneksi terputus cukup lama. Mohon tunggu sebentar, atau hubungi pewawancara jika berlanjut. / Connection is taking too long to restore.</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
+          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2" data-testid="reconnecting-banner">
             <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
+            <span>Menghubungkan kembali... Mohon tunggu sebentar. / Briefly reconnecting — please wait a moment.</span>
           </div>
         )
       )}
 
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
+        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2" data-testid="reconnected-banner">
+          <span>Terhubung kembali / Reconnected — silakan lanjutkan jawaban Anda atau katakan <strong>"check"</strong> untuk melanjutkan.</span>
           <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
         </div>
       )}
@@ -288,7 +379,7 @@ export default function InterviewPage() {
           <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
+            <VoiceBars active={true} label="AI speaking" variant="ai" analyserNode={playbackAnalyser} />
             <p className="text-xs text-muted-foreground">Wrapping up...</p>
           </div>
         ) : (
@@ -297,6 +388,7 @@ export default function InterviewPage() {
               active={aiSpeaking}
               label={aiSpeaking ? "AI speaking" : "Listening..."}
               variant="ai"
+              analyserNode={playbackAnalyser}
             />
 
             {candidateSpeaking && (
@@ -304,6 +396,7 @@ export default function InterviewPage() {
                 active={true}
                 label="You're speaking"
                 variant="candidate"
+                analyserNode={captureAnalyser}
               />
             )}
 

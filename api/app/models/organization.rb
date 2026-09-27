@@ -8,6 +8,18 @@
 class Organization < ApplicationRecord
   self.table_name = 'organizations'
 
+  has_many :users, dependent: :nullify
+
+  before_validation :normalize_and_default_attributes
+
+  validates :name, presence: true
+  validates :scheme, presence: true,
+                    uniqueness: { case_sensitive: false },
+                    format: { with: /\A[a-z0-9\-_]+\z/, message: 'must contain only lowercase letters, numbers, hyphens, or underscores' }
+  validates :identifier, presence: true,
+                        uniqueness: { case_sensitive: false }
+  validates :host, presence: true
+
   # Mirrors rakamin-api Organisation.identify exactly.
   # Accepts identifier, name, scheme, or host.
   def self.identify(identifier)
@@ -29,5 +41,16 @@ class Organization < ApplicationRecord
   # Convenience: is this the system default org?
   def default?
     id.zero?
+  end
+
+  private
+
+  def normalize_and_default_attributes
+    self.scheme = scheme.to_s.strip.downcase if scheme.present?
+    self.identifier = identifier.presence || scheme
+    self.identifier = identifier.to_s.strip.downcase if identifier.present?
+    self.host = host.presence || "#{identifier}.localhost" if identifier.present?
+    self.alias_hosts ||= []
+    self.config ||= {}
   end
 end

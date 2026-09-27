@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
+# Represents an authenticated user (admin, assessor, or standard user)
+# optionally bound to an organization for multi-tenant scheme resolution.
 class User < ApplicationRecord
   has_secure_password
 
-  ROLES = %w[admin user].freeze
+  belongs_to :organization, optional: true
+
+  ROLES = %w[admin assessor user].freeze
 
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },

@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
+import { useAtomValue } from "jotai";
+import { authAtom, isSuperAdmin } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +11,12 @@ import { Separator } from "@/components/ui/separator";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
+import { adminOrganizationsApi, AdminOrganization } from "@/services/adminOrganizations";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
+  organization_id?: string;
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
@@ -21,21 +25,34 @@ interface VacancyFormValues {
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
+  const auth = useAtomValue(authAtom);
+  const isSuper = isSuperAdmin(auth.token);
+
+  const [organizations, setOrganizations] = useState<AdminOrganization[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+    defaultValues: { organization_id: "", role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
+
+  useEffect(() => {
+    if (isSuper) {
+      adminOrganizationsApi.list()
+        .then((res) => setOrganizations(res.data.organizations || []))
+        .catch(() => {});
+    }
+  }, [isSuper]);
 
   const onSubmit = async (data: VacancyFormValues) => {
     setError(null);
     setSubmitting(true);
     try {
       await vacanciesApi.create({
+        organization_id: isSuper && data.organization_id ? Number(data.organization_id) : undefined,
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
@@ -61,6 +78,32 @@ export default function VacancyNewPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {isSuper && (
+          <div className="space-y-1.5">
+            <Label htmlFor="organization_id">
+              Organization <span className="text-destructive">*</span>
+            </Label>
+            <select
+              id="organization_id"
+              aria-label="Organization"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              {...register("organization_id", {
+                required: isSuper ? "Please select an organization." : false,
+              })}
+            >
+              <option value="">Select an organization...</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name} ({org.scheme})
+                </option>
+              ))}
+            </select>
+            {errors.organization_id && (
+              <p className="text-xs text-destructive">{errors.organization_id.message}</p>
+            )}
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
           <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />

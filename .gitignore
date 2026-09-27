@@ -14,6 +14,16 @@ api/storage/
 # Build output
 web/dist/
 web/.vite/
+e2e/test-results/
+e2e/playwright-report/
 
 # OS
 .DS_Store
+
+tech-docs/
+docs/
+.agents/
+.claude/
+AGENTS.md
+.gitignore
+skills-lock.json

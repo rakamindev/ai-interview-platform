@@ -16,7 +16,7 @@ export interface Assessment {
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | number;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -112,6 +112,9 @@ export interface Vacancy {
   culture_dimensions: string;
   competency_expectations: string;
   created_by?: number;
+  tenant_id?: number;
+  organization_name?: string;
+  organization_scheme?: string;
   created_at?: string;
   updated_at?: string;
   skills: VacancySkill[];
@@ -119,7 +122,7 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | number;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -129,7 +132,8 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  required_level?: number;
+  expected_level?: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -164,6 +168,9 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  resumption_token?: string | null;
+  turns?: Array<{ speaker: "candidate" | "ai" | "assessor" | "system"; text: string; turn_number?: number }>;
+  turn_count?: number;
 }
 
 export interface PaginationMeta {
@@ -194,6 +201,8 @@ export interface WsControlMessage {
     | "transcription"
     | "reconnecting"
     | "reconnected"
+    | "session_resumed"
+    | "session_resumption"
     | "speaker_changed"
     | "preparing_to_end"
     | "error";
@@ -203,5 +212,7 @@ export interface WsControlMessage {
   reason?: string;
   code?: string;
   message?: string;
+  token?: string;
+  resumed?: boolean;
   recoverable?: boolean;
 }

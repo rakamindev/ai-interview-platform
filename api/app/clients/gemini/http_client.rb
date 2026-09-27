@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = ENV.fetch('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta')
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -17,10 +17,14 @@ module Gemini
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
 
-    def initialize(model: nil, api_key: nil, timeout: 60)
+    def initialize(model: nil, api_key: nil, timeout: 60, base_url: nil, adapter: Faraday.default_adapter, adapter_options: nil, retry_options: {})
       @model = model
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
       @timeout = timeout
+      @base_url = base_url || BASE_URL
+      @adapter = adapter
+      @adapter_options = adapter_options
+      @retry_options = retry_options || {}
       @connection = build_connection
     end
 
@@ -38,7 +42,7 @@ module Gemini
     private
 
     def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+      "#{@base_url}/models/#{@model}:generateContent"
     end
 
     def request_headers
@@ -54,21 +58,21 @@ module Gemini
 
     def build_connection
       Faraday.new do |f|
-        f.request :retry, {
+        default_retry_options = {
           max: 3,
           interval: 1,
           interval_randomness: 0.5,
           backoff_factor: 2,
+          methods: Faraday::Retry::Middleware::IDEMPOTENT_METHODS + [:post],
           retry_statuses: [429, 500, 502, 503],
-          retry_block: ->(env, _opts, retries, exc) {
-            retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
+          retry_block: ->(retry_count:, exception: nil, **_kwargs) {
+            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retry_count} for #{@model}: #{exception&.message}")
           }
         }
+        f.request :retry, default_retry_options.merge(@retry_options)
         f.options.timeout = @timeout
         f.options.open_timeout = 10
-        f.adapter Faraday.default_adapter
+        f.adapter(*[@adapter, @adapter_options].compact)
       end
     end
 

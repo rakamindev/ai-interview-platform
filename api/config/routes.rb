@@ -3,10 +3,23 @@
 Rails.application.routes.draw do
   get '/health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
+  # Fallback redirect for candidate invite links on API host
+  get '/interview/:token', to: redirect { |params, _req|
+    web_base = ENV.fetch('WEB_BASE_URL', 'http://localhost:5173')
+    "#{web_base}/interview/#{params[:token]}"
+  }
+
   namespace :api do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+
+      # Admin management (super admin only)
+      namespace :admin do
+        resources :users, only: %i[index create]
+        resources :organizations, only: %i[index create]
+      end
+
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
@@ -51,7 +64,7 @@ Rails.application.routes.draw do
       resources :vacancies
 
       # Portfolios — fit/gap and export
-      resources :portfolios, only: [] do
+      resources :portfolios, only: %i[show] do
         member do
           post :fitgap
           post :regenerate_fitgap

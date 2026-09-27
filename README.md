@@ -25,3 +25,21 @@ Each service has its own setup guide. Run the API first, then the web app pointe
 - This is the codebase you assess, harden, and release. Treat it as a version about to ship to a client.
 - Work in the `/assessment` folder at the repo root for your written deliverables; code changes go in `api/` or `web/`.
 - See the case-study brief you were given for what to produce and how it is evaluated.
+
+## Running Characterization Tests
+
+The repository includes full-stack characterization test suites capturing existing baseline behaviors and documented quirks:
+
+1. **Backend (`api/`)**:
+   ```bash
+   cd api
+   RAILS_ENV=test bundle exec rails db:test:prepare
+   bundle exec rspec
+   ```
+
+2. **Frontend (`web/`)**:
+   ```bash
+   cd web
+   npm test
+   ```
+

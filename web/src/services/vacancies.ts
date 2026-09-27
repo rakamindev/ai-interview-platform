@@ -5,14 +5,17 @@ export interface VacancyPayload {
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  organization_id?: number;
   vacancy_skills_attributes: Partial<VacancySkill>[];
 }
 
 export const vacanciesApi = {
-  list: (page = 1) =>
-    api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
-    }),
+  list: (params?: { page?: number; organization_id?: number } | number) => {
+    const queryParams = typeof params === "number" ? { page: params } : { page: 1, ...params };
+    return api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
+      params: queryParams,
+    });
+  },
 
   get: (id: number) =>
     api.get<{ vacancy: Vacancy }>(`/vacancies/${id}`),

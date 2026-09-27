@@ -9,10 +9,16 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        scope = Vacancy.order(created_at: :desc)
+        scope = scope.where(tenant_id: params[:organization_id]) if params[:organization_id].present?
+
+        vacancies = paginate(scope)
+
+        org_ids = vacancies.map(&:tenant_id).compact.uniq
+        orgs_by_id = Organization.where(id: org_ids).index_by(&:id)
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
+          vacancies: vacancies.map { |v| vacancy_json(v, orgs_by_id[v.tenant_id]) },
           meta: pagination_meta(vacancies)
         )
       end
@@ -24,8 +30,15 @@ module Api
 
       # POST /api/v1/vacancies
       def create
-        vacancy = Vacancy.new(vacancy_params)
+        vacancy = Vacancy.new(vacancy_params.except(:organization_id))
         vacancy.created_by = current_user.id
+
+        if current_user&.role == 'admin' && vacancy_params[:organization_id].present?
+          org = Organization.find_by(id: vacancy_params[:organization_id])
+          return json_error("Organization not found", :unprocessable_entity) unless org
+
+          vacancy.tenant_id = org.id
+        end
 
         if vacancy.save
           json_response({ vacancy: vacancy_with_skills_json(vacancy) }, :created)
@@ -36,7 +49,7 @@ module Api
 
       # PUT /api/v1/vacancies/:id
       def update
-        if @vacancy.update(vacancy_params)
+        if @vacancy.update(vacancy_params.except(:organization_id))
           json_response(vacancy: vacancy_with_skills_json(@vacancy))
         else
           json_error(@vacancy.errors.full_messages.first, :unprocessable_entity)
@@ -58,23 +71,29 @@ module Api
       end
 
       def vacancy_params
-        params.require(:vacancy).permit(
+        permitted = [
           :role_title,
           :culture_dimensions,
           :competency_expectations,
           vacancy_skills_attributes: %i[
             id skill_id skill_label expected_level _destroy
           ]
-        )
+        ]
+        permitted << :organization_id if current_user&.role == 'admin'
+        params.require(:vacancy).permit(*permitted)
       end
 
-      def vacancy_json(vacancy)
+      def vacancy_json(vacancy, org = nil)
+        org ||= Organization.find_by(id: vacancy.tenant_id)
         {
           id:                       vacancy.id,
           role_title:               vacancy.role_title,
           culture_dimensions:       vacancy.culture_dimensions,
           competency_expectations:  vacancy.competency_expectations,
           created_by:               vacancy.created_by,
+          tenant_id:                vacancy.tenant_id,
+          organization_name:        org&.name,
+          organization_scheme:      org&.scheme,
           created_at:               vacancy.created_at,
           updated_at:               vacancy.updated_at
         }

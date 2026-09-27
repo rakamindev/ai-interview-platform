@@ -17,15 +17,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Unwrap backend envelope: { data: { ... } } → { ... }
 // On 401/403, clear stored credentials and redirect to login.
 api.interceptors.response.use(
-  (response) => {
-    if (response.data && typeof response.data === "object" && "data" in response.data) {
-      response.data = response.data.data;
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
       clearToken();

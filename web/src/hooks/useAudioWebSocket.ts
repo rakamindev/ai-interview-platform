@@ -5,11 +5,13 @@ import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker
 interface UseAudioWebSocketOptions {
   sessionId: number;
   token?: string;
+  resumptionToken?: string | null;
   onAudioChunk: (buffer: ArrayBuffer) => void;
   onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text">) => void;
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  onResumptionToken?: (token: string) => void;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -17,14 +19,17 @@ const RECONNECT_DELAYS = [1000, 2000, 4000];
 export function useAudioWebSocket({
   sessionId,
   token,
+  resumptionToken,
   onAudioChunk,
   onTranscript,
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onResumptionToken,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const isReconnectingRef = useRef(false);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
@@ -36,17 +41,48 @@ export function useAudioWebSocket({
 
     sessionEndedRef.current = false;
     setConnectionState("connecting");
-    const url = token
+
+    const storedResumptionToken =
+      (token && typeof sessionStorage !== "undefined"
+        ? sessionStorage.getItem(`resumption_token_${token}`)
+        : null) ||
+      resumptionToken ||
+      null;
+
+    if (typeof window !== "undefined") {
+      (window as any).__lastConnectedResumptionToken = storedResumptionToken;
+    }
+
+    let url = token
       ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
       : `${WS_URL}/ws/sessions/${sessionId}/audio`;
+
+    if (storedResumptionToken) {
+      url += `&resumption_token=${encodeURIComponent(storedResumptionToken)}`;
+    }
+
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
 
     ws.onopen = () => {
+      const wasReconnecting = isReconnectingRef.current || reconnectAttemptsRef.current > 0;
       setConnectionState("connected");
       reconnectAttemptsRef.current = 0;
-      if (token) ws.send(JSON.stringify({ type: "auth", token }));
+      if (token) {
+        ws.send(
+          JSON.stringify({
+            type: "auth",
+            token,
+            resumption_token: storedResumptionToken,
+          })
+        );
+      }
+      if (wasReconnecting) {
+        isReconnectingRef.current = false;
+        onStateChange("active");
+        onReconnected?.();
+      }
     };
 
     // Only signal AI speaking once per turn (first binary chunk).
@@ -66,6 +102,21 @@ export function useAudioWebSocket({
           switch (msg.type) {
             case "session_started":
               onStateChange("active");
+              if (isReconnectingRef.current) {
+                isReconnectingRef.current = false;
+                onReconnected?.();
+              }
+              break;
+            case "session_resumption":
+              if (msg.token) {
+                if (token && typeof sessionStorage !== "undefined") {
+                  sessionStorage.setItem(`resumption_token_${token}`, msg.token);
+                }
+                if (typeof window !== "undefined") {
+                  (window as any).__latestResumptionToken = msg.token;
+                }
+                onResumptionToken?.(msg.token);
+              }
               break;
             case "transcription":
             case "transcript":
@@ -91,9 +142,11 @@ export function useAudioWebSocket({
               onStateChange("draining_audio");
               break;
             case "reconnecting":
+              isReconnectingRef.current = true;
               onStateChange("reconnecting");
               break;
             case "reconnected":
+              isReconnectingRef.current = false;
               onStateChange("active");
               onReconnected?.();
               break;
@@ -121,19 +174,23 @@ export function useAudioWebSocket({
       if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
+        isReconnectingRef.current = true;
         onStateChange("reconnecting");
-        reconnectTimerRef.current = setTimeout(() => {
-          reconnectAttemptsRef.current += 1;
-          connect();
-        }, RECONNECT_DELAYS[attempt]);
+        if (!reconnectTimerRef.current) {
+          reconnectTimerRef.current = setTimeout(() => {
+            reconnectTimerRef.current = null;
+            reconnectAttemptsRef.current += 1;
+            connect();
+          }, RECONNECT_DELAYS[attempt]);
+        }
       } else {
         onStateChange("complete");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [sessionId, token, resumptionToken, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onReconnected, onResumptionToken]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && !isReconnectingRef.current) {
       wsRef.current.send(buffer);
     }
   }, []);
@@ -151,11 +208,44 @@ export function useAudioWebSocket({
   }, []);
 
   useEffect(() => {
+    const handleOffline = () => {
+      if (sessionEndedRef.current) return;
+      isReconnectingRef.current = true;
+      onStateChange("reconnecting");
+      setConnectionState("disconnected");
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.close();
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const handleOnline = () => {
+      if (sessionEndedRef.current) return;
+      if (isReconnectingRef.current && wsRef.current?.readyState !== WebSocket.OPEN) {
+        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+        const attempt = reconnectAttemptsRef.current;
+        const delay = RECONNECT_DELAYS[attempt] || 1000;
+        reconnectTimerRef.current = setTimeout(() => {
+          reconnectTimerRef.current = null;
+          reconnectAttemptsRef.current += 1;
+          connect();
+        }, delay);
+      }
+    };
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
     return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       wsRef.current?.close();
     };
-  }, []);
+  }, [connect, onStateChange]);
 
   return { connect, send, sendJson, disconnect, connectionState };
 }
