@@ -21,7 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { sessionStatusToState } from "@/utils/interviewState";
+import { CheckCircle, Mic, MicOff, RotateCcw, AlertTriangle } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -46,9 +47,12 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        // Honest mapping on (re)load (see sessionStatusToState). A pre-first-turn failure was reset
+        // to `pending` server-side, so it lands on the normal start screen and can retry.
+        const finished = sessionStatusToState(res.data.session_status, res.data.end_reason);
+        if (finished) setInterviewState(finished);
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("failed_terminal"));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -170,15 +174,20 @@ export default function InterviewPage() {
     muteRef.current?.();
   }, [sessionId, connect, startCapture]);
 
-  const endInterview = useCallback(async () => {
-    setInterviewState("ending");
-    if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
-    stopCapture();
-    stopPlayback();
-    sendJson({ type: "end_session" });
-    disconnect();
-    setInterviewState("complete");
-  }, [stopCapture, stopPlayback, sendJson, disconnect]);
+  // A candidate pressing "End Interview" is a deliberate early end (manual_candidate); the timer
+  // running out is a full-length completion (time_ceiling). They must not be conflated — the screen
+  // the candidate sees and the remark the assessor sees both depend on which one it was.
+  const endInterview = useCallback(
+    (reason: "manual_candidate" | "time_ceiling" = "manual_candidate") => {
+      setInterviewState(reason === "time_ceiling" ? "complete" : "ended_early");
+      if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
+      stopCapture();
+      stopPlayback();
+      sendJson({ type: "end_session", reason });
+      disconnect();
+    },
+    [stopCapture, stopPlayback, sendJson, disconnect]
+  );
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
@@ -207,6 +216,10 @@ export default function InterviewPage() {
               <p>• The AI will ask follow-up questions — there are no scripts.</p>
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
+            </div>
+            <div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-2.5">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>This is your <strong>one and only attempt</strong> — once you start, you can't redo or restart the interview, so make sure you're ready and in a quiet spot before you begin.</span>
             </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
@@ -241,6 +254,55 @@ export default function InterviewPage() {
     );
   }
 
+  // ── Ended early: the candidate deliberately ended before completion ──
+  if (interviewState === "ended_early") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">🕓</div>
+        <h2 className="text-xl font-semibold">Interview ended early</h2>
+        <p className="text-sm text-muted-foreground">
+          You ended the interview before it was complete.
+          <br />
+          Your answers so far have been saved, and the hiring team will follow up with you.
+        </p>
+      </div>
+    );
+  }
+
+  // ── Failure: retryable — the interview never started, the same link still works ──
+  if (interviewState === "failed_retryable") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">🔌</div>
+        <h2 className="text-xl font-semibold">We couldn't connect you</h2>
+        <p className="text-sm text-muted-foreground">
+          This is a problem on our side — not your device or your connection.
+          <br />
+          Your interview hasn't started yet, and your invite link still works.
+        </p>
+        <Button size="lg" onClick={() => window.location.reload()}>
+          <RotateCcw className="h-4 w-4 mr-2" />
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  // ── Failure: terminal — interrupted mid-interview, or the link can't be loaded ──
+  if (interviewState === "failed_terminal") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="flex justify-center text-amber-500"><AlertTriangle className="h-10 w-10" /></div>
+        <h2 className="text-xl font-semibold">Interview interrupted</h2>
+        <p className="text-sm text-muted-foreground">
+          The interview couldn't continue because of a technical problem on our side.
+          <br />
+          If you had already started, your answers are saved and the hiring team will follow up with you.
+        </p>
+      </div>
+    );
+  }
+
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
@@ -254,7 +316,7 @@ export default function InterviewPage() {
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
             running={interviewState === "active"}
-            onExpired={endInterview}
+            onExpired={() => endInterview("time_ceiling")}
           />
         )}
       </div>
@@ -349,7 +411,7 @@ export default function InterviewPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
+              <AlertDialogAction onClick={() => endInterview("manual_candidate")}>End interview</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

@@ -1,160 +1,122 @@
-// Internet Speed Test Utilities — standalone, no backend dependency
+// Pre-interview connection check. The interview is audio-only: the mic streams 16 kHz mono PCM
+// (~0.26 Mbps up) and AI playback is 24 kHz PCM (~0.4 Mbps down), so thresholds are sized to that.
+import { API_BASE_URL } from "@/services/api";
+
+export type ConnectionQuality = "good" | "fair" | "poor" | "unknown";
 
 export interface InternetSpeedResult {
-    download: number;
-    upload: number;
-    ping: number;
-    passed: boolean;
-    downloadTests: number[];
-    uploadTests: number[];
-    pingTests: number[];
+    download: number | null; // Mbps, null when it couldn't be measured
+    upload: number | null; // Mbps
+    ping: number | null; // ms
+    quality: ConnectionQuality;
 }
 
 export interface SpeedThresholds {
     minDownloadMbps: number;
     minUploadMbps: number;
     maxPingMs: number;
+    recommendedDownloadMbps: number;
+    recommendedUploadMbps: number;
+    recommendedPingMs: number;
 }
 
+// Minimum ≈ 2x what the audio stream needs; recommended ≈ 4x, leaving room for other traffic on the network.
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+    minDownloadMbps: 1,
+    minUploadMbps: 0.5,
+    maxPingMs: 1000,
+    recommendedDownloadMbps: 2,
+    recommendedUploadMbps: 1,
+    recommendedPingMs: 300,
 };
 
-const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const PING_URL = (import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined) || `${API_BASE_URL}/health`;
+const UPLOAD_URL = (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) || "https://speed.cloudflare.com/__up";
+const DOWNLOAD_URL = "https://speed.cloudflare.com/__down";
 
-async function measurePing(): Promise<number> {
-    if (SPEED_TEST_PING_URL) {
-        try {
-            const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            return 999;
-        }
-    }
-    const testUrls = [
-        "https://www.google.com/favicon.ico",
-        "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
-        "https://unpkg.com/react@18/umd/react.production.min.js",
-    ];
-    for (const url of testUrls) {
-        try {
-            const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            continue;
-        }
-    }
-    return 999;
-}
+const DOWNLOAD_BYTES = 500_000;
+const UPLOAD_BYTES = 250_000;
+const PING_TIMEOUT_MS = 3_000;
+const TRANSFER_TIMEOUT_MS = 8_000;
 
-async function measureDownloadSpeed(): Promise<number> {
-    const testFiles = [
-        { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
-        { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },
-        { url: "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js", size: 0.09 },
-    ];
-    for (const testFile of testFiles) {
-        try {
-            const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
-            if (response.ok) {
-                await response.blob();
-                const seconds = (performance.now() - start) / 1000;
-                return testFile.size / seconds;
-            }
-        } catch {
-            continue;
-        }
-    }
-    // Rough fallback
+type Sample = { ms: number; bytes: number } | "timeout" | null;
+
+// Times the full request including the body, so a slow body read counts against the connection.
+async function timedRequest(url: string, init: RequestInit, timeoutMs: number): Promise<Sample> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const start = performance.now();
     try {
-        const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
-        const duration = (performance.now() - start) / 1000;
-        return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
+        const res = await fetch(url, { ...init, cache: "no-store", signal: controller.signal });
+        if (!res.ok) return null;
+        const bytes = (await res.arrayBuffer()).byteLength;
+        return { ms: performance.now() - start, bytes };
     } catch {
-        return 0;
+        return controller.signal.aborted ? "timeout" : null;
+    } finally {
+        clearTimeout(timer);
     }
 }
 
-async function measureUploadSpeed(): Promise<number> {
-    const uploadSizeMB = 0.5;
-    const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
-        type: "application/octet-stream",
-    });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
-    for (const endpoint of endpoints) {
-        try {
-            const formData = new FormData();
-            formData.append("test", uploadData);
-            const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
-            const seconds = (performance.now() - start) / 1000;
-            return uploadSizeMB / seconds;
-        } catch {
-            continue;
+const toMbps = (bytes: number, ms: number) => (bytes * 8) / (ms / 1000) / 1_000_000;
+
+async function measurePingMs(): Promise<number | null> {
+    const samples: number[] = [];
+    for (let i = 0; i < 3; i++) {
+        const sample = await timedRequest(PING_URL, {}, PING_TIMEOUT_MS);
+        if (sample === "timeout") {
+            samples.push(PING_TIMEOUT_MS);
+            break;
         }
+        if (sample) samples.push(sample.ms);
     }
-    return 0.5; // conservative fallback
+    // Min is the standard RTT estimate: the first request also pays for DNS and the TLS handshake.
+    return samples.length ? Math.min(...samples) : null;
 }
 
-async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {
-    const results: T[] = [];
-    for (let i = 0; i < count; i++) {
-        try {
-            results.push(await testFn());
-            await new Promise((r) => setTimeout(r, 100));
-        } catch {
-            // skip failed test
+async function measureThroughputMbps(url: string, init: RequestInit, bytes: number): Promise<number | null> {
+    let best: number | null = null;
+    for (let i = 0; i < 2; i++) {
+        const sample = await timedRequest(url, init, TRANSFER_TIMEOUT_MS);
+        if (sample === "timeout") {
+            // Didn't finish in time, so the speed is at most this; that's already below the minimum.
+            best = Math.max(best ?? 0, toMbps(bytes, TRANSFER_TIMEOUT_MS));
+            break;
         }
+        if (sample) best = Math.max(best ?? 0, toMbps(bytes, sample.ms));
     }
-    return results;
+    return best;
 }
 
-function average(values: number[]): number {
-    if (values.length === 0) return 0;
-    if (values.length <= 2) return values.reduce((a, b) => a + b, 0) / values.length;
-    const sorted = [...values].sort((a, b) => a - b);
-    const trimmed = sorted.slice(1, -1);
-    return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+export function classifyConnection(
+    { download, upload, ping }: Pick<InternetSpeedResult, "download" | "upload" | "ping">,
+    t: SpeedThresholds = DEFAULT_THRESHOLDS
+): ConnectionQuality {
+    const tooSlow =
+        (upload !== null && upload < t.minUploadMbps) ||
+        (download !== null && download < t.minDownloadMbps) ||
+        (ping !== null && ping > t.maxPingMs);
+    if (tooSlow) return "poor";
+    if (upload === null || download === null || ping === null) return "unknown";
+    const belowRecommended =
+        upload < t.recommendedUploadMbps || download < t.recommendedDownloadMbps || ping > t.recommendedPingMs;
+    return belowRecommended ? "fair" : "good";
 }
 
-export async function testInternetSpeed(
-    thresholds: SpeedThresholds = DEFAULT_THRESHOLDS
-): Promise<InternetSpeedResult> {
-    try {
-        const [downloadTests, uploadTests, pingTests] = await Promise.all([
-            runMultipleTests(measureDownloadSpeed, 3),
-            runMultipleTests(measureUploadSpeed, 3),
-            runMultipleTests(measurePing, 3),
-        ]);
+const round2 = (v: number | null) => (v === null ? null : Math.round(v * 100) / 100);
 
-        const downloadMbps = average(downloadTests) * 8;
-        const uploadMbps = average(uploadTests) * 8;
-        const ping = average(pingTests);
+export async function testInternetSpeed(thresholds: SpeedThresholds = DEFAULT_THRESHOLDS): Promise<InternetSpeedResult> {
+    if (!navigator.onLine) return { download: null, upload: null, ping: null, quality: "poor" };
 
-        const passed =
-            downloadMbps >= thresholds.minDownloadMbps &&
-            uploadMbps >= thresholds.minUploadMbps &&
-            ping <= thresholds.maxPingMs;
+    // Sequential on purpose: running these in parallel makes them compete for the same bandwidth.
+    const ping = await measurePingMs();
+    const download = await measureThroughputMbps(`${DOWNLOAD_URL}?bytes=${DOWNLOAD_BYTES}`, {}, DOWNLOAD_BYTES);
+    const upload = await measureThroughputMbps(UPLOAD_URL, { method: "POST", body: new Blob([new Uint8Array(UPLOAD_BYTES)]) }, UPLOAD_BYTES);
 
-        return {
-            download: Math.round(downloadMbps * 100) / 100,
-            upload: Math.round(uploadMbps * 100) / 100,
-            ping: Math.round(ping),
-            passed,
-            downloadTests: downloadTests.map((v) => Math.round(v * 8 * 100) / 100),
-            uploadTests: uploadTests.map((v) => Math.round(v * 8 * 100) / 100),
-            pingTests: pingTests.map((v) => Math.round(v)),
-        };
-    } catch {
-        return { download: 0, upload: 0, ping: 999, passed: false, downloadTests: [], uploadTests: [], pingTests: [] };
-    }
+    return {
+        download: round2(download),
+        upload: round2(upload),
+        ping: ping === null ? null : Math.round(ping),
+        quality: classifyConnection({ download, upload, ping }, thresholds),
+    };
 }

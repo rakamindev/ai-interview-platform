@@ -5,10 +5,14 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
+    # Raised when the model returns a parseable response with no assessable skills.
+    # A technically-completed job with no usable result must not present as a successful assessment.
+    class EmptyPortfolioError < StandardError; end
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.5-flash'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -24,8 +28,18 @@ module Portfolios
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      data     = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      save_skills(portfolio, response)
+      configured = Array(data['configured_skills'])
+      discovered = Array(data['discovered_skills'])
+      # F-AI-2: never present an empty result as a complete portfolio (and don't wipe a prior one below).
+      raise EmptyPortfolioError, 'AI returned no assessable skills' if configured.empty? && discovered.empty?
+
+      # F-AI-1: atomic — a bad skill in the batch must not leave the old skills destroyed and the
+      # new ones unwritten. destroy_all + create! run as one unit and roll back together on error.
+      ActiveRecord::Base.transaction do
+        save_skills(portfolio, configured, discovered)
+      end
       portfolio.update!(generation_status: 'complete', generated_at: Time.current)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
@@ -147,35 +161,29 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
+    # Caller wraps this in a transaction (see #call) so destroy_all + create! are atomic.
+    def save_skills(portfolio, configured, discovered)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      configured.each do |skill_data|
+        portfolio.portfolio_skills.create!(skill_attributes(skill_data, is_discovered: false))
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      discovered.each do |skill_data|
+        portfolio.portfolio_skills.create!(skill_attributes(skill_data, is_discovered: true))
       end
+    end
+
+    def skill_attributes(skill_data, is_discovered:)
+      {
+        skill_id:           is_discovered ? nil : skill_data['skill_id'],
+        skill_label:        skill_data['skill_label'],
+        is_discovered:      is_discovered,
+        ai_level:           skill_data['level'].to_i.clamp(1, 5),
+        ai_confidence:      skill_data['confidence'],
+        evidence:           Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary']
+      }
     end
   end
 end

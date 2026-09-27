@@ -280,16 +280,18 @@ module Gemini
         # Skip audio-only frames (too noisy)
         return if has_audio && !has_input_tx && !has_output_tx && !turn_complete && !gen_complete && !interrupted
 
+        # Log only that a transcription arrived and its size — never its content. It is the
+        # candidate's own words (UU PDP data minimisation); the transcript itself is stored in the DB.
         parts = []
         parts << 'interrupted' if interrupted
         parts << 'audio' if has_audio
         if has_input_tx
           input_tx_text = sc.dig('inputTranscription', 'parts', 0, 'text') || sc.dig('inputTranscription', 'text')
-          parts << "inputTx=#{input_tx_text.truncate(50)}" if input_tx_text.present?
+          parts << "inputTx(#{input_tx_text.length} chars)" if input_tx_text.present?
         end
         if has_output_tx
           output_tx_text = sc.dig('outputTranscription', 'parts', 0, 'text') || sc.dig('outputTranscription', 'text')
-          parts << "outputTx=#{output_tx_text.truncate(50)}" if output_tx_text.present?
+          parts << "outputTx(#{output_tx_text.length} chars)" if output_tx_text.present?
         end
         parts << 'turnComplete' if turn_complete
         parts << 'generationComplete' if gen_complete

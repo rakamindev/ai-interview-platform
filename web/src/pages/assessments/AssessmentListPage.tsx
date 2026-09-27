@@ -5,26 +5,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight } from "lucide-react";
+import { sessionOutcome } from "@/utils/interviewState";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
   if (!session) return null;
 
-  if (session.status === "active")
-    return (
-      <span className="flex items-center gap-1 text-xs text-primary">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        Live now
-      </span>
-    );
-
-  if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
-
-  if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
-
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  switch (sessionOutcome(session.status, session.end_reason)) {
+    case "live":
+      return (
+        <span className="flex items-center gap-1 text-xs text-primary">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          Live now
+        </span>
+      );
+    case "failed":
+      return <span className="text-xs text-destructive">Last: failed</span>;
+    case "early_end":
+      return <span className="text-xs text-amber-600">Last: completed (early-end)</span>;
+    case "completed":
+      return <span className="text-xs text-muted-foreground">Last: completed</span>;
+    default:
+      return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  }
 }
 
 export default function AssessmentListPage() {
