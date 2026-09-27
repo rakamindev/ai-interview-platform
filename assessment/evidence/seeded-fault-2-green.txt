@@ -1,0 +1,66 @@
+
+AudioWebSocketMiddleware
+  when the interview cannot start
+    records assessment_invalid with a short reason when the assessment has a duplicate
+    records start_failed without the exception text for an unexpected error
+    tells the candidate the failure is final, without internal details, then closes
+  when the candidate does not come back within the grace period
+2026-09-26T15:06:06.422Z pid=595136 tid=czdw INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+    ends a running interview as candidate_disconnected
+    leaves an interview that never started pending and retryable
+
+Assessment
+  validation
+    returns error when name is not given
+    returns error when time limit is not one of the allowed options
+    raises when created outside an organization
+    returns error when two skills have the same label ignoring case and spaces
+    returns error when a taxonomy skill and a custom skill have the same label
+  Create
+    returns ok with valid inputs
+  Update
+    returns error when adding a skill with the same label as a saved one
+    returns ok when removing one copy of an existing duplicate
+  tenant scoping
+    returns only assessments of the current organization
+
+Session
+  record_failure!
+    stores the failure code, detail and time without changing the status
+    keeps only the latest failure when it fails again
+    returns error when the failure code is unknown
+  clear_failure!
+    removes a recorded failure
+  failure_message
+    describes the failure for the assessor, including the short reason
+    describes the failure without a detail
+    returns nil when no failure was recorded
+
+Assessments
+  POST /api/v1/assessments
+    returns ok with valid inputs
+    returns error when two skills have the same label
+  PUT /api/v1/assessments/:id
+    returns error when adding a skill with the same label as a saved one
+
+Sessions
+  GET /api/v1/assessments/:id/sessions
+    returns the failure code and the assessor message of a failed session
+    returns no failure for a session that has not failed
+    does not return another organization's sessions
+
+Sessions::EndHandler
+  records why the session ended in error
+  does not keep the detail of an earlier failure
+  does not record a failure for a normal end
+  clears the failure when an error end is upgraded to a manual end
+
+Sessions::StartHandler
+  activates the session and creates one coverage map per skill
+  clears a failure recorded by an earlier attempt
+  raises InvalidAssessment with a short reason when the assessment already has a duplicate
+  raises InvalidAssessment with a generic reason when the assessment is invalid for another reason
+
+Finished in 0.6501 seconds (files took 0.69618 seconds to load)
+35 examples, 0 failures
+

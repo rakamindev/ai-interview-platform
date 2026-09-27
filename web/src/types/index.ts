@@ -11,6 +11,8 @@ export interface Assessment {
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
+    failure_code?: string | null;
+    failure_message?: string | null;
   };
 }
 
@@ -44,6 +46,8 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  failure_code?: string | null;
+  failure_message?: string | null;
   created_at?: string;
 }
 
@@ -164,6 +168,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  ended_with_error?: boolean;
 }
 
 export interface PaginationMeta {
@@ -182,7 +187,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "failed";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

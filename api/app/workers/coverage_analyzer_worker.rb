@@ -9,6 +9,7 @@ class CoverageAnalyzerWorker
     session = Session.find(session_id)
 
     return if session.ended?
+    return unless claim_turn(session, turn_number)
 
     result = Coverage::Analyzer.new(session: session).call
 
@@ -35,6 +36,13 @@ class CoverageAnalyzerWorker
   end
 
   private
+
+  def claim_turn(session, turn_number)
+    Session.unscoped
+           .where(id: session.id)
+           .where('last_analyzed_turn IS NULL OR last_analyzed_turn < ?', turn_number)
+           .update_all(last_analyzed_turn: turn_number) == 1
+  end
 
   def apply_updates(session, skill_updates)
     skill_updates.each do |update|

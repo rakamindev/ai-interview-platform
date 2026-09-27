@@ -11,12 +11,12 @@ module Sessions
       @session = session
     end
 
-    def call(reason: 'manual_assessor')
+    def call(reason: 'manual_assessor', failure_code: nil)
       # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
       if @session.ended?
         manual = %w[manual_candidate manual_assessor]
         if manual.include?(reason.to_s) && @session.end_reason == 'error'
-          @session.update_column(:end_reason, reason.to_s)
+          @session.update_columns(end_reason: reason.to_s, failure_code: nil, failure_detail: nil, failed_at: nil)
         end
         return @session
       end
@@ -30,7 +30,10 @@ module Sessions
           status:           'ended',
           end_reason:       reason.to_s,
           ended_at:         Time.current,
-          duration_seconds: duration
+          duration_seconds: duration,
+          failure_code:     failure_code,
+          failure_detail:   nil,
+          failed_at:        failure_code && Time.current
         )
 
         create_portfolio

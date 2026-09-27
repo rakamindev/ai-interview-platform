@@ -4,11 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { AlertCircle, Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
+
+function FailureSummary({ label, message }: { label: string; message?: string | null }) {
+  return (
+    <span className="flex items-center gap-1 min-w-0 text-xs text-destructive">
+      <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
+      <span className="truncate">{label} · {message ?? "Reason not recorded"}</span>
+    </span>
+  );
+}
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
   if (!session) return null;
+
+  if (session.status === "pending" && session.failure_code)
+    return <FailureSummary label="Couldn't start" message={session.failure_message} />;
 
   if (session.status === "active")
     return (
@@ -19,7 +31,7 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     );
 
   if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
+    return <FailureSummary label="Last: failed" message={session.failure_message} />;
 
   if (session.status === "ended")
     return <span className="text-xs text-muted-foreground">Last: completed</span>;
@@ -75,11 +87,11 @@ export default function AssessmentListPage() {
               className="cursor-pointer hover:border-primary/40 transition-colors"
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
+              <CardContent className="py-3 px-4 flex items-center justify-between gap-2">
+                <div className="min-w-0">
                   <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground mt-0.5">
+                    <span className="flex items-center gap-1 shrink-0 whitespace-nowrap">
                       <Clock className="h-3 w-3" />
                       {a.time_limit_min} min
                     </span>
@@ -91,7 +103,7 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
               </CardContent>
             </Card>
           ))}

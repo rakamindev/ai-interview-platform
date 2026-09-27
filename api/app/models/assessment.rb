@@ -16,4 +16,6 @@ class Assessment < ApplicationRecord
   accepts_nested_attributes_for :assessment_skills,
                                  allow_destroy: true,
                                  reject_if: :all_blank
+
+  validates_with UniqueSkillLabelsValidator, association: :assessment_skills
 end

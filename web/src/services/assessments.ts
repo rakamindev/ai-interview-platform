@@ -5,7 +5,7 @@ export interface AssessmentPayload {
   name: string;
   time_limit_min: number;
   language?: "en" | "id";
-  assessment_skills_attributes: Partial<AssessmentSkill>[];
+  assessment_skills_attributes: (Partial<AssessmentSkill> & { _destroy?: boolean })[];
 }
 
 export const assessmentsApi = {

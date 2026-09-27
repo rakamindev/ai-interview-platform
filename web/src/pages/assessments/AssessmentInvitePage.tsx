@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { AlertCircle, ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -35,16 +35,24 @@ function SessionRow({
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  const couldNotStart = isPending && !!session.failure_code;
+  const isFailed = isEnded && session.end_reason === "error";
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+    <div className="flex flex-col gap-2 py-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
-        <div className="space-y-0.5">
+        <div className="space-y-0.5 min-w-0">
           <div className="text-sm font-medium">{displayName}</div>
+          {(isFailed || couldNotStart) && (
+            <div className="flex items-start gap-1 text-xs text-destructive">
+              <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="break-words">{session.failure_message ?? "Reason not recorded"}</span>
+            </div>
+          )}
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -53,11 +61,17 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {isPending && (
+      <div className="flex items-center gap-3 shrink-0 pl-10 sm:pl-0">
+        {isPending && !couldNotStart && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
+          </span>
+        )}
+        {couldNotStart && (
+          <span className="flex items-center gap-1 text-xs text-destructive">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+            Couldn't start
           </span>
         )}
         {isLive && (
@@ -66,7 +80,7 @@ function SessionRow({
             Live
           </span>
         )}
-        {isEnded && session.end_reason === "error" && (
+        {isFailed && (
           <span className="flex items-center gap-1 text-xs text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
             Failed
@@ -201,8 +215,8 @@ export default function AssessmentInvitePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-2 min-w-0">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -215,7 +229,7 @@ export default function AssessmentInvitePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 pl-6 sm:pl-0">
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>

@@ -14,6 +14,7 @@ class AudioWebSocketMiddleware
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
   SYSTEM_SIGNAL_TOKEN = 'SYS-TC-7x9k'
+  START_FAILED_MESSAGE = "This interview can't start right now. Please contact the person who invited you."
 
   WRAP_UP_SIGNAL = "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"wrap_up\": true, \"all_skills_covered\": true }" \
                    ' — Close the interview NOW. Do NOT ask any more questions.' \
@@ -57,8 +58,20 @@ class AudioWebSocketMiddleware
 
     state.session = session
     connect_to_gemini(browser_ws, state)
+  rescue Sessions::StartHandler::InvalidAssessment => e
+    fail_session_start(browser_ws, state.session, 'assessment_invalid', e.message)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+    fail_session_start(browser_ws, state.session, 'start_failed')
+  end
+
+  def fail_session_start(browser_ws, session, code, detail = nil)
+    begin
+      session&.record_failure!(code, detail)
+    rescue StandardError => e
+      Rails.logger.error("[AudioWS] Could not record start failure for session #{session&.id}: #{e.class}")
+    end
+    send_json(browser_ws, type: 'error', code: code, recoverable: false, message: START_FAILED_MESSAGE)
     browser_ws.close
   end
 
@@ -384,7 +397,7 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
-      Sessions::EndHandler.new(state.session).call(reason: 'error')
+      Sessions::EndHandler.new(state.session).call(reason: 'error', failure_code: 'ai_connection_lost')
       send_json(browser_ws, type: 'session_ended', reason: 'error',
                             message: 'The session encountered a problem. Please contact the interviewer.')
       browser_ws.close
@@ -504,16 +517,20 @@ class AudioWebSocketMiddleware
     state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
-          next if state.session.reload.ended?
-
-          Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
-          EM.schedule { state.gemini_client&.close }
+          EM.schedule { state.gemini_client&.close } if end_after_grace_period(state)
         end
       rescue StandardError => e
         Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")
       end
     end
+  end
+
+  def end_after_grace_period(state)
+    return false unless state.session.reload.active?
+
+    Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
+    Sessions::EndHandler.new(state.session).call(reason: 'error', failure_code: 'candidate_disconnected')
+    true
   end
 
   # Sends session_ended then closes both connections; 300ms delay lets the frontend process the JSON

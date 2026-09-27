@@ -1,0 +1,119 @@
+
+AudioWebSocketMiddleware
+  when the interview cannot start
+    records assessment_invalid with a short reason when the assessment has a duplicate
+    records start_failed without the exception text for an unexpected error
+    tells the candidate the failure is final, without internal details, then closes
+  when the candidate does not come back within the grace period
+2026-09-26T15:05:44.526Z pid=594667 tid=cy6n INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+    ends a running interview as candidate_disconnected
+    leaves an interview that never started pending and retryable
+
+Assessment
+  validation
+    returns error when name is not given
+    returns error when time limit is not one of the allowed options
+    raises when created outside an organization
+    returns error when two skills have the same label ignoring case and spaces (FAILED - 1)
+    returns error when a taxonomy skill and a custom skill have the same label
+  Create
+    returns ok with valid inputs
+  Update
+    returns error when adding a skill with the same label as a saved one (FAILED - 2)
+    returns ok when removing one copy of an existing duplicate
+  tenant scoping
+    returns only assessments of the current organization
+
+Session
+  record_failure!
+    stores the failure code, detail and time without changing the status
+    keeps only the latest failure when it fails again
+    returns error when the failure code is unknown
+  clear_failure!
+    removes a recorded failure
+  failure_message
+    describes the failure for the assessor, including the short reason
+    describes the failure without a detail
+    returns nil when no failure was recorded
+
+Assessments
+  POST /api/v1/assessments
+    returns ok with valid inputs
+    returns error when two skills have the same label (FAILED - 3)
+  PUT /api/v1/assessments/:id
+    returns error when adding a skill with the same label as a saved one (FAILED - 4)
+
+Sessions
+  GET /api/v1/assessments/:id/sessions
+    returns the failure code and the assessor message of a failed session
+    returns no failure for a session that has not failed
+    does not return another organization's sessions
+
+Sessions::EndHandler
+  records why the session ended in error
+  does not keep the detail of an earlier failure
+  does not record a failure for a normal end
+  clears the failure when an error end is upgraded to a manual end
+
+Sessions::StartHandler
+  activates the session and creates one coverage map per skill
+  clears a failure recorded by an earlier attempt
+  raises InvalidAssessment with a short reason when the assessment already has a duplicate
+  raises InvalidAssessment with a generic reason when the assessment is invalid for another reason
+
+Failures:
+
+  1) Assessment validation returns error when two skills have the same label ignoring case and spaces
+     Failure/Error: expect(subject.save).to eq(false)
+
+       expected: false
+            got: true
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -false
+       +true
+     # ./spec/models/assessment_spec.rb:41:in `block (4 levels) in <main>'
+     # ./app/models/current.rb:23:in `using'
+     # ./spec/support/organization_helpers.rb:9:in `within_organization'
+     # ./spec/models/assessment_spec.rb:33:in `block (3 levels) in <main>'
+
+  2) Assessment Update returns error when adding a skill with the same label as a saved one
+     Failure/Error: expect(result).to eq(false)
+
+       expected: false
+            got: true
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -false
+       +true
+     # ./spec/models/assessment_spec.rb:88:in `block (4 levels) in <main>'
+     # ./app/models/current.rb:23:in `using'
+     # ./spec/support/organization_helpers.rb:9:in `within_organization'
+     # ./spec/models/assessment_spec.rb:83:in `block (3 levels) in <main>'
+
+  3) Assessments POST /api/v1/assessments returns error when two skills have the same label
+     Failure/Error: expect(response).to have_http_status(422)
+       expected the response to have status code 422 but it was 201
+     # ./spec/requests/assessments_spec.rb:40:in `block (3 levels) in <main>'
+
+  4) Assessments PUT /api/v1/assessments/:id returns error when adding a skill with the same label as a saved one
+     Failure/Error: expect(response).to have_http_status(422)
+       expected the response to have status code 422 but it was 200
+     # ./spec/requests/assessments_spec.rb:66:in `block (3 levels) in <main>'
+
+Finished in 0.74249 seconds (files took 0.84179 seconds to load)
+35 examples, 4 failures
+
+Failed examples:
+
+rspec ./spec/models/assessment_spec.rb:32 # Assessment validation returns error when two skills have the same label ignoring case and spaces
+rspec ./spec/models/assessment_spec.rb:82 # Assessment Update returns error when adding a skill with the same label as a saved one
+rspec ./spec/requests/assessments_spec.rb:29 # Assessments POST /api/v1/assessments returns error when two skills have the same label
+rspec ./spec/requests/assessments_spec.rb:58 # Assessments PUT /api/v1/assessments/:id returns error when adding a skill with the same label as a saved one
+
