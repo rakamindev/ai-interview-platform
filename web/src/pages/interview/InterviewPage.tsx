@@ -95,6 +95,13 @@ export default function InterviewPage() {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
 
+  const transcriptContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (transcriptContainerRef.current) {
+      transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight;
+    }
+  }, [transcript]);
+
   const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
   const audioCompleteCalledRef = useRef(false);
   const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -323,22 +330,14 @@ export default function InterviewPage() {
         ) : (
           <>
             <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
+              active={aiSpeaking || candidateSpeaking}
+              label={aiSpeaking ? "AI speaking" : candidateSpeaking ? "You're speaking" : "Listening..."}
+              variant={candidateSpeaking ? "candidate" : "ai"}
             />
-
-            {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
-            )}
 
             {/* Transcript */}
             {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
+              <div ref={transcriptContainerRef} className="w-full space-y-2 overflow-y-auto max-h-[60vh] pb-4 scroll-smooth">
                 {transcript.map((turn, i) => (
                   <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
                 ))}
