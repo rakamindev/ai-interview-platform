@@ -25,7 +25,7 @@ export function controlMessageToState(msg: WsControlMessage): InterviewState | n
       return msg.reason === "manual_candidate" ? "ended_early" : "complete";
     case "session_failed":
       // A pre-first-turn failure is retryable on the same link; a mid-interview one is terminal.
-      return msg.retryable ? "failed_retryable" : "failed_terminal";
+      return "complete"; // SEEDED FAULT: re-introduces P0 #5 (a failure shown as success)
     case "error":
       // Recoverable errors are transient; a non-recoverable error is an honest failure, not success.
       return msg.recoverable ? null : "failed_terminal";

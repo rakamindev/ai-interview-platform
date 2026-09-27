@@ -37,9 +37,7 @@ module Portfolios
 
       # F-AI-1: atomic — a bad skill in the batch must not leave the old skills destroyed and the
       # new ones unwritten. destroy_all + create! run as one unit and roll back together on error.
-      ActiveRecord::Base.transaction do
-        save_skills(portfolio, configured, discovered)
-      end
+      save_skills(portfolio, configured, discovered) # SEEDED FAULT: transaction removed (re-introduces F-AI-1)
       portfolio.update!(generation_status: 'complete', generated_at: Time.current)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
