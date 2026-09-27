@@ -20,13 +20,20 @@ class Session < ApplicationRecord
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
   scope :ended,   -> { where(status: 'ended') }
+  scope :failed,  -> { where(status: 'failed') }
 
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+  def failed?  = status == 'failed'
 
+  # Both are terminal for the candidate: the audio WS must not re-accept them.
+  # (A pre-first-turn failure is reset to `pending` instead — see Sessions::FailureHandler.)
+  def terminal? = ended? || failed?
+
+  # Candidates open this in a browser; /interview/:token is a web-app route, not an API route.
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('FRONTEND_BASE_URL', 'http://localhost:5173').chomp('/')
     "#{base}/interview/#{invite_token}"
   end
 
