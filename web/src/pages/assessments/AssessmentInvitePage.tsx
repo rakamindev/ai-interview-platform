@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
+import { sessionOutcome } from "@/utils/interviewState";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
@@ -32,9 +33,12 @@ function SessionRow({
   copiedId: number | null;
 }) {
   const navigate = useNavigate();
-  const isLive = session.status === "active";
-  const isEnded = session.status === "ended";
-  const isPending = session.status === "pending";
+  const outcome = sessionOutcome(session.status, session.end_reason);
+  const isLive = outcome === "live";
+  const isPending = outcome === "awaiting";
+  const hasFailed = outcome === "failed"; // the `failed` status, or a legacy ended/error row
+  const isEarlyEnd = outcome === "early_end";
+  const isCompleted = outcome === "completed";
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
@@ -66,13 +70,19 @@ function SessionRow({
             Live
           </span>
         )}
-        {isEnded && session.end_reason === "error" && (
+        {hasFailed && (
           <span className="flex items-center gap-1 text-xs text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
             Failed
           </span>
         )}
-        {isEnded && session.end_reason !== "error" && (
+        {isEarlyEnd && (
+          <span className="flex items-center gap-1 text-xs text-amber-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            Completed (early-end)
+          </span>
+        )}
+        {isCompleted && (
           <span className="flex items-center gap-1 text-xs text-green-600">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
@@ -104,7 +114,7 @@ function SessionRow({
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
           )}
-          {isEnded && session.end_reason !== "error" && (
+          {(isCompleted || isEarlyEnd) && (
             <Button
               variant="outline"
               size="sm"
@@ -150,7 +160,7 @@ export default function AssessmentInvitePage() {
 
   // Poll while any session is live or pending
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
+    const hasActive = sessions.some((s) => s.status === "pending" || s.status === "active");
     if (!hasActive) return;
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);

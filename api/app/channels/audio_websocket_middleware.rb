@@ -384,9 +384,14 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
-      Sessions::EndHandler.new(state.session).call(reason: 'error')
-      send_json(browser_ws, type: 'session_ended', reason: 'error',
-                            message: 'The session encountered a problem. Please contact the interviewer.')
+      outcome = Sessions::FailureHandler.new(state.session).call(reason: 'error')
+      if outcome == :reset
+        send_json(browser_ws, type: 'session_failed', reason: 'error', retryable: true,
+                              message: "We couldn't connect you to the interview. This is a problem on our side, not your device or connection. Your invite link still works — please try again.")
+      else
+        send_json(browser_ws, type: 'session_failed', reason: 'error', retryable: false,
+                              message: 'Your interview was interrupted by a technical problem on our side. Your answers so far are saved, and the hiring team will follow up with you.')
+      end
       browser_ws.close
     end
   end
@@ -431,8 +436,13 @@ class AudioWebSocketMiddleware
       state.graceful_end_timer&.cancel
       state.time_ceiling_timer&.cancel
       state.coverage_end_timer&.cancel
-      Sessions::EndHandler.new(state.session).call(reason: 'manual_candidate')
-      send_json(browser_ws, type: 'session_ended', reason: 'manual_candidate')
+      # The candidate can end deliberately (manual_candidate) or the frontend timer can hit the
+      # limit (time_ceiling). Honour the reason the client sends, but only trust these two — anything
+      # else falls back to manual_candidate. This keeps the assessor's "early-end" remark honest.
+      requested = message['reason']
+      reason = %w[manual_candidate time_ceiling].include?(requested) ? requested : 'manual_candidate'
+      Sessions::EndHandler.new(state.session).call(reason: reason)
+      send_json(browser_ws, type: 'session_ended', reason: reason)
       state.gemini_client&.close
       browser_ws.close
     end
@@ -504,10 +514,12 @@ class AudioWebSocketMiddleware
     state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
-          next if state.session.reload.ended?
+          next if state.session.reload.terminal?
 
-          Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
+          # Browser is already gone; no socket to notify. FailureHandler resets a pre-first-turn
+          # session to pending (retryable on reload) or marks a mid-interview one failed.
+          Rails.logger.info("[AudioWS] Grace period expired — finalizing session #{state.session.id}")
+          Sessions::FailureHandler.new(state.session).call(reason: 'error')
           EM.schedule { state.gemini_client&.close }
         end
       rescue StandardError => e
@@ -754,7 +766,7 @@ class AudioWebSocketMiddleware
     end
 
     return [nil, 'Session not found'] unless session
-    return [nil, 'Session has ended'] if session.ended?
+    return [nil, 'Session is no longer available'] if session.terminal?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 
     [session, nil]

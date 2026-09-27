@@ -9,7 +9,7 @@ export interface Assessment {
   updated_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: "pending" | "active" | "ended" | "failed";
     end_reason?: string | null;
   };
 }
@@ -39,7 +39,7 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
@@ -164,6 +164,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
 }
 
 export interface PaginationMeta {
@@ -182,7 +183,10 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "ended_early"
+  | "failed_retryable"
+  | "failed_terminal";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -190,6 +194,7 @@ export interface WsControlMessage {
   type:
     | "session_started"
     | "session_ended"
+    | "session_failed"
     | "transcript"
     | "transcription"
     | "reconnecting"
@@ -204,4 +209,5 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+  retryable?: boolean;
 }
