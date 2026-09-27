@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,17 +9,19 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Plus, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [vacancyLoad, setVacancyLoad] = useState<"loading" | "error" | "ready">("loading");
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
@@ -42,14 +44,26 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies);
+    Promise.all([fetchPortfolio(), sessionsApi.get(Number(sessionId))])
+      .then(([, sRes]) => {
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
+
+  // Loaded on its own so a failure shows up at the picker instead of looking like "no vacancies".
+  const loadVacancies = useCallback(() => {
+    setVacancyLoad("loading");
+    vacanciesApi.listAll()
+      .then((list) => {
+        setVacancies(list);
+        setVacancyLoad("ready");
+      })
+      .catch(() => setVacancyLoad("error"));
+  }, []);
+
+  useEffect(loadVacancies, [loadVacancies]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -232,23 +246,46 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
-          </div>
+          {vacancyLoad === "error" ? (
+            <div role="alert" className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span>Failed to load vacancies, so Fit/Gap can't run yet.</span>
+              <Button variant="outline" size="sm" onClick={loadVacancies}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+              </Button>
+            </div>
+          ) : vacancyLoad === "ready" && vacancies.length === 0 ? (
+            <div className="border rounded-lg p-4 text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p>
+                No vacancies yet. Fit/Gap compares this portfolio against a vacancy's expected skill levels.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => navigate("/vacancies/new", { state: { returnTo: location.pathname } })}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Create a vacancy
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Select value={selectedVacancy} onValueChange={setSelectedVacancy} disabled={vacancyLoad === "loading"}>
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder={vacancyLoad === "loading" ? "Loading vacancies..." : "Choose vacancy..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancies.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.role_title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                Run Fit/Gap Analysis →
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>
