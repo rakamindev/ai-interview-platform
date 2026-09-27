@@ -19,6 +19,43 @@ module Api
         json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
       end
 
+      # POST /api/v1/signup
+      def signup
+        user = User.new(
+          email: params[:email].to_s.strip,
+          password: params[:password].to_s,
+          role: params[:role].to_s
+        )
+
+        unless user.save
+          return json_error(
+            user.errors.full_messages.first || "Signup failed",
+            :unprocessable_entity
+          )
+        end
+
+        scheme = resolve_scheme
+
+        token = JsonWebToken.encode(
+          {
+            user_id: user.id,
+            role: user.role,
+            scheme:
+          }
+        )
+
+        json_response(
+          {
+            token:,
+            user: {
+              id: user.id,
+              email: user.email,
+              role: user.role
+            }
+          }
+        )
+      end
+
       private
 
       def resolve_scheme

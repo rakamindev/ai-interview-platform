@@ -731,34 +731,47 @@ class AudioWebSocketMiddleware
   end
 
   def authenticate_and_load(env, session_id)
-    request = Rack::Request.new(env)
+  request = Rack::Request.new(env)
 
-    session = begin
-      invite_token = request.params['token']
+  session = begin
+    invite_token = request.params['token']
 
-      if invite_token.present?
-        Session.unscoped.find_by(invite_token: invite_token)
-      else
-        auth_header = env['HTTP_AUTHORIZATION']
-        return [nil, 'Missing authorization'] unless auth_header.present?
+    if invite_token.present?
+      Session.unscoped.find_by(invite_token: invite_token)
+    else
+      auth_header = env['HTTP_AUTHORIZATION']
+      return [nil, 'Missing authorization'] unless auth_header.present?
 
-        token = auth_header.split(' ').last
-        payload = JsonWebToken.decode(token)
-        tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
-        return [nil, 'Invalid tenant'] unless tenant_id
+      token = auth_header.split(' ').last
+      payload = JsonWebToken.decode(token)
 
-        Session.unscoped.where(tenant_id: tenant_id).find_by(id: session_id)
-      end
-    rescue StandardError => e
-      return [nil, "Authentication failed: #{e.message}"]
+      tenant_id = Organization.find_by(
+        scheme: payload[:scheme]
+      )&.id
+
+      return [nil, 'Invalid tenant'] unless tenant_id
+
+      Session.unscoped
+        .where(tenant_id: tenant_id)
+        .find_by(id: session_id)
     end
 
-    return [nil, 'Session not found'] unless session
-    return [nil, 'Session has ended'] if session.ended?
-    return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
-
-    [session, nil]
+  rescue StandardError => e
+    return [nil, "Authentication failed: #{e.message}"]
   end
+
+  return [nil, 'Session not found'] unless session
+
+  return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+
+  return [nil, 'Session has ended'] if session.ended?
+
+  if session.invitation_expired?
+    return [nil, 'Invitation expired']
+  end
+
+  [session, nil]
+end
 
   def send_json(ws, **payload)
     ws.send(payload.to_json)

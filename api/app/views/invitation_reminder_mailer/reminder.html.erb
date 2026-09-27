@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interview Invitation Reminder</title>
+  </head>
+
+  <body
+    style="
+      margin: 0;
+      padding: 32px 16px;
+      background-color: #f4f8fb;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #172033;
+    "
+  >
+    <table
+      role="presentation"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      align="center"
+      width="100%"
+      style="max-width: 560px;"
+    >
+      <tr>
+        <td
+          style="
+            padding: 24px 32px;
+            background-color: #008c9b;
+            border-radius: 16px 16px 0 0;
+          "
+        >
+          <div
+            style="
+              color: #ffffff;
+              font-size: 21px;
+              font-weight: bold;
+              letter-spacing: -0.4px;
+            "
+          >
+            Rakamin AI Interview
+          </div>
+
+          <div
+            style="
+              margin-top: 6px;
+              color: #dbf5f6;
+              font-size: 12px;
+            "
+          >
+            INTERVIEW INVITATION REMINDER
+          </div>
+        </td>
+      </tr>
+
+      <tr>
+        <td
+          style="
+            padding: 32px;
+            background-color: #ffffff;
+            border: 1px solid #e4edf2;
+            border-top: 0;
+            border-radius: 0 0 16px 16px;
+          "
+        >
+          <h1
+            style="
+              margin: 0 0 20px;
+              font-size: 24px;
+              line-height: 1.4;
+              color: #172033;
+            "
+          >
+            Your interview is waiting
+          </h1>
+
+          <p
+            style="
+              margin: 0 0 16px;
+              font-size: 15px;
+              line-height: 1.8;
+              color: #475569;
+            "
+          >
+            Hello <%= @candidate_name %>,
+          </p>
+
+          <p
+            style="
+              margin: 0 0 24px;
+              font-size: 15px;
+              line-height: 1.8;
+              color: #475569;
+            "
+          >
+            This is a reminder to complete your
+            <strong><%= @assessment_name %></strong>
+            interview before your invitation expires.
+          </p>
+
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+            style="
+              background-color: #f2f9fa;
+              border: 1px solid #d4edf0;
+              border-radius: 10px;
+            "
+          >
+            <tr>
+              <td style="padding: 20px;">
+                <div
+                  style="
+                    margin-bottom: 8px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: #008c9b;
+                  "
+                >
+                  INVITATION EXPIRES
+                </div>
+
+                <div
+                  style="
+                    font-size: 17px;
+                    font-weight: bold;
+                    color: #172033;
+                  "
+                >
+                  <%= @expires_at.in_time_zone("Asia/Jakarta").strftime("%d %B %Y, %H:%M") %> WIB
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="margin: 28px 0;"
+          >
+            <tr>
+              <td
+                bgcolor="#008c9b"
+                style="border-radius: 9px;"
+              >
+                <a
+                  href="<%= @invite_url %>"
+                  style="
+                    display: inline-block;
+                    padding: 15px 28px;
+                    color: #ffffff;
+                    font-size: 14px;
+                    font-weight: bold;
+                    text-decoration: none;
+                  "
+                >
+                  Start Interview
+                </a>
+              </td>
+            </tr>
+          </table>
+
+          <p
+            style="
+              margin: 0;
+              font-size: 13px;
+              line-height: 1.8;
+              color: #64748b;
+            "
+          >
+            If you have already started your interview,
+            please disregard this reminder.
+          </p>
+
+          <hr
+            style="
+              margin: 28px 0 20px;
+              border: 0;
+              border-top: 1px solid #e4edf2;
+            "
+          />
+
+          <p
+            style="
+              margin: 0;
+              font-size: 12px;
+              line-height: 1.8;
+              color: #94a3b8;
+            "
+          >
+            If the button does not work, copy this link:
+          </p>
+
+          <p
+            style="
+              margin-top: 8px;
+              font-size: 12px;
+              line-height: 1.8;
+              word-break: break-all;
+            "
+          >
+            <a
+              href="<%= @invite_url %>"
+              style="color: #008c9b;"
+            >
+              <%= @invite_url %>
+            </a>
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

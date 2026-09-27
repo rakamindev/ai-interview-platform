@@ -1,3 +1,4 @@
+
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
@@ -7,13 +8,23 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
-      # Health check
-      get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
+      # Signup
+      post 'signup', to: 'authentication#signup'
+
+      # Health check
+      get 'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+
+      # Upload speed test — accepts any payload, discards it,
+      # returns bytes received
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+
+        [
+          200,
+          { 'Content-Type' => 'application/json' },
+          [{ received_bytes: bytes }.to_json]
+        ]
       }
 
       # Assessments
@@ -21,20 +32,31 @@ Rails.application.routes.draw do
         resources :sessions, only: %i[index create]
       end
 
+      # Candidates — across all assessments
+      # GET /api/v1/candidates
+      resources :candidates, only: %i[index]
+
       # Sessions
-      resources :sessions, only: %i[show] do
+      resources :sessions, only: %i[show destroy] do
         member do
           post :end_session
+          post :extend_invitation, path: 'extend'
           get  :coverage
           get  :transcript
+
           get  :portfolio, to: 'portfolios#show'
           post 'portfolio/regenerate', to: 'portfolios#regenerate'
+
+          patch :update_decision, path: 'decision'
         end
       end
 
       # Candidate-facing (no JWT — invite token only)
-      get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
-      post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      get  'sessions/:token/candidate',
+           to: 'sessions#candidate_info'
+
+      post 'sessions/:token/audio_complete',
+           to: 'sessions#audio_complete'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do
@@ -44,8 +66,12 @@ Rails.application.routes.draw do
       end
 
       # B7 Skill Taxonomy (read-only reference data)
-      get  'skill_taxonomies',          to: 'skill_taxonomies#index'
-      get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
+      get 'skill_taxonomies',
+          to: 'skill_taxonomies#index'
+
+      get 'skill_taxonomies/:skill_id',
+          to: 'skill_taxonomies#show',
+          as: :skill_taxonomy
 
       # Vacancies
       resources :vacancies
@@ -55,8 +81,12 @@ Rails.application.routes.draw do
         member do
           post :fitgap
           post :regenerate_fitgap
-          get  'fitgap/:vacancy_id', to: 'portfolios#show_fitgap', as: :fitgap_vacancy
-          get  :export
+
+          get 'fitgap/:vacancy_id',
+              to: 'portfolios#show_fitgap',
+              as: :fitgap_vacancy
+
+          get :export
         end
       end
     end

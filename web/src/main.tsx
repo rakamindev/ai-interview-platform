@@ -4,6 +4,9 @@ import { Provider as JotaiProvider } from "jotai";
 import "./index.css";
 import App from "./App";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { initializeTheme } from "./utils/theme";
+
+initializeTheme();
 
 createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>

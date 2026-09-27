@@ -39,12 +39,19 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  candidate_email?: string | null;
+  expires_at?: string | null;
+  reminder_sent_at?: string | null;
+  invitation_expired?: boolean;
+  hiring_decision?: HiringDecision;
+decision_notes?: string | null;
+decided_at?: string | null;
 }
 
 export interface CoverageSkill {
@@ -129,7 +136,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -164,6 +171,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  invitation_expired: boolean;
 }
 
 export interface PaginationMeta {
@@ -188,15 +196,15 @@ export type InterviewSpeaker = "ai" | "candidate" | null;
 
 export interface WsControlMessage {
   type:
-    | "session_started"
-    | "session_ended"
-    | "transcript"
-    | "transcription"
-    | "reconnecting"
-    | "reconnected"
-    | "speaker_changed"
-    | "preparing_to_end"
-    | "error";
+  | "session_started"
+  | "session_ended"
+  | "transcript"
+  | "transcription"
+  | "reconnecting"
+  | "reconnected"
+  | "speaker_changed"
+  | "preparing_to_end"
+  | "error";
   speaker?: "candidate" | "ai";
   role?: "candidate" | "ai";
   text?: string;
@@ -205,3 +213,8 @@ export interface WsControlMessage {
   message?: string;
   recoverable?: boolean;
 }
+
+export type HiringDecision =
+  | "under_review"
+  | "accepted"
+  | "rejected";

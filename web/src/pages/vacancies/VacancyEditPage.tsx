@@ -1,105 +1,127 @@
-import { useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import LevelRadio from "@/components/assessment/LevelRadio";
-import SkillPicker from "@/components/assessment/SkillPicker";
-import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
-import type { VacancySkill } from "@/types";
 
-interface VacancyFormValues {
-  role_title: string;
-  culture_dimensions: string;
-  competency_expectations: string;
-  skills: Partial<VacancySkill>[];
-}
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { toast } from "react-toastify";
+
+import VacancyForm from "@/components/vacancies/VacancyForm";
+import { vacanciesApi } from "@/services/vacancies";
+import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/utils/apiError";
+
+import type { VacancyFormValues } from "@/components/vacancies/VacancyForm";
+import type { VacancyPayload } from "@/services/vacancies";
 
 export default function VacancyEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
-  });
-  const { fields, append, remove } = useFieldArray({ control, name: "skills" });
+  const [initialValues, setInitialValues] =
+    useState<VacancyFormValues | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    vacanciesApi.get(Number(id)).then((res) => {
-      const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id, reset]);
+    let cancelled = false;
 
-  const onSubmit = async (data: VacancyFormValues) => {
-    setSubmitting(true);
+    const loadVacancy = async () => {
+      setLoading(true);
+      setError(false);
+
+      try {
+        const response = await vacanciesApi.get(Number(id));
+
+        if (cancelled) return;
+
+        const vacancy = response.data.vacancy;
+
+        setInitialValues({
+          role_title: vacancy.role_title,
+          culture_dimensions: vacancy.culture_dimensions ?? "",
+          competency_expectations:
+            vacancy.competency_expectations ?? "",
+          skills: vacancy.skills ?? [],
+        });
+      } catch {
+        if (!cancelled) {
+          setError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadVacancy();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const handleSave = async (data: VacancyPayload) => {
     try {
-      await vacanciesApi.update(Number(id), {
-        role_title: data.role_title,
-        culture_dimensions: data.culture_dimensions,
-        competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
-      });
+      await vacanciesApi.update(Number(id), data);
+
+      toast.success("Vacancy updated successfully.");
+
       navigate("/vacancies");
-    } finally {
-      setSubmitting(false);
+    } catch (error: unknown) {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Failed to update vacancy. Please try again."
+        )
+      );
+
+      throw error;
     }
   };
 
-  if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-[420px] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+
+          <p className="mt-4 text-sm text-slate-500">
+            Loading vacancy...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !initialValues) {
+    return (
+      <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center">
+        <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
+
+        <h1 className="mt-4 text-xl font-bold text-slate-900">
+          Unable to load vacancy
+        </h1>
+
+        <p className="mt-2 text-sm text-slate-500">
+          The vacancy could not be loaded. Please try again.
+        </p>
+
+        <Button asChild className="mt-6 rounded-xl">
+          <Link to="/vacancies">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Vacancies
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
-        <span className="text-sm font-medium">Edit Vacancy</span>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-1.5">
-          <Label>Role title <span className="text-destructive">*</span></Label>
-          <Input {...register("role_title", { required: true })} />
-        </div>
-        <Separator />
-        <div className="space-y-3">
-          <Label>Expected skills</Label>
-          {fields.map((field, index) => (
-            <div key={field.id} className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
-              </div>
-              <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
-            </div>
-          ))}
-          <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add skill
-          </Button>
-        </div>
-        <Separator />
-        <div className="space-y-1.5">
-          <Label>Company culture</Label>
-          <Textarea rows={3} {...register("culture_dimensions")} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Competency expectations</Label>
-          <Textarea rows={3} {...register("competency_expectations")} />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
-        </div>
-      </form>
-
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
-    </div>
+    <VacancyForm
+      mode="edit"
+      initialValues={initialValues}
+      onSave={handleSave}
+    />
   );
 }

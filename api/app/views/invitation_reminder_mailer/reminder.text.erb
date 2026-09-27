@@ -1,0 +1,17 @@
+
+RAKAMIN AI INTERVIEW
+Interview Invitation Reminder
+
+Hello <%= @candidate_name %>,
+
+This is a reminder to complete your <%= @assessment_name %> interview before your invitation expires.
+
+Invitation expires:
+<%= @expires_at.in_time_zone("Asia/Jakarta").strftime("%d %B %Y, %H:%M") %> WIB
+
+Start your interview:
+<%= @invite_url %>
+
+If you have already started your interview, please disregard this reminder.
+
+Rakamin AI Interview

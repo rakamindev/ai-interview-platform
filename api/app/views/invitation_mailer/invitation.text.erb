@@ -1,0 +1,26 @@
+RAKAMIN AI INTERVIEW
+Interview Invitation
+
+Hello <%= @candidate_name %>,
+
+You have been invited to complete the
+<%= @assessment_name %> interview.
+
+Interview duration:
+<%= @time_limit_min %> minutes
+
+Invitation expires:
+<%= @expires_at.in_time_zone("Asia/Jakarta").strftime("%d %B %Y, %H:%M") %> WIB
+
+Start your interview:
+<%= @invite_url %>
+
+Please start your interview before the invitation expires.
+
+Prepare a stable internet connection, a working microphone,
+and a quiet environment.
+
+Once your interview has started, invitation expiration
+will not interrupt an interview already in progress.
+
+Rakamin AI Interview

@@ -46,4 +46,10 @@ Rails.application.configure do
 
   # Use a cache store that supports distributed caching.
   config.cache_store = :redis_cache_store, { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
+
+    # Send production emails through Gmail API over HTTPS.
+  # SMTP is not required.
+  config.action_mailer.delivery_method = :gmail_api
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.raise_delivery_errors = true
 end
