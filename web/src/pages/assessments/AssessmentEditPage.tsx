@@ -1,3 +1,6 @@
+import { notify } from "@/components/ui/toast";
+import { useBreadcrumbLabel } from "@/components/layout/Breadcrumbs";
+import { PageHeader, ErrorState } from "@/components/ui/page";
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
@@ -32,6 +35,9 @@ import type { AssessmentFormValues } from "./AssessmentNewPage";
 export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [recordTitle, setRecordTitle] = useState("");
+  useBreadcrumbLabel(`assessments:${id}`, recordTitle);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -49,9 +55,10 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
+      setRecordTitle(a.name);
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [id, reset]);
 
@@ -79,16 +86,19 @@ export default function AssessmentEditPage() {
         time_limit_min: data.time_limit_min,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
+      notify("Assessment saved.");
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
+      notify("Could not save. Your changes are still here; please try again.", "error");
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
+  if (loadError) return <ErrorState message="Could not load the saved settings." onRetry={() => window.location.reload()} />;
+
+  if (loading) { return (
       <div className="max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
@@ -99,29 +109,24 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Edit Assessment</span>
-      </div>
+    <div className="form-page">
+      <Link to={`/assessments/${id}/invite`} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Back to assessment</Link>
 
+      <PageHeader title={recordTitle || "Edit assessment"} description="Edit assessment settings and expected skill levels for this interview." />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
+          <Input id="name" aria-invalid={!!errors.name} aria-describedby={errors.name ? "name-error" : undefined} {...register("name", { required: "Role title is required" })} />
+          {errors.name && <p id="name-error" role="alert" className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Session time limit <span className="text-destructive">*</span></Label>
+          <Label htmlFor="time-limit">Session time limit <span className="text-destructive">*</span></Label>
           <Select
             value={String(form.watch("time_limit_min"))}
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="time-limit" className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
@@ -133,7 +138,10 @@ export default function AssessmentEditPage() {
         <Separator />
 
         <div className="space-y-3">
-          <Label>Skills to assess</Label>
+          <div>
+            <h2 className="text-base font-semibold">Skills to assess</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Set the expected level and review the evidence anchors for each skill.</p>
+          </div>
           {fields.length === 0 ? (
             <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
               No skills added yet.
@@ -149,7 +157,7 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
             </Button>
@@ -159,10 +167,9 @@ export default function AssessmentEditPage() {
           </div>
         </div>
 
-        <Separator />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2 border-t pt-5">
           <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

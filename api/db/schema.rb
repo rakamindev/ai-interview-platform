@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -89,9 +89,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "narrative_source", limit: 30, default: "ai", null: false
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.check_constraint "narrative_source::text = ANY (ARRAY['ai'::character varying, 'rule_based_fallback'::character varying]::text[])", name: "chk_fit_gap_reports_narrative_source"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -143,10 +145,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.string "hiring_decision", limit: 20
+    t.text "decision_notes"
+    t.bigint "decided_by"
+    t.datetime "decided_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
+    t.index ["decided_by"], name: "index_sessions_on_decided_by"
+    t.index ["hiring_decision"], name: "index_sessions_on_hiring_decision"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
     t.index ["tenant_id", "status"], name: "idx_sessions_tenant_status"
+    t.check_constraint "hiring_decision IS NULL OR (hiring_decision::text = ANY (ARRAY['advance'::character varying, 'hold'::character varying, 'reject'::character varying]::text[]))", name: "chk_sessions_hiring_decision"
   end
 
   create_table "skill_taxonomies", force: :cascade do |t|

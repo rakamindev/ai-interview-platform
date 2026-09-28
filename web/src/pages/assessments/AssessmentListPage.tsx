@@ -1,102 +1,108 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
+import { Clock, ArrowUpRight } from "lucide-react";
+import ResourceList from "@/components/ui/resource-list";
+import { Badge } from "@/components/ui/badge";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
 
-function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
-  if (!session) return null;
-
-  if (session.status === "active")
-    return (
-      <span className="flex items-center gap-1 text-xs text-primary">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        Live now
-      </span>
-    );
-
-  if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
-
+function status(a: Assessment) {
+  const session = a.latest_session;
+  if (!session) return "No interviews";
+  if (String(session.status) === "failed") return "Failed";
+  if (session.status === "active") return "Live now";
   if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
-
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+    return session.end_reason === "error" ? "Failed" : "Completed";
+  return "Awaiting candidate";
 }
-
+const load = async (page: number) => {
+  const { data } = await assessmentsApi.list(page);
+  return { records: data.assessments, meta: data.meta };
+};
 export default function AssessmentListPage() {
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    assessmentsApi
-      .list()
-      .then((res) => setAssessments(res.data.assessments))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Assessment
-        </Button>
-      </div>
-
-      {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load assessments. Please refresh the page.
-        </div>
-      )}
-
-      {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
-        </div>
-      ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {assessments.map((a) => (
-            <Card
-              key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/assessments/${a.id}/invite`)}
+    <ResourceList<Assessment>
+      title="Assessments"
+      singular="assessment"
+      description="Manage interview assessments, invite candidates, and follow their progress."
+      createHref="/assessments/new"
+      load={load}
+      name={(a) => a.name}
+      status={status}
+      statuses={[
+        "No interviews",
+        "Awaiting candidate",
+        "Live now",
+        "Completed",
+        "Failed",
+      ]}
+      columns={[
+        {
+          label: "Assessment",
+          render: (a) => (
+            <Link
+              className="block min-w-48 font-medium hover:text-primary hover:underline"
+              to={`/assessments/${a.id}/invite`}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {a.time_limit_min} min
-                    </span>
-                    {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+              {a.name}
+            </Link>
+          ),
+        },
+        {
+          label: "Duration",
+          render: (a) => (
+            <span className="flex items-center gap-1.5 whitespace-nowrap text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              {a.time_limit_min} min
+            </span>
+          ),
+        },
+        {
+          label: "Latest interview",
+          render: (a) => (
+            <Badge
+              className="whitespace-nowrap"
+              variant={
+                status(a) === "Live now"
+                  ? "info"
+                  : status(a) === "Completed"
+                    ? "success"
+                    : status(a) === "Failed"
+                      ? "danger"
+                      : "neutral"
+              }
+            >
+              {status(a)}
+            </Badge>
+          ),
+        },
+        {
+          label: "Created",
+          render: (a) => (
+            <span className="whitespace-nowrap text-xs text-muted-foreground">
+              {a.created_at
+                ? new Date(a.created_at).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "—"}
+            </span>
+          ),
+        },
+        {
+          label: "Actions",
+          render: (a) => (
+            <Link
+              aria-label={`View candidates for ${a.name}`}
+              className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium hover:text-primary"
+              to={`/assessments/${a.id}/invite`}
+            >
+              View candidates
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          ),
+        },
+      ]}
+    />
   );
 }

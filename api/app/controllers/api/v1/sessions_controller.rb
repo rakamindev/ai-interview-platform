@@ -6,12 +6,12 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript update_decision]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        sessions = assessment.sessions.includes(:portfolio).order(created_at: :desc)
 
         json_response(sessions: sessions.map(&method(:session_json)))
       rescue ActiveRecord::RecordNotFound
@@ -112,6 +112,37 @@ module Api
         )
       end
 
+      # PATCH /api/v1/sessions/:id/decision
+      # Records the assessor's decision. AI output supports this decision but
+      # never sets it automatically.
+      def update_decision
+        unless @session.ended? && @session.portfolio&.complete?
+          return json_error("A decision can only be recorded after the interview report is ready", :unprocessable_entity)
+        end
+
+        decision = params.dig(:decision, :value)
+        notes = params.dig(:decision, :notes).to_s.strip
+
+        unless Session::HIRING_DECISIONS.include?(decision)
+          return json_error("Decision must be advance, hold, or reject", :unprocessable_entity)
+        end
+
+        if notes.blank?
+          return json_error("Decision rationale is required", :unprocessable_entity)
+        end
+
+        if @session.update(
+          hiring_decision: decision,
+          decision_notes:  notes,
+          decided_by:      current_user.id,
+          decided_at:      Time.current
+        )
+          json_response(session: session_json(@session))
+        else
+          json_error(@session.errors.full_messages.first, :unprocessable_entity)
+        end
+      end
+
       # POST /sessions/:token/audio_complete  — no JWT, invite token in URL
       # Called by the frontend when the audio queue drains after a preparing_to_end signal.
       # Ends the session if all coverage is complete; idempotent if already ended.
@@ -175,6 +206,11 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          portfolio_status: session.portfolio&.generation_status,
+          hiring_decision:  session.hiring_decision,
+          decision_notes:   session.decision_notes,
+          decided_by:       session.decided_by,
+          decided_at:       session.decided_at,
           created_at:       session.created_at
         }
       end

@@ -35,7 +35,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       ref={setNodeRef}
       style={style}
       className={cn(
-        "border rounded-lg bg-white",
+        "border rounded-lg bg-card",
         isDragging && "opacity-50 shadow-lg"
       )}
     >
@@ -43,9 +43,10 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       <div className="flex items-center gap-2 px-3 py-2.5">
         <button
           type="button"
-          className="cursor-grab text-muted-foreground hover:text-foreground touch-none"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md cursor-grab text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing transition-colors duration-150 touch-none"
           {...attributes}
           {...listeners}
+          aria-label={`Reorder ${skillLabel}`}
         >
           <GripVertical className="h-4 w-4" />
         </button>
@@ -62,8 +63,8 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
         <button
           type="button"
           onClick={onRemove}
-          className="text-muted-foreground hover:text-destructive transition-colors"
-          aria-label="Remove skill"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/5 hover:text-destructive transition-colors duration-150"
+          aria-label={`Remove ${skillLabel}`}
         >
           <X className="h-4 w-4" />
         </button>
@@ -79,6 +80,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             <button
               type="button"
               onClick={() => setAnchorsOpen((o) => !o)}
+              aria-expanded={anchorsOpen}
               className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
               {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}

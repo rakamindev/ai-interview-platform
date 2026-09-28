@@ -14,8 +14,8 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
 
   if (label === "HIGH") {
     return (
-      <span className="flex items-center gap-1 text-xs text-green-600">
-        <span className="h-2 w-2 rounded-full bg-green-500" />
+      <span className="flex items-center gap-1 text-xs text-success">
+        <span className="h-2 w-2 rounded-full bg-success" />
         Confidence: HIGH
       </span>
     );
@@ -23,7 +23,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
   if (label === "MEDIUM") {
     return (
       <span className="flex items-center gap-1 text-xs">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
+        <span className="h-2 w-2 rounded-full bg-warning" />
         Confidence: MEDIUM
       </span>
     );

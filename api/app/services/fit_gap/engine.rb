@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.6-flash'),
         timeout: 30
       )
     end
@@ -27,6 +27,7 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
+        narrative_source:  narratives[:source],
         generated_at:      Time.current
       )
 
@@ -101,10 +102,18 @@ module FitGap
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        {
+          culture: data['culture_narrative'],
+          overall: data['overall_narrative'],
+          source:  'ai'
+        }
       rescue => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        {
+          culture: nil,
+          overall: generate_fallback_narrative(skill_comparisons),
+          source:  'rule_based_fallback'
+        }
       end
     end
 

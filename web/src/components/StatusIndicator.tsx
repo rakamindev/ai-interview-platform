@@ -18,8 +18,8 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ state }) => {
     if (state === ProctoringState.PASSED) {
         return (
             <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="text-green-600 font-medium">Passed</span>
+                <CheckCircle className="w-5 h-5 text-success" />
+                <span className="text-success font-medium">Passed</span>
             </div>
         );
     }

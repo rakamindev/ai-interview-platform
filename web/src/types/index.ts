@@ -39,13 +39,20 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  portfolio_status?: "pending" | "generating" | "complete" | "failed" | null;
+  hiring_decision?: HiringDecision | null;
+  decision_notes?: string | null;
+  decided_by?: number | null;
+  decided_at?: string | null;
   created_at?: string;
 }
+
+export type HiringDecision = "advance" | "hold" | "reject";
 
 export interface CoverageSkill {
   id: number;
@@ -129,7 +136,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -141,8 +148,9 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  narrative_source: "ai" | "rule_based_fallback";
   generated_at: string;
 }
 

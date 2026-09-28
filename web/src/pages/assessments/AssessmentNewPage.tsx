@@ -1,3 +1,5 @@
+import { notify } from "@/components/ui/toast";
+import { PageHeader } from "@/components/ui/page";
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
@@ -98,8 +100,10 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
+      notify("Assessment created.");
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
+      notify("Could not save. Your changes are still here; please try again.", "error");
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
     } finally {
       setSubmitting(false);
@@ -107,10 +111,10 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="form-page">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" aria-label="Back to assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -118,6 +122,7 @@ export default function AssessmentNewPage() {
         <span className="text-sm font-medium">New Assessment</span>
       </div>
 
+      <PageHeader title="New assessment" description="Define the interview format and the skills you want to assess." />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Role title */}
         <div className="space-y-1.5">
@@ -125,25 +130,25 @@ export default function AssessmentNewPage() {
             Role title <span className="text-destructive">*</span>
           </Label>
           <Input
-            id="name"
+            id="name" aria-invalid={!!errors.name} aria-describedby={errors.name ? "name-error" : undefined}
             placeholder="Senior Frontend Engineer"
             {...register("name", { required: "Role title is required" })}
           />
           {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+            <p id="name-error" role="alert" className="text-xs text-destructive">{errors.name.message}</p>
           )}
         </div>
 
         {/* Time limit */}
         <div className="space-y-1.5">
-          <Label>
+          <Label htmlFor="time-limit">
             Session time limit <span className="text-destructive">*</span>
           </Label>
           <Select
             defaultValue="45"
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger id="time-limit" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -158,12 +163,12 @@ export default function AssessmentNewPage() {
 
         {/* Language */}
         <div className="space-y-1.5">
-          <Label>Interview language</Label>
+          <Label htmlFor="interview-language">Interview language</Label>
           <Select
             defaultValue="en"
             onValueChange={(v) => setValue("language", v as "en" | "id")}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger id="interview-language" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -209,7 +214,7 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
@@ -231,14 +236,12 @@ export default function AssessmentNewPage() {
           </div>
         </div>
 
-        <Separator />
-
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p role="alert" className="text-sm text-destructive">{error}</p>
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2 border-t pt-5">
           <Button
             type="button"
             variant="outline"

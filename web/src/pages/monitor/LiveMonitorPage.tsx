@@ -1,3 +1,6 @@
+import { notify } from "@/components/ui/toast";
+import { useBreadcrumbLabel } from "@/components/layout/Breadcrumbs";
+import { ErrorState } from "@/components/ui/page";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -54,7 +57,9 @@ export default function LiveMonitorPage() {
   const navigate = useNavigate();
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [assessmentName, setAssessmentName] = useState<string>("");
+  useBreadcrumbLabel(`assessments:${id}`, assessmentName);
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
@@ -91,6 +96,7 @@ export default function LiveMonitorPage() {
           lastTurnRef.current = turns[turns.length - 1].turn_number;
         }
       })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -111,25 +117,27 @@ export default function LiveMonitorPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    if (!sessionActive || loading) return;
+    if (!sessionActive || loading || loadError) return;
     pollTimerRef.current = setInterval(fetchNewTurns, 3000);
     return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
-  }, [sessionActive, loading, fetchNewTurns]);
+  }, [sessionActive, loading, loadError, fetchNewTurns]);
 
   const handleEndSession = async () => {
     setEnding(true);
     try {
       await sessionsApi.endSession(Number(sessionId));
+      notify("Interview ended.");
       navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`);
     } catch {
       setEnding(false);
       setEndError(true);
+      notify("Could not end the interview. Please try again.", "error");
     }
   };
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
@@ -137,19 +145,21 @@ export default function LiveMonitorPage() {
     );
   }
 
+  if (loadError) return <ErrorState message="Could not load this interview." onRetry={() => window.location.reload()} />;
+
   const configuredSkills = coverageMap?.skills ?? [];
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="detail-page">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link to={`/assessments/${id}/invite`} aria-label="Back to previous page" className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Live Monitor</h1>
           </div>
           {assessmentName && (
             <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
@@ -160,7 +170,7 @@ export default function LiveMonitorPage() {
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
           <span className={cn(
             "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
+            isConnected ? "text-success" : "text-muted-foreground"
           )}>
             <Radio className="h-3 w-3" />
             {isConnected ? "Live" : "Reconnecting..."}
@@ -171,7 +181,7 @@ export default function LiveMonitorPage() {
       {/* Session ended banner */}
       {sessionEnded && (
         <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+          <CheckCircle className="h-4 w-4 text-success shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>
             {sessionEndReason && (
@@ -237,7 +247,7 @@ export default function LiveMonitorPage() {
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
+                        <Zap className="h-3 w-3 text-warning" />
                         {skill.skill_label}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -249,7 +259,7 @@ export default function LiveMonitorPage() {
                     </div>
                     <Progress
                       value={COVERAGE_STATE_WIDTH[skill.state]}
-                      indicatorClassName="bg-amber-400"
+                      indicatorClassName="bg-warning"
                       className="h-2"
                     />
                     {skill.last_signal && (

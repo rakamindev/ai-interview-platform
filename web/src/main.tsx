@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/toast";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { Provider as JotaiProvider } from "jotai";
@@ -10,6 +11,7 @@ createRoot(document.getElementById("root")!).render(
         <JotaiProvider>
             <BrowserRouter>
                 <App />
+                <Toaster />
             </BrowserRouter>
         </JotaiProvider>
     </ErrorBoundary>

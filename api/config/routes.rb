@@ -27,6 +27,7 @@ Rails.application.routes.draw do
           post :end_session
           get  :coverage
           get  :transcript
+          patch :decision, to: 'sessions#update_decision'
           get  :portfolio, to: 'portfolios#show'
           post 'portfolio/regenerate', to: 'portfolios#regenerate'
         end

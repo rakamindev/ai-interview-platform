@@ -7,15 +7,15 @@ interface ConnectionStatusProps {
 export default function ConnectionStatus({ state }: ConnectionStatusProps) {
   if (state === "connected") {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-green-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+      <div className="flex items-center gap-1.5 text-xs text-success">
+        <span className="h-1.5 w-1.5 rounded-full bg-success" />
         Connected
       </div>
     );
   }
   if (state === "reconnecting") {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-amber-600">
+      <div className="flex items-center gap-1.5 text-xs text-warning">
         <Loader2 className="h-3 w-3 animate-spin" />
         Reconnecting...
       </div>
