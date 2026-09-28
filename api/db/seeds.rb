@@ -369,18 +369,455 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
-# ── Print usage instructions ──────────────────────────────────────────────────
+# ── Users ─────────────────────────────────────────────────────────────────────
+puts "== Seeding Users =="
+
+admin_user = User.find_or_initialize_by(email: "admin@test-corp.local")
+if admin_user.new_record?
+  admin_user.assign_attributes(password: "password123", role: "admin")
+  admin_user.save!
+  puts "  Created admin user: id=#{admin_user.id} email=#{admin_user.email}"
+else
+  puts "  Admin user already exists: id=#{admin_user.id} (skipped)"
+end
+
+candidate_user = User.find_or_initialize_by(email: "candidate@test-corp.local")
+if candidate_user.new_record?
+  candidate_user.assign_attributes(password: "password123", role: "user")
+  candidate_user.save!
+  puts "  Created candidate user: id=#{candidate_user.id} email=#{candidate_user.email}"
+else
+  puts "  Candidate user already exists: id=#{candidate_user.id} (skipped)"
+end
 
 org = ActiveRecord::Base.connection.select_one(
   "SELECT id, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
 )
+org_id = org['id'].to_i
+
+# ── Assessment ────────────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Assessment =="
+
+assessment = Assessment.find_or_initialize_by(
+  tenant_id:  org_id,
+  name:       "Senior Frontend Engineer Interview"
+)
+
+if assessment.new_record?
+  assessment.assign_attributes(
+    created_by:    admin_user.id,
+    time_limit_min: 60,
+    language:      "en",
+    system_prompt: <<~PROMPT.strip
+      You are an expert technical interviewer assessing a candidate for a Senior Frontend Engineer role.
+      Be thorough but conversational. Probe for depth on React, TypeScript, and system design.
+      Cover all required skills before ending the session.
+    PROMPT
+  )
+  assessment.save!
+  puts "  Created assessment: id=#{assessment.id} name=#{assessment.name}"
+else
+  puts "  Assessment already exists: id=#{assessment.id} (skipped)"
+end
+
+# ── Assessment Skills ─────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Assessment Skills =="
+
+ASSESSMENT_SKILL_DEFS = [
+  { skill_id: "SK-ENG-001", skill_label: "React / Frontend Development Core", expected_level: 4, display_order: 1 },
+  { skill_id: "SK-ENG-009", skill_label: "TypeScript & Type Systems",          expected_level: 3, display_order: 2 },
+  { skill_id: "SK-ENG-003", skill_label: "System Design & Architecture",       expected_level: 3, display_order: 3 },
+  { skill_id: "SK-ENG-006", skill_label: "Testing & Quality Assurance",        expected_level: 3, display_order: 4 },
+  { skill_id: "SK-SOFT-001", skill_label: "Communication",                     expected_level: 3, display_order: 5 },
+].freeze
+
+ASSESSMENT_SKILL_DEFS.each do |defn|
+  taxonomy = SkillTaxonomy.find_by(skill_id: defn[:skill_id])
+  unless taxonomy
+    puts "  WARN: taxonomy #{defn[:skill_id]} not found, skipping"
+    next
+  end
+
+  skill = AssessmentSkill.find_or_initialize_by(
+    assessment_id: assessment.id,
+    skill_id:      defn[:skill_id]
+  )
+
+  if skill.new_record?
+    skill.assign_attributes(
+      skill_label:    defn[:skill_label],
+      is_custom:      false,
+      expected_level: defn[:expected_level],
+      display_order:  defn[:display_order],
+      scope_include:  taxonomy.scope_include,
+      scope_exclude:  taxonomy.scope_exclude,
+      l1_anchor:      taxonomy.l1_anchor,
+      l2_anchor:      taxonomy.l2_anchor,
+      l3_anchor:      taxonomy.l3_anchor,
+      l4_anchor:      taxonomy.l4_anchor,
+      l5_anchor:      taxonomy.l5_anchor
+    )
+    skill.save!
+    puts "  Created assessment skill: #{defn[:skill_id]} — #{defn[:skill_label]}"
+  else
+    puts "  Assessment skill already exists: #{defn[:skill_id]} (skipped)"
+  end
+end
+
+# ── Session ───────────────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Session =="
+
+session = Session.find_or_initialize_by(
+  tenant_id:     org_id,
+  assessment_id: assessment.id,
+  candidate_id:  candidate_user.id
+)
+
+if session.new_record?
+  session.assign_attributes(
+    candidate_name: "Budi Santoso",
+    status:         "ended",
+    end_reason:     "all_covered",
+    started_at:     2.hours.ago,
+    ended_at:       1.hour.ago,
+    duration_seconds: 3540
+  )
+  session.save!
+  puts "  Created session: id=#{session.id} candidate=#{session.candidate_name}"
+else
+  puts "  Session already exists: id=#{session.id} (skipped)"
+end
+
+# ── Transcript Turns ──────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Transcript Turns =="
+
+TRANSCRIPT = [
+  { turn: 1, speaker: "ai",        text: "Hi Budi! Welcome to the interview for the Senior Frontend Engineer position. Let's start — can you walk me through your experience with React and how you've used it in production?" },
+  { turn: 2, speaker: "candidate", text: "Sure! I've been working with React for about 5 years. Most recently, I led the frontend for a large e-commerce platform where we migrated from a class-based architecture to hooks, implemented code splitting to reduce our initial bundle size by 40%, and adopted Redux Toolkit for state management across 20+ feature teams." },
+  { turn: 3, speaker: "ai",        text: "That's impressive. Can you tell me more about the code splitting strategy you used? How did you decide what to split?" },
+  { turn: 4, speaker: "candidate", text: "We used React.lazy and Suspense for route-level splitting as a baseline. Then we profiled the bundle with webpack-bundle-analyzer and identified heavy vendor libraries — like a rich text editor — that were only needed on specific pages, so we lazy-loaded those too. We also introduced import() with prefetch hints for pages users were likely to visit next, which improved perceived performance significantly." },
+  { turn: 5, speaker: "ai",        text: "Great answer. Let's shift to TypeScript. How would you type a generic API response wrapper that can hold any data type but always includes a status code and optional error message?" },
+  { turn: 6, speaker: "candidate", text: "I'd use a generic interface like: interface ApiResponse<T> { status: number; data?: T; error?: string; }. This keeps it flexible — you can narrow T at the call site, like ApiResponse<User[]>, and TypeScript will enforce the shape throughout. I'd also add a type guard like isSuccess to help narrow the union at runtime." },
+  { turn: 7, speaker: "ai",        text: "Excellent. Last area — communication. Can you describe a situation where you had to explain a complex technical decision to a non-technical stakeholder?" },
+  { turn: 8, speaker: "candidate", text: "Yes, we decided to delay a feature to pay down significant technical debt in our data fetching layer. I prepared a one-pager comparing two options — quick fix vs. proper refactor — with projected timelines and risk of each. I focused on business outcomes: the quick fix would likely cause 2-3 more production incidents per quarter, each costing roughly 4 hours of eng time. The stakeholder approved the refactor after that." },
+].freeze
+
+TRANSCRIPT.each do |t|
+  turn = TranscriptTurn.find_or_initialize_by(session_id: session.id, turn_number: t[:turn])
+  if turn.new_record?
+    turn.assign_attributes(speaker: t[:speaker], text: t[:text])
+    turn.save!
+    puts "  Created turn ##{t[:turn]} (#{t[:speaker]})"
+  else
+    puts "  Turn ##{t[:turn]} already exists (skipped)"
+  end
+end
+
+# ── Coverage Maps ─────────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Coverage Maps =="
+
+COVERAGE_MAP_DEFS = [
+  { skill_id: "SK-ENG-001", skill_label: "React / Frontend Development Core", state: "covered",   probe_count: 4, last_signal: "Candidate demonstrated advanced knowledge of hooks, performance optimization, and code splitting." },
+  { skill_id: "SK-ENG-009", skill_label: "TypeScript & Type Systems",          state: "covered",   probe_count: 2, last_signal: "Candidate correctly typed a generic API wrapper with type guards." },
+  { skill_id: "SK-ENG-003", skill_label: "System Design & Architecture",       state: "partial",   probe_count: 1, last_signal: "Mentioned bundle optimization but didn't discuss broader system design." },
+  { skill_id: "SK-ENG-006", skill_label: "Testing & Quality Assurance",        state: "not_yet",   probe_count: 0, last_signal: nil },
+  { skill_id: "SK-SOFT-001", skill_label: "Communication",                     state: "covered",   probe_count: 2, last_signal: "Candidate clearly explained technical trade-offs to a non-technical stakeholder using business impact framing." },
+].freeze
+
+COVERAGE_MAP_DEFS.each do |defn|
+  cm = CoverageMap.find_or_initialize_by(session_id: session.id, skill_label: defn[:skill_label])
+  if cm.new_record?
+    cm.assign_attributes(
+      skill_id:    defn[:skill_id],
+      state:       defn[:state],
+      probe_count: defn[:probe_count],
+      last_signal: defn[:last_signal]
+    )
+    cm.save!
+    puts "  Created coverage map: #{defn[:skill_label]} → #{defn[:state]}"
+  else
+    puts "  Coverage map already exists: #{defn[:skill_label]} (skipped)"
+  end
+end
+
+# ── Vacancy ───────────────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Vacancy =="
+
+vacancy = Vacancy.find_or_initialize_by(
+  tenant_id:  org_id,
+  role_title: "Senior Frontend Engineer"
+)
+
+if vacancy.new_record?
+  vacancy.assign_attributes(
+    created_by: admin_user.id,
+    culture_dimensions: <<~TEXT.strip,
+      We value engineers who take strong ownership of their work, communicate proactively with stakeholders,
+      and care deeply about end-user experience. We expect candidates to balance speed with quality,
+      and to bring a growth mindset to every challenge.
+    TEXT
+    competency_expectations: <<~TEXT.strip
+      The ideal candidate has 4+ years of experience with React in production, is comfortable with TypeScript
+      at an advanced level, and can design scalable frontend architectures. Strong communication skills are
+      essential as this role works closely with product managers and designers.
+    TEXT
+  )
+  vacancy.save!
+  puts "  Created vacancy: id=#{vacancy.id} role=#{vacancy.role_title}"
+else
+  puts "  Vacancy already exists: id=#{vacancy.id} (skipped)"
+end
+
+# ── Vacancy Skills ────────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Vacancy Skills =="
+
+VACANCY_SKILL_DEFS = [
+  { skill_id: "SK-ENG-001", skill_label: "React / Frontend Development Core", expected_level: 4 },
+  { skill_id: "SK-ENG-009", skill_label: "TypeScript & Type Systems",          expected_level: 4 },
+  { skill_id: "SK-ENG-003", skill_label: "System Design & Architecture",       expected_level: 3 },
+  { skill_id: "SK-ENG-006", skill_label: "Testing & Quality Assurance",        expected_level: 3 },
+  { skill_id: "SK-SOFT-001", skill_label: "Communication",                     expected_level: 3 },
+].freeze
+
+VACANCY_SKILL_DEFS.each do |defn|
+  vs = VacancySkill.find_or_initialize_by(vacancy_id: vacancy.id, skill_id: defn[:skill_id])
+  if vs.new_record?
+    vs.assign_attributes(skill_label: defn[:skill_label], expected_level: defn[:expected_level])
+    vs.save!
+    puts "  Created vacancy skill: #{defn[:skill_id]} — #{defn[:skill_label]} (L#{defn[:expected_level]})"
+  else
+    puts "  Vacancy skill already exists: #{defn[:skill_id]} (skipped)"
+  end
+end
+
+# ── Portfolio ─────────────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Portfolio =="
+
+portfolio = Portfolio.find_or_initialize_by(session_id: session.id)
+
+if portfolio.new_record?
+  portfolio.assign_attributes(
+    candidate_id:      candidate_user.id,
+    generation_status: "complete",
+    generated_at:      45.minutes.ago
+  )
+  portfolio.save!
+  puts "  Created portfolio: id=#{portfolio.id} status=#{portfolio.generation_status}"
+else
+  puts "  Portfolio already exists: id=#{portfolio.id} (skipped)"
+end
+
+# ── Portfolio Skills ──────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Portfolio Skills =="
+
+PORTFOLIO_SKILL_DEFS = [
+  {
+    skill_id:          "SK-ENG-001",
+    skill_label:       "React / Frontend Development Core",
+    is_discovered:     false,
+    ai_level:          4,
+    ai_confidence:     "high",
+    evidence:          [
+      "Led migration from class components to hooks across 20+ feature teams.",
+      "Reduced initial bundle by 40% using React.lazy, Suspense, and route-level code splitting.",
+      "Implemented Redux Toolkit for shared state in a large e-commerce platform."
+    ],
+    competency_summary: "Candidate demonstrates strong L4 competency in React. They have led architectural migrations at scale, applied advanced performance optimization techniques, and managed complex state across large teams. Suitable for senior/lead roles."
+  },
+  {
+    skill_id:          "SK-ENG-009",
+    skill_label:       "TypeScript & Type Systems",
+    is_discovered:     false,
+    ai_level:          3,
+    ai_confidence:     "high",
+    evidence:          [
+      "Correctly designed a generic ApiResponse<T> wrapper with optional fields.",
+      "Mentioned adding type guards (isSuccess) to narrow union types at runtime."
+    ],
+    competency_summary: "Candidate shows solid L3 TypeScript skills. They can design generic, reusable type abstractions and apply type narrowing in practice. Has not yet demonstrated L4 behaviors such as defining typing standards or leading TS migrations."
+  },
+  {
+    skill_id:          "SK-ENG-003",
+    skill_label:       "System Design & Architecture",
+    is_discovered:     false,
+    ai_level:          2,
+    ai_confidence:     "medium",
+    evidence:          [
+      "Described bundle architecture decisions (code splitting, prefetch hints).",
+      "Did not discuss broader system boundaries, inter-service communication, or scalability trade-offs."
+    ],
+    competency_summary: "Evidence is limited to frontend build optimization. Candidate did not demonstrate full L3 system design (multi-service design, failure modes, scalability). Assessed at L2 with medium confidence — more probing needed."
+  },
+  {
+    skill_id:          "SK-ENG-006",
+    skill_label:       "Testing & Quality Assurance",
+    is_discovered:     false,
+    ai_level:          2,
+    ai_confidence:     "low",
+    evidence:          [],
+    competency_summary: "No explicit evidence gathered for this skill. Session ended before testing could be probed. Defaulting to L2 based on seniority inference only — confidence is low. Recommend assessor override if additional evidence is available."
+  },
+  {
+    skill_id:          "SK-SOFT-001",
+    skill_label:       "Communication",
+    is_discovered:     false,
+    ai_level:          3,
+    ai_confidence:     "high",
+    evidence:          [
+      "Prepared a one-pager comparing technical options framed around business outcomes.",
+      "Convinced a non-technical stakeholder to approve a technical debt refactor by quantifying production incident costs."
+    ],
+    competency_summary: "Candidate demonstrates clear L3 communication. They proactively framed a technical decision using business language, adapted their message to a non-technical audience, and drove stakeholder alignment on a difficult trade-off."
+  },
+  {
+    skill_id:          "SK-ENG-007",
+    skill_label:       "DevOps & CI/CD",
+    is_discovered:     true,
+    ai_level:          2,
+    ai_confidence:     "medium",
+    evidence:          [
+      "Mentioned deploying to staging and production as part of their migration work.",
+      "Implied familiarity with webpack build pipeline configuration."
+    ],
+    competency_summary: "Candidate incidentally revealed basic DevOps familiarity. Not a required skill for this assessment, but may be additive for the role."
+  },
+].freeze
+
+PORTFOLIO_SKILL_DEFS.each do |defn|
+  ps = PortfolioSkill.find_or_initialize_by(
+    portfolio_id: portfolio.id,
+    skill_label:  defn[:skill_label]
+  )
+
+  if ps.new_record?
+    ps.assign_attributes(
+      skill_id:           defn[:skill_id],
+      is_discovered:      defn[:is_discovered],
+      ai_level:           defn[:ai_level],
+      ai_confidence:      defn[:ai_confidence],
+      evidence:           defn[:evidence],
+      competency_summary: defn[:competency_summary]
+    )
+    ps.save!
+    puts "  Created portfolio skill: #{defn[:skill_label]} L#{defn[:ai_level]} (#{defn[:ai_confidence]})#{defn[:is_discovered] ? ' [discovered]' : ''}"
+  else
+    puts "  Portfolio skill already exists: #{defn[:skill_label]} (skipped)"
+  end
+end
+
+# ── Fit Gap Report ────────────────────────────────────────────────────────────
+puts ""
+puts "== Seeding Fit Gap Report =="
+
+fit_gap = FitGapReport.find_or_initialize_by(
+  portfolio_id: portfolio.id,
+  vacancy_id:   vacancy.id
+)
+
+if fit_gap.new_record?
+  fit_gap.assign_attributes(
+    generated_at: 30.minutes.ago,
+    skill_comparisons: [
+      {
+        skill_id:       "SK-ENG-001",
+        skill_label:    "React / Frontend Development Core",
+        expected_level: 4,
+        candidate_level: 4,
+        fit_result:     "match",
+        summary:        "Candidate fully meets the L4 expectation. Led React migrations at scale, owns performance optimization strategies, and has demonstrated team-level impact."
+      },
+      {
+        skill_id:       "SK-ENG-009",
+        skill_label:    "TypeScript & Type Systems",
+        expected_level: 4,
+        candidate_level: 3,
+        fit_result:     "gap",
+        summary:        "Candidate is one level below expectation. Solid L3 skills (generics, type guards) but has not yet demonstrated L4 behaviors like defining team-wide standards or leading TS migrations."
+      },
+      {
+        skill_id:       "SK-ENG-003",
+        skill_label:    "System Design & Architecture",
+        expected_level: 3,
+        candidate_level: 2,
+        fit_result:     "gap",
+        summary:        "Evidence is limited to frontend build decisions. Multi-service system design, failure modes, and scalability trade-offs were not demonstrated. Assessed one level below expectation with medium confidence."
+      },
+      {
+        skill_id:       "SK-ENG-006",
+        skill_label:    "Testing & Quality Assurance",
+        expected_level: 3,
+        candidate_level: 2,
+        fit_result:     "gap",
+        summary:        "No testing evidence gathered during the session. Assessed at L2 by inference from seniority. Low confidence — assessor override recommended."
+      },
+      {
+        skill_id:       "SK-SOFT-001",
+        skill_label:    "Communication",
+        expected_level: 3,
+        candidate_level: 3,
+        fit_result:     "match",
+        summary:        "Candidate meets the L3 expectation. Demonstrated clear, audience-adapted communication and successfully drove stakeholder alignment on a complex technical decision."
+      }
+    ],
+    culture_narrative: <<~TEXT.strip,
+      Budi demonstrates strong ownership and initiative — hallmarks of the engineering culture at Test Corp.
+      The e-commerce migration story shows they can drive large, cross-team changes without being directed,
+      which aligns well with our expectation of senior engineers who lead from the front.
+
+      Their communication style is particularly strong: they frame decisions in business terms, prepare
+      structured artifacts, and drive stakeholder buy-in proactively. This is exactly the kind of
+      cross-functional impact we value.
+
+      The main cultural risk is around quality rigor — we didn't gather testing evidence, and system
+      design depth was below expectation. If Test Corp runs a test-first culture, this should be probed
+      further before making a hiring decision.
+    TEXT
+    overall_narrative: <<~TEXT.strip
+      Budi is a strong match for the React and communication dimensions of this role, demonstrating
+      genuine L4 React expertise and L3 communication skills. However, two notable gaps exist:
+      TypeScript is one level below the L4 requirement, and system design evidence is thin.
+      Testing could not be assessed.
+
+      Recommendation: Proceed to final round with a focused system design interview and a practical
+      TypeScript challenge. If those go well, this candidate is a strong hire for the senior track.
+    TEXT
+  )
+  fit_gap.save!
+  puts "  Created fit gap report: id=#{fit_gap.id} for vacancy '\#{vacancy.role_title}'"
+else
+  puts "  Fit gap report already exists: id=#{fit_gap.id} (skipped)"
+end
+
+# ── Print usage instructions ──────────────────────────────────────────────────
 
 puts ""
 puts "== Done! =="
 puts ""
-puts "Your test organization:"
-puts "  id     : #{org['id']}"
-puts "  scheme : #{org['scheme']}"
+puts "Seeded data summary:"
+puts "  Organization : id=#{org['id']} scheme=#{org['scheme']}"
+puts "  Admin user   : id=#{admin_user.id} email=#{admin_user.email}"
+puts "  Candidate    : id=#{candidate_user.id} email=#{candidate_user.email}"
+puts "  Assessment   : id=#{assessment.id} — #{assessment.name}"
+puts "  Session      : id=#{session.id} — #{session.candidate_name} (#{session.status})"
+puts "  Vacancy      : id=#{vacancy.id} — #{vacancy.role_title}"
+puts "  Portfolio    : id=#{portfolio.id} (#{portfolio.generation_status})"
+puts "  Fit/Gap      : id=#{fit_gap.id}"
+puts ""
+puts "Frontend URLs you can now visit:"
+puts "  Assessments  : http://localhost:5173/assessments"
+puts "  Assessment   : http://localhost:5173/assessments/#{assessment.id}"
+puts "  Session      : http://localhost:5173/assessments/#{assessment.id}/sessions/#{session.id}"
+puts "  Portfolio    : http://localhost:5173/assessments/#{assessment.id}/sessions/#{session.id}/portfolio"
+puts "  Fit/Gap      : http://localhost:5173/assessments/#{assessment.id}/sessions/#{session.id}/fitgap/#{vacancy.id}"
 puts ""
 puts "To mint a JWT for testing, open the Rails console:"
 puts ""
@@ -389,11 +826,11 @@ puts ""
 puts "Then run:"
 puts ""
 puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
+puts "  token = JsonWebToken.encode({ user_id: #{admin_user.id}, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
 puts "  puts token"
 puts ""
 puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
+puts "  token = JsonWebToken.encode({ user_id: #{candidate_user.id}, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
 puts "  puts token"
 puts ""
 puts "Then hit the API:"
