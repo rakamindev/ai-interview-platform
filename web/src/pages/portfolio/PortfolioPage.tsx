@@ -1,3 +1,6 @@
+import { notify } from "@/components/ui/toast";
+import { useBreadcrumbLabel } from "@/components/layout/Breadcrumbs";
+import { ErrorState, EmptyState } from "@/components/ui/page";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,6 +18,7 @@ import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -23,6 +27,9 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [assessmentName, setAssessmentName] = useState("");
+  useBreadcrumbLabel(`assessments:${id}`, assessmentName);
+  useBreadcrumbLabel(`sessions:${sessionId}`, candidateName);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -46,8 +53,9 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setAssessmentName(sRes.data.assessment?.name ?? "");
       })
-      .catch(() => {})
+      .catch(() => setError("Could not load the candidate portfolio. Please try again."))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -66,6 +74,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -80,6 +89,7 @@ export default function PortfolioPage() {
         a.download = `portfolio-${sessionId}.json`;
         a.click();
         URL.revokeObjectURL(url);
+      notify(`${format.toUpperCase()} download started.`);
       } else {
         const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
@@ -88,7 +98,11 @@ export default function PortfolioPage() {
         a.download = `portfolio-${sessionId}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
+      notify(`${format.toUpperCase()} download started.`);
       }
+    } catch {
+      notify("Could not export the portfolio. Please try again.", "error");
+      setError("Could not export the portfolio. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -96,7 +110,7 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -105,22 +119,22 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="detail-page">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
         <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+          <Link to={`/assessments/${id}/invite`} aria-label="Back to previous page" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+            <h1 className="text-2xl font-semibold sm:text-[28px] tracking-tight">Portfolio Results</h1>
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -153,6 +167,8 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {error && <ErrorState message={error} onRetry={() => window.location.reload()} />}
+      {!error && !generating && !portfolio && <EmptyState title="Portfolio not available yet" description="A portfolio becomes available after the interview has been processed." action={<Button variant="outline" onClick={() => window.location.reload()}>Check again</Button>} />}
       {/* Generating state */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
@@ -174,8 +190,10 @@ export default function PortfolioPage() {
             variant="outline"
             size="sm"
             onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
+              try {
+                await sessionsApi.regeneratePortfolio(Number(sessionId));
+                setError(null); setGenerating(true); notify("Portfolio generation restarted.");
+              } catch { notify("Could not restart portfolio generation.", "error"); setError("Could not restart portfolio generation. Please try again."); }
             }}
           >
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
@@ -186,6 +204,33 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          <div className="rounded-md border bg-muted/30 px-4 py-3"><p className="text-xs font-medium">AI-generated evaluation</p><p className="mt-1 text-xs text-muted-foreground">Review the interview evidence before making a decision. Recruiter overrides are shown separately from AI ratings.</p></div>
+          <section aria-labelledby="compare-title" className="rounded-lg border bg-surface-secondary p-4 space-y-3">
+            <div>
+              <h2 id="compare-title" className="text-base font-semibold">Compare against a vacancy</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Choose the role to compare its requirements with this candidate's evidence.</p>
+            </div>
+            {vacancies.length ? (
+              <>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-0 flex-1 basis-64 space-y-1.5">
+                    <label htmlFor="comparison-vacancy" className="text-sm font-medium">Vacancy</label>
+                    <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                      <SelectTrigger id="comparison-vacancy" aria-label="Vacancy for fit/gap analysis"><SelectValue placeholder="Choose a vacancy" /></SelectTrigger>
+                      <SelectContent>{vacancies.map((vacancy) => <SelectItem key={vacancy.id} value={String(vacancy.id)}>{vacancy.role_title}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>Run fit/gap analysis</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Review the skills below first. The selected vacancy is also included when exporting this portfolio.</p>
+              </>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                <p className="text-muted-foreground">Create a vacancy to compare this candidate against a role.</p>
+                <Button asChild variant="outline"><Link to="/vacancies/new">Create vacancy</Link></Button>
+              </div>
+            )}
+          </section>
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>
@@ -208,7 +253,7 @@ export default function PortfolioPage() {
               <div className="space-y-3">
                 <div>
                   <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
+                    <Zap className="h-4 w-4 text-warning" />
                     Discovered Skills
                   </h2>
                   <p className="text-xs text-muted-foreground">
@@ -229,26 +274,7 @@ export default function PortfolioPage() {
             </>
           )}
 
-          <Separator />
 
-          {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
-          </div>
         </>
       )}
     </div>

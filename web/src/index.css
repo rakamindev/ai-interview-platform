@@ -2,42 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep the real page scrollbar for menus, not an empty gutter for dialogs.
+   Radix still owns focus and wheel locking. Nested menus inside dialogs must
+   retain the dialog's normal scroll lock and scrollbar compensation. */
+/* Presence includes the closing animation, while Radix still holds its lock. */
+html:has([data-page-menu]):not(:has([role="dialog"], [role="alertdialog"])) {
+    overflow-y: auto;
+}
+html:has([data-page-menu]):not(:has([role="dialog"], [role="alertdialog"])) body[data-scroll-locked] {
+    margin-right: 0 !important;
+}
+
+/* Radix hides native viewport scrollbars; long lists need a visible affordance. */
+.select-viewport[data-radix-select-viewport] {
+    scrollbar-width: thin !important;
+    scrollbar-color: hsl(var(--input)) transparent;
+    overscroll-behavior: contain;
+}
+.select-viewport[data-radix-select-viewport]::-webkit-scrollbar {
+    display: block !important;
+    width: 6px;
+}
+.select-viewport[data-radix-select-viewport]::-webkit-scrollbar-thumb {
+    background: hsl(var(--input));
+    border-radius: 6px;
+}
+
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
-
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
-
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
-
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
-
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
-
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
-
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
-
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
-
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 184 99% 31%;
-
-        --radius: 0.5rem;
+        /* Linear DESIGN.md tokens: near-black canvas, charcoal surfaces, lavender accent. */
+        --background: 240 33% 0.4%;
+        --foreground: 180 9% 97%;
+        --card: 210 7% 6%;
+        --card-foreground: 180 9% 97%;
+        --popover: 210 4% 8%;
+        --popover-foreground: 180 9% 97%;
+        --primary: 235 56% 60%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 210 4% 8%;
+        --secondary-foreground: 210 18% 85%;
+        --muted: 210 4% 9%;
+        --muted-foreground: 218 10% 57%;
+        --accent: 210 4% 9%;
+        --accent-foreground: 180 9% 97%;
+        --destructive: 0 65% 55%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 225 9% 15%;
+        --input: 225 9% 20%;
+        --ring: 235 56% 60%;
+        --radius: 0.75rem;
+        --primary-hover: 234 100% 75%;
+        --primary-active: 235 56% 59%;
+        --success: 133 61% 40%;
+        --warning: 39 92% 55%;
+        --info: 235 56% 60%;
+        --surface: 210 7% 6%;
+        --surface-secondary: 210 4% 8%;
     }
 
     .dark {
+        --primary-hover: 0 0% 85%;
+        --primary-active: 0 0% 80%;
+        --surface: 222 47% 11%;
+        --surface-secondary: 217 33% 15%;
         --background: 222 47% 11%;
         --foreground: 210 40% 98%;
 
@@ -47,11 +74,11 @@
         --popover: 222 47% 11%;
         --popover-foreground: 210 40% 98%;
 
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        --primary: 0 0% 95%;
+        --primary-foreground: 0 0% 7%;
 
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+        --secondary: 0 0% 96%;
+        --secondary-foreground: 215 28% 17%;
 
         --muted: 217 33% 17%;
         --muted-foreground: 215 20% 65%;
@@ -64,7 +91,7 @@
 
         --border: 217 33% 17%;
         --input: 217 33% 17%;
-        --ring: 184 99% 31%;
+        --ring: 0 0% 25%;
     }
 }
 
@@ -74,6 +101,54 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground antialiased;
+        font-family: "Linear Text", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
     }
+}
+@layer base {
+    :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+    ::selection { background: hsl(var(--primary) / 0.15); }
+}
+@layer components {
+    /* Shared field states: focus/open > hover; invalid > focus; disabled never hovers. */
+    .field-control {
+        @apply rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors duration-150 ease-out placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-50;
+    }
+    .field-control:enabled:hover:not(:focus-visible):not([data-state="open"]):not([aria-invalid="true"]) {
+        border-color: hsl(var(--foreground) / 0.3);
+    }
+    .field-control:enabled:focus-visible:not([data-pointer-focus="true"]),
+    .field-control:enabled[data-state="open"] {
+        @apply border-primary outline-none ring-2 ring-ring/30 ring-offset-0;
+    }
+    .field-control[aria-invalid="true"] {
+        border-color: hsl(var(--destructive));
+    }
+    .field-control:enabled[aria-invalid="true"]:focus-visible:not([data-pointer-focus="true"]),
+    .field-control:enabled[aria-invalid="true"][data-state="open"] {
+        @apply border-destructive ring-destructive/20;
+    }
+    /* Select options reserve space for a check; action menus only reserve it when inset. */
+    .overlay-item {
+        @apply relative flex min-h-9 cursor-default select-none items-center rounded-sm px-2 py-2 text-sm outline-none transition-colors duration-150 ease-out;
+    }
+    .overlay-item:not([data-disabled])[data-highlighted],
+    .overlay-item:not([data-disabled]):focus {
+        @apply bg-muted text-foreground outline-none ring-1 ring-inset ring-primary/20;
+    }
+    .overlay-item[data-disabled] {
+        @apply pointer-events-none opacity-50;
+    }
+    .data-table { @apply w-full text-left text-sm; }
+    .data-table thead { @apply border-b bg-muted/50 text-xs text-muted-foreground; }
+    .data-table th { @apply px-4 py-3 font-medium; }
+    .data-table td { @apply px-4 py-3; }
+    .data-table tbody tr { @apply border-b transition-colors last:border-0 hover:bg-muted/40 focus-within:bg-muted/40; }
+    .form-page { @apply mx-auto max-w-3xl space-y-6; }
+    .detail-page { @apply mx-auto max-w-5xl space-y-6; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

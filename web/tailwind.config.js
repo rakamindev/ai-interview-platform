@@ -5,6 +5,10 @@ export default {
     theme: {
         extend: {
             colors: {
+                success: "hsl(var(--success))",
+                warning: "hsl(var(--warning))",
+                info: "hsl(var(--info))",
+                surface: { DEFAULT: "hsl(var(--surface))", secondary: "hsl(var(--surface-secondary))" },
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
                 ring: "hsl(var(--ring))",
@@ -12,6 +16,8 @@ export default {
                 foreground: "hsl(var(--foreground))",
                 primary: {
                     DEFAULT: "hsl(var(--primary))",
+                    hover: "hsl(var(--primary-hover))",
+                    active: "hsl(var(--primary-active))",
                     foreground: "hsl(var(--primary-foreground))",
                 },
                 secondary: {
@@ -41,8 +47,8 @@ export default {
             },
             borderRadius: {
                 lg: "var(--radius)",
-                md: "calc(var(--radius) - 2px)",
-                sm: "calc(var(--radius) - 4px)",
+                md: "calc(var(--radius) - 4px)",
+                sm: "calc(var(--radius) - 6px)",
             },
             keyframes: {
                 "accordion-down": {

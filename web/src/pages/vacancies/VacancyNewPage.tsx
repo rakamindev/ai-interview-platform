@@ -1,3 +1,5 @@
+import { notify } from "@/components/ui/toast";
+import { PageHeader } from "@/components/ui/page";
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
@@ -41,8 +43,10 @@ export default function VacancyNewPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
+      notify("Vacancy created.");
       navigate("/vacancies");
     } catch (e: any) {
+      notify("Could not save. Your changes are still here; please try again.", "error");
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
     } finally {
       setSubmitting(false);
@@ -50,9 +54,9 @@ export default function VacancyNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="form-page">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
+        <Link to="/vacancies" aria-label="Back to vacancies" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Vacancies</span>
@@ -60,10 +64,12 @@ export default function VacancyNewPage() {
         <span className="text-sm font-medium">New Vacancy</span>
       </div>
 
+      <PageHeader title="New vacancy" description="Define the role and expectations used to evaluate candidates." />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Input id="role_title" aria-invalid={!!errors.role_title} aria-describedby={errors.role_title ? "role-error" : undefined} placeholder="Senior Frontend Engineer" {...register("role_title", { required: "Role title is required" })} />
+          {errors.role_title && <p id="role-error" role="alert" className="text-xs text-destructive">{errors.role_title.message}</p>}
         </div>
 
         <Separator />
@@ -82,7 +88,7 @@ export default function VacancyNewPage() {
                 <div key={field.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                    <button type="button" aria-label="Remove skill expectation" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -125,9 +131,9 @@ export default function VacancyNewPage() {
           />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2 border-t pt-5">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

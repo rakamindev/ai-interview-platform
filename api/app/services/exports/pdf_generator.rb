@@ -7,6 +7,9 @@ module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
   class PdfGenerator
+    FONT_FAMILY = 'Liberation Sans'.freeze
+    FONT_PATH = Rails.root.join('app', 'assets', 'fonts').freeze
+
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
     RESULT_LABELS = {
@@ -27,6 +30,9 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        register_fonts(pdf)
+        pdf.font FONT_FAMILY
+
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -35,6 +41,15 @@ module Exports
     end
 
     private
+
+    def register_fonts(pdf)
+      pdf.font_families.update(
+        FONT_FAMILY => {
+          normal: FONT_PATH.join('LiberationSans-Regular.ttf').to_s,
+          bold:   FONT_PATH.join('LiberationSans-Bold.ttf').to_s
+        }
+      )
+    end
 
     def render_header(pdf)
       pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
@@ -142,6 +157,7 @@ module Exports
       if @fit_gap.culture_narrative.present?
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
+        pdf.font_size(8) { pdf.text narrative_source_label, color: '666666' }
         pdf.move_down 4
         pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
       end
@@ -149,9 +165,14 @@ module Exports
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
         pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
+        pdf.font_size(8) { pdf.text narrative_source_label, color: '666666' }
         pdf.move_down 4
         pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
       end
+    end
+
+    def narrative_source_label
+      @fit_gap.narrative_source == 'ai' ? 'AI-generated' : 'Rule-based fallback (AI narrative unavailable)'
     end
 
     def render_footer(pdf)

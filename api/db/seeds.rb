@@ -77,6 +77,39 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Development admin ─────────────────────────────────────────────────────────
+
+user_seed_configs = [
+  { role: 'admin', env_prefix: 'ADMIN', default_email: 'admin@example.com' },
+  { role: 'user', env_prefix: 'USER', default_email: 'user@example.com' }
+].freeze
+
+seeded_users = if Rails.env.production?
+                 puts "  Development users skipped in production"
+                 []
+               else
+                 user_seed_configs.map do |config|
+                   email_override = ENV["SEED_#{config[:env_prefix]}_EMAIL"].presence
+                   password_override = ENV["SEED_#{config[:env_prefix]}_PASSWORD"].presence
+                   email = email_override || config[:default_email]
+                   password = password_override || 'password123'
+
+                   user = User.find_or_initialize_by(email: email.downcase)
+                   user.role = config[:role]
+
+                   # Re-running seeds must not reset a developer's password.
+                   # An explicit environment override may intentionally rotate it.
+                   if user.new_record? || password_override.present?
+                     user.password = password
+                     user.password_confirmation = password
+                   end
+
+                   user.save!
+                   puts "  Seed #{user.role} ready: #{user.email}"
+                   user
+                 end
+               end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [
@@ -381,6 +414,13 @@ puts ""
 puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
+if seeded_users.any?
+  puts ""
+  puts "Your seed users:"
+  seeded_users.each do |user|
+    puts "  #{user.role}: #{user.email}"
+  end
+end
 puts ""
 puts "To mint a JWT for testing, open the Rails console:"
 puts ""
@@ -388,13 +428,12 @@ puts "  bundle exec rails console"
 puts ""
 puts "Then run:"
 puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
+seeded_users.each do |user|
+  puts "  # #{user.role} token"
+  puts "  token = JsonWebToken.encode({ user_id: #{user.id}, role: '#{user.role}', scheme: '#{TEST_ORG[:scheme]}' })"
+  puts "  puts token"
+  puts ""
+end
 puts ""
 puts "Then hit the API:"
 puts ""

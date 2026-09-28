@@ -21,6 +21,7 @@ gem 'rack-cors'
 
 # Environment
 gem 'figaro'
+gem 'tzinfo-data', platforms: %i[mingw x64_mingw]
 
 # Background jobs
 gem 'redis', '~> 5.0'

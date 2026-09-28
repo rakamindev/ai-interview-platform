@@ -4,8 +4,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ErrorState } from "@/components/ui/page";
 import { Search, Loader2 } from "lucide-react";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
@@ -21,16 +23,21 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
   const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!open) return;
+    let active = true;
     setLoading(true);
+    setError(false);
     skillTaxonomiesApi
       .list()
-      .then((res) => setSkills(res.data.skill_taxonomies ?? []))
-      .catch((err) => { console.error("skill_taxonomies fetch failed:", err); setSkills([]); })
-      .finally(() => setLoading(false));
-  }, [open]);
+      .then((res) => { if (active) setSkills(res.data.skill_taxonomies ?? []); })
+      .catch(() => { if (active) setError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [open, attempt]);
 
   const filtered = skills.filter((s) =>
     s.skill_label.toLowerCase().includes(query.toLowerCase())
@@ -58,11 +65,13 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add from B7 taxonomy</DialogTitle>
+          <DialogDescription>Search the taxonomy and choose a skill to add to this assessment.</DialogDescription>
         </DialogHeader>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            aria-label="Search skills"
             placeholder="Search skills..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -73,9 +82,12 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
         <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
+            <div role="status" className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              Loading skills
             </div>
+          ) : error ? (
+            <ErrorState message="Couldn't load the skill taxonomy." onRetry={() => setAttempt((value) => value + 1)} />
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
           ) : (
@@ -84,7 +96,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
                 key={s.skill_id}
                 type="button"
                 onClick={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
+                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted focus-visible:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 transition-colors duration-150 text-sm"
               >
                 {s.skill_label}
               </button>
