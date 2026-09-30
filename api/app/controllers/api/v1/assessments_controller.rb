@@ -10,13 +10,15 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(:sessions).where(tenant_id: current_tenant_id).order(created_at: :desc)
         )
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
           meta: pagination_meta(assessments)
         )
+      rescue ActiveRecord::RecordNotFound
+        json_error("Assessment not found", :not_found)
       end
 
       # GET /api/v1/assessments/:id

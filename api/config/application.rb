@@ -9,6 +9,12 @@ require 'action_controller/railtie'
 
 require_relative '../app/middlewares/application_middleware'
 require_relative '../app/middlewares/tenant_resolver_middleware'
+# WebSocket proxies are required here (not in an initializer) so the constants
+# exist before Zeitwerk registers autoloads for app/channels. Referencing them
+# from config/initializers/*.rb crashed the boot under `config.eager_load`
+# (CI) with `uninitialized constant AudioWebsocketMiddleware`.
+require_relative '../app/channels/audio_websocket_middleware'
+require_relative '../app/channels/coverage_websocket_middleware'
 
 Bundler.require(*Rails.groups)
 
@@ -48,5 +54,10 @@ module AiInterview
 
     config.middleware.use Rack::Attack
     config.middleware.use TenantResolverMiddleware
+    # WebSocket upgrade proxies must sit BEFORE the tenant resolver so they can
+    # handle /ws/sessions/:id/audio and /ws/sessions/:id/coverage upgrades
+    # before Rails routing runs.
+    config.middleware.insert_before TenantResolverMiddleware, AudioWebSocketMiddleware
+    config.middleware.insert_before TenantResolverMiddleware, CoverageWebSocketMiddleware
   end
 end

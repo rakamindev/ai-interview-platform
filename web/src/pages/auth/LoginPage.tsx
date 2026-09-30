@@ -23,8 +23,11 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ email, password });
       const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
+      const scheme = res.data.user.scheme; // Assuming scheme is returned with user data
+      console.log("Received token:", token);
+      console.log("Received scheme:", scheme); // Debugging
+      saveToken(token, scheme);
+      setAuth({ token, scheme });
       navigate("/assessments");
     } catch {
       setError("Invalid email or password.");

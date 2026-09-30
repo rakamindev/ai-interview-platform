@@ -2,7 +2,7 @@
 
 class CreateOrganizations < ActiveRecord::Migration[7.0]
   def change
-    create_table :organizations do |t|
+    create_table :organizations, id: :uuid do |t|
       t.string :name,        limit: 255, null: false
       t.string :scheme,      limit: 255, null: false
       t.string :identifier,  limit: 255, null: false

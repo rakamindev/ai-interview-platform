@@ -40,6 +40,8 @@ class AuthorizeApiRequest
 
   def check_role!(user)
     allowed = @required_roles.map(&:to_s)
+    puts "DEBUG: User Role: #{user.role}"
+    puts "DEBUG: Required Roles: #{allowed.inspect}"
 
     # :any means no role restriction
     return if allowed.include?('any')

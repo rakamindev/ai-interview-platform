@@ -34,6 +34,9 @@ Rails.application.configure do
   # Raise an error on page load if there are pending migrations.
   config.active_record.migration_error = :page_load
 
+  # Allow specific hostnames for security (Host Authorization middleware)
+  config.hosts << "apirakamin.agusetyawan.com"
+
   # Highlight code that triggered database queries in logs.
   config.active_record.verbose_query_logs = true
 

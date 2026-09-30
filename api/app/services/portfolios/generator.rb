@@ -153,29 +153,87 @@ module Portfolios
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      save_configured_skills(portfolio, data['configured_skills'] || [])
+      save_discovered_skills(portfolio, data['discovered_skills'] || [])
+    end
 
-      (data['discovered_skills'] || []).each do |skill_data|
+    # Every configured skill must appear in the portfolio. If Gemini omitted it
+    # or returned data too weak to rate (missing/out-of-range level, unknown
+    # confidence), we store it as an explicit `assessed: false` row instead of
+    # fabricating an L1. A fabricated L1 on an unprobed skill is a false
+    # credential for the candidate — worse than an honest "not assessed".
+    def save_configured_skills(portfolio, skills_data)
+      by_id    = skills_data.index_by { |s| s['skill_id'] }
+      by_label = skills_data.index_by { |s| s['skill_label'].to_s.downcase }
+
+      configured_skills.each do |skill|
+        incoming = by_id[skill.skill_id] || by_label[skill.skill_label.to_s.downcase]
+
+        attrs = {
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          is_discovered:      false,
+          evidence:           incoming ? Array(incoming['evidence']).first(3) : []
+        }
+
+        level, confidence = parse_rating(incoming)
+        if level && confidence
+          attrs.merge!(
+            assessed:          true,
+            ai_level:          level,
+            ai_confidence:     confidence,
+            competency_summary: incoming['competency_summary'].presence || default_summary(skill.skill_label)
+          )
+        else
+          attrs.merge!(
+            assessed:          false,
+            ai_level:          nil,
+            ai_confidence:     nil,
+            competency_summary: PortfolioSkill.not_assessed_summary
+          )
+        end
+
+        portfolio.portfolio_skills.create!(attrs)
+      end
+    end
+
+    def save_discovered_skills(portfolio, skills_data)
+      skills_data.each do |skill_data|
+        level, confidence = parse_rating(skill_data)
+        next unless level && confidence # never store a discovery we cannot rate
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          assessed:           true,
+          ai_level:           level,
+          ai_confidence:      confidence,
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'].presence || default_summary(skill_data['skill_label'])
         )
       end
+    end
+
+    # Returns [level, confidence] only when both are valid; [nil, nil] otherwise.
+    def parse_rating(skill_data)
+      return [nil, nil] unless skill_data
+
+      level = skill_data['level'].to_i
+      level = nil unless (1..5).cover?(level)
+
+      confidence = skill_data['confidence'].to_s.downcase
+      confidence = nil unless PortfolioSkill::CONFIDENCE_LEVELS.include?(confidence)
+
+      [level, confidence]
+    end
+
+    def configured_skills
+      @session.assessment.assessment_skills.order(:display_order)
+    end
+
+    def default_summary(label)
+      "#{label} was discussed during the interview but did not yield a rateable level."
     end
   end
 end

@@ -9,6 +9,13 @@ module Api
 
       # POST /api/v1/portfolio-skills/:id/override
       def override
+        # A skill that was never assessed cannot be overridden — there is no AI
+        # baseline to record against (the overrides row requires ai_level 1..5).
+        # The assessor should run a new session instead.
+        unless @portfolio_skill.assessed?
+          return json_error('Skill was not assessed — overrides require an existing AI level. Run a new session to assess it.', :unprocessable_entity)
+        end
+
         existing = @portfolio_skill.assessor_override
 
         if existing

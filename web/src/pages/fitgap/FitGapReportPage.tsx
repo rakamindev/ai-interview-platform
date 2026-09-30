@@ -168,10 +168,24 @@ export default function FitGapReportPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
+            <CardContent className="px-4 pb-4 space-y-3">
+              {report.culture_narrative && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Culture fit</p>
+                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{report.culture_narrative}</p>
+                </div>
+              )}
+              {report.overall_narrative && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Overall assessment</p>
+                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{report.overall_narrative}</p>
+                </div>
+              )}
+              {!report.culture_narrative && !report.overall_narrative && (
+                <p className="text-sm text-muted-foreground">
+                  Narrative generation was unavailable. Use the skill comparison table above to evaluate fit.
+                </p>
+              )}
             </CardContent>
           </Card>
 

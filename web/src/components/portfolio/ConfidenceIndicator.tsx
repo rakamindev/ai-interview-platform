@@ -1,16 +1,26 @@
 interface ConfidenceIndicatorProps {
-  confidence: string; // "high" | "medium" | "low" from API
+  confidence: string | null; // "high" | "medium" | "low" | null (when unassessed)
 }
 
-function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
+function getLabel(c: string | null): "HIGH" | "MEDIUM" | "LOW" | null {
   const normalized = c?.toLowerCase();
   if (normalized === "high") return "HIGH";
   if (normalized === "medium") return "MEDIUM";
-  return "LOW";
+  if (normalized === "low") return "LOW";
+  return null;
 }
 
 export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
   const label = getLabel(confidence);
+
+  if (label == null) {
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <span className="h-2 w-2 rounded-full bg-muted" />
+        Not rated this session
+      </span>
+    );
+  }
 
   if (label === "HIGH") {
     return (

@@ -10,6 +10,10 @@ module Api
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
+        puts "DEBUG: SessionsController#index - params[:assessment_id]: #{params[:assessment_id].inspect}"
+        puts "DEBUG: SessionsController#index - params[:assessment_id] class: #{params[:assessment_id].class}"
+        puts "DEBUG: SessionsController#index - current_tenant_id: #{current_tenant_id}"
+        puts "DEBUG: SessionsController#index - Organization.find_by(id: current_tenant_id): #{Organization.find_by(id: current_tenant_id).inspect}"
         assessment = Assessment.find(params[:assessment_id])
         sessions = assessment.sessions.order(created_at: :desc)
 
@@ -58,8 +62,10 @@ module Api
 
       # POST /api/v1/sessions/:id/end
       def end_session
+        # Idempotent: a repeated end call from a double-clicked button or a
+        # retried request should not surface as a 422 error to the assessor.
         if @session.ended?
-          return json_error("Session is already ended", :unprocessable_entity)
+          return json_response(session: session_json(@session))
         end
 
         reason = params.dig(:session, :reason) || "manual_assessor"

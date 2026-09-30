@@ -3,68 +3,116 @@
 @tailwind utilities;
 
 @layer base {
-    :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
+:root {
+        --primary: 154 70% 52%;
+        --primary-deep: 154 65% 42%;
+        --primary-soft: 139 72% 60%;
+        --ink: 0 0% 9%;
+        --ink-secondary: 0 0% 13%;
+        --ink-mute: 0 0% 44%;
+        --ink-mute-2: 0 0% 60%;
+        --ink-faint: 0 0% 70%;
+        --on-primary: 0 0% 9%;
+        --on-dark: 0 0% 100%;
+        --canvas: 0 0% 100%;
+        --canvas-soft: 0 0% 98%;
+        --canvas-night: 0 0% 11%;
+        --canvas-night-soft: 0 0% 13%;
+        --hairline: 0 0% 87%;
+        --hairline-strong: 0 0% 78%;
+        --hairline-cool: 0 0% 93%;
+        --hairline-cool-2: 0 0% 94%;
+        --hairline-cool-3: 0 0% 83%;
+        --accent-purple: 271 99% 38%;
+        --accent-violet: 246 59% 53%;
+        --accent-purple-soft: 285 79% 92%;
+        --accent-yellow: 48 99% 54%;
+        --accent-tomato: 7 100% 50%;
+        --accent-pink: 326 100% 39%;
+        --accent-indigo: 226 100% 50%;
+        --accent-crimson: 337 100% 44%;
 
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --background: var(--canvas); /* Default background to canvas */
+        --foreground: var(--ink); /* Default foreground to ink */
 
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+        --card: var(--canvas);
+        --card-foreground: var(--ink);
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        --popover: var(--canvas);
+        --popover-foreground: var(--ink);
 
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+        --secondary: var(--ink-mute); /* Using ink-mute as a secondary for now, adjust as needed */
+        --secondary-foreground: var(--on-dark);
 
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+        --muted: var(--canvas-soft);
+        --muted-foreground: var(--ink-mute);
 
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
+        --accent: var(--accent-purple); /* Using accent-purple as a generic accent for now */
+        --accent-foreground: var(--on-dark);
 
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
+        --destructive: var(--accent-tomato); /* Using accent-tomato for destructive */
+        --destructive-foreground: var(--on-dark);
 
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+        --border: var(--hairline);
+        --input: var(--hairline);
+        --ring: var(--primary);
 
-        --radius: 0.5rem;
+        --radius: 0.5rem; /* Keep existing radius for now, will refine with DESIGN.md's rounded values */
     }
 
     .dark {
-        --background: 222 47% 11%;
-        --foreground: 210 40% 98%;
+        --background: var(--canvas-night);
+        --foreground: var(--on-dark);
 
-        --card: 222 47% 11%;
-        --card-foreground: 210 40% 98%;
+        --card: var(--canvas-night);
+        --card-foreground: var(--on-dark);
 
-        --popover: 222 47% 11%;
-        --popover-foreground: 210 40% 98%;
+        --popover: var(--canvas-night);
+        --popover-foreground: var(--on-dark);
 
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        --primary: 154 70% 52%; /* Keep primary same for dark mode as per DESIGN.md's overall philosophy */
+        --primary-deep: 154 65% 42%;
+        --primary-soft: 139 72% 60%;
+        --ink: 0 0% 9%;
+        --ink-secondary: 0 0% 13%;
+        --ink-mute: 0 0% 44%;
+        --ink-mute-2: 0 0% 60%;
+        --ink-faint: 0 0% 70%;
+        --on-primary: 0 0% 9%;
+        --on-dark: 0 0% 100%;
+        --canvas: 0 0% 100%;
+        --canvas-soft: 0 0% 98%;
+        --canvas-night: 0 0% 11%;
+        --canvas-night-soft: 0 0% 13%;
+        --hairline: 0 0% 87%;
+        --hairline-strong: 0 0% 78%;
+        --hairline-cool: 0 0% 93%;
+        --hairline-cool-2: 0 0% 94%;
+        --hairline-cool-3: 0 0% 83%;
+        --accent-purple: 271 99% 38%;
+        --accent-violet: 246 59% 53%;
+        --accent-purple-soft: 285 79% 92%;
+        --accent-yellow: 48 99% 54%;
+        --accent-tomato: 7 100% 50%;
+        --accent-pink: 326 100% 39%;
+        --accent-indigo: 226 100% 50%;
+        --accent-crimson: 337 100% 44%;
+        
+        --secondary: var(--canvas-night-soft); /* Using canvas-night-soft as secondary for dark mode */
+        --secondary-foreground: var(--on-dark);
 
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+        --muted: var(--canvas-night-soft);
+        --muted-foreground: var(--ink-mute-2);
 
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
+        --accent: var(--accent-purple);
+        --accent-foreground: var(--on-dark);
 
-        --accent: 217 33% 17%;
-        --accent-foreground: 210 40% 98%;
+        --destructive: var(--accent-tomato);
+        --destructive-foreground: var(--on-dark);
 
-        --destructive: 0 63% 31%;
-        --destructive-foreground: 0 0% 98%;
-
-        --border: 217 33% 17%;
-        --input: 217 33% 17%;
-        --ring: 184 99% 31%;
+        --border: var(--canvas-night-soft);
+        --input: var(--canvas-night-soft);
+        --ring: var(--primary);
     }
 }
 
@@ -74,6 +122,10 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-sans;
+    }
+
+    code {
+        @apply font-mono;
     }
 }

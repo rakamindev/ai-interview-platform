@@ -17,7 +17,8 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const assessed = skill.assessed !== false && skill.ai_level != null;
+  const effectiveLevel = assessed ? (override?.override_level ?? parseLevel(skill.ai_level)) : null;
 
   return (
     <Card>
@@ -35,11 +36,25 @@ export default function SkillPortfolioCard({
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              <ConfidenceIndicator confidence={assessed ? skill.ai_confidence : null} />
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          {assessed ? (
+            <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          ) : (
+            <span className="text-xs text-muted-foreground bg-muted/60 border border-dashed rounded px-2 py-1">
+              Not assessed this session
+            </span>
+          )}
         </div>
+
+        {/* Unassessed explanation */}
+        {!assessed && (
+          <div className="text-xs text-muted-foreground bg-muted/40 border border-dashed rounded px-3 py-2">
+            The interview did not reach this skill, so no level was assigned. Run a new
+            session or assess the remaining skills separately before making a hire decision.
+          </div>
+        )}
 
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (

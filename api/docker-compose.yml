@@ -1,0 +1,46 @@
+
+
+services:
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ai_interview_development
+    ports:
+      - "54323:5432"
+
+  redis:
+    image: redis:6-alpine
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3001 -b '0.0.0.0'"
+    volumes:
+      - .:/app
+    ports:
+      - "3001:3001"
+    depends_on:
+      - db
+      - redis
+    environment:
+      RAILS_ENV: development
+      DATABASE_URL: postgres://postgres:password@db:5432/ai_interview_development
+      REDIS_URL: redis://redis:6379/1
+      ALLOWED_ORIGINS: "*"
+      SECRET_KEY_BASE: 5675cf74057af2e9206cc9a21fe05f62b929840643153476b831827c4d406e8320f93fbea2127438766a7bed91fbd98527753363f10d3f81cffccf84b2692655
+      GEMINI_LIVE_MODEL: gemini-3.1-flash-live-preview
+      GEMINI_FLASH_MODEL: gemini-flash-lite-latest
+      GEMINI_PRO_MODEL: gemini-pro-latest
+
+volumes:
+  db-data:
+  redis-data:

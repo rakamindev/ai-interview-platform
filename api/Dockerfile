@@ -1,40 +1,44 @@
-FROM ruby:3.3.2 AS builder
+# Use an official Ruby runtime as a parent image
+FROM ruby:3.3.2-slim-bullseye
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  build-essential \
-  git \
-  libpq-dev \
-  tzdata \
-  libjemalloc2 \
-  && rm -rf /var/lib/apt/lists/*
+# Set working directory
+WORKDIR /app
 
-WORKDIR /ai-interview
+# Set frontend non-interactive to prevent hanging during build
+ENV DEBIAN_FRONTEND=noninteractive
 
-COPY Gemfile Gemfile.lock ./
-RUN bundle config set --local without 'development test' && \
-    bundle install --deployment --frozen --jobs 4
+# Install build essentials and PostgreSQL client libraries
+RUN echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until && \
+    sed -i '/bullseye-security/d' /etc/apt/sources.list && \
+    echo "deb http://snapshot.debian.org/archive/debian-security/20240310T110000Z bullseye-security main contrib non-free" >> /etc/apt/sources.list && \
+    echo "deb http://snapshot.debian.org/archive/debian/20240310T110000Z bullseye main contrib non-free" >> /etc/apt/sources.list && \
+    apt-get update -y && \
+    apt-get install -y --no-install-recommends build-essential libpq-dev && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
 
+# Install Node.js from NodeSource (more reliable for specific versions)
+RUN apt-get update -y && \
+    apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
+
+# Install Bundler
+RUN gem install bundler:2.5.11
+
+# Copy Gemfile and Gemfile.lock
+COPY Gemfile Gemfile.lock ./ 
+
+# Install dependencies
+RUN bundle install --jobs=$(nproc) --without development test
+
+# Copy the rest of the application code
 COPY . .
 
-# ============================================================================
+# Expose port 3000 to the Docker host
+EXPOSE 3000
 
-FROM ruby:3.3.2
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  libpq-dev \
-  tzdata \
-  libjemalloc2 \
-  && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /ai-interview
-
-COPY --from=builder /usr/local/bundle /usr/local/bundle
-COPY --from=builder /ai-interview /ai-interview
-
-ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
-
-RUN mkdir -p tmp/pids tmp/cache tmp/sockets log
-
-EXPOSE 3001
-
-CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
+# Command to run the Rails server
+CMD ["bundle", "exec", "rails", "s", "-b", "0.0.0.0"]
