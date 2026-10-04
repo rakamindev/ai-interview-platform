@@ -9,10 +9,14 @@ export interface VacancyPayload {
 }
 
 export const vacanciesApi = {
-  list: (page = 1) =>
+  list: (page = 1, search = "", perPage = 10) =>
     api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
-    }),
+      params: {
+        page,
+        search,
+        per_page: perPage,
+      },
+  }),
 
   get: (id: number) =>
     api.get<{ vacancy: Vacancy }>(`/vacancies/${id}`),

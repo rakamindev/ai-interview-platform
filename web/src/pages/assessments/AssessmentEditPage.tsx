@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -36,6 +36,7 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletedSkillIds, setDeletedSkillIds] = useState<number[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -77,7 +78,16 @@ export default function AssessmentEditPage() {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: [
+          ...data.skills.map((s, i) => ({
+            ...s,
+            display_order: i,
+          })),
+          ...deletedSkillIds.map((id) => ({
+            id,
+            _destroy: true,
+          })),
+        ],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -143,7 +153,15 @@ export default function AssessmentEditPage() {
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form}
+                      onRemove={() => {
+                        const skillId = form.getValues(`skills.${index}.id`);
+                        if (typeof skillId === "number") {
+                          setDeletedSkillIds((prev) => [...prev, skillId]);
+                        }
+                        remove(index);
+                      }}
+                    />
                   ))}
                 </div>
               </SortableContext>

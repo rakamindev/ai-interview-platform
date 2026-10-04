@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import Pagination from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +23,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  Trash2,
+  Search,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -131,17 +150,30 @@ export default function AssessmentInvitePage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
+    const res = await assessmentsApi.getSessions(
+      Number(id),
+      page,
+      search,
+      perPage
+    );
+
     setSessions(res.data.sessions);
-  }, [id]);
+    setTotalPages(res.data.meta.total_pages);
+  }, [id, page, search, perPage]);
 
   useEffect(() => {
     Promise.all([
       assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
+      assessmentsApi.getSessions(Number(id), page, search, perPage),
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
@@ -172,6 +204,18 @@ export default function AssessmentInvitePage() {
       setSessions((prev) => [created, ...prev]);
     } finally {
       setCreatingSession(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+
+    try {
+      await assessmentsApi.delete(Number(id));
+      navigate("/assessments");
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -216,9 +260,26 @@ export default function AssessmentInvitePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/assessments/${id}/edit`)}
+          >
+            <Pencil className="h-3.5 w-3.5 mr-1.5" />
+            Edit
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={sessions.length > 0}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            Delete
+          </Button>
+
           <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
@@ -247,6 +308,41 @@ export default function AssessmentInvitePage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
             <Button onClick={handleInviteCandidate}>Create Link</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete assessment dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Assessment?</DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete{" "}
+            <span className="font-medium text-foreground">
+              {assessment?.name}
+            </span>
+            ? This action cannot be undone.
+          </p>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -289,6 +385,46 @@ export default function AssessmentInvitePage() {
           </h2>
         </div>
 
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Show</span>
+
+            <Select
+              value={String(perPage)}
+              onValueChange={(value) => {
+                setPerPage(Number(value));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <span>data</span>
+          </div>
+
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search candidates..."
+              className="pl-9"
+            />
+          </div>
+        </div>
+
         {sessions.length === 0 ? (
           <div className="border rounded-lg p-10 text-center space-y-3">
             <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
@@ -300,23 +436,31 @@ export default function AssessmentInvitePage() {
             </div>
           </div>
         ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
-              {sessions.map((session, i) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  index={sessions.length - i}
-                  assessmentId={id!}
-                  onCopy={(sid) => {
-                    const s = sessions.find((x) => x.id === sid);
-                    if (s) copyLink(s, sid);
-                  }}
-                  copiedId={copiedId}
-                />
-              ))}
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardContent className="p-0 divide-y">
+                {sessions.map((session, i) => (
+                  <SessionRow
+                    key={session.id}
+                    session={session}
+                    index={(page - 1) * perPage + i + 1}
+                    assessmentId={id!}
+                    onCopy={(sid) => {
+                      const s = sessions.find((x) => x.id === sid);
+                      if (s) copyLink(s, sid);
+                    }}
+                    copiedId={copiedId}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </>
         )}
       </div>
 

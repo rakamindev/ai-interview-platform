@@ -9,10 +9,14 @@ export interface AssessmentPayload {
 }
 
 export const assessmentsApi = {
-  list: (page = 1) =>
+  list: (page = 1, search = "", perPage = 10) =>
     api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
-    }),
+      params: {
+        page,
+        search,
+        per_page: perPage,
+      },
+  }),
 
   get: (id: number) =>
     api.get<{ assessment: Assessment }>(`/assessments/${id}`),
@@ -31,8 +35,17 @@ export const assessmentsApi = {
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
 
-  getSessions: (assessmentId: number) =>
-    api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
+  getSessions: (assessmentId: number, page = 1, search = "", perPage = 10) =>
+    api.get<{ sessions: Session[]; meta: PaginationMeta }>(
+      `/assessments/${assessmentId}/sessions`,
+      {
+        params: {
+          page,
+          search,
+          per_page: perPage,
+        },
+      }
+    ),
 
   createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
     api.post<{ session: Session; invite_url: string }>(

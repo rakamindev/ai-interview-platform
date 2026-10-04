@@ -9,8 +9,14 @@ module Api
 
       # GET /api/v1/assessments
       def index
+        assessments = Assessment.includes(:sessions)
+
+        if params[:search].present?
+          assessments = assessments.where("name ILIKE ?", "%#{params[:search]}%")
+        end
+
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          assessments.order(created_at: :desc)
         )
 
         json_response(
@@ -49,6 +55,14 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
+        if @assessment.sessions.exists?
+          json_error(
+            "Assessment cannot be deleted because it has candidates",
+            :unprocessable_entity
+          )
+          return
+        end
+
         @assessment.destroy
         json_response({ message: "Assessment deleted" })
       end

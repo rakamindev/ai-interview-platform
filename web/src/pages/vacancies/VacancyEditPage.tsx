@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, Trash2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -26,11 +33,18 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [deletedSkillIds, setDeletedSkillIds] = useState<number[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
-  const { fields, append, remove } = useFieldArray({ control, name: "skills" });
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "skills",
+    keyName: "fieldId",
+  });
 
   useEffect(() => {
     vacanciesApi.get(Number(id)).then((res) => {
@@ -39,6 +53,18 @@ export default function VacancyEditPage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id, reset]);
 
+  const handleDelete = async () => {
+    setDeleting(true);
+
+    try {
+      await vacanciesApi.delete(Number(id));
+      navigate("/vacancies");
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   const onSubmit = async (data: VacancyFormValues) => {
     setSubmitting(true);
     try {
@@ -46,7 +72,13 @@ export default function VacancyEditPage() {
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
+        vacancy_skills_attributes: [
+          ...data.skills,
+          ...deletedSkillIds.map((id) => ({
+            id,
+            _destroy: true,
+          })),
+        ],
       });
       navigate("/vacancies");
     } finally {
@@ -72,10 +104,21 @@ export default function VacancyEditPage() {
         <div className="space-y-3">
           <Label>Expected skills</Label>
           {fields.map((field, index) => (
-            <div key={field.id} className="border rounded-lg p-3 space-y-2">
+            <div key={field.fieldId} className="border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
+                <button type="button"
+                  onClick={() => {
+                    const skillId = watch(`skills.${index}.id`);
+
+                    if (typeof skillId === "number") {
+                      setDeletedSkillIds((prev) => [...prev, skillId]);
+                    }
+
+                    remove(index);
+                  }}
+                  className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" />
+                </button>
               </div>
               <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
             </div>
@@ -94,11 +137,60 @@ export default function VacancyEditPage() {
           <Textarea rows={3} {...register("competency_expectations")} />
         </div>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/vacancies")}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+
+          <Button type="submit" disabled={submitting}>
+            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save Changes
+          </Button>
         </div>
       </form>
 
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Vacancy?</DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete this vacancy? This action cannot be undone.
+          </p>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
     </div>
   );

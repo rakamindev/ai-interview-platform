@@ -11,9 +11,23 @@ module Api
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        sessions = assessment.sessions
 
-        json_response(sessions: sessions.map(&method(:session_json)))
+        if params[:search].present?
+          sessions = sessions.where(
+            "candidate_name ILIKE ?",
+            "%#{params[:search]}%"
+          )
+        end
+
+        sessions = paginate(
+          sessions.order(created_at: :asc)
+        )
+
+        json_response(
+          sessions: sessions.map(&method(:session_json)),
+          meta: pagination_meta(sessions)
+        )
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -154,6 +168,15 @@ module Api
       end
 
       private
+
+      def pagination_meta(collection)
+        {
+          current_page: collection.current_page,
+          total_pages:  collection.total_pages,
+          total_count:  collection.total_count,
+          per_page:     collection.limit_value
+        }
+      end
 
       def set_session
         @session = Session.find(params[:id])
