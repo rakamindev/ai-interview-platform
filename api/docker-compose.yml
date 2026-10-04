@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: rakamin_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p 3001"
+    volumes:
+      - .:/ai-interview
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_HOST=db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=rakamin_development
+      - REDIS_URL=redis://redis:6379/1
+      - SECRET_KEY_BASE=your_secret_key_base_here
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-dummy_key_for_now}
+      - APP_BASE_URL=http://localhost:3001
+      - ALLOWED_ORIGINS=*
+    depends_on:
+      - db
+      - redis
+
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+    volumes:
+      - .:/ai-interview
+    environment:
+      - DB_HOST=db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=rakamin_development
+      - REDIS_URL=redis://redis:6379/1
+      - SECRET_KEY_BASE=your_secret_key_base_here
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-dummy_key_for_now}
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  pgdata:
+  redisdata:

@@ -21,3 +21,7 @@ Thumbs.db
 # logs
 *.log
 npm-debug.log*
+
+# Playwright
+playwright-report/
+test-results/

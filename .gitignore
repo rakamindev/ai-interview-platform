@@ -17,3 +17,7 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Local Reports & generator
+*.docx
+generate_report.py

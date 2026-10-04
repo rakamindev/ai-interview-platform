@@ -209,12 +209,13 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setPickerOpen(true)}
+              className="w-full sm:w-auto"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add from Skill Taxonomy
@@ -224,6 +225,7 @@ export default function AssessmentNewPage() {
               variant="outline"
               size="sm"
               onClick={addCustomSkill}
+              className="w-full sm:w-auto"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add custom skill
@@ -238,15 +240,16 @@ export default function AssessmentNewPage() {
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate("/assessments")}
+            className="order-last sm:order-first w-full sm:w-auto"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save &amp; Create Session →
           </Button>

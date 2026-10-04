@@ -1,0 +1,21 @@
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  libpq-dev \
+  tzdata \
+  git \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4
+
+COPY . .
+
+ENV DB_HOST=db
+ENV REDIS_URL=redis://redis:6379/1
+
+EXPOSE 3001
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]

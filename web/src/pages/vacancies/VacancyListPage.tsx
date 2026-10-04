@@ -39,7 +39,7 @@ export default function VacancyListPage() {
         <div className="space-y-2">
           {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
-      ) : vacancies.length === 0 ? (
+      ) : (!error && vacancies.length === 0) ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
           <p className="mb-3">No vacancies yet.</p>
           <Button variant="outline" onClick={() => navigate("/vacancies/new")}>

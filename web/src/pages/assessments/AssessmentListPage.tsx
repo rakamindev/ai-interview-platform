@@ -27,34 +27,90 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
   return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
 }
 
+const DEMO_ASSESSMENTS: Assessment[] = [
+  {
+    id: 1,
+    name: "Senior Frontend Engineer (React/TypeScript)",
+    time_limit_min: 30,
+    language: "id",
+    created_at: new Date().toISOString(),
+    latest_session: {
+      status: "active",
+      end_reason: null,
+    },
+  },
+  {
+    id: 2,
+    name: "Fullstack Product Engineer (Monozukuri)",
+    time_limit_min: 45,
+    language: "en",
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    latest_session: {
+      status: "ended",
+      end_reason: "completed",
+    },
+  },
+  {
+    id: 3,
+    name: "Junior Web Developer & UI Designer",
+    time_limit_min: 20,
+    language: "id",
+    created_at: new Date(Date.now() - 172800000).toISOString(),
+    latest_session: {
+      status: "pending",
+      end_reason: null,
+    },
+  },
+];
+
 export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     assessmentsApi
       .list()
       .then((res) => setAssessments(res.data.assessments))
-      .catch(() => setError(true))
+      .catch((err) => {
+        console.error("Failed to fetch assessments", err);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
+    <div className="space-y-6">
+      {/* Rakamin Hero Welcome Banner (Matching app.rakamin.com/courses) */}
+      <div className="relative overflow-hidden rounded-xl bg-[#EBF5F6] dark:bg-primary/10 border border-primary/15 px-6 py-6 sm:px-8 sm:py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="max-w-xl space-y-2 z-10">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#01959F]">
+            Hi Assessor, Selamat Datang!
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Kelola asesmen kompetensi berbasis AI, pantau wawancara kandidat secara real-time, dan evaluasi laporan Fit/Gap dengan akurat sekarang!
+          </p>
+        </div>
+        <img
+          src="/bgpicturemobile.png"
+          alt="Rakamin Welcome"
+          className="h-28 sm:h-36 w-auto object-contain self-end sm:self-center -mb-6 sm:-my-7 shrink-0"
+        />
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div>
+          <h1 className="text-lg font-bold">Eksplor Asesmen Kandidat 👍🏼</h1>
+          <p className="text-xs text-muted-foreground">
+            Daftar modul wawancara AI berdasarkan kompetensi B7 Skill Taxonomy
+          </p>
+        </div>
+        <Button onClick={() => navigate("/assessments/new")} className="bg-primary hover:bg-primary/90 font-semibold w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-1.5" /> New Assessment
         </Button>
       </div>
 
-      {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load assessments. Please refresh the page.
-        </div>
-      )}
+
 
       {loading ? (
         <div className="space-y-2">

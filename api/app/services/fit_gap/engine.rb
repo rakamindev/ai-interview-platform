@@ -46,8 +46,13 @@ module FitGap
         if portfolio_skill
           candidate_level  = portfolio_skill[:effective_level]
           expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          if candidate_level.nil?
+            delta  = nil
+            result = 'not_assessed'
+          else
+            delta  = candidate_level - expected_level
+            result = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          end
         else
           candidate_level = nil
           expected_level  = vacancy_skill.expected_level
