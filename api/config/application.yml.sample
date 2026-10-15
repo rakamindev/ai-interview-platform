@@ -18,7 +18,7 @@ GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
 GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
 
 # App URL (for invite links)
-APP_BASE_URL: "http://localhost:3001"
+APP_BASE_URL: "http://localhost:5173"
 
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds
