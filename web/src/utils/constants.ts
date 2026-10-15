@@ -1,10 +1,13 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+/**
+ * Parse "L3" → 3 and pass 1-5 through. Anything else is null: an unknown level
+ * must never be shown as L1, because that reads as a real (low) rating.
+ */
+export function parseLevel(level: string | number | null | undefined): number | null {
+  if (level == null) return null;
+  const n = typeof level === "number" ? level : Number(String(level).trim().replace(/^L/i, ""));
+  return Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
 }
 
 export const LEVEL_LABELS: Record<number, string> = {
@@ -54,6 +57,18 @@ export const COVERAGE_STATE_COLOR: Record<string, string> = {
   covered: "bg-teal-600",
 };
 
+export const RATING_STATUS_LABELS: Record<string, string> = {
+  not_assessed: "Not assessed",
+  insufficient_evidence: "Insufficient evidence",
+  missing: "Not assessed",
+};
+
+export const RATING_STATUS_EXPLANATIONS: Record<string, string> = {
+  not_assessed: "The interview never reached this skill, so there is nothing to rate.",
+  insufficient_evidence: "It came up, but nothing the candidate said supports a rating.",
+  missing: "This skill was not part of the interview.",
+};
+
 // Fit/Gap result display
 export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   match: "Match",
@@ -66,5 +81,5 @@ export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   match: "text-green-700 bg-green-50",
   gap: "text-amber-700 bg-amber-50",
   exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  not_assessed: "text-slate-600 bg-slate-100",
 };

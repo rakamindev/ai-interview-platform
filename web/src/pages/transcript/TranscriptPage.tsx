@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
@@ -12,6 +12,7 @@ export default function TranscriptPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { hash } = useLocation();
 
   useEffect(() => {
     Promise.all([
@@ -25,6 +26,12 @@ export default function TranscriptPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Evidence quotes on the portfolio link to #turn-N; scroll there once loaded.
+  useEffect(() => {
+    if (loading || !hash) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: "center" });
+  }, [loading, hash]);
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -92,7 +99,10 @@ export default function TranscriptPage() {
             return (
               <div
                 key={turn.id}
-                className={`rounded-lg p-4 ${
+                id={`turn-${turn.turn_number}`}
+                className={`scroll-mt-24 rounded-lg p-4 ${
+                  hash === `#turn-${turn.turn_number}` ? "ring-2 ring-primary " : ""
+                }${
                   isAI
                     ? "bg-muted border"
                     : "bg-background border border-primary/20"
@@ -104,6 +114,7 @@ export default function TranscriptPage() {
                   }`}
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
+                  <span className="ml-2 font-normal text-muted-foreground">Turn {turn.turn_number}</span>
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
               </div>
