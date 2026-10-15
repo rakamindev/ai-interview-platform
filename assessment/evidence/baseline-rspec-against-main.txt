@@ -1,0 +1,683 @@
+
+Randomized with seed 1
+2026-10-15T09:26:26.043Z pid=82874 tid=1zhe INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/15"}
+FFFFFFFFFFFFFF.F.FFF..FFFFFFFF...FFFFFFF.FFFFFFFFF.FFFFFF
+
+Failures:
+
+  1) Portfolios::Generator leaves the previous skills untouched when saving fails halfway (G11)
+     Failure/Error: expect { generate(FakeGeminiClient.new(model_response)) }.to raise_error(ActiveRecord::RecordInvalid)
+
+       expected ActiveRecord::RecordInvalid, got #<ArgumentError: wrong number of arguments (given 1, expected 0)> with backtrace:
+         # ./spec/services/portfolios/generator_spec.rb:208:in `call'
+         # ./spec/services/portfolios/generator_spec.rb:208:in `block (3 levels) in <main>'
+         # ./app/services/portfolios/generator.rb:157:in `block in save_skills'
+         # ./app/services/portfolios/generator.rb:156:in `each'
+         # ./app/services/portfolios/generator.rb:156:in `save_skills'
+         # ./app/services/portfolios/generator.rb:28:in `call'
+         # ./spec/services/portfolios/generator_spec.rb:45:in `generate'
+         # ./spec/services/portfolios/generator_spec.rb:211:in `block (3 levels) in <main>'
+         # ./spec/services/portfolios/generator_spec.rb:211:in `block (2 levels) in <main>'
+         # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+         # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+         # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:211:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  2) Portfolios::Generator caps long summaries and the number of quotes (G7)
+     Failure/Error: expect(react_skill.competency_summary.length).to eq(described_class::MAX_SUMMARY_LENGTH)
+
+     NameError:
+       uninitialized constant Portfolios::Generator::MAX_SUMMARY_LENGTH
+     # ./spec/services/portfolios/generator_spec.rb:159:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  3) Portfolios::Generator keeps assessor overrides attached across a regeneration (G14)
+     Failure/Error: expect(override.reload.portfolio_skill_id).to eq(react_skill.id)
+
+     ActiveRecord::RecordNotFound:
+       Couldn't find AssessorOverride with 'id'=20
+     # ./spec/services/portfolios/generator_spec.rb:251:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  4) Portfolios::Generator keeps a configured skill the model left out, as insufficient evidence (G2)
+     Failure/Error: portfolio.portfolio_skills.find_by!(skill_label: label)
+
+     ActiveRecord::RecordNotFound:
+       Couldn't find PortfolioSkill with [WHERE "portfolio_skills"."portfolio_id" = $1 AND "portfolio_skills"."skill_label" = $2]
+     # ./spec/services/portfolios/generator_spec.rb:49:in `skill'
+     # ./spec/services/portfolios/generator_spec.rb:88:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  5) Portfolios::Generator does not call the model when the candidate never spoke (G8)
+     Failure/Error: expect(client.calls).to eq(0)
+
+       expected: 0
+            got: 1
+
+       (compared using ==)
+     # ./spec/services/portfolios/generator_spec.rb:169:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  6) Portfolios::Generator rates skills that were reached and backs each level with verified quotes
+     Failure/Error: expect(react_skill).to have_attributes(rating_status: 'rated', ai_level: 3, probe_count: 4, coverage_state: 'covered')
+
+       expected #<PortfolioSkill id: 301, portfolio_id: 206, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => 3, :coverage_state => "covered", :probe_count => 4, :rating_status => "rated"} but had attributes {:ai_level => 3, :coverage_state => nil, :probe_count => nil, :rating_status => "rated"}
+       Diff:
+       @@ -1,4 +1,4 @@
+        :ai_level => 3,
+       -:coverage_state => "covered",
+       -:probe_count => 4,
+       +:coverage_state => nil,
+       +:probe_count => nil,
+        :rating_status => "rated",
+     # ./spec/services/portfolios/generator_spec.rb:57:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  7) Portfolios::Generator derives confidence from coverage, not from the model (G4)
+     Failure/Error: expect(skill(portfolio, 'Communication').ai_confidence).to eq('medium') # partial, 2 probes; model said high
+
+       expected: "medium"
+            got: "high"
+
+       (compared using ==)
+     # ./spec/services/portfolios/generator_spec.rb:118:in `block (2 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  8) Portfolios::Generator evidence verification (G5, G6) accepts quotes stitched with an ellipsis when every fragment is in the same turn
+     Failure/Error: expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to be_rated
+       expected #<PortfolioSkill id: 305, portfolio_id: 208, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to respond to `rated?`
+     # ./spec/services/portfolios/generator_spec.rb:139:in `block (3 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  9) Portfolios::Generator evidence verification (G5, G6) drops quotes the candidate never said and quotes from the AI
+     Failure/Error: quotes = skill(generate(FakeGeminiClient.new(response)), 'React').evidence_quotes.map { |e| e[:quote] }
+
+     TypeError:
+       no implicit conversion of Symbol into Integer
+     # ./spec/services/portfolios/generator_spec.rb:130:in `[]'
+     # ./spec/services/portfolios/generator_spec.rb:130:in `block (4 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:130:in `map'
+     # ./spec/services/portfolios/generator_spec.rb:130:in `block (3 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  10) Portfolios::Generator evidence verification (G5, G6) downgrades a level with no surviving quote to insufficient evidence
+      Failure/Error:
+        expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+          rating_status: 'insufficient_evidence', ai_level: nil
+        )
+
+        expected #<PortfolioSkill id: 309, portfolio_id: 210, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 3, :rating_status => "rated"}
+        Diff:
+        @@ -1,2 +1,2 @@
+        -:ai_level => nil,
+        -:rating_status => "insufficient_evidence",
+        +:ai_level => 3,
+        +:rating_status => "rated",
+      # ./spec/services/portfolios/generator_spec.rb:146:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  11) Portfolios::Generator skills the interview never reached (G1) stores them as not assessed with no level, even if the model rates them
+      Failure/Error:
+        portfolio.portfolio_skills.create!(
+          skill_id:           skill_data['skill_id'],
+          skill_label:        skill_data['skill_label'],
+          is_discovered:      false,
+          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_confidence:      skill_data['confidence'],
+          evidence:           Array(skill_data['evidence']).first(3),
+          competency_summary: skill_data['competency_summary']
+        )
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai confidence is not included in the list
+      # ./app/services/portfolios/generator.rb:157:in `block in save_skills'
+      # ./app/services/portfolios/generator.rb:156:in `each'
+      # ./app/services/portfolios/generator.rb:156:in `save_skills'
+      # ./app/services/portfolios/generator.rb:28:in `call'
+      # ./spec/services/portfolios/generator_spec.rb:45:in `generate'
+      # ./spec/services/portfolios/generator_spec.rb:67:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  12) Portfolios::Generator skills the interview never reached (G1) does not ask the model to rate them
+      Failure/Error: expect(client.prompts.first).not_to include('SKILL: System Design')
+        expected "You are evaluating a completed skills assessment interview to produce a structured skill portfolio.\...evidence\": [\"quote 1\"],\n      \"competency_summary\": \"2-3 sentence summary\"\n    }\n  ]\n}\n" not to include "SKILL: System Design"
+      # ./spec/services/portfolios/generator_spec.rb:78:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  13) Portfolios::Generator model failures (G9, G10) never stores raw exception text from unexpected errors
+      Failure/Error: expect(session.reload.portfolio.generation_error).to eq('RuntimeError')
+
+        expected: "RuntimeError"
+             got: "boom near I wrote a one-pager with the profiling data before the meeting"
+
+        (compared using ==)
+      # ./spec/services/portfolios/generator_spec.rb:196:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  14) Portfolios::Generator model failures (G9, G10) treats a non-JSON answer as a failure instead of saving nothing
+      Failure/Error: expect { generate(client) }.to raise_error(described_class::InvalidResponseError)
+
+      NameError:
+        uninitialized constant Portfolios::Generator::InvalidResponseError
+      # ./spec/services/portfolios/generator_spec.rb:188:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  15) Portfolios::Generator duplicate jobs (G12, G13) does not regenerate a complete portfolio
+      Failure/Error: expect(client.calls).to eq(0)
+
+        expected: 0
+             got: 1
+
+        (compared using ==)
+      # ./spec/services/portfolios/generator_spec.rb:239:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  16) Portfolios::Generator duplicate jobs (G12, G13) skips without calling the model while another job holds the portfolio
+      Failure/Error: expect(client.calls).to eq(0)
+
+        expected: 0
+             got: 1
+
+        (compared using ==)
+      # ./spec/services/portfolios/generator_spec.rb:222:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  17) Portfolios::Generator level parsing (G3) treats -1 as no level instead of clamping it
+      Failure/Error:
+        expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+          rating_status: 'insufficient_evidence', ai_level: nil
+        )
+
+        expected #<PortfolioSkill id: 323, portfolio_id: 218, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+        Diff:
+        @@ -1,2 +1,2 @@
+        -:ai_level => nil,
+        -:rating_status => "insufficient_evidence",
+        +:ai_level => 1,
+        +:rating_status => "rated",
+      # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  18) Portfolios::Generator level parsing (G3) treats 7 as no level instead of clamping it
+      Failure/Error:
+        expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+          rating_status: 'insufficient_evidence', ai_level: nil
+        )
+
+        expected #<PortfolioSkill id: 325, portfolio_id: 219, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 5, :rating_status => "rated"}
+        Diff:
+        @@ -1,2 +1,2 @@
+        -:ai_level => nil,
+        -:rating_status => "insufficient_evidence",
+        +:ai_level => 5,
+        +:rating_status => "rated",
+      # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  19) Portfolios::Generator level parsing (G3) treats "three" as no level instead of clamping it
+      Failure/Error:
+        expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+          rating_status: 'insufficient_evidence', ai_level: nil
+        )
+
+        expected #<PortfolioSkill id: 331, portfolio_id: 222, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+        Diff:
+        @@ -1,2 +1,2 @@
+        -:ai_level => nil,
+        -:rating_status => "insufficient_evidence",
+        +:ai_level => 1,
+        +:rating_status => "rated",
+      # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  20) Portfolios::Generator level parsing (G3) treats nil as no level instead of clamping it
+      Failure/Error:
+        expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+          rating_status: 'insufficient_evidence', ai_level: nil
+        )
+
+        expected #<PortfolioSkill id: 333, portfolio_id: 223, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+        Diff:
+        @@ -1,2 +1,2 @@
+        -:ai_level => nil,
+        -:rating_status => "insufficient_evidence",
+        +:ai_level => 1,
+        +:rating_status => "rated",
+      # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  21) Portfolios::Generator level parsing (G3) reads "L3" as 3
+      Failure/Error: expect(skill(generate(FakeGeminiClient.new(response)), 'React').ai_level).to eq(expected)
+
+        expected: 3
+             got: 1
+
+        (compared using ==)
+      # ./spec/services/portfolios/generator_spec.rb:98:in `block (4 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  22) Portfolios::Generator level parsing (G3) treats 2.5 as no level instead of clamping it
+      Failure/Error:
+        expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+          rating_status: 'insufficient_evidence', ai_level: nil
+        )
+
+        expected #<PortfolioSkill id: 337, portfolio_id: 225, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 2, :rating_status => "rated"}
+        Diff:
+        @@ -1,2 +1,2 @@
+        -:ai_level => nil,
+        -:rating_status => "insufficient_evidence",
+        +:ai_level => 2,
+        +:rating_status => "rated",
+      # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  23) Portfolios::Generator level parsing (G3) treats 0 as no level instead of clamping it
+      Failure/Error:
+        expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+          rating_status: 'insufficient_evidence', ai_level: nil
+        )
+
+        expected #<PortfolioSkill id: 339, portfolio_id: 226, skill_id: "sk-react", skill_label: "React", is_discovere..._summary: "Strong state management.", rating_status: "rated", probe_count: nil, coverage_state: nil> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+        Diff:
+        @@ -1,2 +1,2 @@
+        -:ai_level => nil,
+        -:rating_status => "insufficient_evidence",
+        +:ai_level => 1,
+        +:rating_status => "rated",
+      # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  24) Portfolios::Generator discovered skills (G15) drops discovered skills without verifiable evidence and ones that duplicate a configured skill
+      Failure/Error:
+        portfolio.portfolio_skills.create!(
+          skill_id:           nil,
+          skill_label:        skill_data['skill_label'],
+          is_discovered:      true,
+          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_confidence:      skill_data['confidence'],
+          evidence:           Array(skill_data['evidence']).first(3),
+          competency_summary: skill_data['competency_summary']
+        )
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai confidence is not included in the list
+      # ./app/services/portfolios/generator.rb:169:in `block in save_skills'
+      # ./app/services/portfolios/generator.rb:168:in `each'
+      # ./app/services/portfolios/generator.rb:168:in `save_skills'
+      # ./app/services/portfolios/generator.rb:28:in `call'
+      # ./spec/services/portfolios/generator_spec.rb:45:in `generate'
+      # ./spec/services/portfolios/generator_spec.rb:276:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  25) Portfolios::Generator discovered skills (G15) keeps rated ones with confidence from their coverage row
+      Failure/Error:
+        portfolio.portfolio_skills.create!(
+          skill_id:           nil,
+          skill_label:        skill_data['skill_label'],
+          is_discovered:      true,
+          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_confidence:      skill_data['confidence'],
+          evidence:           Array(skill_data['evidence']).first(3),
+          competency_summary: skill_data['competency_summary']
+        )
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai confidence is not included in the list
+      # ./app/services/portfolios/generator.rb:169:in `block in save_skills'
+      # ./app/services/portfolios/generator.rb:168:in `each'
+      # ./app/services/portfolios/generator.rb:168:in `save_skills'
+      # ./app/services/portfolios/generator.rb:28:in `call'
+      # ./spec/services/portfolios/generator_spec.rb:45:in `generate'
+      # ./spec/services/portfolios/generator_spec.rb:265:in `block (3 levels) in <main>'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  26) Exports::PdfGenerator renders overrides, unrated skills and text outside Windows-1252
+      Failure/Error: create(:portfolio_skill, :not_assessed, portfolio:, skill_label: 'System Design')
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai level is not a number
+      # ./spec/services/exports/pdf_generator_spec.rb:16:in `block (2 levels) in <main>'
+      # ./spec/services/exports/pdf_generator_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/exports/pdf_generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  27) POST /api/v1/portfolio_skills/:id/override returns 404 for a skill in another organization (O4)
+      Failure/Error: expect(response).to have_http_status(:not_found)
+        expected the response to have a not_found status code (404) but it was 201
+      # ./spec/requests/portfolio_skill_overrides_spec.rb:51:in `block (2 levels) in <top (required)>'
+
+  28) POST /api/v1/portfolio_skills/:id/override requires a reason (O1)
+      Failure/Error: expect(response).to have_http_status(:unprocessable_entity)
+        expected the response to have status code :unprocessable_entity (422) but it was :created (201)
+      # ./spec/requests/portfolio_skill_overrides_spec.rb:27:in `block (2 levels) in <top (required)>'
+
+  29) POST /api/v1/portfolio_skills/:id/override refuses to override a skill that was never rated (O2)
+      Failure/Error: unrated = create(:portfolio_skill, :not_assessed, portfolio:)
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai level is not a number
+      # ./spec/requests/portfolio_skill_overrides_spec.rb:32:in `block (2 levels) in <top (required)>'
+
+  30) FitGap::Engine uses the assessor override and still reports the AI level (F2)
+      Failure/Error:
+        expect(comparison(run, 'React')).to include(
+          'result' => 'match', 'candidate_level' => 3, 'ai_level' => 2, 'overridden' => true, 'low_confidence' => false
+        )
+
+        expected {"candidate_level" => 3, "confidence" => "low", "delta" => 0, "expected_level" => 3, "result" => "match", "skill_id" => nil, "skill_label" => "React"} to include {"ai_level" => 2, "overridden" => true, "low_confidence" => false}
+        Diff:
+
+
+        @@ -1,5 +1,7 @@
+        -"ai_level" => 2,
+         "candidate_level" => 3,
+        -"low_confidence" => false,
+        -"overridden" => true,
+        +"confidence" => "low",
+        +"delta" => 0,
+        +"expected_level" => 3,
+         "result" => "match",
+        +"skill_id" => nil,
+        +"skill_label" => "React",
+      # ./spec/services/fit_gap/engine_spec.rb:68:in `block (2 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  31) FitGap::Engine matches by skill_id first, then by label ignoring case and punctuation (F4)
+      Failure/Error: expect(comparison(report, '  Communication ')).to include('candidate_level' => 2)
+
+        expected {"candidate_level" => nil, "confidence" => nil, "delta" => nil, "expected_level" => 2, "result" => "not_assessed", "skill_id" => nil, "skill_label" => "  Communication "} to include {"candidate_level" => 2}
+        Diff:
+        @@ -1 +1,7 @@
+        -"candidate_level" => 2,
+        +"candidate_level" => nil,
+        +"confidence" => nil,
+        +"delta" => nil,
+        +"expected_level" => 2,
+        +"result" => "not_assessed",
+        +"skill_id" => nil,
+        +"skill_label" => "  Communication ",
+      # ./spec/services/fit_gap/engine_spec.rb:89:in `block (2 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  32) FitGap::Engine flags low-confidence ratings for verification (F3)
+      Failure/Error: expect(comparison(run, 'React')).to include('result' => 'gap', 'low_confidence' => true)
+
+        expected {"candidate_level" => 2, "confidence" => "low", "delta" => -1, "expected_level" => 3, "result" => "gap", "skill_id" => nil, "skill_label" => "React"} to include {"low_confidence" => true}
+        Diff:
+
+        @@ -1,2 +1,7 @@
+        -"low_confidence" => true,
+        +"candidate_level" => 2,
+        +"confidence" => "low",
+        +"delta" => -1,
+        +"expected_level" => 3,
+         "result" => "gap",
+        +"skill_id" => nil,
+        +"skill_label" => "React",
+      # ./spec/services/fit_gap/engine_spec.rb:77:in `block (2 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  33) FitGap::Engine updates the existing row when another job inserted it first (F7)
+      Failure/Error:
+        report.update!(
+          skill_comparisons: skill_comparisons,
+          culture_narrative: narratives[:culture],
+          overall_narrative: narratives[:overall],
+          generated_at:      Time.current
+        )
+
+      ActiveRecord::RecordNotUnique:
+        PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "index_fit_gap_reports_on_portfolio_id_and_vacancy_id"
+        DETAIL:  Key (portfolio_id, vacancy_id)=(240, 96) already exists.
+      # ./app/services/fit_gap/engine.rb:26:in `call'
+      # ./spec/services/fit_gap/engine_spec.rb:15:in `run'
+      # ./spec/services/fit_gap/engine_spec.rb:147:in `block (2 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+      # ------------------
+      # --- Caused by: ---
+      # PG::UniqueViolation:
+      #   ERROR:  duplicate key value violates unique constraint "index_fit_gap_reports_on_portfolio_id_and_vacancy_id"
+      #   DETAIL:  Key (portfolio_id, vacancy_id)=(240, 96) already exists.
+      #   ./app/services/fit_gap/engine.rb:26:in `call'
+
+  34) FitGap::Engine narrative failures (F5) still saves the report with an automatic summary when the model errors
+      Failure/Error: expect(report.overall_narrative).to start_with('Automatic summary')
+        expected "Candidate shows 1 skill matches, 0 exceeds, and 0 gaps against role requirements." to start with "Automatic summary"
+      # ./spec/services/fit_gap/engine_spec.rb:104:in `block (3 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  35) FitGap::Engine narrative failures (F5) falls back when the model answers with the wrong shape
+      Failure/Error: expect(report.overall_narrative).to start_with('Automatic summary')
+        expected nil to start with "Automatic summary", but it cannot be indexed using #[]
+      # ./spec/services/fit_gap/engine_spec.rb:111:in `block (3 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  36) FitGap::Engine skills without a level (F1) tells the narrative model they are not weaknesses
+      Failure/Error: create(:portfolio_skill, :not_assessed, portfolio:, skill_label: 'System Design')
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai level is not a number
+      # ./spec/services/fit_gap/engine_spec.rb:39:in `block (3 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  37) FitGap::Engine skills without a level (F1) reports them as not assessed rather than as a gap
+      Failure/Error: create(:portfolio_skill, :not_assessed, portfolio:, skill_label: 'System Design')
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai level is not a number
+      # ./spec/services/fit_gap/engine_spec.rb:39:in `block (3 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  38) FitGap::Engine.fingerprint (F6) changes when an override is saved
+      Failure/Error: before = described_class.fingerprint(portfolio, vacancy)
+
+      NoMethodError:
+        undefined method `fingerprint' for class FitGap::Engine
+      # ./spec/services/fit_gap/engine_spec.rb:121:in `block (3 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  39) FitGap::Engine.fingerprint (F6) is stored on the report
+      Failure/Error: expect(run.input_fingerprint).to eq(described_class.fingerprint(portfolio, vacancy))
+
+      NoMethodError:
+        undefined method `fingerprint' for class FitGap::Engine
+      # ./spec/services/fit_gap/engine_spec.rb:135:in `block (3 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  40) FitGap::Engine.fingerprint (F6) changes when the vacancy requirement changes
+      Failure/Error: before = described_class.fingerprint(portfolio, vacancy)
+
+      NoMethodError:
+        undefined method `fingerprint' for class FitGap::Engine
+      # ./spec/services/fit_gap/engine_spec.rb:128:in `block (3 levels) in <main>'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (3 levels) in <main>'
+      # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+      # ./spec/services/fit_gap/engine_spec.rb:8:in `block (2 levels) in <main>'
+
+  41) Portfolios API tenant isolation (F8) does not start fit/gap on another organization's portfolio
+      Failure/Error: expect(response).to have_http_status(:not_found)
+        expected the response to have a not_found status code (404) but it was 202
+      # ./spec/requests/portfolios_spec.rb:61:in `block (3 levels) in <main>'
+
+  42) Portfolios API tenant isolation (F8) does not export another organization's portfolio
+      Failure/Error: expect(response).to have_http_status(:not_found)
+        expected the response to have a not_found status code (404) but it was 200
+      # ./spec/requests/portfolios_spec.rb:55:in `block (3 levels) in <main>'
+
+  43) Portfolios API GET /api/v1/sessions/:id/portfolio reports a pending portfolio as still in progress instead of an empty result
+      Failure/Error: expect(response).to have_http_status(:accepted)
+        expected the response to have status code :accepted (202) but it was :ok (200)
+      # ./spec/requests/portfolios_spec.rb:46:in `block (3 levels) in <main>'
+
+  44) Portfolios API GET /api/v1/sessions/:id/portfolio returns skills with their rating status and verified evidence
+      Failure/Error: create(:portfolio_skill, :not_assessed, portfolio:, skill_label: 'System Design')
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai level is not a number
+      # ./spec/requests/portfolios_spec.rb:21:in `block (3 levels) in <main>'
+
+  45) Portfolios API GET /api/v1/sessions/:id/portfolio reads old string evidence rows without breaking
+      Failure/Error: expect(response.parsed_body.dig('portfolio', 'skills', 0, 'evidence')).to eq([{ 'quote' => 'an older quote', 'turn_number' => nil }])
+
+        expected: [{"quote"=>"an older quote", "turn_number"=>nil}]
+             got: ["an older quote"]
+
+        (compared using ==)
+
+        Diff:
+        @@ -1 +1 @@
+        -[{"quote"=>"an older quote", "turn_number"=>nil}]
+        +["an older quote"]
+      # ./spec/requests/portfolios_spec.rb:38:in `block (3 levels) in <main>'
+
+  46) Portfolios API POST /api/v1/portfolios/:id/fitgap enqueues at most one job per pair while one is pending (F9)
+      Failure/Error: expect(FitGapGeneratorWorker.jobs.size).to eq(1)
+
+        expected: 1
+             got: 3
+
+        (compared using ==)
+      # ./spec/requests/portfolios_spec.rb:79:in `block (3 levels) in <main>'
+
+  47) Portfolios API GET /api/v1/portfolios/:id/fitgap/:vacancy_id returns a fresh report as not stale
+      Failure/Error: expect(response.parsed_body.dig('report', 'stale')).to be(false)
+
+        expected false
+             got nil
+      # ./spec/requests/portfolios_spec.rb:94:in `block (3 levels) in <main>'
+
+  48) Portfolios API GET /api/v1/portfolios/:id/fitgap/:vacancy_id flags the report as stale once the vacancy changes (F6)
+      Failure/Error: expect(response.parsed_body.dig('report', 'stale')).to be(true)
+
+        expected true
+             got nil
+      # ./spec/requests/portfolios_spec.rb:103:in `block (3 levels) in <main>'
+
+Finished in 4.7 seconds (files took 2.44 seconds to load)
+57 examples, 48 failures
+
+Failed examples:
+
+rspec ./spec/services/portfolios/generator_spec.rb:200 # Portfolios::Generator leaves the previous skills untouched when saving fails halfway (G11)
+rspec ./spec/services/portfolios/generator_spec.rb:152 # Portfolios::Generator caps long summaries and the number of quotes (G7)
+rspec ./spec/services/portfolios/generator_spec.rb:243 # Portfolios::Generator keeps assessor overrides attached across a regeneration (G14)
+rspec ./spec/services/portfolios/generator_spec.rb:83 # Portfolios::Generator keeps a configured skill the model left out, as insufficient evidence (G2)
+rspec ./spec/services/portfolios/generator_spec.rb:163 # Portfolios::Generator does not call the model when the candidate never spoke (G8)
+rspec ./spec/services/portfolios/generator_spec.rb:52 # Portfolios::Generator rates skills that were reached and backs each level with verified quotes
+rspec ./spec/services/portfolios/generator_spec.rb:114 # Portfolios::Generator derives confidence from coverage, not from the model (G4)
+rspec ./spec/services/portfolios/generator_spec.rb:135 # Portfolios::Generator evidence verification (G5, G6) accepts quotes stitched with an ellipsis when every fragment is in the same turn
+rspec ./spec/services/portfolios/generator_spec.rb:122 # Portfolios::Generator evidence verification (G5, G6) drops quotes the candidate never said and quotes from the AI
+rspec ./spec/services/portfolios/generator_spec.rb:142 # Portfolios::Generator evidence verification (G5, G6) downgrades a level with no surviving quote to insufficient evidence
+rspec ./spec/services/portfolios/generator_spec.rb:62 # Portfolios::Generator skills the interview never reached (G1) stores them as not assessed with no level, even if the model rates them
+rspec ./spec/services/portfolios/generator_spec.rb:74 # Portfolios::Generator skills the interview never reached (G1) does not ask the model to rate them
+rspec ./spec/services/portfolios/generator_spec.rb:192 # Portfolios::Generator model failures (G9, G10) never stores raw exception text from unexpected errors
+rspec ./spec/services/portfolios/generator_spec.rb:185 # Portfolios::Generator model failures (G9, G10) treats a non-JSON answer as a failure instead of saving nothing
+rspec ./spec/services/portfolios/generator_spec.rb:233 # Portfolios::Generator duplicate jobs (G12, G13) does not regenerate a complete portfolio
+rspec ./spec/services/portfolios/generator_spec.rb:216 # Portfolios::Generator duplicate jobs (G12, G13) skips without calling the model while another job holds the portfolio
+rspec './spec/services/portfolios/generator_spec.rb[1:4:9]' # Portfolios::Generator level parsing (G3) treats -1 as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:6]' # Portfolios::Generator level parsing (G3) treats 7 as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:7]' # Portfolios::Generator level parsing (G3) treats "three" as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:4]' # Portfolios::Generator level parsing (G3) treats nil as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:1]' # Portfolios::Generator level parsing (G3) reads "L3" as 3
+rspec './spec/services/portfolios/generator_spec.rb[1:4:8]' # Portfolios::Generator level parsing (G3) treats 2.5 as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:5]' # Portfolios::Generator level parsing (G3) treats 0 as no level instead of clamping it
+rspec ./spec/services/portfolios/generator_spec.rb:270 # Portfolios::Generator discovered skills (G15) drops discovered skills without verifiable evidence and ones that duplicate a configured skill
+rspec ./spec/services/portfolios/generator_spec.rb:260 # Portfolios::Generator discovered skills (G15) keeps rated ones with confidence from their coverage row
+rspec ./spec/services/exports/pdf_generator_spec.rb:12 # Exports::PdfGenerator renders overrides, unrated skills and text outside Windows-1252
+rspec ./spec/requests/portfolio_skill_overrides_spec.rb:46 # POST /api/v1/portfolio_skills/:id/override returns 404 for a skill in another organization (O4)
+rspec ./spec/requests/portfolio_skill_overrides_spec.rb:24 # POST /api/v1/portfolio_skills/:id/override requires a reason (O1)
+rspec ./spec/requests/portfolio_skill_overrides_spec.rb:31 # POST /api/v1/portfolio_skills/:id/override refuses to override a skill that was never rated (O2)
+rspec ./spec/services/fit_gap/engine_spec.rb:63 # FitGap::Engine uses the assessor override and still reports the AI level (F2)
+rspec ./spec/services/fit_gap/engine_spec.rb:80 # FitGap::Engine matches by skill_id first, then by label ignoring case and punctuation (F4)
+rspec ./spec/services/fit_gap/engine_spec.rb:73 # FitGap::Engine flags low-confidence ratings for verification (F3)
+rspec ./spec/services/fit_gap/engine_spec.rb:139 # FitGap::Engine updates the existing row when another job inserted it first (F7)
+rspec ./spec/services/fit_gap/engine_spec.rb:99 # FitGap::Engine narrative failures (F5) still saves the report with an automatic summary when the model errors
+rspec ./spec/services/fit_gap/engine_spec.rb:108 # FitGap::Engine narrative failures (F5) falls back when the model answers with the wrong shape
+rspec ./spec/services/fit_gap/engine_spec.rb:53 # FitGap::Engine skills without a level (F1) tells the narrative model they are not weaknesses
+rspec ./spec/services/fit_gap/engine_spec.rb:44 # FitGap::Engine skills without a level (F1) reports them as not assessed rather than as a gap
+rspec ./spec/services/fit_gap/engine_spec.rb:120 # FitGap::Engine.fingerprint (F6) changes when an override is saved
+rspec ./spec/services/fit_gap/engine_spec.rb:134 # FitGap::Engine.fingerprint (F6) is stored on the report
+rspec ./spec/services/fit_gap/engine_spec.rb:127 # FitGap::Engine.fingerprint (F6) changes when the vacancy requirement changes
+rspec ./spec/requests/portfolios_spec.rb:58 # Portfolios API tenant isolation (F8) does not start fit/gap on another organization's portfolio
+rspec ./spec/requests/portfolios_spec.rb:52 # Portfolios API tenant isolation (F8) does not export another organization's portfolio
+rspec ./spec/requests/portfolios_spec.rb:41 # Portfolios API GET /api/v1/sessions/:id/portfolio reports a pending portfolio as still in progress instead of an empty result
+rspec ./spec/requests/portfolios_spec.rb:18 # Portfolios API GET /api/v1/sessions/:id/portfolio returns skills with their rating status and verified evidence
+rspec ./spec/requests/portfolios_spec.rb:33 # Portfolios API GET /api/v1/sessions/:id/portfolio reads old string evidence rows without breaking
+rspec ./spec/requests/portfolios_spec.rb:73 # Portfolios API POST /api/v1/portfolios/:id/fitgap enqueues at most one job per pair while one is pending (F9)
+rspec ./spec/requests/portfolios_spec.rb:91 # Portfolios API GET /api/v1/portfolios/:id/fitgap/:vacancy_id returns a fresh report as not stale
+rspec ./spec/requests/portfolios_spec.rb:98 # Portfolios API GET /api/v1/portfolios/:id/fitgap/:vacancy_id flags the report as stale once the vacancy changes (F6)
+
+Randomized with seed 1
+

@@ -16,7 +16,7 @@ module Api
             regenerate_stale_fitgap_reports
             json_response(override: override_json(existing))
           else
-            json_error(existing.errors.full_messages.first, :unprocessable_entity)
+            json_error(existing.errors.full_messages.to_sentence, :unprocessable_entity)
           end
         else
           new_override = @portfolio_skill.build_assessor_override(
@@ -31,7 +31,7 @@ module Api
             regenerate_stale_fitgap_reports
             json_response({ override: override_json(new_override) }, :created)
           else
-            json_error(new_override.errors.full_messages.first, :unprocessable_entity)
+            json_error(new_override.errors.full_messages.to_sentence, :unprocessable_entity)
           end
         end
       end
@@ -40,15 +40,17 @@ module Api
 
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
+        FitGapReport.where(portfolio_id: portfolio.id).find_each do |report|
           vacancy_id = report.vacancy_id
           report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          FitGapGeneratorWorker.enqueue_once(portfolio.id, vacancy_id)
         end
       end
 
+      # Scoped through portfolio -> session so a skill id from another
+      # organization is reported as not found.
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        @portfolio_skill = PortfolioSkill.where(portfolio_id: Portfolio.visible_to_current_tenant.select(:id))
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

@@ -1,0 +1,53 @@
+
+ RUN  v3.2.4 <repo>/web
+
+ ❯ src/utils/__tests__/constants.test.ts (9 tests | 5 failed) 24ms
+   ✓ parseLevel > passes numbers 1-5 through 3ms
+   ✓ parseLevel > parses the L-prefixed form 0ms
+   ✓ parseLevel > returns null for %p instead of defaulting to L1 null 0ms
+   ✓ parseLevel > returns null for %p instead of defaulting to L1 undefined 0ms
+   × parseLevel > returns null for %p instead of defaulting to L1  9ms
+     → expected 1 to be null
+   × parseLevel > returns null for %p instead of defaulting to L1 L0 1ms
+     → expected 1 to be null
+   × parseLevel > returns null for %p instead of defaulting to L1 6 1ms
+     → expected 1 to be null
+   × parseLevel > returns null for %p instead of defaulting to L1 2.5 2ms
+     → expected 1 to be null
+   × parseLevel > returns null for %p instead of defaulting to L1 three 1ms
+     → expected 1 to be null
+ ✓ src/hooks/__tests__/useFitGapReport.test.ts (5 tests) 95ms
+ ✓ src/components/fitgap/__tests__/ComparisonTable.test.tsx (4 tests) 363ms
+ ✓ src/components/portfolio/__tests__/SkillPortfolioCard.test.tsx (7 tests) 772ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/utils/__tests__/constants.test.ts > parseLevel > returns null for %p instead of defaulting to L1 
+ FAIL  src/utils/__tests__/constants.test.ts > parseLevel > returns null for %p instead of defaulting to L1 L0
+ FAIL  src/utils/__tests__/constants.test.ts > parseLevel > returns null for %p instead of defaulting to L1 6
+ FAIL  src/utils/__tests__/constants.test.ts > parseLevel > returns null for %p instead of defaulting to L1 2.5
+ FAIL  src/utils/__tests__/constants.test.ts > parseLevel > returns null for %p instead of defaulting to L1 three
+AssertionError: expected 1 to be null
+
+[32m- Expected:[39m 
+null
+
+[31m+ Received:[39m 
+1
+
+ ❯ src/utils/__tests__/constants.test.ts:14:40
+     12| 
+     13|   it.each([null, undefined, "", "L0", 6, 2.5, "three"])("returns null …
+     14|     expect(parseLevel(value as never)).toBeNull();
+       |                                        ^
+     15|   });
+     16| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  5 failed | 20 passed (25)
+   Start at  16:34:28
+   Duration  4.46s (transform 519ms, setup 1.74s, collect 1.63s, tests 1.25s, environment 4.14s, prepare 771ms)
+

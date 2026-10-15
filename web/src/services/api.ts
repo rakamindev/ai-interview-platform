@@ -35,4 +35,11 @@ api.interceptors.response.use(
   }
 );
 
+/** First error message from the API's `{ errors: [{ message }] }` envelope, or the fallback. */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { response?: { data?: { errors?: { message?: unknown }[] } } })
+    ?.response?.data?.errors?.[0]?.message;
+  return typeof message === "string" && message.trim() ? message : fallback;
+}
+
 export default api;

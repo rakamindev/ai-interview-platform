@@ -1,0 +1,128 @@
+
+Randomized with seed 1
+..........................FF..FF.FF..............................
+
+Failures:
+
+  1) Portfolios::Generator level parsing (G3) treats -1 as no level instead of clamping it
+     Failure/Error:
+       expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+         rating_status: 'insufficient_evidence', ai_level: nil
+       )
+
+       expected #<PortfolioSkill id: 148, portfolio_id: 86, skill_id: "sk-react", skill_label: "React", is_discovered...mary: "Strong state management.", rating_status: "rated", probe_count: 4, coverage_state: "covered"> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:rating_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:rating_status => "rated",
+     # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  2) Portfolios::Generator level parsing (G3) treats 7 as no level instead of clamping it
+     Failure/Error:
+       expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+         rating_status: 'insufficient_evidence', ai_level: nil
+       )
+
+       expected #<PortfolioSkill id: 151, portfolio_id: 87, skill_id: "sk-react", skill_label: "React", is_discovered...mary: "Strong state management.", rating_status: "rated", probe_count: 4, coverage_state: "covered"> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 5, :rating_status => "rated"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:rating_status => "insufficient_evidence",
+       +:ai_level => 5,
+       +:rating_status => "rated",
+     # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  3) Portfolios::Generator level parsing (G3) treats "three" as no level instead of clamping it
+     Failure/Error:
+       expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+         rating_status: 'insufficient_evidence', ai_level: nil
+       )
+
+       expected #<PortfolioSkill id: 160, portfolio_id: 90, skill_id: "sk-react", skill_label: "React", is_discovered...mary: "Strong state management.", rating_status: "rated", probe_count: 4, coverage_state: "covered"> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:rating_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:rating_status => "rated",
+     # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  4) Portfolios::Generator level parsing (G3) treats nil as no level instead of clamping it
+     Failure/Error:
+       expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+         rating_status: 'insufficient_evidence', ai_level: nil
+       )
+
+       expected #<PortfolioSkill id: 163, portfolio_id: 91, skill_id: "sk-react", skill_label: "React", is_discovered...mary: "Strong state management.", rating_status: "rated", probe_count: 4, coverage_state: "covered"> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:rating_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:rating_status => "rated",
+     # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  5) Portfolios::Generator level parsing (G3) treats 2.5 as no level instead of clamping it
+     Failure/Error:
+       expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+         rating_status: 'insufficient_evidence', ai_level: nil
+       )
+
+       expected #<PortfolioSkill id: 169, portfolio_id: 93, skill_id: "sk-react", skill_label: "React", is_discovered...mary: "Strong state management.", rating_status: "rated", probe_count: 4, coverage_state: "covered"> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 2, :rating_status => "rated"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:rating_status => "insufficient_evidence",
+       +:ai_level => 2,
+       +:rating_status => "rated",
+     # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+  6) Portfolios::Generator level parsing (G3) treats 0 as no level instead of clamping it
+     Failure/Error:
+       expect(skill(generate(FakeGeminiClient.new(response)), 'React')).to have_attributes(
+         rating_status: 'insufficient_evidence', ai_level: nil
+       )
+
+       expected #<PortfolioSkill id: 172, portfolio_id: 94, skill_id: "sk-react", skill_label: "React", is_discovered...mary: "Strong state management.", rating_status: "rated", probe_count: 4, coverage_state: "covered"> to have attributes {:ai_level => nil, :rating_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :rating_status => "rated"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:rating_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:rating_status => "rated",
+     # ./spec/services/portfolios/generator_spec.rb:107:in `block (4 levels) in <main>'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (3 levels) in <main>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/services/portfolios/generator_spec.rb:8:in `block (2 levels) in <main>'
+
+Finished in 4.06 seconds (files took 2.43 seconds to load)
+65 examples, 6 failures
+
+Failed examples:
+
+rspec './spec/services/portfolios/generator_spec.rb[1:4:9]' # Portfolios::Generator level parsing (G3) treats -1 as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:6]' # Portfolios::Generator level parsing (G3) treats 7 as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:7]' # Portfolios::Generator level parsing (G3) treats "three" as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:4]' # Portfolios::Generator level parsing (G3) treats nil as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:8]' # Portfolios::Generator level parsing (G3) treats 2.5 as no level instead of clamping it
+rspec './spec/services/portfolios/generator_spec.rb[1:4:5]' # Portfolios::Generator level parsing (G3) treats 0 as no level instead of clamping it
+
+Randomized with seed 1
+

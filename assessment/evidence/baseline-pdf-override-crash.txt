@@ -1,0 +1,40 @@
+
+Randomized with seed 2245
+2026-10-15T09:27:15.555Z pid=83189 tid=20fh INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/15"}
+F
+
+Failures:
+
+  1) Exports::PdfGenerator exports a portfolio that has an assessor override
+     Failure/Error: pdf.text level_text
+
+     Prawn::Errors::IncompatibleStringEncoding:
+       Your document includes text that's not compatible with the Windows-1252 character set.
+       If you need full UTF-8 support, use external fonts instead of PDF's built-in fonts.
+     # ./app/services/exports/pdf_generator.rb:87:in `block in render_skill_card'
+     # ./app/services/exports/pdf_generator.rb:81:in `render_skill_card'
+     # ./app/services/exports/pdf_generator.rb:66:in `block in render_portfolio_section'
+     # ./app/services/exports/pdf_generator.rb:66:in `each'
+     # ./app/services/exports/pdf_generator.rb:66:in `render_portfolio_section'
+     # ./app/services/exports/pdf_generator.rb:31:in `block in call'
+     # ./app/services/exports/pdf_generator.rb:29:in `new'
+     # ./app/services/exports/pdf_generator.rb:29:in `call'
+     # ./spec/pdf_baseline_spec.rb:8:in `block (2 levels) in <top (required)>'
+     # ./spec/pdf_baseline_spec.rb:4:in `block (3 levels) in <top (required)>'
+     # ./spec/support/tenant_helpers.rb:15:in `as_tenant'
+     # ./spec/pdf_baseline_spec.rb:4:in `block (2 levels) in <top (required)>'
+     # ------------------
+     # --- Caused by: ---
+     # Encoding::UndefinedConversionError:
+     #   U+2192 to WINDOWS-1252 in conversion from UTF-8 to WINDOWS-1252
+     #   ./app/services/exports/pdf_generator.rb:87:in `block in render_skill_card'
+
+Finished in 0.24187 seconds (files took 2.29 seconds to load)
+1 example, 1 failure
+
+Failed examples:
+
+rspec ./spec/pdf_baseline_spec.rb:5 # Exports::PdfGenerator exports a portfolio that has an assessor override
+
+Randomized with seed 2245
+

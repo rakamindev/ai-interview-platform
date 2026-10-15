@@ -3,12 +3,19 @@
 require 'prawn'
 require 'prawn/table'
 
+# Text is passed through #safe below, so the built-in fonts' encoding limits are handled.
+Prawn::Fonts::AFM.hide_m17n_warning = true
+
 module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
   class PdfGenerator
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
+    STATUS_LABELS = {
+      'not_assessed'          => 'Not assessed',
+      'insufficient_evidence' => 'Insufficient evidence'
+    }.freeze
     RESULT_LABELS = {
       'match'        => 'Match',
       'gap'          => 'Gap',
@@ -37,7 +44,7 @@ module Exports
     private
 
     def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
+      pdf.font_size(22) { pdf.text safe(@assessment.name), style: :bold }
       pdf.move_down 4
       pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
       pdf.move_down 4
@@ -76,28 +83,38 @@ module Exports
 
     def render_skill_card(pdf, skill)
       override = skill.assessor_override
-      effective_level = override ? override.override_level : skill.ai_level
+      effective_level = skill.effective_level
 
       pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+        pdf.text safe(skill.skill_label), style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+        level_text =
+          if effective_level.nil?
+            "Level: #{STATUS_LABELS[skill.rating_status]} (not counted for or against the candidate)"
+          elsif override
+            "Level: #{LEVEL_LABELS[effective_level]} (AI: #{LEVEL_LABELS[skill.ai_level] || 'none'} -> " \
+              "Assessor override: #{LEVEL_LABELS[override.override_level]})"
+          else
+            "Level: #{LEVEL_LABELS[effective_level]}"
+          end
+        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence]}" if skill.rated?
         pdf.text level_text
       end
 
       pdf.move_down 4
 
       if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
+        pdf.font_size(10) { pdf.text safe(skill.competency_summary) }
       end
 
-      if skill.evidence.any?
+      if skill.evidence_quotes.any?
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence_quotes.each do |item|
+            turn = item[:turn_number] ? " (turn #{item[:turn_number]})" : ''
+            pdf.text "  • \"#{safe(item[:quote])}\"#{turn}"
+          end
         end
       end
 
@@ -105,7 +122,7 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
+          pdf.text "  #{safe(override.assessor_notes)}"
         end
       end
 
@@ -116,7 +133,7 @@ module Exports
     def render_fit_gap_section(pdf)
       pdf.start_new_page
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{safe(@vacancy.role_title)}", style: :bold }
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
@@ -124,7 +141,7 @@ module Exports
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
         table_data << [
-          c['skill_label'],
+          safe(c['skill_label']),
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
           RESULT_LABELS[c['result']] || c['result'],
@@ -143,14 +160,14 @@ module Exports
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
+        pdf.font_size(10) { pdf.text safe(@fit_gap.culture_narrative) }
       end
 
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
         pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
+        pdf.font_size(10) { pdf.text safe(@fit_gap.overall_narrative) }
       end
     end
 
@@ -161,6 +178,15 @@ module Exports
                         align:  :center,
                         size:   9,
                         color:  '999999'
+    end
+
+    # Prawn's built-in fonts only cover Windows-1252. Any other character
+    # (arrows, emoji, non-Latin scripts in a transcript quote) makes Prawn raise
+    # and the whole export fail, so replace what can't be drawn.
+    def safe(text)
+      text.to_s
+          .encode('Windows-1252', invalid: :replace, undef: :replace, replace: '?')
+          .encode('UTF-8')
     end
 
     def format_duration(seconds)

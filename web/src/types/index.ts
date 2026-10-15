@@ -85,14 +85,27 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export type RatingStatus = "rated" | "not_assessed" | "insufficient_evidence";
+export type Confidence = "high" | "medium" | "low";
+
+export interface EvidenceQuote {
+  quote: string;
+  /** Transcript turn the quote was verified against; null for older portfolios. */
+  turn_number: number | null;
+}
+
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
-  evidence: string[];
+  rating_status: RatingStatus;
+  /** 1-5, or null when the skill was not rated. Never default this to L1. */
+  ai_level: number | null;
+  ai_confidence: Confidence | null;
+  probe_count?: number | null;
+  coverage_state?: CoverageSkill["state"] | null;
+  evidence: EvidenceQuote[];
   competency_summary: string;
 }
 
@@ -129,11 +142,16 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  expected_level: number;
+  candidate_level: number | null;
+  ai_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  confidence?: Confidence | null;
+  rating_status?: RatingStatus | "missing";
+  overridden?: boolean;
+  low_confidence?: boolean;
 }
 
 export interface FitGapReport {
@@ -141,9 +159,11 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
   generated_at: string;
+  /** True when overrides or the vacancy changed after this report was computed. */
+  stale?: boolean;
 }
 
 export interface SkillTaxonomy {
