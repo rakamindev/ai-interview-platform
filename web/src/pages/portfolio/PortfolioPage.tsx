@@ -22,6 +22,7 @@ export default function PortfolioPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
@@ -66,6 +67,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -89,6 +91,20 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch (err: any) {
+      let errMsg = "Failed to export report. Please try again.";
+      if (err?.response?.data instanceof Blob) {
+        try {
+          const text = await (err.response.data as Blob).text();
+          const parsed = JSON.parse(text);
+          errMsg = parsed?.errors?.[0]?.message || errMsg;
+        } catch {
+          // keep fallback message
+        }
+      } else if (err?.response?.data?.errors?.[0]?.message) {
+        errMsg = err.response.data.errors[0].message;
+      }
+      setExportError(errMsg);
     } finally {
       setExporting(null);
     }
@@ -152,6 +168,19 @@ export default function PortfolioPage() {
           )}
         </div>
       </div>
+
+      {exportError && (
+        <div className="border border-destructive/40 bg-destructive/10 text-destructive text-sm rounded-lg p-3 flex items-center justify-between">
+          <span>{exportError}</span>
+          <button
+            type="button"
+            className="text-destructive font-bold text-xs hover:underline ml-4"
+            onClick={() => setExportError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Generating state */}
       {generating && (

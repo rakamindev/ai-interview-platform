@@ -58,7 +58,12 @@ module Api
         end
 
         if format == "pdf"
-          vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
+          vacancy = nil
+          if params[:vacancy_id].present?
+            vacancy = Vacancy.find_by(id: params[:vacancy_id])
+            return json_error("Vacancy not found", :not_found) unless vacancy
+          end
+
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
@@ -69,6 +74,9 @@ module Api
 
         # JSON export
         vacancy_id = params[:vacancy_id]
+        if vacancy_id.present?
+          return json_error("Vacancy not found", :not_found) unless Vacancy.exists?(id: vacancy_id)
+        end
         export_data = build_export_json(@portfolio, vacancy_id)
 
         send_data export_data.to_json,
@@ -153,8 +161,12 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.joins(:session)
+                                .where(sessions: { tenant_id: current_tenant_id })
+                                .find_by(id: params[:id])
         end
+
+        return json_error("Portfolio not found", :not_found) unless @portfolio
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end

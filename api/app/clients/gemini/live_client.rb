@@ -60,8 +60,19 @@ module Gemini
       @on_resumption_token_update = on_resumption_token_update
     end
 
+    def mock_mode?
+      !EventMachine.ssl? || @api_key.blank? || @api_key == 'your_gemini_api_key'
+    end
+
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
+      if mock_mode?
+        Rails.logger.info('[Gemini::LiveClient] Mock/offline mode active (!EM.ssl? or missing GEMINI_API_KEY)')
+        @connected = true
+        EM.add_timer(0.2) { activate_connection! }
+        return
+      end
+
       @setup_complete = false
       @ws = Faye::WebSocket::Client.new(
         GEMINI_WS_URL,
@@ -79,7 +90,42 @@ module Gemini
 
     # Sends raw PCM audio bytes to Gemini Live as realtimeInput.
     def send_audio(pcm_bytes)
-      return unless @connected && @ws
+      return unless @connected
+
+      if mock_mode?
+        @mock_audio_frames = (@mock_audio_frames || 0) + 1
+        # Setiap ~60 frame audio (~2 detik), simulasikan candidate turn dan AI reply
+        if @mock_audio_frames % 70 == 35 && !@mock_turn_in_progress
+          @mock_turn_in_progress = true
+          EM.add_timer(0.5) do
+            @mock_candidate_turn_count = (@mock_candidate_turn_count || 0) + 1
+            case @mock_candidate_turn_count
+            when 1
+              @on_input_transcription&.call("I lead the QA automation pipeline using Playwright and Jest with extensive coverage for REST APIs.")
+              EM.add_timer(1.2) do
+                # Dummy 24kHz PCM silence chunks
+                @on_audio&.call("\x00" * 960)
+                @on_output_transcription&.call("That's great. Can you explain how you design integration test suites for idempotent REST endpoints?")
+                @on_model_turn_complete&.call
+                @mock_turn_in_progress = false
+              end
+            when 2
+              @on_input_transcription&.call("For idempotent endpoints like PUT and DELETE, we assert repeatable state changes and use schema validation against OpenAPI contracts.")
+              EM.add_timer(1.2) do
+                @on_audio&.call("\x00" * 960)
+                @on_output_transcription&.call("Thank you for sharing that. You'll hear back from the team soon.")
+                @on_model_turn_complete&.call
+                @mock_turn_in_progress = false
+              end
+            else
+              @mock_turn_in_progress = false
+            end
+          end
+        end
+        return
+      end
+
+      return unless @ws
 
       ensure_inactivity_watchdog
       track_audio_forwarded(pcm_bytes)
@@ -90,7 +136,14 @@ module Gemini
 
     # Injects hidden context via realtimeInput.text — same channel as audio, no interleaving conflicts.
     def inject_context(text, turn_complete: true) # turn_complete kept for interface compat, ignored
-      return false unless @connected && @ws
+      return false unless @connected
+
+      if mock_mode?
+        Rails.logger.debug("[Gemini::LiveClient] Mock inject_context: #{text[0..60]}")
+        return true
+      end
+
+      return false unless @ws
 
       @ws.send({ realtimeInput: { text: text } }.to_json)
       true
@@ -98,7 +151,19 @@ module Gemini
 
     # Prompts Gemini to speak first via realtimeInput.text.
     def trigger_opening
-      return unless @connected && @ws
+      return unless @connected
+
+      if mock_mode?
+        Rails.logger.info('[Gemini::LiveClient] Mock trigger_opening executed')
+        EM.add_timer(0.8) do
+          @on_audio&.call("\x00" * 960)
+          @on_output_transcription&.call("Hello! Welcome to your interview for the Quality Engineer assessment. Let's begin by discussing your experience with test automation and API design.")
+          @on_model_turn_complete&.call
+        end
+        return
+      end
+
+      return unless @ws
 
       @ws.send({ realtimeInput: { text: '[Start the interview. Greet the candidate and ask your first question.]' } }.to_json)
       Rails.logger.info('[Gemini::LiveClient] trigger_opening sent')
@@ -106,6 +171,8 @@ module Gemini
 
     # True when this client is ready to accept audio frames.
     def accepting_audio?
+      return (@connected && !@superseded) if mock_mode?
+
       @connected && @ws && !@superseded
     end
 
