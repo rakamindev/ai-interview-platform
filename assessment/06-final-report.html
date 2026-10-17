@@ -1,0 +1,166 @@
+<style>body { font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #1f2937; max-width: 900px; margin: 0 auto; padding: 24px; }
+h1 { font-size: 24px; border-bottom: 2px solid #111; padding-bottom: 8px; }
+h2 { font-size: 19px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 28px; }
+h3 { font-size: 16px; margin-top: 20px; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 13px; }
+th { background: #f3f4f6; }
+img { max-width: 100%; height: auto; margin: 8px 0; display: block; }
+blockquote { border-left: 3px solid #ccc; margin: 8px 0; padding-left: 12px; color: #555; }
+code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+</style><h1>AI Interview Platform — Case Study Report</h1>
+<p><strong>Fullstack Product Engineer — Rakamin</strong>
+<strong>PR:</strong> <a href="https://github.com/rakamindev/ai-interview-platform/pull/163">https://github.com/rakamindev/ai-interview-platform/pull/163</a>
+<strong>Video:</strong> <a href="https://www.loom.com/share/2284207a12854e4985a553d224977825">https://www.loom.com/share/2284207a12854e4985a553d224977825</a>
+<strong>Date:</strong> 2026-10-17</p>
+<hr>
+<h2>Step 1 — Setup &amp; Local Exploration</h2>
+<p>Both services were run locally and explored end-to-end before any judgement.</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Stack</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>API</td>
+<td>Rails 7 / PostgreSQL / Redis / Sidekiq / Gemini</td>
+<td>3001</td>
+</tr>
+<tr>
+<td>Web</td>
+<td>React 18 + TypeScript / Vite / Tailwind / Radix</td>
+<td>5173</td>
+</tr>
+</tbody></table>
+<p><strong>Setup blockers found &amp; resolved:</strong></p>
+<ul>
+<li>Ruby version mismatch (Gemfile pinned 3.3.2, toolchain 3.3.10) — bumped Gemfile</li>
+<li>Redis NOAUTH (local container requires auth) — local-only config fix</li>
+<li>macOS fork crash in Puma — launched with <code>OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES</code></li>
+<li>No seeded users — JWTs minted manually for local dev</li>
+</ul>
+<p><strong>Baseline confirmed (as the brief stated):</strong> no RSpec specs, no web test runner, no CI.</p>
+<hr>
+<h2>Step 2 — Deep Context &amp; Domain Immersion</h2>
+<h3>The product</h3>
+<p>A voice-based AI skills assessor: the assessor configures a role + skills (L1–L5 behavioral anchors), the candidate talks to Gemini Live over audio WebSocket, a coverage map tracks which skills have been probed live, and after the session Gemini Pro produces an L1–L5 portfolio with evidence quotes, compared against a vacancy (fit/gap), exportable to PDF.</p>
+<h3>The industry (hiring in Indonesia)</h3>
+<p>Hard: volume, inconsistent interviewer probing, little behavioral evidence, senior roles need deep probing. Commoditized: coding quizzes (HackerRank), ATS filtering, one-way video answers. The real leverage this product occupies: adaptive, probed, voice-based behavioral assessment against an explicit L1–L5 rubric with citable evidence.</p>
+<h3>Users</h3>
+<ul>
+<li>Assessor — wants a trustworthy per-candidate skill profile with evidence, and the ability to override AI ratings (human-in-the-loop).</li>
+<li>Recruiter — wants async, self-serve assessment they don&#39;t schedule.</li>
+<li>Hiring manager — wants one answer: fit/gap vs the role, in an exportable form.</li>
+</ul>
+<h3>Candidates &amp; UU PDP (UU 27/2022)</h3>
+<p>Candidates never chose this product; a wrong rating changes a real person&#39;s year. Voice is biometric (specific) data; automated rating is a decision candidates may object to (Pasal 10); Gemini is a cross-border transfer (Pasal 56). This drives the chosen revamp.</p>
+<hr>
+<h2>Step 3 — Problem &amp; Gap Analysis</h2>
+<p>Full findings in <code>assessment/03-step3-problem-gap.md</code>. Highlights:</p>
+<table>
+<thead>
+<tr>
+<th>Sev</th>
+<th>Finding</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P0</td>
+<td>Invite link points to API not frontend — candidates can&#39;t start</td>
+<td>defined but broken</td>
+</tr>
+<tr>
+<td>P0</td>
+<td>Interview session auto-ends with error — deprecated Gemini model + keys without Live access</td>
+<td>defined but broken</td>
+</tr>
+<tr>
+<td>P0</td>
+<td>No test harness (API + web + CI)</td>
+<td>never defined</td>
+</tr>
+<tr>
+<td>P0</td>
+<td>UU PDP non-compliance — no consent, plaintext transcripts, token in URL, no audit</td>
+<td>never defined</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Auth trusts JWT claims without DB lookup; no users; admin-only login</td>
+<td>defined but broken</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Portfolio generation fails without recovery</td>
+<td>defined but broken</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Worker idempotency / auto-advance can mis-rate</td>
+<td>never defined</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Candidate UI shows &quot;Completed&quot; for failed sessions</td>
+<td>defined but broken</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>B7 skill loses skill_id; signup dead route; no 404 page; create-session no error handling; deprecated model config in docs</td>
+<td>mixed</td>
+</tr>
+</tbody></table>
+<p><strong>Constraint signal:</strong> Gemini Live is paid/licensed; end-to-end interview verification is blocked (documented). Test infra must be built from zero. UU PDP needs product/legal decisions beyond code.</p>
+<hr>
+<h2>Step 4 — Revamp Strategy</h2>
+<p><strong>Chosen scope: Candidate consent (P0-4).</strong> Highest legal + fairness impact; fully implementable without a paid Gemini Live key; spans backend + frontend.</p>
+<p><strong>Self-derived acceptance criteria (13 + 4 revoke cases)</strong> — see <code>assessment/04-step4-revamp-strategy.md</code>: consent screen before interview, accept/decline/withdraw flows, idempotency, version mismatch, ended-session 409, unknown-token 404, proof record (version/timestamp/hash), EN/ID localization, revoked-on-refresh guard.</p>
+<p><strong>Options evaluated:</strong></p>
+<ul>
+<li><strong>A. Columns on <code>sessions</code> (chosen)</strong> — smallest change satisfying Pasal 20/22/24 proof; natural 1:1 with the candidate session; low walk-back cost.</li>
+<li><strong>B. Separate <code>candidate_consents</code> table</strong> — richer audit history but premature: no candidate identity yet, no consumer of the history.</li>
+<li><strong>C. Disclaimer-only (rejected)</strong> — fails Pasal 24 proof-of-consent; it <em>is</em> the defect we&#39;re fixing.</li>
+</ul>
+<hr>
+<h2>Step 5 — Monozukuri Implementation</h2>
+<p>Full details in <code>assessment/05-step5-implementation.md</code>.</p>
+<h3>Shipped</h3>
+<ul>
+<li><strong>Backend:</strong> consent migration (reversible), <code>Session#grant_consent!</code>/<code>#revoke_consent!</code>, <code>POST consent</code> + <code>consent/revoke</code> endpoints, <code>candidate_info</code> returns consent metadata + localized notice, <code>StartHandler</code> raises <code>ConsentRequired</code> (WS surfaces it, session never activates).</li>
+<li><strong>Frontend:</strong> <code>ConsentScreen</code> component, <code>InterviewPage</code> gate (accept / withdraw / revoked), revoked-on-refresh guard.</li>
+<li><strong>Harness:</strong> RSpec (20 examples) + Vitest (6 tests) + GitHub Actions CI (RSpec + Vitest + tsc).</li>
+</ul>
+<h3>Proven correctness</h3>
+<ul>
+<li><code>bundle exec rspec</code> → 20 examples, 0 failures</li>
+<li><code>npm run test</code> → 6 tests, 0 failures</li>
+<li><code>tsc --noEmit</code> → clean</li>
+</ul>
+<h3>Seeded fault test</h3>
+<p>Seeded <code>consent_status: &#39;none&#39;</code> instead of <code>&#39;given&#39;</code> in <code>grant_consent!</code> → <strong>3 specs failed</strong> → reverted → 20 pass. The suite genuinely catches regressions.</p>
+<h3>AI verification moments (3)</h3>
+<ol>
+<li>&quot;Just change the model&quot; hypothesis disproved by direct API testing — all provided keys lack Gemini Live access; the real blocker is licensing, not the model name.</li>
+<li>First <code>json_error</code> implementation passed a hash as <code>message</code>; the RSpec request spec caught the broken response shape, forcing a string fix.</li>
+<li>Early &quot;l1 anchor missing&quot; misdiagnosis corrected after re-reading <code>CustomSkillForm</code>.</li>
+</ol>
+<h3>Screenshots (revamped UI)</h3>
+<p><strong>Consent screen (EN):</strong>
+<img src="screenshoots/1-consent-screen.png" alt="Consent screen EN"></p>
+<p><strong>Consent screen (ID):</strong>
+<img src="screenshoots/2-consent-screen-id.png" alt="Consent screen ID"></p>
+<p><strong>Revoked state — interview blocked:</strong>
+<img src="screenshoots/3-revoked-state.png" alt="Revoked state"></p>
+<p><strong>Test harness passing (RSpec + Vitest):</strong>
+<img src="screenshoots/4-rspec-and-vitest.png" alt="Tests passing"></p>
+<hr>
+<h2>Step 6 — Submission</h2>
+<ul>
+<li><strong>PR:</strong> <a href="https://github.com/rakamindev/ai-interview-platform/pull/163">https://github.com/rakamindev/ai-interview-platform/pull/163</a></li>
+<li><strong>Video walkthrough:</strong> <a href="https://www.loom.com/share/2284207a12854e4985a553d224977825">https://www.loom.com/share/2284207a12854e4985a553d224977825</a></li>
+<li>This PDF + screenshots + video per the brief&#39;s checklist.</li>
+</ul>

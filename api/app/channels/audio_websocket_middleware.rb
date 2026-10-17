@@ -112,6 +112,12 @@ class AudioWebSocketMiddleware
     end
 
     Sessions::StartHandler.new(session).call unless session.active?
+  rescue Sessions::StartHandler::ConsentRequired
+    Rails.logger.warn("[AudioWS] Session #{session.id} start refused — consent not given")
+    send_json(browser_ws, type: 'error', code: 'consent_required',
+                          message: 'You must accept the data consent notice before starting the interview.', recoverable: false)
+    browser_ws.close
+    return
 
     state.turn_counter = session.transcript_turns.maximum(:turn_number).to_i
 

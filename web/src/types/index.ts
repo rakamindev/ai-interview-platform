@@ -164,6 +164,15 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  consent_required: boolean;
+  consent_status: "none" | "given" | "revoked";
+  consent_version?: string;
+  consent_text?: string;
+}
+
+export interface ConsentRequest {
+  accepted: boolean;
+  consent_version: string;
 }
 
 export interface PaginationMeta {
@@ -176,6 +185,9 @@ export interface PaginationMeta {
 // WebSocket message types
 export type InterviewState =
   | "idle"
+  | "consent"
+  | "consent_declined"
+  | "consent_revoked"
   | "hardware_check"
   | "connecting"
   | "active"

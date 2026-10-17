@@ -9,6 +9,8 @@ module Sessions
     end
 
     def call
+      raise ConsentRequired unless @session.consent_given?
+
       ActiveRecord::Base.transaction do
         @session.update!(status: 'active', started_at: Time.current)
         initialize_coverage_maps
@@ -18,6 +20,8 @@ module Sessions
       Rails.logger.info("[N5/StartHandler] Session #{@session.id} activated")
       @session
     end
+
+    class ConsentRequired < StandardError; end
 
     private
 

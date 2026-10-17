@@ -21,7 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import ConsentScreen from "@/components/interview/ConsentScreen";
+import { CheckCircle, Mic, MicOff, ShieldAlert } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -38,6 +39,9 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [consentDone, setConsentDone] = useState(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -49,6 +53,39 @@ export default function InterviewPage() {
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
+  }, [token]);
+
+  const handleConsentAccept = useCallback(async (version: string) => {
+    if (!token) return;
+    setConsentLoading(true);
+    setConsentError(null);
+    try {
+      await sessionsApi.requestConsent(token, { accepted: true, consent_version: version });
+      setConsentDone(true);
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.errors?.[0]?.message ??
+        e?.response?.data?.message ??
+        "Failed to record consent. Please try again.";
+      setConsentError(typeof msg === "string" ? msg : "Failed to record consent. Please try again.");
+    } finally {
+      setConsentLoading(false);
+    }
+  }, [token]);
+
+  const handleConsentRevoke = useCallback(async () => {
+    if (!token) return;
+    setConsentLoading(true);
+    setConsentError(null);
+    try {
+      await sessionsApi.revokeConsent(token);
+      setCandidateInfo((prev) => (prev ? { ...prev, consent_status: "revoked" } : prev));
+      setInterviewState("consent_revoked");
+    } catch {
+      setConsentError("Failed to withdraw consent. Please try again.");
+    } finally {
+      setConsentLoading(false);
+    }
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -189,6 +226,12 @@ export default function InterviewPage() {
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
+    const consentRevoked = candidateInfo?.consent_status === "revoked";
+    const requiresConsent =
+      candidateInfo?.consent_required &&
+      candidateInfo?.consent_status === "none" &&
+      !consentDone;
+
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
@@ -200,7 +243,28 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {consentRevoked ? (
+          <div className="text-center space-y-4 py-10">
+            <div className="flex justify-center text-destructive">
+              <ShieldAlert className="h-10 w-10" />
+            </div>
+            <h2 className="text-xl font-semibold">Consent withdrawn</h2>
+            <p className="text-sm text-muted-foreground">
+              The interview cannot start without your consent, and your data has not been processed.
+              <br />
+              If you change your mind, a new invitation must be created by the hiring team.
+            </p>
+          </div>
+        ) : requiresConsent ? (
+          <ConsentScreen
+            consentText={candidateInfo.consent_text ?? ""}
+            consentVersion={candidateInfo.consent_version ?? "v1"}
+            onAccept={handleConsentAccept}
+            onRevoke={handleConsentRevoke}
+            accepting={consentLoading}
+            error={consentError}
+          />
+        ) : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
@@ -222,6 +286,23 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State A2: Consent declined / revoked ────────────────────────────────
+  if (interviewState === "consent_revoked") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="flex justify-center text-destructive">
+          <ShieldAlert className="h-10 w-10" />
+        </div>
+        <h2 className="text-xl font-semibold">Consent withdrawn</h2>
+        <p className="text-sm text-muted-foreground">
+          The interview cannot start without your consent, and your data has not been processed.
+          <br />
+          If you change your mind, a new invitation must be created by the hiring team.
+        </p>
       </div>
     );
   }
