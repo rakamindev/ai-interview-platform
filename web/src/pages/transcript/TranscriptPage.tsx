@@ -3,8 +3,10 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, FileText } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
+import HeroBanner from "@/components/common/HeroBanner";
+import RakaminSpinner from "@/components/common/RakaminSpinner";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -40,38 +42,65 @@ export default function TranscriptPage() {
     URL.revokeObjectURL(url);
   };
 
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto py-12">
+        <RakaminSpinner text="Memuat transkrip percakapan sesi wawancara..." size="lg" />
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl mx-auto space-y-6 py-2 pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
+            className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-[#01959f]" />
+              Detail Percakapan
+            </h2>
             {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
+              <p className="text-xs text-slate-500">Kandidat: <span className="font-semibold text-slate-700">{candidateName}</span></p>
             )}
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
+          <Button
+            variant="cta"
+            size="sm"
+            onClick={handleDownload}
+            className="w-full sm:w-auto rounded-xl text-xs shadow-xs font-bold h-10 sm:h-9 justify-center"
+          >
+            <Download className="h-3.5 w-3.5 mr-1" />
             Download .txt
           </Button>
         )}
       </div>
 
-      {loading && (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      )}
+      {/* Hero Banner */}
+      <HeroBanner
+        badgeText="⭐️ Verbatim Conversation Record"
+        title={candidateName ? `Transkrip Wawancara: ${candidateName}` : "Transkrip Lengkap Sesi Wawancara"}
+        highlightText="Audio to Text"
+        subtitle="Rekaman percakapan dua arah antara AI Assessor dan kandidat dengan penanda waktu & speaker label."
+        bulletPoints={[
+          "Transkripsi audio verbatim terproteksi privasi UU PDP",
+          "Penanda giliran bicara (AI Assessor vs Candidate)",
+          "Ekspor transkrip teks lengkap untuk audit & evaluasi lanjutan",
+        ]}
+        imageSrc="/images/interview.png"
+        imageAlt="Rakamin Interview Transcript"
+        imageFloatingBadge={{
+          title: "Auditable Record",
+          subtitle: "UU PDP Compliant",
+        }}
+      />
 
       {!loading && error && (
         <div className="border rounded-lg p-6 text-center text-sm text-destructive">

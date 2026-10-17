@@ -59,12 +59,12 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   match: "Match",
   gap: "Gap",
   exceed: "Exceeds",
-  not_assessed: "Not assessed",
+  not_assessed: "Not Assessed",
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-emerald-700 bg-emerald-50 border border-emerald-200/80 font-medium",
+  gap: "text-amber-800 bg-amber-50 border border-amber-200/80 font-medium",
+  exceed: "text-sky-800 bg-sky-50 border border-sky-200/80 font-medium",
+  not_assessed: "text-slate-600 bg-slate-100 border border-slate-200 font-medium",
 };

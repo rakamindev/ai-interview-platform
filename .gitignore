@@ -17,3 +17,6 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Local demo scripts / notes
+assessment/VIDEO_WALKTHROUGH_SCRIPT.md

@@ -164,6 +164,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  candidate_name?: string;
+  turns?: TranscriptTurn[];
 }
 
 export interface PaginationMeta {

@@ -4,6 +4,9 @@ export default {
     content: ["./index.html", "./src/**/*.{ts,tsx}"],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ['"Nunito Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            },
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
@@ -62,6 +65,7 @@ export default {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
                 "voice-bar": "voice-bar 0.8s ease-in-out infinite",
+                "spin-slow": "spin 8s linear infinite",
             },
         },
     },

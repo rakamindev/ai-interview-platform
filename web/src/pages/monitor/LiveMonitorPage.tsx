@@ -27,6 +27,8 @@ import {
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
+import HeroBanner from "@/components/common/HeroBanner";
+import RakaminSpinner from "@/components/common/RakaminSpinner";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -129,10 +131,8 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-32 w-full" />
+      <div className="max-w-4xl mx-auto py-12">
+        <RakaminSpinner text="Menghubungkan ke live monitor session..." size="lg" />
       </div>
     );
   }
@@ -141,52 +141,89 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-8 py-4 pb-12">
+      {/* Hero Banner */}
+      <HeroBanner
+        badgeText="⭐️ Real-Time AI Interview Observer"
+        title="Live Session Monitor & Signal Tracker"
+        highlightText="Real-Time WebSocket"
+        subtitle="Pantau progres wawancara kandidat secara real-time, visualisasi 4-level coverage state, dan amati transkrip percakapan langsung."
+        bulletPoints={[
+          "Sinkronisasi status coverage B7 secara instan via WebSocket",
+          "Indikator konektivitas live candidate audio channel",
+          "Opsi emergency termination dengan konfirmasi asesor",
+        ]}
+        primaryAction={
+          sessionEnded
+            ? {
+                label: "Lihat Portfolio Kandidat",
+                onClick: () => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`),
+              }
+            : undefined
+        }
+        secondaryAction={{
+          label: "Kembali ke Sesi",
+          onClick: () => navigate(`/assessments/${id}/invite`),
+          icon: <ArrowLeft className="h-4 w-4 mr-1.5" />,
+        }}
+        imageSrc="/images/interview.png"
+        imageAlt="Rakamin Live Interview Monitor"
+        imageFloatingBadge={{
+          title: "Live Streaming",
+          subtitle: "Zero Latency WebSocket",
+        }}
+      />
+
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between pb-2 border-b border-slate-200">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link
+              to={`/assessments/${id}/invite`}
+              className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
+              Live Monitor Session
+            </h2>
           </div>
           {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
+            <p className="text-xs text-slate-500 pl-6">Assessment: <span className="font-semibold text-slate-700">{assessmentName}</span></p>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
           <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
+            "flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full",
+            isConnected ? "text-emerald-700 bg-emerald-50 border border-emerald-200" : "text-amber-700 bg-amber-50 border border-amber-200"
           )}>
-            <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
+            <Radio className="h-3.5 w-3.5 animate-pulse" />
+            {isConnected ? "Koneksi Live Aktif" : "Menghubungkan Ulang..."}
           </span>
         </div>
       </div>
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+        <div className="flex items-center gap-3 text-sm bg-teal-50/80 border border-teal-200 rounded-2xl px-5 py-4">
+          <CheckCircle className="h-5 w-5 text-[#01959f] shrink-0" />
           <div>
-            <span className="font-medium">Session ended</span>
+            <span className="font-bold text-slate-900">Sesi Wawancara Telah Berakhir</span>
             {sessionEndReason && (
-              <span className="text-muted-foreground ml-1.5">
+              <span className="text-slate-500 ml-1.5 text-xs">
                 — {sessionEndReason.replace(/_/g, " ")}
               </span>
             )}
           </div>
           <Button
             size="sm"
-            variant="outline"
-            className="ml-auto"
+            variant="cta"
+            className="ml-auto rounded-xl shadow-xs text-xs"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            Lihat Portfolio →
           </Button>
         </div>
       )}

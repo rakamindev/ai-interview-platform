@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import VoiceBars from "@/components/interview/VoiceBars";
+import AIVoiceStage from "@/components/interview/AIVoiceStage";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
@@ -21,8 +21,10 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, Sparkles, ShieldCheck, RefreshCw } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import HeroBanner from "@/components/common/HeroBanner";
+import { cn } from "@/lib/utils";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -31,13 +33,14 @@ export default function InterviewPage() {
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
-  const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [hardwareCheckDone, setHardwareCheckDone] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch candidate info
   useEffect(() => {
@@ -46,10 +49,25 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        if (res.data.turns && res.data.turns.length > 0) {
+          setTranscript(
+            res.data.turns.map((t) => ({
+              speaker: t.speaker === "candidate" ? "candidate" : "assessor",
+              text: t.text,
+            }))
+          );
+        }
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
+
+  // Auto-scroll transcript feed whenever new messages arrive
+  useEffect(() => {
+    if (transcript.length > 0) {
+      transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [transcript]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -58,10 +76,8 @@ export default function InterviewPage() {
     setInterviewState(state);
 
     if (state === "draining_audio") {
-      // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
       muteRef.current?.();
       audioCompleteCalledRef.current = false;
-      // Safety timeout: call audio_complete after 10s even if drain never fires
       audioCompleteSafetyTimerRef.current = setTimeout(() => {
         callAudioComplete();
       }, 10_000);
@@ -91,7 +107,7 @@ export default function InterviewPage() {
   }, []);
 
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
-    setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
+    setTranscript((prev) => [...prev, turn]);
   }, []);
 
   const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
@@ -106,8 +122,6 @@ export default function InterviewPage() {
       clearTimeout(audioCompleteSafetyTimerRef.current);
       audioCompleteSafetyTimerRef.current = null;
     }
-    // Retry until success — endpoint now always returns ended:true or an error.
-    // ended:false is no longer a valid response; any success means the session ended.
     const attempt = async (delay: number) => {
       try {
         await sessionsApi.audioComplete(token);
@@ -164,9 +178,6 @@ export default function InterviewPage() {
     setInterviewState("connecting");
     connect();
     await startCapture();
-    // Start muted — only unmute when backend sends speaker_changed: candidate.
-    // This prevents mic audio from being sent during AI speech, since separate
-    // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
   }, [sessionId, connect, startCapture]);
 
@@ -190,35 +201,38 @@ export default function InterviewPage() {
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
-          {candidateInfo && (
-            <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
-            </p>
-          )}
-        </div>
+      <div className="max-w-6xl mx-auto px-3.5 sm:px-6 py-5 sm:py-8 space-y-6">
+        <HeroBanner
+          badgeText="⭐️ Sesi Wawancara Teknis Interaktif"
+          title={candidateInfo?.role_title ? `Wawancara AI: ${candidateInfo.role_title}` : "AI Technical Interview"}
+          highlightText="Rakamin Assessor"
+          subtitle="Selamat datang di sesi evaluasi teknis berbasis AI. Sesi ini akan menguji pemahaman dan pengalaman Anda melalui percakapan suara interaktif."
+          bulletPoints={[
+            `Durasi maksimal sesi: ${candidateInfo?.time_limit_min ?? 45} menit`,
+            "Interaksi suara dua arah secara langsung (Real-Time Voice AI)",
+            "Pastikan mikrofon aktif dan Anda berada di lingkungan yang tenang",
+          ]}
+          imageSrc="/images/interview.png"
+          imageAlt="Rakamin Candidate Interview"
+          imageFloatingBadge={{
+            title: "Enkripsi Aman",
+            subtitle: "UU PDP No. 27/2022",
+          }}
+        />
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-              <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
+            <div className="flex items-center gap-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 shadow-xs">
+              <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>Pengecekan audio berhasil. Anda siap memulai wawancara.</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
-              <Mic className="h-4 w-4 mr-2" />
-              Start Interview
+            <Button variant="cta" className="w-full rounded-xl shadow-md font-bold text-base py-6" size="lg" onClick={startInterview}>
+              <Mic className="h-5 w-5 mr-2" />
+              Mulai Sesi Wawancara AI
             </Button>
           </div>
         )}
@@ -229,139 +243,235 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
+      <div className="max-w-2xl mx-auto px-4 py-16 sm:py-24 text-center space-y-6 my-auto">
+        <div className="w-20 h-20 rounded-3xl bg-teal-50 text-[#01959f] border border-teal-200/80 flex items-center justify-center mx-auto shadow-md shadow-teal-500/10">
+          <CheckCircle className="h-10 w-10 text-[#01959f]" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            Wawancara Selesai
+          </h2>
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-md mx-auto">
+            Terima kasih telah menyelesaikan sesi wawancara. Rekaman percakapan dan bukti kompetensi Anda telah tersimpan dengan aman untuk dievaluasi oleh tim asesor.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold border border-slate-200 shadow-2xs">
+          <ShieldCheck className="h-4 w-4 text-[#01959f]" />
+          <span>Sesi Ditutup • Standar UU PDP No. 27/2022</span>
+        </div>
       </div>
     );
   }
 
-  // ── States B/C/D/E: Active interview ────────────────────────────────────
-  const aiSpeaking = speaker === "ai";
-  const candidateSpeaking = speaker === "candidate";
-
+  // ── States B/C/D/E: Active interview Studio ──────────────────────────────
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
-      {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
-        <span className="text-sm font-medium">AI Interview</span>
-        {candidateInfo && (
-          <InterviewTimer
-            totalSeconds={candidateInfo.time_limit_min * 60}
-            running={interviewState === "active"}
-            onExpired={endInterview}
-          />
-        )}
+    <div className="max-w-6xl mx-auto w-full px-3.5 sm:px-6 py-3 sm:py-5 flex-1 flex flex-col min-h-0">
+      {/* Top Header Bar inside Interview Studio */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 sm:mb-4 border-b border-slate-200/90 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">
+                {candidateInfo?.role_title || "AI Technical Interview Session"}
+              </h1>
+              <span className="text-xs font-bold text-[#01959f] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200 shrink-0">
+                AI Interview
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 truncate">
+              Kandidat: <span className="font-semibold text-slate-700">{candidateInfo?.candidate_name || "Peserta"}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          {candidateInfo && (
+            <InterviewTimer
+              totalSeconds={candidateInfo.time_limit_min * 60}
+              running={interviewState === "active"}
+              onExpired={endInterview}
+            />
+          )}
+          <ConnectionStatus state={wsConnectionStatus} />
+        </div>
       </div>
 
-      {/* Reconnecting banner */}
+      {/* Warning/Reconnecting Banners */}
       {interviewState === "reconnecting" && (
-        connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
-          </div>
-        )
-      )}
-
-      {/* Reconnected prompt */}
-      {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+        <div className="mb-3 shrink-0">
+          {connectionLostLong ? (
+            <div className="flex items-center gap-2 text-xs sm:text-sm bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-2.5 shadow-xs">
+              <span className="animate-pulse font-bold">●</span>
+              <span>Koneksi terputus cukup lama. Mohon tunggu sejenak, atau hubungi perekrut bila masalah berlanjut.</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs sm:text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl px-4 py-2.5 shadow-xs">
+              <span className="animate-pulse font-bold">●</span>
+              <span>Menghubungkan ulang sesi secara otomatis — mohon tunggu beberapa detik...</span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-        {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
-        ) : interviewState === "draining_audio" ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
-            <p className="text-xs text-muted-foreground">Wrapping up...</p>
-          </div>
-        ) : (
-          <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
+      {reconnectedPrompt && (
+        <div className="mb-3 shrink-0 flex items-center justify-between text-xs sm:text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-xl px-4 py-2.5 shadow-2xs">
+          <span>Koneksi pulih kembali — silakan katakan <strong>"cek"</strong> atau lanjutkan jawaban Anda.</span>
+          <button className="ml-3 text-blue-500 hover:text-blue-700 font-bold shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+        </div>
+      )}
 
-            {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
-            )}
+      {/* Main Studio Grid: Stage (Left) & Verbatim Transcript (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 flex-1 min-h-0">
+        {/* Left Column: AI Voice Holographic Stage */}
+        <div className="lg:col-span-5 flex flex-col min-h-0">
+          <AIVoiceStage
+            speaker={speaker}
+            interviewState={interviewState}
+            roleTitle={candidateInfo?.role_title}
+            micMuted={micMuted}
+          />
+        </div>
 
-            {/* Transcript */}
-            {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
-                {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
-                ))}
+        {/* Right Column: Verbatim Transcript Studio Card */}
+        <div className="lg:col-span-7 flex flex-col min-h-0">
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm flex flex-col flex-1 h-[420px] sm:h-[480px] lg:h-full overflow-hidden">
+            {/* Panel Header */}
+            <div className="px-3.5 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200/80 bg-slate-50/70 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-slate-800 whitespace-nowrap">
+                  Transkrip Percakapan Real-Time
+                </span>
               </div>
-            )}
-          </>
-        )}
+
+              <div className="flex items-center gap-2 text-xs text-slate-500 shrink-0">
+                <span className="bg-slate-200/80 text-slate-700 font-semibold px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap shrink-0">
+                  {transcript.length} percakapan
+                </span>
+              </div>
+            </div>
+
+            {/* Scrollable Transcript Feed */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 scroll-smooth">
+              {transcript.length === 0 ? (
+                <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-center p-6 space-y-3 my-auto">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-[#01959f]">
+                    <Sparkles className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-slate-800">Sesi Wawancara Siap Dimulai</p>
+                    <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+                      Pewawancara AI Rakamin akan menyapa Anda terlebih dahulu. Silakan jawab pertanyaan dengan santai dan jelas melalui mikrofon.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {transcript.map((turn, i) => (
+                    <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
+                  ))}
+                  <div ref={transcriptEndRef} className="h-4" />
+                </>
+              )}
+            </div>
+
+            {/* Panel Footer note */}
+            <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/40 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+              <span>Transkrip auditable (UU PDP & Monozukuri)</span>
+              <span className="hidden sm:inline">Auto-scroll aktif</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
-        <ConnectionStatus state={wsConnectionStatus} />
+      {/* Bottom Floating Control Dock */}
+      <div className="mt-4 p-2.5 sm:px-6 sm:py-3 bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-lg shadow-slate-100/80 rounded-2xl flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <div
+            className={cn(
+              "w-2.5 h-2.5 rounded-full shrink-0",
+              micMuted ? "bg-rose-500" : "bg-emerald-500 animate-pulse"
+            )}
+          />
+          <span className="text-xs font-semibold text-slate-700 hidden sm:inline whitespace-nowrap">
+            {micMuted ? "Mikrofon Senyap" : "Mikrofon Siaga"}
+          </span>
+        </div>
 
-        <div className="flex items-center gap-3">
+        {/* Center: Large Tactile Microphone Toggle */}
+        <div className="flex-1 sm:flex-initial flex items-center justify-center min-w-0">
           <Button
-            variant={micMuted ? "destructive" : "outline"}
-            size="sm"
             onClick={toggleMic}
+            className={cn(
+              "w-full sm:w-auto rounded-xl px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2",
+              micMuted
+                ? "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/20"
+                : "bg-[#01959f] hover:bg-[#00828b] text-white shadow-[#01959f]/25 hover:scale-102"
+            )}
           >
             {micMuted ? (
-              <><MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted</>
+              <>
+                <MicOff className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">Muted (Mic Mati)</span>
+              </>
             ) : (
-              <><Mic className="h-3.5 w-3.5 mr-1.5" /> Mic On</>
+              <>
+                <Mic className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">Mic On (Mikrofon Aktif)</span>
+              </>
             )}
           </Button>
+        </div>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>End interview?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to end the interview early?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
-            onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
-          </Button>
-        )}
+        {/* Right: End Interview Action with Confirmation Modal */}
+        <div className="flex items-center gap-2 shrink-0">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-300 text-slate-700 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 rounded-xl px-2.5 sm:px-4 py-2 font-bold text-xs shrink-0"
+              >
+                <span className="whitespace-nowrap">End Interview</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-lg font-bold text-slate-900">
+                  End interview? (Akhiri sesi wawancara?)
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm text-slate-600">
+                  Are you sure you want to end the interview early? Rekaman dan transkrip percakapan akan langsung diproses menjadi laporan portofolio kompetensi.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="gap-2 sm:gap-0">
+                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={endInterview}
+                  className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold"
+                >
+                  End interview
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {import.meta.env.DEV && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[11px] text-slate-400 hover:text-slate-700 rounded-xl px-2.5 hidden md:flex"
+              onClick={() => sendJson({ type: "debug_force_reconnect" })}
+            >
+              ⚡ Reconnect
+            </Button>
+          )}
         </div>
       </div>
-
     </div>
   );
 }

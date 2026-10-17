@@ -70,6 +70,23 @@ module Sessions
 
       PortfolioGeneratorWorker.perform_async(@session.id)
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+
+      # In development mode, if Sidekiq worker is not running in a separate terminal,
+      # trigger non-blocking execution via background thread so generation completes in ~10 seconds.
+      if Rails.env.development?
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            sleep 0.5
+            p = @session.reload.portfolio
+            if p && p.pending?
+              claimed = Portfolio.where(id: p.id, generation_status: 'pending').update_all(generation_status: 'generating') > 0
+              Portfolios::Generator.new(session: @session).call if claimed
+            end
+          end
+        rescue => e
+          Rails.logger.error("[N9/EndHandler] Dev portfolio fallback generation failed: #{e.message}")
+        end
+      end
     end
   end
 end

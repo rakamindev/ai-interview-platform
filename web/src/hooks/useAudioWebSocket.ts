@@ -103,7 +103,11 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect loop
+                onStateChange("complete");
+              }
               break;
           }
         } catch {

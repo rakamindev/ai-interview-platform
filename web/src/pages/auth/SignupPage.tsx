@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
+import { authAtom, saveToken, saveUser } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +25,10 @@ export default function SignupPage() {
     try {
       const res = await authApi.signup({ email, password, role });
       const token = res.data.token;
+      const user = res.data.user || { email, role };
       saveToken(token);
-      setAuth({ token });
+      saveUser(user);
+      setAuth({ token, user });
       navigate("/assessments");
     } catch {
       setError("Signup failed. Please try again.");

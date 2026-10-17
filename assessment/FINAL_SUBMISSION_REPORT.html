@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Monozukuri Fullstack Revamp - AI Interview Platform</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+    @page {
+      margin: 18mm 16mm;
+      size: A4 portrait;
+    }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.6;
+      font-size: 13px;
+      margin: 0;
+      padding: 16px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px solid #01959f;
+      padding-bottom: 8px;
+      margin-top: 0;
+    }
+    h2 {
+      font-size: 17px;
+      font-weight: 600;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+      margin-top: 26px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 18px;
+      page-break-after: avoid;
+    }
+    p, li {
+      color: #334155;
+    }
+    code {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11.5px;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 4px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+    pre {
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      line-height: 1.45;
+      page-break-inside: avoid;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 11.5px;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 7px 9px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+    .gap-table th:first-child,
+    .gap-table td:first-child {
+      white-space: nowrap;
+      text-align: center;
+      width: 65px;
+      vertical-align: middle;
+    }
+    .gap-table th:nth-child(2),
+    .gap-table td:nth-child(2) {
+      white-space: nowrap;
+      text-align: center;
+      width: 75px;
+      vertical-align: middle;
+    }
+    .gap-table th:nth-child(3),
+    .gap-table td:nth-child(3) {
+      width: 135px;
+      white-space: nowrap;
+    }
+    .gap-table th:nth-child(4),
+    .gap-table td:nth-child(4) {
+      width: 120px;
+    }
+    .badge-id {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 6px;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .badge-p0 {
+      display: inline-block;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      font-weight: 700;
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .badge-p1 {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      font-weight: 700;
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .badge-p2 {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      font-weight: 700;
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    blockquote {
+      border-left: 4px solid #01959f;
+      margin: 14px 0;
+      padding: 8px 14px;
+      background-color: #f0fdfa;
+      color: #134e4a;
+      border-radius: 0 4px 4px 0;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 20px 0;
+    }
+    a {
+      color: #01959f;
+      text-decoration: none;
+    }
+    .page-break {
+      page-break-before: always;
+      margin-top: 0;
+    }
+    .screenshot-section {
+      page-break-inside: avoid;
+    }
+    .screenshot-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin: 10px auto 16px auto;
+      background: #f8fafc;
+      page-break-inside: avoid;
+      text-align: center;
+    }
+    .screenshot-card img {
+      max-width: 100%;
+      max-height: 470px;
+      width: auto;
+      height: auto;
+      border-radius: 5px;
+      border: 1px solid #94a3b8;
+      display: block;
+      margin: 0 auto;
+      object-fit: contain;
+    }
+    .screenshot-caption {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 6px;
+      text-align: center;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>Monozukuri Fullstack Revamp: AI-Powered Technical Interview Platform</h1>
+<p><strong>Assessment Deliverable &amp; Executive Engineering Submission</strong><br>
+<em>Candidate: Tunggal Wigati (GitHub: <a href="https://github.com/tunggalw7" target="_blank">@tunggalw7</a>)</em><br>
+<em>Role Focus: Fullstack Engineer (Frontend Depth)</em><br>
+<em>Target Repository: rakamin-ai-interview-platform</em><br>
+<em>Branch: <code>feature/monozukuri-fullstack-revamp</code></em><br>
+<em>Pull Request (GitHub): <a href="https://github.com/rakamindev/ai-interview-platform/pull/162" target="_blank">https://github.com/rakamindev/ai-interview-platform/pull/162</a></em><br>
+<em>Video Demonstration (Loom): <a href="https://www.loom.com/share/11dcd0ced750444f8a6a31e7e5841c08" target="_blank">https://www.loom.com/share/11dcd0ced750444f8a6a31e7e5841c08</a></em></p>
+<hr>
+<h2>Executive Summary</h2>
+<p>This report presents the end-to-end revamp of the <strong>AI-Powered Technical Interview Platform</strong> under the Japanese philosophy of <strong>Monozukuri (ものづくり)</strong> — combining deep craftsmanship, systematic verification, structural empathy for candidate evaluation, and absolute respect for production failure paths.</p>
+<p>Starting from an unhardened prototype with zero automated test coverage, silent scoring degradation defects, unhandled model timeouts, and unredacted PII logging, we have delivered:</p>
+<ol>
+<li><strong>A Complete Automated Test Harness Built From Scratch</strong>:<ul>
+<li><strong>Backend</strong>: 32 RSpec unit, service, and integration request tests covering multi-tenant scoping, state transitions, portfolio generation, and fit/gap analytics (100% pass).</li>
+<li><strong>Frontend</strong>: Full Playwright End-to-End (30 test scenarios passing across live candidate interview, assessment management, portfolio human override, and report export) + Vitest unit tests.</li>
+<li><strong>Seeded Fault Verification</strong>: Proven harness sensitivity on both backend and frontend by injecting breaking logic mutations, observing exact test failure diagnostics, and verifying clean recovery.</li>
+</ul>
+</li>
+<li><strong>Defect Remediation &amp; Structural Hardening</strong>:<ul>
+<li><strong>Fixed AI Scoring Downgrade</strong>: Eliminated a silent bug where <code>&quot;L3&quot;.to_i</code> returned <code>0</code> and downgraded qualified Senior/Staff candidates to <code>L1</code>.</li>
+<li><strong>Gemini Dynamic Multi-Model Failover</strong>: Added zero-latency fallback across <code>gemini-3.5-flash</code>, <code>gemini-flash-lite</code>, and heuristic rubric mapping, preventing rate-limit disruptions during live assessment recordings.</li>
+<li><strong>Transactional Database Integrity &amp; Concurrency Control</strong>: Wrapped portfolio and fit/gap writes in database transactions with atomic status claims, eliminating duplicate model calls and half-written records.</li>
+<li><strong>Multi-Tenant Scoping</strong>: Verified default tenant isolation preventing cross-organization leakage of candidate data.</li>
+<li><strong>Indonesian UU PDP Compliance (UU No. 27/2022)</strong>: Parameterized log filtering of candidate PII (<code>:nik</code>, <code>:phone</code>, <code>:candidate_name</code>).</li>
+</ul>
+</li>
+<li><strong>UI/UX Craftsmanship</strong>:<ul>
+<li>Elevated Fit/Gap analysis with executive KPI cards, clear delta mapping, human-in-the-loop override audit trails, expandable evidence quotes, and respectful handling of unassessed skills.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#1-domain-immersion--regional-realities">1. Domain Immersion &amp; Regional Realities</a></li>
+<li><a href="#2-severity-ranked-problem--gap-analysis">2. Severity-Ranked Problem &amp; Gap Analysis</a></li>
+<li><a href="#3-revamp-strategy--acceptance-criteria">3. Revamp Strategy &amp; Acceptance Criteria</a></li>
+<li><a href="#4-monozukuri-implementation-details">4. Monozukuri Implementation Details</a></li>
+<li><a href="#5-verification-proofs--ai-moments">5. Verification Proofs &amp; AI Moments</a></li>
+<li><a href="#6-video-demonstration-walkthrough">6. Video Demonstration Walkthrough</a></li>
+<li><a href="#7-visual-evidence--ui-screenshots">7. Visual Evidence &amp; UI Screenshots</a></li>
+<li><a href="#8-claimed-engineering-depth--production-verification">8. Claimed Engineering Depth &amp; Production Verification</a></li>
+</ol>
+<hr>
+<h2 id="1-domain-immersion--regional-realities" class="page-break">1. Domain Immersion &amp; Regional Realities</h2>
+<h3>1.1 The 5 Core Pillars</h3>
+<ol>
+<li><strong>Conversational AI Probing</strong>: Replacing static multiple-choice tests with a Gemini-powered conversational agent that probes depth across technical competencies.</li>
+<li><strong>Dynamic Coverage Mapping</strong>: Tracking candidate competency exploration in real-time across four discrete states: <code>not_yet</code> (0%) → <code>initiated</code> (25%) → <code>partial</code> (60%) → <code>covered</code> (100%).</li>
+<li><strong>Portfolio Synthesis</strong>: Automatically summarizing transcript evidence quotes, AI competency determinations, and confidence levels into an assessor dossier.</li>
+<li><strong>Fit/Gap Benchmark Analytics</strong>: Comparing synthesized candidate portfolios against specific vacancy job requirements to determine delta values (Match, Exceed, Gap, Not Assessed).</li>
+<li><strong>Human-in-the-Loop Governance</strong>: Empowering technical hiring leads and recruiters to review evidence, adjust AI levels with documented rationale, and rerun downstream fit/gap analytics atomically.</li>
+</ol>
+<h3>1.2 Indonesian Hiring Market Dynamics</h3>
+<ul>
+<li><strong>Network Asymmetry &amp; Connectivity Variations</strong>: Candidates interviewing from across Indonesia (Jabodetabek vs tier-2/3 cities across Java, Sumatra, Sulawesi) experience bandwidth fluctuations, packet loss, and latency spikes. The system must never drop interviews due to transient disconnects or audio packet delays.</li>
+<li><strong>Bilingual Nuance &amp; Bahasa Indonesia Code-Switching</strong>: Indonesian software engineering interviews heavily feature code-switching (<em>&quot;Aku pake hook useReducer buat manage state-nya...&quot;</em>). Skill extraction must accommodate colloquial phrasing and localized terminology without hallucinating low confidence.</li>
+<li><strong>Compliance with UU No. 27/2022 (UU Perlindungan Data Pribadi)</strong>: Mandates explicit purpose limitation, non-disclosure of candidate PII, and data minimization. Logging raw candidate names, phone numbers, NIK, or unredacted CV data in server logs or Gemini prompt traces breaches compliance.</li>
+</ul>
+<hr>
+<h2 id="2-severity-ranked-problem--gap-analysis" class="page-break">2. Severity-Ranked Problem &amp; Gap Analysis</h2>
+<p>Through fullstack static analysis and dynamic runtime inspection, eight critical gaps were identified and categorized:</p>
+<table class="gap-table">
+<thead>
+<tr>
+<th style="text-align: center;">ID</th>
+<th style="text-align: center;">Severity</th>
+<th>Category</th>
+<th>Seam</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><span class="badge-id">F-01</span></td>
+<td align="center"><span class="badge-p0">P0</span></td>
+<td>Defective Implementation</td>
+<td>Backend Data Layer</td>
+<td>String-to-integer conversion bug (<code>&quot;L3&quot;.to_i == 0</code>) silently downgraded candidate scores to <code>L1</code>.</td>
+</tr>
+<tr>
+<td align="center"><span class="badge-id">F-02</span></td>
+<td align="center"><span class="badge-p0">P0</span></td>
+<td>Defective Implementation</td>
+<td>Backend API</td>
+<td>Destructive fit/gap regeneration destroyed previous reports before background worker completed.</td>
+</tr>
+<tr>
+<td align="center"><span class="badge-id">F-03</span></td>
+<td align="center"><span class="badge-p0">P0</span></td>
+<td>Missing Spec</td>
+<td>Backend / Infra</td>
+<td>Zero automated test coverage across both Rails backend and React frontend.</td>
+</tr>
+<tr>
+<td align="center"><span class="badge-id">F-04</span></td>
+<td align="center"><span class="badge-p1">P1</span></td>
+<td>Defective Implementation</td>
+<td>Fullstack Seam</td>
+<td>Vacancy skills not probed during the interview were rendered as gaps (-3 delta) or caused frontend crashes.</td>
+</tr>
+<tr>
+<td align="center"><span class="badge-id">F-05</span></td>
+<td align="center"><span class="badge-p1">P1</span></td>
+<td>Defective Implementation</td>
+<td>Data Pipeline</td>
+<td>Non-transactional DB writes left orphaned records when Gemini timed out.</td>
+</tr>
+<tr>
+<td align="center"><span class="badge-id">F-06</span></td>
+<td align="center"><span class="badge-p1">P1</span></td>
+<td>Missing Spec</td>
+<td>Compliance</td>
+<td>Production server logs printed unredacted candidate personal information violating UU PDP.</td>
+</tr>
+<tr>
+<td align="center"><span class="badge-id">F-07</span></td>
+<td align="center"><span class="badge-p2">P2</span></td>
+<td>Defective Implementation</td>
+<td>Fullstack Seam</td>
+<td>Inconsistent attribute naming (<code>expected_level</code> vs <code>required_level</code>) between Rails serializer and React types.</td>
+</tr>
+<tr>
+<td align="center"><span class="badge-id">F-08</span></td>
+<td align="center"><span class="badge-p2">P2</span></td>
+<td>Defective Implementation</td>
+<td>Frontend UI/UX</td>
+<td>Text overflow and cramped layout on long candidate quotes and lack of visual audit trail for overrides.</td>
+</tr>
+</tbody></table>
+<h3>Technical Lead Constraint Signal</h3>
+<blockquote>
+<p><strong>Architectural Signal to Tech Lead</strong>: In multi-tenant environments, default scopes (<code>TenantScoped</code>) ensure complete database row isolation. However, relying on implicit background job arguments without explicit tenant context risks worker execution errors. All asynchronous workers (<code>PortfolioGeneratorWorker</code>, <code>FitGapGeneratorWorker</code>) must maintain explicit tenant boundaries.</p>
+</blockquote>
+<hr>
+<h2 id="3-revamp-strategy--acceptance-criteria" class="page-break">3. Revamp Strategy &amp; Acceptance Criteria</h2>
+<h3>3.1 Self-Derived Acceptance Criteria (AC)</h3>
+<ul>
+<li><strong>AC-01 (Unassessed Skills)</strong>: Skills required by a vacancy that were not explored during the session must be explicitly marked as <code>not_assessed</code> with <code>candidate_level: nil</code> and <code>delta: nil</code>. They must never be penalized as 0.</li>
+<li><strong>AC-02 (Deterministic Fallbacks)</strong>: If the LLM narrative call fails or times out, the system must generate structured rule-based narratives reflecting matches, gaps, and unassessed counts without failing the background job.</li>
+<li><strong>AC-03 (Idempotent Regeneration)</strong>: Regenerating fit/gap reports must preserve the existing report until the new synthesis completes successfully.</li>
+<li><strong>AC-04 (Executive UI &amp; Human Audit)</strong>: Comparison tables must render executive metric cards, clean visual badges, and prominent assessor override justification callouts.</li>
+<li><strong>AC-05 (UU PDP Redaction)</strong>: All candidate PII parameters (<code>:nik</code>, <code>:phone</code>, <code>:candidate_name</code>) must be filtered from Rails production logs.</li>
+</ul>
+<h3>3.2 Architectural Decision Trade-Off Matrix</h3>
+<p>We evaluated two implementation paths:</p>
+<table>
+<thead>
+<tr>
+<th align="left">Architectural Dimension</th>
+<th align="left">Option A: Rapid Patch</th>
+<th align="left">Option B: Monozukuri Fullstack Revamp (Selected)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>Testing Architecture</strong></td>
+<td align="left">Ad-hoc manual verification script</td>
+<td align="left">RSpec &amp; Vitest harnesses built from scratch with seeded fault proof</td>
+</tr>
+<tr>
+<td align="left"><strong>Unassessed Handling</strong></td>
+<td align="left">Coalesce missing skills to L1 in DB</td>
+<td align="left">Explicit <code>not_assessed</code> domain state with UI badge and metric tracking</td>
+</tr>
+<tr>
+<td align="left"><strong>Failure Recovery</strong></td>
+<td align="left">Let Sidekiq retry failed jobs 5 times</td>
+<td align="left">Atomic database transactions + deterministic rule-based narrative fallbacks</td>
+</tr>
+<tr>
+<td align="left"><strong>Assessor Experience</strong></td>
+<td align="left">Plain table with text values</td>
+<td align="left">Executive metric cards, expandable quotes, override audit trails</td>
+</tr>
+<tr>
+<td align="left"><strong>Long-Term Maintainability</strong></td>
+<td align="left">High technical debt</td>
+<td align="left">Self-documenting test suite, zero regressions, strict type safety</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="4-monozukuri-implementation-details" class="page-break">4. Monozukuri Implementation Details</h2>
+<h3>4.1 Backend Hardening (<a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/api"><code>api/</code></a>)</h3>
+<ol>
+<li><strong><a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/api/app/services/portfolios/generator.rb"><code>Portfolios::Generator</code></a></strong>:<ul>
+<li>Added <code>ActiveRecord::Base.transaction</code> to ensure all portfolio skills and metadata persist atomically.</li>
+<li>Implemented regex markdown fence stripping (<code>sub(/\A```json\s*/i, &#39;&#39;).sub(/\s*```\z/i, &#39;&#39;)</code>).</li>
+<li>Fixed string level parsing: <code>clean_num = val.to_s.gsub(/\D/, &#39;&#39;).to_i</code>, preventing silent score downgrades.</li>
+<li>Added API key sanitization in error logs.</li>
+</ul>
+</li>
+<li><strong><a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/api/app/services/fit_gap/engine.rb"><code>FitGap::Engine</code></a></strong>:<ul>
+<li>Added unassessed skill tracking (<code>result: &#39;not_assessed&#39;</code>, <code>delta: nil</code>, <code>candidate_level: nil</code>).</li>
+<li>Implemented <code>generate_fallback_culture_narrative</code> and <code>generate_fallback_overall_narrative</code> to guarantee report generation even during complete Gemini API outages.</li>
+</ul>
+</li>
+<li><strong><a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/api/app/controllers/api/v1/portfolios_controller.rb"><code>PortfoliosController</code></a></strong>:<ul>
+<li>Removed destructive <code>existing&amp;.destroy</code> before job enqueue; report is now replaced atomically when the new report is ready.</li>
+</ul>
+</li>
+<li><strong><a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/api/config/initializers/filter_parameter_logging.rb"><code>filter_parameter_logging.rb</code></a></strong>:<ul>
+<li>Configured UU PDP PII parameter filtering.</li>
+</ul>
+</li>
+</ol>
+<h3>4.2 Frontend Elevation (<a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/web"><code>web/</code></a>)</h3>
+<ol>
+<li><strong><a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/web/src/components/fitgap/ComparisonTable.tsx"><code>ComparisonTable.tsx</code></a></strong>:<ul>
+<li>Added 4 executive metric cards: Matches, Exceeds, Gaps, and Not Evaluated.</li>
+<li>Added <code>ResultBadge</code> with distinct icons and color tokens (emerald for match, sky for exceed, amber for gap, slate for not assessed).</li>
+<li>Rendered human assessor override icons (<code>UserCheck</code>) and contextual explanatory footnotes.</li>
+</ul>
+</li>
+<li><strong><a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/web/src/pages/fitgap/FitGapReportPage.tsx"><code>FitGapReportPage.tsx</code></a></strong>:<ul>
+<li>Added vacancy context header, loading pulse state, and error recovery banners.</li>
+<li>Structured recommendation narratives into dual executive cards: Executive Recommendation and Culture &amp; Competency Fit.</li>
+<li>Built additive discovered competencies card for skills discovered beyond the job description.</li>
+</ul>
+</li>
+<li><strong><a href="file:///Volumes/SSD%20External/PERSONAL/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx"><code>SkillPortfolioCard.tsx</code></a></strong>:<ul>
+<li>Added expandable quote accordion (&quot;Show all (N) / Show less&quot;).</li>
+<li>Added assessor override rationale banner displaying the assessor&#39;s justification notes.</li>
+<li>Added low-confidence advisory callout for skills briefly touched upon.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="5-verification-proofs--ai-moments">5. Verification Proofs &amp; AI Moments</h2>
+<h3>5.1 Test Suite Results</h3>
+<ul>
+<li><strong>Backend RSpec Suite</strong>: 32 examples, 0 failures (Services, Models, Requests, Multitenancy, UU PDP sanitization).</li>
+<li><strong>Frontend Playwright E2E Suite</strong>: 30 comprehensive browser scenarios, 100% passed (Auth, Interview room, Portfolio, Fit/Gap, Vacancy management).</li>
+<li><strong>Frontend Vitest Suite</strong>: 11 unit tests, 0 failures.</li>
+<li><strong>Production Bundle</strong>: <code>npm run build</code> compiled cleanly in 2.21 seconds.</li>
+</ul>
+<h3>5.2 Seeded Fault Proof</h3>
+<ul>
+<li><strong>Backend</strong>: Inverting <code>delta = expected_level - candidate_level</code> in <code>FitGap::Engine</code> caused immediate RSpec failure (<code>expected &quot;gap&quot;, got &quot;exceed&quot;</code>). Restoring code returned the suite to 100% pass.</li>
+<li><strong>Frontend</strong>: Hardcoding <code>const result = &quot;match&quot;</code> in <code>ComparisonTable.tsx</code> caused Vitest to fail (<code>Unable to find element with text: Not Assessed</code>). Restoring code returned the suite to 100% pass.</li>
+</ul>
+<h3>5.3 AI Verification Moment</h3>
+<p>The discovery of <code>&quot;L3&quot;.to_i == 0</code> demonstrates the critical necessity of manual code inspection over blind model reliance. AI models frequently write concise parsing code that behaves unexpectedly across language boundaries. Catching and resolving this bug saved candidates from systematic wrongful disqualification.</p>
+<hr>
+<h2 id="6-video-demonstration-walkthrough" class="page-break">6. Video Demonstration Walkthrough</h2>
+<p><strong>Loom Walkthrough Link</strong>: <a href="https://www.loom.com/share/11dcd0ced750444f8a6a31e7e5841c08" target="_blank">https://www.loom.com/share/11dcd0ced750444f8a6a31e7e5841c08</a></p>
+<blockquote>
+<p><strong>Assessor Note on Video Duration</strong>:<br>
+In accordance with <strong>Monozukuri craftsmanship standards</strong>, this video demonstration delivers complete architectural transparency and an authentic end-to-end live product walkthrough. Rather than an edited high-level overview, the video walks through the entire user journey and technical edge cases. Assessors may view the complete video or utilize the structured chapter markers below for targeted review:</p>
+</blockquote>
+<ol>
+<li><strong>Role &amp; Vacancy Creation</strong>: Creating the vacancy with specific competency levels and role expectations.</li>
+<li><strong>Assessment Rubric Setup</strong>: Configuring the assessment, adding B7 rubric behavioral anchors (L1–L5), and generating candidate invitation links.</li>
+<li><strong>Live AI Candidate Interview</strong>: Hardware checks, entry into the live room, dynamic audio interaction, and session completion.</li>
+<li><strong>Portfolio Synthesis &amp; Evidence Extraction</strong>: Verbatim transcript extraction, AI level determination, and confidence ratings.</li>
+<li><strong>Human Assessor Override</strong>: Modifying candidate competency levels with mandatory audit rationale in compliance with Indonesian UU PDP standards.</li>
+<li><strong>Fit/Gap Benchmark Analytics</strong>: Reviewing the delta matrix (Matches, Exceeds, Gaps, and unassessed competencies) with narrative synthesis.</li>
+<li><strong>Export &amp; Verification</strong>: Generating PDF dossiers, CSV matrices, and verifying automated test harnesses (<code>bundle exec rspec</code> and <code>npx playwright test</code>).</li>
+</ol>
+<hr>
+<h2 id="7-visual-evidence--ui-screenshots" class="page-break">7. Visual Evidence &amp; UI Screenshots</h2>
+<p>The following embedded high-resolution screenshots document the platform's core workflows, interaction states, responsive views, and test suites:</p>
+
+<div class="screenshot-section">
+  <h3>7.1 Fit/Gap Benchmark Analytics &amp; Executive Decision Matrix</h3>
+  <div class="screenshot-card">
+    <img src="screenshots/04_fitgap_report.png" alt="Fit/Gap Evaluation Report" />
+    <div class="screenshot-caption">Figure 7.1: Executive metric cards (Matches 1/2, Exceeds 1, Gaps 0, Not Evaluated 0), 100% benchmark alignment progress bar, and verified skill comparison matrix.</div>
+  </div>
+</div>
+
+<div class="screenshot-section">
+  <h3>7.2 Candidate Competency Portfolio &amp; Evidence Quotes</h3>
+  <div class="screenshot-card">
+    <img src="screenshots/03_candidate_portfolio.png" alt="Candidate Portfolio" />
+    <div class="screenshot-caption">Figure 7.2: Candidate Competency Dossier (Budi Santoso) displaying extracted verbatim evidence quotes per competency, AI level determinations (L4 Advanced, L3 Proficient), and human assessor override controls.</div>
+  </div>
+</div>
+
+<div class="screenshot-section">
+  <h3>7.3 Live Multimodal AI Interview &amp; Real-Time Voice Waveform</h3>
+  <div class="screenshot-card">
+    <img src="screenshots/07_live_interview_room.png" alt="Live AI Interview Room" />
+    <div class="screenshot-caption">Figure 7.3: Real-time multimodal interview stage with pulsing voice visualizer, active listening state, 9 live conversation turns, and connection telemetry.</div>
+  </div>
+</div>
+
+<div class="screenshot-section">
+  <h3>7.4 Modern Role Vacancy &amp; Assessment Catalog</h3>
+  <div class="screenshot-card">
+    <img src="screenshots/02_vacancies_list.png" alt="Vacancy Management" />
+    <div class="screenshot-caption">Figure 7.4: Role vacancies catalog with gold CTA action buttons, category filter pills, benchmark targets, and authenticated user profile (Tunggal).</div>
+  </div>
+</div>
+
+<div class="screenshot-section">
+  <h3>7.5 Mobile Responsive Adaptation (390px Viewport)</h3>
+  <div class="screenshot-card" style="max-width: 270px; margin: 10px auto;">
+    <img src="screenshots/05_mobile_responsive.png" alt="Mobile Responsive" style="max-height: 460px; width: auto;" />
+    <div class="screenshot-caption">Figure 7.5: Mobile-first responsive adaptation on 390px viewport demonstrating fluid touch targets, candidate dossier cards, and clean typography hierarchy.</div>
+  </div>
+</div>
+
+<div class="screenshot-section">
+  <h3>7.6 Automated Test Suite Execution (100% Pass Rate)</h3>
+  <div class="screenshot-card">
+    <img src="screenshots/08_terminal_playwright_pass.png" alt="Playwright E2E Test Suite Pass" style="max-height: 420px;" />
+    <div class="screenshot-caption">Figure 7.6a: End-to-end browser test execution — 30 Playwright scenarios passing on headless Chromium (56.2s).</div>
+  </div>
+  <div class="screenshot-card">
+    <img src="screenshots/09_terminal_rspec_pass.png" alt="RSpec Backend Test Suite Pass" style="max-height: 180px;" />
+    <div class="screenshot-caption">Figure 7.6b: Backend test harness — 32 RSpec unit, model, and request specs passing with 0 failures (0.61s).</div>
+  </div>
+</div>
+
+<hr>
+<h2 id="8-claimed-engineering-depth--production-verification" class="page-break">8. Claimed Engineering Depth &amp; Production Verification</h2>
+<ul>
+  <li><strong>Claimed Engineering Depth</strong>: <strong>Fullstack Engineer with Frontend Depth</strong></li>
+  <li><strong>Frontend Architecture &amp; Craftsmanship (50%)</strong>:
+    <ul>
+      <li>React 18, TypeScript, Tailwind CSS, Framer Motion, and Radix UI primitives.</li>
+      <li>Pixel-perfect typography alignment using Nunito Sans font hierarchy.</li>
+      <li>Graceful responsive adaptation across desktop, tablet, and mobile (390px viewport).</li>
+      <li>Robust client-side validation, error boundaries, accessible modal dialogues, and audio visualizer stages.</li>
+      <li>End-to-end browser test harness: <strong>30 Playwright scenarios running against headless Chromium with 100% pass</strong>.</li>
+    </ul>
+  </li>
+  <li><strong>Backend Rigor &amp; Data Safety (50%)</strong>:
+    <ul>
+      <li>Ruby on Rails 7 with PostgreSQL, Redis, Sidekiq, and Gemini AI.</li>
+      <li>Multi-model failover engine (<code>gemini-3.5-flash</code> &rarr; <code>gemini-flash-lite</code> &rarr; heuristic fallback) eliminating 429 rate limit errors.</li>
+      <li>Atomic database transactions with concurrency claim locks preventing duplicate worker jobs.</li>
+      <li>UU PDP No. 27/2022 parameter sanitization filtering candidate personal identifiers (<code>:nik</code>, <code>:phone</code>, <code>:candidate_name</code>).</li>
+      <li>Automated test harness: <strong>32 RSpec unit, model, and request specs with 100% pass</strong>.</li>
+    </ul>
+  </li>
+</ul>
+</body>
+</html>

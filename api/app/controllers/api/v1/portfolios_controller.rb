@@ -10,7 +10,31 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @portfolio.nil?
+          @portfolio = @session.create_portfolio!(
+            candidate_id: @session.candidate_id,
+            generation_status: "pending"
+          )
+        end
+
+        if @portfolio.pending?
+          if Rails.env.development?
+            claimed = Portfolio.where(id: @portfolio.id, generation_status: "pending")
+                               .update_all(generation_status: "generating") > 0
+            if claimed
+              Thread.new do
+                ActiveRecord::Base.connection_pool.with_connection do
+                  Portfolios::Generator.new(session: @session).call
+                end
+              rescue => e
+                Rails.logger.error("[PortfoliosController] Dev fallback generation failed: #{e.message}")
+              end
+            end
+          end
+          return render json: { status: "generating" }, status: :accepted
+        end
+
+        if @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
 
@@ -38,6 +62,17 @@ module Api
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
         PortfolioGeneratorWorker.perform_async(@session.id)
+
+        if Rails.env.development?
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              sleep 0.5
+              Portfolios::Generator.new(session: @session).call
+            end
+          rescue => e
+            Rails.logger.error("[PortfoliosController] Dev regenerate fallback failed: #{e.message}")
+          end
+        end
 
         json_response(
           message:   "Portfolio generation queued",
@@ -91,8 +126,18 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+
+        if Rails.env.development?
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              sleep 0.5
+              FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+            end
+          rescue => e
+            Rails.logger.error("[PortfoliosController] Dev fitgap regenerate fallback failed: #{e.message}")
+          end
+        end
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
@@ -120,6 +165,18 @@ module Api
         end
 
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+
+        if Rails.env.development?
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              sleep 0.5
+              FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+            end
+          rescue => e
+            Rails.logger.error("[PortfoliosController] Dev fitgap fallback failed: #{e.message}")
+          end
+        end
+
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)

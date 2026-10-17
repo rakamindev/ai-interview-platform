@@ -43,6 +43,9 @@ Rails.application.configure do
   # Log level
   config.log_level = :debug
 
+  # Allow all hosts / tunnel domains in development mode
+  config.hosts.clear
+
   # Use an evented file watcher to asynchronously detect changes in source code,
   # routes, locales, etc. This feature depends on the listen gem.
   config.file_watcher = ActiveSupport::EventedFileUpdateChecker

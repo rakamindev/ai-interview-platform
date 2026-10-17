@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class VacancySkill < ApplicationRecord
-  belongs_to :vacancy
+  belongs_to :vacancy, touch: true
 
   validates :skill_label, presence: true
   validates :expected_level, numericality: { only_integer: true, in: 1..5 }

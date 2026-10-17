@@ -55,7 +55,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md mx-auto rounded-2xl p-5">
         <DialogHeader>
           <DialogTitle>Add from B7 taxonomy</DialogTitle>
         </DialogHeader>
@@ -84,9 +84,12 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
                 key={s.skill_id}
                 type="button"
                 onClick={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
+                className="w-full flex items-center justify-between text-left px-3.5 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-[#01959f]/10 hover:text-[#01959f] font-semibold transition-colors cursor-pointer group"
               >
-                {s.skill_label}
+                <span>{s.skill_label}</span>
+                <span className="text-xs text-[#01959f] opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                  + Pilih
+                </span>
               </button>
             ))
           )}

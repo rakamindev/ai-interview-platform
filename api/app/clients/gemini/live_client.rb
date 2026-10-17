@@ -113,6 +113,10 @@ module Gemini
       @silence_pumping
     end
 
+    def model_emitting_audio?
+      @model_emitting_audio
+    end
+
     # Gracefully closes the connection.
     def close
       @inactivity_timer&.cancel
@@ -342,8 +346,9 @@ module Gemini
 
       log_gemini_event(data)
 
-      handle_audio_response(data)
+      # Buffer input transcription before checking model response so final user words in this frame are captured
       handle_input_transcription(data)
+      handle_audio_response(data)
       handle_output_transcription(data)
       handle_generation_complete(data)
       handle_interrupted(data)
@@ -358,6 +363,9 @@ module Gemini
     def handle_audio_response(data)
       parts = data.dig('serverContent', 'modelTurn', 'parts')
       return unless parts
+
+      # User has finished speaking — flush their input transcript so "You" bubble appears immediately
+      flush_input_buffer
 
       parts.each do |part|
         next unless (inline = part['inlineData'])
@@ -380,6 +388,9 @@ module Gemini
     def handle_output_transcription(data)
       output_tx = data.dig('serverContent', 'outputTranscription')
       return unless output_tx
+
+      # Ensure user input is flushed if output text arrives before/without audio
+      flush_input_buffer
 
       text = output_tx.dig('parts', 0, 'text') || output_tx['text']
       @output_text_buffer << text.to_s
@@ -418,6 +429,7 @@ module Gemini
       @model_interrupted = true
       @gate_timer&.cancel
       Rails.logger.info('[Gemini::LiveClient] Model interrupted — resetting audio gate immediately')
+      flush_input_buffer
       flush_output_buffer
       @on_model_turn_complete&.call
     end
@@ -429,11 +441,13 @@ module Gemini
         # turnComplete without generationComplete — model interrupted or generation ended abruptly.
         @model_emitting_audio = false
         Rails.logger.info('[Gemini::LiveClient] Model interrupted — turnComplete without generationComplete')
+        flush_input_buffer
         flush_output_buffer
         @on_model_turn_complete&.call
       elsif @model_interrupted
         # Stale post-interruption turnComplete — already handled via `interrupted`.
         @model_interrupted = false
+        flush_input_buffer
       else
         # User's turn complete (or harmless stale model turnComplete after generationComplete).
         Rails.logger.info("[Gemini::LiveClient] User turnComplete — input_buffer=#{@input_text_buffer.length}chars silence_pumping=#{@silence_pumping}")
@@ -474,15 +488,23 @@ module Gemini
     def flush_input_buffer
       return unless @input_text_buffer.present?
 
-      @on_input_transcription&.call(@input_text_buffer.strip)
+      text = @input_text_buffer.strip
       @input_text_buffer = +''
+      return if text.blank?
+
+      Rails.logger.info("[Gemini::LiveClient] Flushing candidate input transcription (#{text.length} chars): #{text.truncate(60)}")
+      @on_input_transcription&.call(text)
     end
 
     def flush_output_buffer
       return unless @output_text_buffer.present?
 
-      @on_output_transcription&.call(@output_text_buffer.strip)
+      text = @output_text_buffer.strip
       @output_text_buffer = +''
+      return if text.blank?
+
+      Rails.logger.info("[Gemini::LiveClient] Flushing model output transcription (#{text.length} chars): #{text.truncate(60)}")
+      @on_output_transcription&.call(text)
     end
   end
 end

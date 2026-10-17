@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -17,17 +17,39 @@ module Gemini
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
 
+    FALLBACK_MODELS = %w[gemini-3.5-flash gemini-flash-lite-latest gemini-3.5-flash-lite gemini-flash-latest].freeze
+
     def initialize(model: nil, api_key: nil, timeout: 60)
-      @model = model
+      @model = model || ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.5-flash')
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
       @timeout = timeout
       @connection = build_connection
     end
 
-    # Generates content using Gemini REST API.
+    # Generates content using Gemini REST API with automatic multi-model failover.
     # Returns parsed JSON response body.
-    def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
+    def generate_content(prompt, temperature: 0.2, fallback_allowed: true)
+      attempt_generate(@model, prompt, temperature)
+    rescue RateLimitError => e
+      raise unless fallback_allowed
+
+      models_to_try = FALLBACK_MODELS.reject { |m| m == @model }
+      models_to_try.each do |fallback|
+        Rails.logger.warn("[Gemini::HttpClient] #{@model} hit RateLimitError (429). Trying fallback #{fallback}...")
+        begin
+          return attempt_generate(fallback, prompt, temperature)
+        rescue RateLimitError
+          next
+        end
+      end
+
+      raise e
+    end
+
+    private
+
+    def attempt_generate(model, prompt, temperature)
+      response = @connection.post(generate_url(model), request_body(prompt, temperature), request_headers)
       parse_response(response)
     rescue Faraday::TimeoutError => e
       raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
@@ -35,10 +57,12 @@ module Gemini
       raise ApiError.new("Gemini API error: #{e.message}")
     end
 
-    private
+    def generate_content_with_model(prompt, model, temperature: 0.2)
+      attempt_generate(model, prompt, temperature)
+    end
 
-    def generate_url
-      "#{BASE_URL}/models/#{@model}:generateContent"
+    def generate_url(model = @model)
+      "#{BASE_URL}/models/#{model}:generateContent"
     end
 
     def request_headers
@@ -55,14 +79,10 @@ module Gemini
     def build_connection
       Faraday.new do |f|
         f.request :retry, {
-          max: 3,
-          interval: 1,
-          interval_randomness: 0.5,
-          backoff_factor: 2,
-          retry_statuses: [429, 500, 502, 503],
+          max: 2,
+          interval: 0.5,
+          retry_statuses: [500, 502, 503],
           retry_block: ->(env, _opts, retries, exc) {
-            retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
             Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
           }
         }

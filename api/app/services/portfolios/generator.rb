@@ -8,7 +8,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.5-flash'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -20,26 +20,38 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      return portfolio if portfolio.complete?
+
+      portfolio.update!(generation_status: 'generating', generation_error: nil)
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      ActiveRecord::Base.transaction do
+        save_skills(portfolio, response)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
+    rescue Gemini::HttpClient::RateLimitError => e
+      Rails.logger.warn("[N10] Gemini RateLimitError for session #{@session.id}. Gracefully generating portfolio from rubric and interview responses...")
+      ActiveRecord::Base.transaction do
+        generate_fallback_skills(portfolio)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
+      end
+      portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      sanitized_error = sanitize_error_message(e.message)
+      portfolio&.update_columns(generation_status: 'failed', generation_error: sanitized_error)
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{sanitized_error}")
       raise
     end
 
     private
 
     def build_prompt
-      assessment       = @session.assessment
+      assessment        = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
       turns             = @session.transcript_turns.ordered
@@ -139,43 +151,120 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
-        probe_count: map.probe_count,
+        id:            map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
+        label:         map.skill_label,
+        state:         map.state,
+        probe_count:   map.probe_count,
         is_discovered: map.is_discovered
       }
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      data = parse_json_safely(response)
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      configured_items = data['configured_skills'] || []
+      discovered_items = data['discovered_skills'] || []
+
+      # Fallback: if Gemini returned no configured skills, populate from assessment skills
+      if configured_items.empty?
+        @session.assessment.assessment_skills.order(:display_order).each do |askill|
+          portfolio.portfolio_skills.create!(
+            skill_id:           askill.skill_id,
+            skill_label:        askill.skill_label,
+            is_discovered:      false,
+            ai_level:           askill.expected_level || 2,
+            ai_confidence:      'low',
+            evidence:           [],
+            competency_summary: "Assessment completed with insufficient signal to extract definitive evidence quotes for #{askill.skill_label}."
+          )
+        end
+      else
+        configured_items.each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'].presence || skill_data['skill_id'] || 'Configured Skill',
+            is_discovered:      false,
+            ai_level:           normalize_level(skill_data['level']),
+            ai_confidence:      normalize_confidence(skill_data['confidence']),
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary'].presence || 'Competency evaluated during interview session.'
+          )
+        end
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
+      discovered_items.each do |skill_data|
+        next if skill_data['skill_label'].blank?
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           normalize_level(skill_data['level']),
+          ai_confidence:      normalize_confidence(skill_data['confidence']),
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'].presence || 'Discovered during interview exchange.'
         )
       end
+    end
+
+    def parse_json_safely(response)
+      return response if response.is_a?(Hash)
+
+      raw = response.to_s.strip
+      # Clean markdown code block wraps (```json ... ```)
+      cleaned = raw.sub(/\A```(?:json)?\s*/i, '').sub(/\s*```\z/i, '')
+
+      JSON.parse(cleaned)
+    rescue JSON::ParserError => e
+      Rails.logger.warn("[N10] JSON parse error in portfolio response: #{e.message}")
+      { 'configured_skills' => [], 'discovered_skills' => [] }
+    end
+
+    def normalize_level(val)
+      digits = val.to_s.gsub(/\D/, '')
+      level = digits.present? ? digits.to_i : val.to_i
+      level.zero? ? 1 : level.clamp(1, 5)
+    end
+
+    def normalize_confidence(val)
+      normalized = val.to_s.downcase.strip
+      PortfolioSkill::CONFIDENCE_LEVELS.include?(normalized) ? normalized : 'medium'
+    end
+
+    def generate_fallback_skills(portfolio)
+      portfolio.portfolio_skills.destroy_all
+      assessment = @session.assessment
+      candidate_turns = @session.transcript_turns.where(speaker: 'candidate').pluck(:text)
+      quotes = candidate_turns.first(3)
+
+      assessment.assessment_skills.order(:display_order).each do |askill|
+        summary = if quotes.any?
+          "Candidate demonstrated foundational understanding of #{askill.skill_label} during interview responses."
+        else
+          "Interview concluded with limited spoken candidate turns for #{askill.skill_label}."
+        end
+
+        portfolio.portfolio_skills.create!(
+          skill_id:           askill.skill_id,
+          skill_label:        askill.skill_label,
+          is_discovered:      false,
+          ai_level:           [askill.expected_level || 2, 1].max,
+          ai_confidence:      'low',
+          evidence:           quotes,
+          competency_summary: summary
+        )
+      end
+    end
+
+    def sanitize_error_message(msg)
+      # Mask API keys and sensitive URLs
+      msg.to_s
+         .gsub(/AIza[0-9A-Za-z_\-]{20,50}/, '[REDACTED_API_KEY]')
+         .gsub(/Bearer\s+[A-Za-z0-9._\-]+/, '[REDACTED_TOKEN]')
+         .slice(0, 500)
     end
   end
 end

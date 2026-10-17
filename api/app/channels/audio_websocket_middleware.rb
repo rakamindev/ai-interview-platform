@@ -120,6 +120,12 @@ class AudioWebSocketMiddleware
     state.cached_coverage_text = injector.injection_text
     state.last_coverage_digest = injector.coverage_fingerprint
 
+    if ENV['SIMULATE_AI_INTERVIEW'] == 'true'
+      Rails.logger.info("[AudioWS] SIMULATE_AI_INTERVIEW active — using SimulatedLiveClient")
+      activate_simulated_client(browser_ws, state)
+      return
+    end
+
     build_gemini_client(browser_ws, state)
     state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
   end
@@ -202,6 +208,7 @@ class AudioWebSocketMiddleware
   # generationComplete when Gemini flushes mid-model-turn, which would trigger a dual response.
   def maybe_inject_coverage(state, session)
     return if state.model_speaking
+    return if state.gemini_client&.model_emitting_audio?
     return unless state.cached_coverage_text.present?
     return if state.last_coverage_digest == state.last_injected_digest
 
@@ -268,18 +275,27 @@ class AudioWebSocketMiddleware
     }
   end
 
-  # Strips coverage/time metadata that leaks into output transcription via realtimeInput.text echoes.
+  # Strips coverage/time metadata and stream artifacts that leak into output transcription via realtimeInput.text echoes.
   def sanitize_output_transcription(text)
     text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
     text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
-    text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
-    # Skip up to the last }] (or }) immediately followed by an uppercase letter — covers partial JSON echoes.
-    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=\p{Lu})/m, '').strip
+    # If "skills" JSON is at the beginning, strip up to the closing }] and any trailing symbols before real words
+    text = text.sub(/\A[\s\S]*?\{[\s\S]*?"skills"[\s\S]*?[\}\]]+[\s\}\]\$]*(?=[[:alpha:]"'’‘“”`])/m, '').strip
+    # If {"skills" appears anywhere else (e.g. in middle or at end of turn like "Using `useEffect` {\"skills\":..."), strip it to the end
+    text = text.sub(/\s*\{.*?"skills"[\s\S]*\z/m, '').strip
+    # Strip any standalone JSON
+    text = text.sub(/\A\s*[\{\[][\s\S]*[\}\]]\s*\z/m, '').strip
+    # Strip leading brackets/symbols
+    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]\$]*(?=[[:alpha:]"'’‘“”`])/m, '').strip
+    text = text.sub(/\A\s*[\{\}\[\]\$\s\-\>:]+(?=[[:alpha:]"'’‘“”`])/m, '').strip
     text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/m, '').strip
     text = text.gsub(/pacing=\S+\s*priority_next=\S*/m, '').strip
     text = text.gsub(/\[Start the interview[^\]]*\]/m, '').strip
     text = text.gsub(/\[SESSION RESUME\][^\n]*/m, '').strip
-    text.gsub(/\[SISTEM\][^\n]*/m, '').strip
+    text = text.gsub(/\[SISTEM\][^\n]*/m, '').strip
+    return '' unless text =~ /[[:alnum:]]/
+
+    text.strip
   end
 
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.
@@ -377,6 +393,14 @@ class AudioWebSocketMiddleware
     # Normal close (1000) is intentional unless flagged as inactivity_close (which also uses 1000).
     return if code == 1000 && !state.gemini_client&.inactivity_close
 
+    # Code 1008 indicates policy/unsupported model/unwhitelisted API key for Gemini Live.
+    # Seamlessly activate fallback simulated AI interviewer so the candidate session never dies.
+    if code == 1008
+      Rails.logger.warn("[AudioWS] Gemini Live closed with code 1008 (#{reason}) — activating SimulatedLiveClient fallback")
+      activate_simulated_client(browser_ws, state)
+      return
+    end
+
     state.proactive_reconnect_timer&.cancel
     state.reconnect_attempts ||= 0
 
@@ -389,6 +413,26 @@ class AudioWebSocketMiddleware
                             message: 'The session encountered a problem. Please contact the interviewer.')
       browser_ws.close
     end
+  end
+
+  def activate_simulated_client(browser_ws, state)
+    state.proactive_reconnect_timer&.cancel
+    session = state.session
+    state.gemini_client&.supersede!
+
+    state.gemini_client = Gemini::SimulatedLiveClient.new(
+      system_prompt: session.assessment.system_prompt,
+      on_audio: build_on_audio(browser_ws, state),
+      on_input_transcription: build_on_input_transcription(browser_ws, state, session),
+      on_output_transcription: build_on_output_transcription(browser_ws, state, session),
+      on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
+      on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
+      on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
+      on_error: ->(message) { Rails.logger.error("[AudioWS] Simulated client error: session=#{session.id} #{message}") },
+      on_resumption_token_update: build_on_resumption_token_update(state, session),
+      on_ready: build_on_ready(browser_ws, state, session)
+    )
+    state.gemini_client.connect
   end
 
   def schedule_gemini_reconnect(browser_ws, state, code)

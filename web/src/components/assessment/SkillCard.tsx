@@ -8,6 +8,7 @@ import LevelRadio from "./LevelRadio";
 import CustomSkillForm from "./CustomSkillForm";
 import { cn } from "@/lib/utils";
 import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface SkillCardProps {
   index: number;
@@ -79,28 +80,46 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             <button
               type="button"
               onClick={() => setAnchorsOpen((o) => !o)}
-              className="flex items-center gap-1 text-xs text-primary hover:underline"
+              className="inline-flex items-center gap-1.5 text-xs text-[#01959f] hover:text-[#01959f]/80 font-semibold cursor-pointer transition-colors"
             >
-              {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {anchorsOpen ? "Hide L1–L5 anchors" : "Show L1–L5 anchors"}
+              <motion.span
+                animate={{ rotate: anchorsOpen ? 90 : 0 }}
+                transition={{ duration: 0.2 }}
+                className="inline-block"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </motion.span>
+              <span>{anchorsOpen ? "Sembunyikan Anchor L1–L5" : "Lihat Anchor Standar L1–L5"}</span>
             </button>
 
-            {anchorsOpen && (
-              <div className="text-xs text-muted-foreground space-y-1 bg-muted/50 rounded p-2">
-                {[1, 2, 3, 4, 5].map((level) => {
-                  const anchor = skill?.[`l${level}_anchor` as keyof typeof skill] as string;
-                  return anchor ? (
-                    <div key={level}>
-                      <span className="font-medium text-foreground">L{level}</span> {anchor}
-                    </div>
-                  ) : null;
-                })}
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {anchorsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="text-xs text-slate-600 space-y-1.5 bg-slate-50 border border-slate-200/80 rounded-xl p-3 my-1">
+                    {[1, 2, 3, 4, 5].map((level) => {
+                      const anchor = skill?.[`l${level}_anchor` as keyof typeof skill] as string;
+                      return anchor ? (
+                        <div key={level} className="flex items-start gap-1.5 leading-relaxed">
+                          <span className="font-bold text-[#01959f] shrink-0">L{level}:</span>
+                          <span>{anchor}</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="space-y-1.5">
               <span className="text-xs text-muted-foreground">Expected level:</span>
               <LevelRadio
+                name={`skill-card-${index}`}
                 value={skill?.expected_level ?? 3}
                 onChange={(v) => form.setValue(`skills.${index}.expected_level`, v)}
               />

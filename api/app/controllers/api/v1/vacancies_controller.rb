@@ -9,11 +9,14 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.includes(:vacancy_skills).order(created_at: :desc))
+        all_skills   = vacancies.flat_map(&:vacancy_skills)
+        skill_ids    = all_skills.filter_map(&:skill_id).uniq
+        taxonomy_map = SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
 
         json_response(
-          vacancies: vacancies.map(&method(:vacancy_json)),
-          meta: pagination_meta(vacancies)
+          vacancies: vacancies.map { |v| serialize_vacancy_with_skills(v, taxonomy_map) },
+          meta:      pagination_meta(vacancies)
         )
       end
 
@@ -37,6 +40,7 @@ module Api
       # PUT /api/v1/vacancies/:id
       def update
         if @vacancy.update(vacancy_params)
+          @vacancy.fit_gap_reports.destroy_all
           json_response(vacancy: vacancy_with_skills_json(@vacancy))
         else
           json_error(@vacancy.errors.full_messages.first, :unprocessable_entity)
@@ -45,8 +49,11 @@ module Api
 
       # DELETE /api/v1/vacancies/:id
       def destroy
-        @vacancy.destroy
-        json_response(message: "Vacancy deleted")
+        if @vacancy.destroy
+          json_response(message: "Vacancy deleted")
+        else
+          json_error(@vacancy.errors.full_messages.first || "Failed to delete vacancy", :unprocessable_entity)
+        end
       end
 
       private
@@ -80,16 +87,18 @@ module Api
         }
       end
 
-      def vacancy_with_skills_json(vacancy)
+      def serialize_vacancy_with_skills(vacancy, taxonomy_map)
         skills = vacancy.vacancy_skills
-
-        # Preload taxonomy anchors in one query to avoid N+1
-        skill_ids    = skills.filter_map(&:skill_id).uniq
-        taxonomy_map = SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
-
         vacancy_json(vacancy).merge(
           skills: skills.map { |s| vacancy_skill_json(s, taxonomy_map[s.skill_id]) }
         )
+      end
+
+      def vacancy_with_skills_json(vacancy)
+        skills = vacancy.vacancy_skills
+        skill_ids    = skills.filter_map(&:skill_id).uniq
+        taxonomy_map = SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
+        serialize_vacancy_with_skills(vacancy, taxonomy_map)
       end
 
       def vacancy_skill_json(skill, taxonomy)
