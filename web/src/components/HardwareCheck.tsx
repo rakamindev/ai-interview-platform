@@ -32,7 +32,7 @@ function stateLabel(state: ProctoringState) {
     return "Waiting";
 }
 
-const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
+export const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
@@ -47,6 +47,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const testStreamRef = useRef<MediaStream | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -60,12 +63,16 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [progress]);
 
     useEffect(() => {
-        if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
+        if (videoRef.current) videoRef.current.srcObject = videoStream;
     }, [videoStream]);
 
     useEffect(() => {
-        return () => { videoStream?.getTracks().forEach((t) => t.stop()); };
-    }, [videoStream]);
+        return () => {
+            if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
+            audioContextRef.current?.close();
+            testStreamRef.current?.getTracks().forEach((track) => track.stop());
+        };
+    }, []);
 
     const checkAudioPlayback = async (): Promise<boolean> => {
         try {
@@ -78,6 +85,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             gain.connect(ctx.destination);
             gain.gain.setValueAtTime(0.01, ctx.currentTime);
             osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.onended = () => { void ctx.close(); };
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.1);
             return true;
@@ -88,6 +96,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const ctx = new AudioCtx();
+            audioContextRef.current = ctx;
             const source = ctx.createMediaStreamSource(stream);
             const analyser = ctx.createAnalyser();
             analyser.fftSize = 256;
@@ -96,10 +105,21 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             const update = () => {
                 analyser.getByteFrequencyData(data);
                 setAudioLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
-                requestAnimationFrame(update);
+                animationFrameRef.current = requestAnimationFrame(update);
             };
             update();
         } catch { /* silent */ }
+    };
+
+    const stopTestMedia = () => {
+        if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+        audioContextRef.current?.close();
+        audioContextRef.current = null;
+        testStreamRef.current?.getTracks().forEach((track) => track.stop());
+        testStreamRef.current = null;
+        setVideoStream(null);
+        setAudioLevel(0);
     };
 
     // Step 1: OS & browser
@@ -146,6 +166,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
         getStream.then((stream) => {
             if (stream) {
+                testStreamRef.current = stream;
                 if (REQUIRE_CAMERA) setVideoStream(stream);
                 startAudioLevelMonitoring(stream);
                 setProgress((p) => ({
@@ -176,8 +197,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [progress.audio]);
 
     const retryAll = () => {
-        videoStream?.getTracks().forEach((t) => t.stop());
-        setVideoStream(null);
+        stopTestMedia();
         setInternetResult(null);
         setProgress({
             osAndBrowser: ProctoringState.LOADING,
@@ -191,8 +211,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const thresholds = DEFAULT_THRESHOLDS;
 
     const rows: { key: keyof HardwareCheckingProgress; label: string }[] = [
-        { key: "osAndBrowser", label: "OS & browser" },
-        { key: "internet", label: "Internet" },
+        { key: "osAndBrowser", label: "OS and browser" },
+        { key: "internet", label: "Internet connection" },
         ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: "Camera" }] : []),
         { key: "microphone", label: "Microphone" },
         { key: "audio", label: "Audio output" },
@@ -230,37 +250,46 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             <span className="text-sm font-medium">{label}</span>
                             <div className="flex items-center gap-2">
                                 <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-700" :
+                                <span className={`text-xs w-24 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-700" :
                                     progress[key] === ProctoringState.ERROR ? "text-destructive" :
                                         "text-muted-foreground"
                                     }`}>
-                                    {stateLabel(progress[key])}
+                                    {key === "internet" && progress[key] === ProctoringState.PASSED ? "Connected" : stateLabel(progress[key])}
                                 </span>
                             </div>
                         </div>
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-700" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-700" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-700" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
+                            <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                                <div>
+                                    <span className="block text-muted-foreground">Download</span>
+                                    <span>{internetResult.download} Mbps</span>
+                                </div>
+                                <div>
+                                    <span className="block text-muted-foreground">Upload</span>
+                                    <span>{internetResult.upload} Mbps</span>
+                                </div>
+                                <div>
+                                    <span className="block text-muted-foreground">Ping</span>
+                                    <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-700" : "text-destructive"}>
+                                        {internetResult.ping} ms
+                                    </span>
+                                </div>
                             </div>
                         )}
 
                         {key === "internet" && (
-                            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                <span>Minimum required:</span>
-                                <span>Download ≥ {thresholds.minDownloadMbps} Mbps</span>
-                                <span>Upload ≥ {thresholds.minUploadMbps} Mbps</span>
-                                <span>Ping ≤ {thresholds.maxPingMs} ms</span>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                Download and upload are estimates. We check ping for responsiveness (up to {thresholds.maxPingMs} ms).
                             </p>
+                        )}
+
+                        {progress[key] === ProctoringState.ERROR && key === "microphone" && (
+                            <p className="mt-2 text-xs text-destructive">Allow microphone access in your browser settings, then retry.</p>
+                        )}
+                        {progress[key] === ProctoringState.ERROR && key === "audio" && (
+                            <p className="mt-2 text-xs text-destructive">Check your speakers or headphones, then retry.</p>
                         )}
 
                         {/* Mic level bar */}
@@ -291,7 +320,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     size="sm"
                     className="ml-auto"
                     disabled={!allPassed}
-                    onClick={onStart}
+                    onClick={() => {
+                        stopTestMedia();
+                        onStart?.();
+                    }}
                 >
                     Start Interview
                 </Button>

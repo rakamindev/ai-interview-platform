@@ -12,7 +12,7 @@ export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProp
     <div className={cn("flex", isCandidate ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+          "min-w-0 max-w-[92%] rounded-lg px-3 py-2 text-sm sm:max-w-[85%] lg:max-w-[65ch]",
           isCandidate
             ? "bg-primary/10 text-foreground"
             : "bg-muted text-foreground"
@@ -21,7 +21,7 @@ export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProp
         <span className="block text-xs font-medium mb-0.5 text-muted-foreground">
           {isCandidate ? "You" : "AI"}
         </span>
-        {text}
+        <p className="break-words whitespace-pre-wrap [overflow-wrap:anywhere]">{text}</p>
       </div>
     </div>
   );

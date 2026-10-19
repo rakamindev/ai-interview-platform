@@ -1,10 +1,18 @@
 import { Loader2 } from "lucide-react";
 
 interface ConnectionStatusProps {
-  state: "connected" | "reconnecting" | "lost";
+  state: "connecting" | "connected" | "reconnecting" | "lost";
 }
 
 export default function ConnectionStatus({ state }: ConnectionStatusProps) {
+  if (state === "connecting") {
+    return (
+      <div role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Connecting...
+      </div>
+    );
+  }
   if (state === "connected") {
     return (
       <div className="flex items-center gap-1.5 text-xs text-green-700">

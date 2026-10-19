@@ -180,6 +180,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  privacy_acknowledged: boolean;
 }
 
 export interface PaginationMeta {
@@ -198,7 +200,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "failed";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

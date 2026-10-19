@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
 interface UseAudioCaptureOptions {
   onFrame: (buffer: ArrayBuffer) => void;
@@ -14,8 +14,18 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   // Avoids AudioContext.suspend/resume async state issues entirely.
   const mutedRef = useRef(false);
 
-  const start = useCallback(async () => {
-    if (isCapturing) return;
+  const releaseCapture = useCallback(() => {
+    workletNodeRef.current?.disconnect();
+    workletNodeRef.current = null;
+    void audioCtxRef.current?.close();
+    audioCtxRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    mutedRef.current = false;
+  }, []);
+
+  const start = useCallback(async (): Promise<boolean> => {
+    if (isCapturing) return true;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -40,12 +50,16 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       source.connect(workletNode);
 
       setIsCapturing(true);
+      return true;
     } catch (err) {
+      releaseCapture();
+      setIsCapturing(false);
       const error = err instanceof Error ? err : new Error(String(err));
       console.error("[AudioCapture] Failed to start:", error.message);
       onError?.(error);
+      return false;
     }
-  }, [isCapturing, onFrame, onError]);
+  }, [isCapturing, onFrame, onError, releaseCapture]);
 
   const mute = useCallback(() => {
     mutedRef.current = true;
@@ -56,15 +70,11 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   }, []);
 
   const stop = useCallback(() => {
-    workletNodeRef.current?.disconnect();
-    workletNodeRef.current = null;
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    mutedRef.current = false;
+    releaseCapture();
     setIsCapturing(false);
-  }, []);
+  }, [releaseCapture]);
+
+  useEffect(() => () => releaseCapture(), [releaseCapture]);
 
   return { start, stop, mute, unmute, isCapturing };
 }
