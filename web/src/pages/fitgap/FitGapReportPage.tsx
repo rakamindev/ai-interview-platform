@@ -66,7 +66,6 @@ export default function FitGapReportPage() {
     setRegenerating(true);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
       setGenerating(true);
     } finally {
       setRegenerating(false);
@@ -126,11 +125,11 @@ export default function FitGapReportPage() {
             </Button>
             {report && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
+                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting || report.stale}>
                   {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                   PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
+                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting || report.stale}>
                   {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                   JSON
                 </Button>
@@ -151,6 +150,12 @@ export default function FitGapReportPage() {
       {/* Report ready */}
       {report && (
         <>
+          {report.stale && (
+            <div role="alert" className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+              Vacancy requirements have changed. Regenerate this report before using it for a decision.
+            </div>
+          )}
+
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">

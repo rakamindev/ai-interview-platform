@@ -144,6 +144,7 @@ export interface FitGapReport {
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
+  stale: boolean;
 }
 
 export interface SkillTaxonomy {

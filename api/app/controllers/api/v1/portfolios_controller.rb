@@ -57,6 +57,13 @@ module Api
           return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})", :unprocessable_entity)
         end
 
+        if params[:vacancy_id].present?
+          report = FitGapReport.find_by(portfolio_id: @portfolio.id, vacancy_id: params[:vacancy_id])
+          if report && fit_gap_report_stale?(report)
+            return json_error("Fit/gap report is stale. Regenerate it before export", :conflict)
+          end
+        end
+
         if format == "pdf"
           vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
@@ -91,7 +98,6 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
         FitGapGeneratorWorker.enqueue_once(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
@@ -205,8 +211,13 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          generated_at:      report.generated_at,
+          stale:             fit_gap_report_stale?(report)
         }
+      end
+
+      def fit_gap_report_stale?(report)
+        report.vacancy_updated_at != report.vacancy.updated_at
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
