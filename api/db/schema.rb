@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_18_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -89,9 +89,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.jsonb "decision"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+  end
+
+  create_table "organizations", force: :cascade do |t|
+    t.string "name", limit: 255, null: false
+    t.string "scheme", limit: 255, null: false
+    t.string "identifier", limit: 255, null: false
+    t.string "host", limit: 255, null: false
+    t.string "alias_hosts", default: [], null: false, array: true
+    t.jsonb "config", default: {}, null: false
+    t.timestamptz "created_at", default: -> { "now()" }, null: false
+    t.timestamptz "updated_at", default: -> { "now()" }, null: false
+    t.index ["host"], name: "index_organizations_on_host"
+    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -126,6 +140,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.datetime "generation_started_at"
+    t.jsonb "omitted_ratings", default: [], null: false
+    t.jsonb "job_claims", default: {}, null: false
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
   end

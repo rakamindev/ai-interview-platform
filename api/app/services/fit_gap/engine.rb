@@ -16,57 +16,43 @@ module FitGap
     # Returns the FitGapReport record.
     def call
       skill_comparisons = build_skill_comparisons
-      narratives        = generate_narratives(skill_comparisons)
+      decision          = Readiness.call(skill_comparisons)
+      narratives        = generate_narratives(skill_comparisons, decision)
 
       report = FitGapReport.find_or_initialize_by(
         portfolio_id: @portfolio.id,
         vacancy_id:   @vacancy.id
       )
 
-      report.update!(
+      attributes = {
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
         generated_at:      Time.current
-      )
+      }
+      attributes[:decision] = decision if report.has_attribute?(:decision)
 
-      Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
+      report.update!(attributes)
+
+      Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id} verdict=#{decision['verdict']}")
       report
     end
 
     private
 
     def build_skill_comparisons
-      vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
-      portfolio_skills = effective_portfolio_skills  # includes overrides
+      ComparisonBuilder.build(
+        vacancy_skills: @vacancy.vacancy_skills.map { |skill| vacancy_skill_payload(skill) },
+        portfolio_skills: effective_portfolio_skills
+      )
+    end
 
-      comparisons = vacancy_skills.map do |label, vacancy_skill|
-        portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
-
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
-        else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
-        end
-
-        {
-          skill_label:     label,
-          skill_id:        vacancy_skill.skill_id,
-          candidate_level: candidate_level,
-          expected_level:  expected_level,
-          result:          result,
-          delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
-        }
-      end
-
-      comparisons
+    def vacancy_skill_payload(skill)
+      {
+        'skill_id' => skill.skill_id,
+        'skill_label' => skill.skill_label,
+        'expected_level' => skill.expected_level
+      }
     end
 
     # Returns portfolio skills with overrides applied.
@@ -85,30 +71,28 @@ module FitGap
       end
     end
 
-    def find_portfolio_skill(portfolio_skills, label, skill_id)
-      portfolio_skills.find { |s| s[:skill_id] == skill_id && skill_id.present? } ||
-        portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
-    end
+    def generate_narratives(skill_comparisons, decision)
+      gaps    = skill_comparisons.select { |c| c['result'] == 'gap' }
+      matches = skill_comparisons.select { |c| c['result'] == 'match' }
+      exceeds = skill_comparisons.select { |c| c['result'] == 'exceed' }
+      not_assessed = skill_comparisons.select { |c| c['result'] == 'not_assessed' }
 
-    def generate_narratives(skill_comparisons)
-      gaps    = skill_comparisons.select { |c| c[:result] == 'gap' }
-      matches = skill_comparisons.select { |c| c[:result] == 'match' }
-      exceeds = skill_comparisons.select { |c| c[:result] == 'exceed' }
-      not_assessed = skill_comparisons.select { |c| c[:result] == 'not_assessed' }
-
-      prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
+      prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed, decision)
 
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
-      rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        {
+          culture: data['culture_narrative'],
+          overall: [decision['rationale'], data['overall_narrative']].compact.join(' ')
+        }
+      rescue StandardError => e
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}")
+        { culture: nil, overall: fallback_narrative(decision) }
       end
     end
 
-    def build_narrative_prompt(gaps, matches, exceeds, not_assessed)
+    def build_narrative_prompt(gaps, matches, exceeds, not_assessed, decision)
       vacancy = @vacancy
       portfolio_session = @portfolio.session
       assessment = portfolio_session.assessment
@@ -121,10 +105,11 @@ module FitGap
         #{vacancy.competency_expectations.present? ? "COMPETENCY EXPECTATIONS:\n#{vacancy.competency_expectations}\n" : ""}
 
         SKILL COMPARISON RESULTS:
-        - Matches (#{matches.count}): #{matches.map { |c| "#{c[:skill_label]} (L#{c[:candidate_level]})" }.join(', ')}
-        - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (delta #{c[:delta]})" }.join(', ')}
-        - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (+#{c[:delta]})" }.join(', ')}
-        - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
+        - Matches (#{matches.count}): #{matches.map { |c| "#{c['skill_label']} (L#{c['candidate_level']})" }.join(', ')}
+        - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c['skill_label']}: candidate L#{c['candidate_level']} vs expected L#{c['expected_level']} (delta #{c['delta']})" }.join(', ')}
+        - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c['skill_label']}: candidate L#{c['candidate_level']} vs expected L#{c['expected_level']} (+#{c['delta']})" }.join(', ')}
+        - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c['skill_label'] }.join(', ')}
+        DECISION ALREADY MADE BY RULES (do not contradict it): #{decision['verdict']} — #{decision['rationale']}
 
         Write two short narrative paragraphs:
         1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
@@ -138,12 +123,11 @@ module FitGap
       PROMPT
     end
 
-    def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
-
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+    def fallback_narrative(decision)
+      counts = decision['counts'] || {}
+      "Decision: #{decision['verdict']}. #{decision['rationale']} " \
+        "Counts — match #{counts['match'].to_i}, exceed #{counts['exceed'].to_i}, " \
+        "gap #{counts['gap'].to_i}, not assessed #{counts['not_assessed'].to_i}."
     end
   end
 end

@@ -4,6 +4,7 @@ import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
 import { Zap } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
+import ExpandableText from "@/components/fitgap/ExpandableText";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface SkillPortfolioCardProps {
@@ -26,9 +27,9 @@ export default function SkillPortfolioCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <LevelBadge level={effectiveLevel} />
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
+                <span className="font-semibold break-words">{skill.skill_label}</span>
                 {skill.is_discovered && (
                   <span className="flex items-center gap-0.5 text-xs text-amber-600">
                     <Zap className="h-3 w-3" /> Discovered
@@ -56,8 +57,8 @@ export default function SkillPortfolioCard({
             </span>
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
+                <li key={i} className="text-sm text-foreground break-words">
+                  <ExpandableText value={quote} limit={180} className="text-sm text-foreground whitespace-pre-wrap break-words" />
                 </li>
               ))}
             </ul>
@@ -70,9 +71,11 @@ export default function SkillPortfolioCard({
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Competency summary
             </span>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {skill.competency_summary}
-            </p>
+            <ExpandableText
+              value={skill.competency_summary}
+              limit={220}
+              className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap break-words"
+            />
           </div>
         )}
       </CardContent>

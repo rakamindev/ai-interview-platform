@@ -15,19 +15,9 @@ puts "== Seeding AI Interview development data =="
 
 # ── Organization ─────────────────────────────────────────────────────────────
 #
-# We write directly to public.organizations (shared with rakamin-api).
-# We use raw SQL so we don't have to mirror all of rakamin-api's validations
-# and callbacks in our read-only Organization model.
-#
-# Columns required by the rakamin-api schema:
-#   name        — display name
-#   scheme      — used as the Apartment schema name AND as the JWT `scheme` claim
-#   identifier  — URL-safe slug (lowercase, min 3 chars)
-#   host        — primary host for HostService resolution
-#   alias_hosts — additional hosts (postgres array)
-#   config      — JSONB config blob (Configurable concern)
-#
-# id = 0 is reserved in rakamin-api as the "default" org — do not use it here.
+# The app resolves the tenant from organizations on the connection search path
+# (ai_interview, then public). A row that exists only in public.organizations
+# is invisible, and every signed-in request is rejected as an unknown tenant.
 
 TEST_ORG = {
   name:       "Test Corp",
@@ -36,45 +26,14 @@ TEST_ORG = {
   host:       "localhost"
 }.freeze
 
-ActiveRecord::Base.connection.execute(<<~SQL)
-  CREATE TABLE IF NOT EXISTS public.organizations (
-    id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
-    scheme      VARCHAR(255) NOT NULL,
-    identifier  VARCHAR(255) NOT NULL,
-    host        VARCHAR(255) NOT NULL,
-    alias_hosts VARCHAR[] NOT NULL DEFAULT '{}',
-    config      JSONB NOT NULL DEFAULT '{}',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  );
-SQL
-
-existing = ActiveRecord::Base.connection.select_one(
-  "SELECT id, name, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
-
-if existing
-  puts "  Organization already exists: id=#{existing['id']} scheme=#{existing['scheme']} (skipped)"
+org = Organization.find_or_initialize_by(scheme: TEST_ORG[:scheme])
+org.assign_attributes(TEST_ORG)
+if org.new_record?
+  org.save!
+  puts "  Created organization: id=#{org.id} scheme=#{org.scheme}"
 else
-  result = ActiveRecord::Base.connection.select_one(<<~SQL)
-    INSERT INTO public.organizations
-      (name, scheme, identifier, host, alias_hosts, config, created_at, updated_at)
-    VALUES
-      (
-        '#{TEST_ORG[:name]}',
-        '#{TEST_ORG[:scheme]}',
-        '#{TEST_ORG[:identifier]}',
-        '#{TEST_ORG[:host]}',
-        '{}',
-        '{}',
-        NOW(),
-        NOW()
-      )
-    RETURNING id, name, scheme;
-  SQL
-
-  puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+  org.save! if org.changed?
+  puts "  Organization already exists: id=#{org.id} scheme=#{org.scheme}"
 end
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
@@ -369,18 +328,35 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Local admin ──────────────────────────────────────────────────────────────
+# Login only accepts role=admin. This is the local assessor account.
+
+LOCAL_ADMIN_EMAIL = "admin@test-corp.local"
+LOCAL_ADMIN_PASSWORD = "password"
+
+puts "== Seeding local admin =="
+admin = User.find_or_initialize_by(email: LOCAL_ADMIN_EMAIL)
+if admin.new_record?
+  admin.password = LOCAL_ADMIN_PASSWORD
+  admin.password_confirmation = LOCAL_ADMIN_PASSWORD
+  admin.role = "admin"
+  admin.save!
+  puts "  Created admin: #{admin.email}"
+else
+  puts "  Admin already exists: #{admin.email}"
+end
+puts ""
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
-org = ActiveRecord::Base.connection.select_one(
-  "SELECT id, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
+org = Organization.find_by(scheme: TEST_ORG[:scheme])
 
 puts ""
 puts "== Done! =="
 puts ""
 puts "Your test organization:"
-puts "  id     : #{org['id']}"
-puts "  scheme : #{org['scheme']}"
+puts "  id     : #{org.id}"
+puts "  scheme : #{org.scheme}"
 puts ""
 puts "To mint a JWT for testing, open the Rails console:"
 puts ""

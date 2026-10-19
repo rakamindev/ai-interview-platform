@@ -24,15 +24,24 @@ module Portfolios
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      plan     = SkillPlan.build(SkillPlan.parse_payload(response))
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      save_skills(portfolio, plan)
+      completion = {
+        generation_status: 'complete',
+        generated_at: Time.current,
+        generation_error: nil
+      }
+      completion[:omitted_ratings] = plan.omissions.map { |item| omission_payload(item) } if portfolio.has_attribute?(:omitted_ratings)
+      portfolio.update!(completion)
 
-      Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
+      Rails.logger.info("[N10] Portfolio generated for session #{@session.id} omitted=#{plan.omissions.size}")
       portfolio
-    rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+    rescue StandardError => e
+      safe_error = "Portfolio generation failed (#{e.class})"
+      failure = { generation_status: 'failed', generation_error: safe_error }
+      portfolio&.update!(failure)
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
@@ -147,35 +156,65 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+    def save_skills(portfolio, plan)
+      Portfolio.transaction do
+        preserved = preserve_overrides(portfolio)
+        portfolio.portfolio_skills.destroy_all
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+        created = plan.rows.map do |row|
+          portfolio.portfolio_skills.create!(
+            skill_id: skill_id_for(row),
+            skill_label: row.skill_label,
+            is_discovered: row.is_discovered,
+            ai_level: row.level,
+            ai_confidence: row.confidence,
+            evidence: row.evidence,
+            competency_summary: row.competency_summary
+          )
+        end
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        restore_overrides(created, preserved)
       end
+    end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+    def skill_id_for(row)
+      return nil if row.is_discovered
+
+      row.skill_id
+    end
+
+    def preserve_overrides(portfolio)
+      portfolio.portfolio_skills.includes(:assessor_override).filter_map do |skill|
+        override = skill.assessor_override
+        next unless override
+
+        {
+          match_key: SkillPlan.match_key(skill.skill_id, skill.skill_label),
+          ai_level: override.ai_level,
+          override_level: override.override_level,
+          assessor_notes: override.assessor_notes,
+          overridden_by: override.overridden_by,
+          overridden_at: override.overridden_at
+        }
       end
+    end
+
+    def restore_overrides(created, preserved)
+      preserved.each do |snapshot|
+        skill = created.find { |row| SkillPlan.match_key(row.skill_id, row.skill_label) == snapshot[:match_key] }
+        next unless skill
+
+        skill.create_assessor_override!(snapshot.except(:match_key))
+      end
+    end
+
+    def omission_payload(item)
+      {
+        'skill_label' => item.skill_label,
+        'skill_id' => item.skill_id,
+        'is_discovered' => item.is_discovered,
+        'reason' => item.reason
+      }
     end
   end
 end

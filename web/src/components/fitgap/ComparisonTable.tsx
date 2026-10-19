@@ -1,80 +1,101 @@
 import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
 import { cn } from "@/lib/utils";
+import { requiredLevel, type ComparisonInput } from "@/features/hiring/decision";
 import type { SkillComparison } from "@/types";
 
 interface ComparisonTableProps {
   comparisons: SkillComparison[];
 }
 
-function ResultBadge({ comparison }: { comparison: SkillComparison }) {
-  const label = FIT_GAP_RESULT_LABELS[comparison.result];
-  const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
+function levelLabel(level: number | null | undefined): string {
+  if (level == null) return "—";
+  return LEVEL_LABELS[level] ?? "—";
+}
 
-  let icon = "";
+function ResultBadge({ comparison }: { comparison: SkillComparison }) {
+  const label = FIT_GAP_RESULT_LABELS[comparison.result] ?? comparison.result;
+  const classes = FIT_GAP_RESULT_CLASSES[comparison.result] ?? "text-neutral-600 bg-neutral-50";
+  const delta = comparison.delta;
   let suffix = "";
-  if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
-  else icon = "—";
+  if (comparison.result === "exceed" && typeof delta === "number" && delta !== 0) suffix = ` +${delta}`;
+  if (comparison.result === "gap" && typeof delta === "number") suffix = ` ${delta}`;
 
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
-      {icon} {label}{suffix}
+    <span className={cn("inline-flex items-center text-xs font-medium px-2 py-0.5 rounded", classes)}>
+      {label}{suffix}
     </span>
   );
 }
 
+function confidenceLabel(value?: string | null): string {
+  if (!value) return "—";
+  return value.toLowerCase();
+}
+
 export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
-  const matchCount = comparisons.filter((c) => c.result === "match").length;
-  const gapCount = comparisons.filter((c) => c.result === "gap").length;
-  const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+  if (comparisons.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed px-4 py-8 text-sm text-muted-foreground text-center">
+        This vacancy has no skills to compare. Add a required level before making a hiring decision.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="hidden md:block overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
+              <th className="text-left px-4 py-2.5 font-medium">Required</th>
+              <th className="text-left px-4 py-2.5 font-medium">Candidate</th>
+              <th className="text-left px-4 py-2.5 font-medium">Confidence</th>
+              <th className="text-left px-4 py-2.5 font-medium">Result</th>
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+            {comparisons.map((comparison, index) => (
+              <tr key={`${comparison.skill_label}-${index}`} className="border-b last:border-0 align-top">
+                <td className="px-4 py-3">
+                  <p className="break-words">{comparison.skill_label || "Untitled skill"}</p>
+                  {comparison.is_override && <p className="text-[11px] text-muted-foreground">Human override applied</p>}
                 </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
+                <td className="px-4 py-3 text-muted-foreground">{levelLabel(requiredLevel(comparison as ComparisonInput))}</td>
+                <td className="px-4 py-3">{levelLabel(comparison.candidate_level)}</td>
+                <td className="px-4 py-3 capitalize text-muted-foreground">{confidenceLabel(comparison.confidence)}</td>
+                <td className="px-4 py-3"><ResultBadge comparison={comparison} /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
-      </div>
+      <ul className="md:hidden space-y-2">
+        {comparisons.map((comparison, index) => (
+          <li key={`${comparison.skill_label}-${index}`} className="rounded-lg border p-3 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium break-words">{comparison.skill_label || "Untitled skill"}</p>
+              <ResultBadge comparison={comparison} />
+            </div>
+            <dl className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <dt className="text-muted-foreground">Required</dt>
+                <dd>{levelLabel(requiredLevel(comparison as ComparisonInput))}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Candidate</dt>
+                <dd>{levelLabel(comparison.candidate_level)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Confidence</dt>
+                <dd className="capitalize">{confidenceLabel(comparison.confidence)}</dd>
+              </div>
+            </dl>
+            {comparison.is_override && <p className="text-[11px] text-muted-foreground">Human override applied</p>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

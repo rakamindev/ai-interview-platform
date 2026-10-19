@@ -23,6 +23,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -47,7 +48,7 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setLoadError("The portfolio could not be loaded. Check the connection and open this session again."))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -105,9 +106,9 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -120,7 +121,7 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -167,9 +168,18 @@ export default function PortfolioPage() {
       )}
 
       {/* Failed state */}
+      {loadError && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-sm text-destructive" role="alert">
+          {loadError}
+        </div>
+      )}
+
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          {portfolio.generation_error && (
+            <p className="text-xs text-muted-foreground break-words">{portfolio.generation_error}</p>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -189,6 +199,11 @@ export default function PortfolioPage() {
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>
+            {portfolio.skills.filter((s) => !s.is_discovered).length === 0 && (
+              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+                No configured skill was rated. Treat this portfolio as incomplete before comparing it with a vacancy.
+              </div>
+            )}
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
@@ -232,9 +247,9 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-72">
                 <SelectValue placeholder="Choose vacancy..." />
               </SelectTrigger>
               <SelectContent>

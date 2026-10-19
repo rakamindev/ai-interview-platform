@@ -129,11 +129,14 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  required_level?: number | null;
+  expected_level?: number | null;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: string | null;
   is_override?: boolean;
+  evidence_status?: "assessed" | "not_assessed" | "insufficient_evidence";
 }
 
 export interface FitGapReport {
@@ -143,6 +146,13 @@ export interface FitGapReport {
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
+  decision?: {
+    verdict: "advance" | "hold" | "decline";
+    rationale: string;
+    counts?: { match: number; gap: number; exceed: number; not_assessed: number };
+    blocking_skills?: string[];
+    low_confidence_skills?: string[];
+  } | null;
   generated_at: string;
 }
 

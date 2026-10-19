@@ -1,0 +1,23 @@
+name: Decision integrity
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  rating-rules:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.2"
+          bundler-cache: false
+      - name: Install the spec runner
+        run: gem install rspec --no-document
+      - name: Run decision specs
+        run: rspec

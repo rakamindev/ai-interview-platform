@@ -125,7 +125,7 @@ module Exports
       comparisons.each do |c|
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
+          (c['required_level'] || c['expected_level']) ? "L#{c['required_level'] || c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
