@@ -10,7 +10,7 @@ module Api
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
-        assessment = Assessment.find(params[:assessment_id])
+        assessment = Assessment.active.find(params[:assessment_id])
         sessions = assessment.sessions.order(created_at: :desc)
 
         json_response(sessions: sessions.map(&method(:session_json)))
@@ -20,7 +20,7 @@ module Api
 
       # POST /api/v1/assessments/:assessment_id/sessions
       def create
-        assessment = Assessment.find(params[:assessment_id])
+        assessment = Assessment.active.find(params[:assessment_id])
 
         session = assessment.sessions.new(
           candidate_id:   params.dig(:session, :candidate_id),

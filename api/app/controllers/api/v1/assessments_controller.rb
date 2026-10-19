@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.active.includes(:sessions).order(created_at: :desc)
         )
 
         json_response(
@@ -49,14 +49,17 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.archive
+          json_response({ message: "Assessment archived" })
+        else
+          json_error(@assessment.errors.full_messages.first || "Assessment could not be archived", :unprocessable_entity)
+        end
       end
 
       private
 
       def set_assessment
-        @assessment = Assessment.find(params[:id])
+        @assessment = Assessment.active.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
