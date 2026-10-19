@@ -9,7 +9,7 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        scope = Assessment.active.includes(:sessions).order(created_at: :desc)
+        scope = Assessment.active.includes(:sessions, :assessment_skills).order(created_at: :desc)
         search = query_params[:search].to_s.strip
         scope = scope.where('name ILIKE ?', "%#{Assessment.sanitize_sql_like(search)}%") if search.present?
         assessments = paginate(scope, per_page: 10)
@@ -80,7 +80,9 @@ module Api
       end
 
       def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+        sessions = assessment.sessions
+        skills = assessment.assessment_skills.sort_by(&:display_order)
+        latest = sessions.max_by(&:created_at)
 
         {
           id:             assessment.id,
@@ -91,6 +93,15 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          skill_count:    skills.length,
+          skill_preview:  skills.first(3).map(&:skill_label),
+          session_summary: {
+            total:     sessions.length,
+            pending:  sessions.count(&:pending?),
+            active:   sessions.count(&:active?),
+            completed: sessions.count { |session| session.ended? && session.end_reason != 'error' },
+            failed:   sessions.count { |session| session.status == 'failed' || (session.ended? && session.end_reason == 'error') }
+          },
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,

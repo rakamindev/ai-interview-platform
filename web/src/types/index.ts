@@ -8,8 +8,17 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
+  skill_count?: number;
+  skill_preview?: string[];
+  session_summary?: {
+    total: number;
+    pending: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: "pending" | "active" | "ended" | "failed";
     end_reason?: string | null;
   };
 }

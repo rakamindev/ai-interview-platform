@@ -8,24 +8,27 @@ import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight, Search } from "lucide-react";
 import type { Assessment, PaginationMeta } from "@/types";
 
-function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
-  if (!session) return <span className="text-xs text-muted-foreground">No candidate invited yet</span>;
+function SessionSummary({ summary }: { summary?: Assessment["session_summary"] }) {
+  if (!summary?.total) return <span className="text-xs text-muted-foreground">No candidates invited yet</span>;
 
-  if (session.status === "active")
-    return (
-      <span className="flex items-center gap-1 text-xs text-primary">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        Live now
-      </span>
-    );
+  const statuses = [
+    summary.active > 0 && { label: `${summary.active} live`, className: "text-primary" },
+    summary.pending > 0 && { label: `${summary.pending} awaiting`, className: "text-amber-800" },
+    summary.completed > 0 && { label: `${summary.completed} completed`, className: "text-green-700" },
+    summary.failed > 0 && { label: `${summary.failed} failed`, className: "font-medium text-destructive" },
+  ].filter((status) => status !== false);
 
-  if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
-
-  if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
-
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+      <span className="font-medium text-foreground">{summary.total} {summary.total === 1 ? "candidate" : "candidates"}</span>
+      {statuses.map((status) => status && (
+        <span key={status.label} className="inline-flex items-center gap-x-3">
+          <span aria-hidden="true" className="font-semibold text-muted-foreground">·</span>
+          <span className={status.className}>{status.label}</span>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function AssessmentListPage() {
@@ -137,7 +140,24 @@ export default function AssessmentListPage() {
                         {a.time_limit_min} min
                       </span>
                       <span aria-hidden="true">·</span>
-                      <SessionSummary session={a.latest_session} />
+                      <span>{a.language === "id" ? "Bahasa Indonesia" : "English"}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{a.skill_count ?? 0} skills</span>
+                    </div>
+                    {a.skill_preview && a.skill_preview.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {a.skill_preview.map((skill, index) => (
+                          <span key={`${skill}-${index}`} className="max-w-48 truncate rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                            {skill}
+                          </span>
+                        ))}
+                        {(a.skill_count ?? 0) > a.skill_preview.length && (
+                          <span className="self-center text-xs text-muted-foreground">+{(a.skill_count ?? 0) - a.skill_preview.length} more</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-2">
+                      <SessionSummary summary={a.session_summary} />
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
