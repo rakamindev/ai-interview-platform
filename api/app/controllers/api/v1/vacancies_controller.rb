@@ -9,7 +9,10 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.active.order(created_at: :desc))
+        scope = Vacancy.active.order(created_at: :desc)
+        search = query_params[:search].to_s.strip
+        scope = scope.where('role_title ILIKE ?', "%#{Vacancy.sanitize_sql_like(search)}%") if search.present?
+        vacancies = paginate(scope, per_page: 10)
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),

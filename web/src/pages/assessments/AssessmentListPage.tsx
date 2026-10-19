@@ -145,7 +145,7 @@ export default function AssessmentListPage() {
               </Card>
             </Link>
           ))}
-          {meta && meta.total_pages > 1 && (
+          {meta && meta.total_count > 0 && (
             <nav aria-label="Assessment pages" className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 Showing {(meta.current_page - 1) * meta.per_page + 1}-{Math.min(meta.current_page * meta.per_page, meta.total_count)} of {meta.total_count} assessments

@@ -12,7 +12,7 @@ module Api
         scope = Assessment.active.includes(:sessions).order(created_at: :desc)
         search = query_params[:search].to_s.strip
         scope = scope.where('name ILIKE ?', "%#{Assessment.sanitize_sql_like(search)}%") if search.present?
-        assessments = paginate(scope)
+        assessments = paginate(scope, per_page: 10)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
