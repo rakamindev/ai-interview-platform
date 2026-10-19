@@ -109,10 +109,18 @@ module Api
 
         # Preload taxonomy anchors in one query to avoid N+1
         skill_ids    = skills.filter_map(&:skill_id).uniq
-        taxonomy_map = SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
+        taxonomies = SkillTaxonomy.where(skill_id: skill_ids).or(
+          SkillTaxonomy.where(skill_label: skills.map(&:skill_label))
+        )
+        taxonomy_by_id = taxonomies.index_by(&:skill_id)
+        taxonomy_by_label = taxonomies.index_by(&:skill_label)
 
         vacancy_json(vacancy).merge(
-          skills: skills.map { |s| vacancy_skill_json(s, taxonomy_map[s.skill_id]) }
+          skills: skills.map do |skill|
+            # ponytail: legacy records may have duplicate labels; newly selected skills persist IDs.
+            taxonomy = taxonomy_by_id[skill.skill_id] || taxonomy_by_label[skill.skill_label]
+            vacancy_skill_json(skill, taxonomy)
+          end
         )
       end
 

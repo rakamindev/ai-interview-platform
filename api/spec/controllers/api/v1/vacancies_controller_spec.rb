@@ -39,4 +39,29 @@ RSpec.describe Api::V1::VacanciesController, type: :controller do
 
     expect(response).to have_http_status(:ok)
   end
+
+  it 'loads taxonomy anchors by label for legacy vacancy skills without an ID' do
+    skill = double(id: 12, skill_id: nil, skill_label: 'Legacy skill', expected_level: 3)
+    vacancy = double(vacancy_skills: [skill])
+    taxonomy = double(
+      skill_id: 'SK-001',
+      skill_label: 'Legacy skill',
+      l1_anchor: 'L1 details',
+      l2_anchor: 'L2 details',
+      l3_anchor: 'L3 details',
+      l4_anchor: 'L4 details',
+      l5_anchor: 'L5 details'
+    )
+    by_id = double
+    by_label = double
+    allow(SkillTaxonomy).to receive(:where).with(skill_id: []).and_return(by_id)
+    allow(SkillTaxonomy).to receive(:where).with(skill_label: ['Legacy skill']).and_return(by_label)
+    allow(by_id).to receive(:or).with(by_label).and_return([taxonomy])
+    allow(controller).to receive(:vacancy_json).with(vacancy).and_return({})
+
+    result = controller.send(:vacancy_with_skills_json, vacancy)
+
+    expect(result.dig(:skills, 0, :l1_anchor)).to eq('L1 details')
+    expect(result.dig(:skills, 0, :l5_anchor)).to eq('L5 details')
+  end
 end

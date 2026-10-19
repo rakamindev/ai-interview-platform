@@ -73,21 +73,22 @@ export default function VacancyListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Vacancies</h1>
-          <p className="text-sm text-muted-foreground">Define role expectations for candidate fit analysis.</p>
+      <div className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">Vacancies</h1>
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground">Define role expectations for candidate fit analysis.</p>
         </div>
-        <Button onClick={() => navigate("/vacancies/new")}>
+        <Button className="h-12 w-full px-5 sm:w-auto" onClick={() => navigate("/vacancies/new")}>
           <Plus className="h-4 w-4" /> New vacancy
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative max-w-md flex-1">
-          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-end">
+        <div className="relative min-w-0 flex-1">
+          <label className="mb-2 block text-sm font-medium" htmlFor="vacancy-search">Search roles</label>
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-[3.125rem] h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            aria-label="Search vacancies by role title"
+            id="vacancy-search"
             autoComplete="off"
             className="pl-9"
             onChange={(event) => setSearch(event.target.value)}
@@ -96,66 +97,72 @@ export default function VacancyListPage() {
             value={search}
           />
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => {
-            setStatusFilter(value as VacancyStatus | "all");
-            setPage(1);
-          }}
-        >
-          <SelectTrigger aria-label="Filter vacancies by status" className="sm:w-48">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="w-full sm:w-56">
+          <label className="mb-2 block text-sm font-medium" htmlFor="vacancy-status-filter">Status</label>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value as VacancyStatus | "all");
+              setPage(1);
+            }}
+          >
+            <SelectTrigger id="vacancy-status-filter" className="w-full">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {error && (
-        <div role="alert" className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-white p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <div role="alert" className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-card p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p className="text-destructive">Vacancies could not be loaded. Check your connection and try again.</p>
           <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>Try again</Button>
         </div>
       )}
 
       {error ? null : loading ? (
-        <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+        <div aria-busy="true" className="space-y-3">
+          <p role="status" className="sr-only">Loading vacancies</p>
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
         </div>
       ) : !error && vacancies.length === 0 && !debouncedSearch && statusFilter === "all" ? (
-        <div className="rounded-xl border bg-white px-6 py-12 text-center">
-          <h2 className="font-medium">No vacancies yet</h2>
-          <p className="mx-auto mb-5 mt-1 max-w-sm text-sm text-muted-foreground">Add a role and its expected skills to compare candidates against it.</p>
-          <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
+        <div className="rounded-xl border bg-card px-6 py-14 text-center">
+          <h2 className="text-lg font-semibold">No vacancies yet</h2>
+          <p className="mx-auto mb-6 mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Add a role and its expected skills to compare candidates against it.</p>
+          <Button className="h-12 px-5" onClick={() => navigate("/vacancies/new")}>
             <Plus className="h-4 w-4" /> Create vacancy
           </Button>
         </div>
       ) : !error && vacancies.length === 0 ? (
-        <div className="rounded-xl border bg-white px-6 py-12 text-center">
-          <h2 className="font-medium">No matching vacancies</h2>
-          <p className="mb-5 mt-1 text-sm text-muted-foreground">Try another role title or status.</p>
+        <div className="rounded-xl border bg-card px-6 py-12 text-center">
+          <h2 className="text-lg font-semibold">No matching vacancies</h2>
+          <p className="mb-6 mt-2 text-sm text-muted-foreground">Try another role title or status.</p>
           <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
         </div>
       ) : (
         <div className="space-y-3">
           {vacancies.map((v) => (
             <Link key={v.id} to={`/vacancies/${v.id}/edit`} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              <Card className="transition-colors group-hover:border-primary/40 group-focus-visible:border-primary">
-                <CardContent className="flex items-start justify-between gap-4 px-5 py-4">
+              <Card className="shadow-none transition-colors group-hover:border-primary/50 group-focus-visible:border-primary">
+                <CardContent className="flex min-h-24 items-center justify-between gap-4 px-4 py-4 sm:px-5">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Briefcase className="h-4 w-4 shrink-0 text-primary" />
-                      <p className="truncate font-medium">{v.role_title || "Untitled vacancy"}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <p className="min-w-0 truncate text-base font-semibold">{v.role_title || "Untitled vacancy"}</p>
                       <Badge variant="outline" className={statusStyles[v.status]}>{statusLabels[v.status]}</Badge>
                     </div>
-                    <p className="mt-1.5 text-xs text-muted-foreground">{v.skill_count} expected {v.skill_count === 1 ? "skill" : "skills"}</p>
+                    <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Briefcase aria-hidden="true" className="h-4 w-4 shrink-0" />
+                      {v.skill_count} expected {v.skill_count === 1 ? "skill" : "skills"}
+                    </p>
                     {v.skill_preview.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         {v.skill_preview.map((skill, index) => (
-                          <span key={`${skill}-${index}`} className="max-w-48 truncate rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                          <span key={`${skill}-${index}`} className="max-w-48 truncate rounded-md bg-muted px-2.5 py-1.5 text-xs text-foreground">
                             {skill}
                           </span>
                         ))}
@@ -165,7 +172,11 @@ export default function VacancyListPage() {
                       </div>
                     )}
                   </div>
-                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  <span className="hidden shrink-0 items-center gap-2 text-sm font-medium text-primary sm:flex">
+                    Edit role
+                    <ChevronRight aria-hidden="true" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                  <ChevronRight aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground sm:hidden" />
                 </CardContent>
               </Card>
             </Link>

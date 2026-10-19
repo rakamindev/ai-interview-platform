@@ -14,7 +14,7 @@ import type { AssessmentSkill, SkillTaxonomy } from "@/types";
 interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (skill: Partial<AssessmentSkill>) => void;
+  onSelect: (skill: Partial<AssessmentSkill>, taxonomy: SkillTaxonomy) => void;
 }
 
 export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
@@ -48,7 +48,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
       l3_anchor: s.l3_anchor,
       l4_anchor: s.l4_anchor,
       l5_anchor: s.l5_anchor,
-    });
+    }, s);
     onOpenChange(false);
     setQuery("");
   };
