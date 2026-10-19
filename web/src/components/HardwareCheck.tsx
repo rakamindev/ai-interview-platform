@@ -201,7 +201,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
 
     return (
-        <div className="rounded-lg border bg-card overflow-hidden">
+        <div className="rounded-xl border border-border bg-white shadow-sm shadow-black/[0.03] overflow-hidden">
             {/* Camera preview */}
             {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
                 {videoStream ? (
@@ -241,16 +241,23 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
+                            <div className="mt-2 space-y-1">
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                                    <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                                        ↓ {internetResult.download} Mbps (min {thresholds.minDownloadMbps})
+                                    </span>
+                                    <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                        ↑ {internetResult.upload} Mbps (min {thresholds.minUploadMbps})
+                                    </span>
+                                    <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                        {internetResult.ping} ms (max {thresholds.maxPingMs})
+                                    </span>
+                                </div>
+                                {!internetResult.passed && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Voice interview needs stable connection; upload {thresholds.minUploadMbps} Mbps+ is enough for mic audio.
+                                    </p>
+                                )}
                             </div>
                         )}
 
@@ -271,16 +278,16 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
+            <div className="px-4 py-4 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#F8FAFC]">
                 {hasError && (
-                    <Button variant="outline" size="sm" onClick={retryAll}>
+                    <Button variant="outline" size="sm" onClick={retryAll} className="w-full sm:w-auto">
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Retry
+                        Retry checks
                     </Button>
                 )}
                 <Button
-                    size="sm"
-                    className="ml-auto"
+                    size="lg"
+                    className="w-full sm:w-auto sm:ml-auto font-medium"
                     disabled={!allPassed}
                     onClick={onStart}
                 >

@@ -15,7 +15,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -126,6 +137,7 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -142,10 +154,14 @@ export default function AssessmentInvitePage() {
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    ])
+      .then(([aRes, sRes]) => {
+        setAssessment(aRes.data.assessment);
+        setSessions(sRes.data.sessions);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -190,10 +206,44 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div
+        className="max-w-2xl mx-auto space-y-6"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+          Loading assessment…
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-72 rounded-lg" />
+          <Skeleton className="h-36 w-full rounded-xl" />
+          <Skeleton className="h-52 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !assessment) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div
+          role="alert"
+          className="flex flex-col items-center gap-4 rounded-xl border border-destructive/30 bg-white px-6 py-12 text-center"
+        >
+          <AlertCircle className="h-10 w-10 text-destructive" aria-hidden />
+          <div className="space-y-1">
+            <p className="font-semibold text-foreground">
+              Could not load this assessment
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Check your connection or try again. The assessment may not exist.
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link to="/assessments">Back to Assessments</Link>
+          </Button>
+        </div>
       </div>
     );
   }

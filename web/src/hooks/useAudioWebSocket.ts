@@ -10,6 +10,7 @@ interface UseAudioWebSocketOptions {
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  onConnectionFailed?: (message: string) => void;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -22,11 +23,13 @@ export function useAudioWebSocket({
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onConnectionFailed,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
+  const fatalErrorRef = useRef(false);
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
   );
@@ -35,6 +38,7 @@ export function useAudioWebSocket({
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     sessionEndedRef.current = false;
+    fatalErrorRef.current = false;
     setConnectionState("connecting");
     const url = token
       ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
@@ -100,11 +104,32 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              if (msg.reason === "error") {
+                fatalErrorRef.current = true;
+                onConnectionFailed?.(
+                  msg.message ??
+                    "Sesi terhenti karena masalah teknis. Hubungi tim rekrutmen jika perlu link baru."
+                );
+                onStateChange("connection_failed");
+              } else {
+                onStateChange("complete");
+              }
               break;
-            case "error":
-              if (!msg.recoverable) onStateChange("complete");
+            case "error": {
+              fatalErrorRef.current = true;
+              reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+              const ended =
+                msg.code === "auth_failed" &&
+                (msg.message?.toLowerCase().includes("ended") ?? false);
+              onConnectionFailed?.(
+                ended
+                  ? "Link undangan ini sudah tidak aktif (sesi sudah selesai). Minta link baru dari tim rekrutmen, atau muat ulang halaman jika sesi baru saja di-reset."
+                  : (msg.message ??
+                      "Tidak dapat terhubung ke AI interviewer. Coba lagi dalam beberapa saat.")
+              );
+              onStateChange("connection_failed");
               break;
+            }
           }
         } catch {
           // Non-JSON text frame — ignore
@@ -118,7 +143,7 @@ export function useAudioWebSocket({
 
     ws.onclose = () => {
       setConnectionState("disconnected");
-      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
+      if (sessionEndedRef.current || fatalErrorRef.current) return;
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
         onStateChange("reconnecting");
@@ -127,10 +152,13 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onConnectionFailed?.(
+          "Koneksi interview terputus. Periksa internet dan API backend, lalu muat ulang halaman."
+        );
+        onStateChange("connection_failed");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onConnectionFailed, onReconnected]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

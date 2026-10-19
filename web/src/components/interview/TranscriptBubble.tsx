@@ -9,17 +9,22 @@ export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProp
   const isCandidate = speaker === "candidate";
 
   return (
-    <div className={cn("flex", isCandidate ? "justify-end" : "justify-start")}>
+    <div className={cn("flex w-full", isCandidate ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+          "max-w-[min(100%,20rem)] sm:max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
           isCandidate
-            ? "bg-primary/10 text-foreground"
-            : "bg-muted text-foreground"
+            ? "bg-primary text-primary-foreground"
+            : "bg-white border border-border text-foreground"
         )}
       >
-        <span className="block text-xs font-medium mb-0.5 text-muted-foreground">
-          {isCandidate ? "You" : "AI"}
+        <span
+          className={cn(
+            "block text-[11px] font-semibold uppercase tracking-wide mb-1",
+            isCandidate ? "text-primary-foreground/80" : "text-muted-foreground"
+          )}
+        >
+          {isCandidate ? "You" : "AI Interviewer"}
         </span>
         {text}
       </div>

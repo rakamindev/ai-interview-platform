@@ -1,4 +1,4 @@
-// Internet Speed Test Utilities — standalone, no backend dependency
+// Internet Speed Test Utilities — prefers same-origin API when configured
 
 export interface InternetSpeedResult {
     download: number;
@@ -16,25 +16,46 @@ export interface SpeedThresholds {
     maxPingMs: number;
 }
 
+/** Voice interview (16 kHz PCM + WebSocket) — asymmetric home links often < 4 Mbps upload. */
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
-    maxPingMs: 300,
+    minDownloadMbps: 5,
+    minUploadMbps: 1,
+    maxPingMs: 250,
 };
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
 const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+function apiOrigin(): string | undefined {
+    if (!API_BASE) return undefined;
+    return API_BASE.replace(/\/api\/v1\/?$/i, "");
+}
+
+function resolvedPingUrl(): string | undefined {
+    if (SPEED_TEST_PING_URL) return SPEED_TEST_PING_URL;
+    const origin = apiOrigin();
+    return origin ? `${origin}/api/v1/health` : undefined;
+}
+
+function resolvedUploadUrl(): string | undefined {
+    if (SPEED_TEST_UPLOAD_URL) return SPEED_TEST_UPLOAD_URL;
+    const origin = apiOrigin();
+    return origin ? `${origin}/api/v1/speed_test` : undefined;
+}
 
 async function measurePing(): Promise<number> {
-    if (SPEED_TEST_PING_URL) {
+    const localPing = resolvedPingUrl();
+    if (localPing) {
         try {
             const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
+            await fetch(localPing, { cache: "no-cache" });
             return performance.now() - start;
         } catch {
-            return 999;
+            // fall through to public probes
         }
     }
+
     const testUrls = [
         "https://www.google.com/favicon.ico",
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
@@ -71,7 +92,6 @@ async function measureDownloadSpeed(): Promise<number> {
             continue;
         }
     }
-    // Rough fallback
     try {
         const start = performance.now();
         await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
@@ -83,17 +103,39 @@ async function measureDownloadSpeed(): Promise<number> {
 }
 
 async function measureUploadSpeed(): Promise<number> {
-    const uploadSizeMB = 0.5;
-    const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
+    const uploadSizeMB = 0.2;
+    const uploadBytes = uploadSizeMB * 1024 * 1024;
+    const uploadBody = new Blob([new ArrayBuffer(uploadBytes)], {
         type: "application/octet-stream",
     });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+
+    const apiUpload = resolvedUploadUrl();
+    if (apiUpload) {
+        try {
+            const start = performance.now();
+            const response = await fetch(apiUpload, {
+                method: "POST",
+                body: uploadBody,
+                headers: { "Content-Type": "application/octet-stream" },
+            });
+            if (response.ok) {
+                const seconds = (performance.now() - start) / 1000;
+                return uploadSizeMB / seconds;
+            }
+        } catch {
+            // fall through
+        }
+    }
+
+    const endpoints = [
+        "https://httpbin.org/post",
+        "https://www.httpbin.org/post",
+        "https://postman-echo.com/post",
+    ];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();
-            formData.append("test", uploadData);
+            formData.append("test", uploadBody);
             const start = performance.now();
             await fetch(endpoint, { method: "POST", body: formData });
             const seconds = (performance.now() - start) / 1000;
@@ -102,7 +144,7 @@ async function measureUploadSpeed(): Promise<number> {
             continue;
         }
     }
-    return 0.5; // conservative fallback
+    return 0;
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {

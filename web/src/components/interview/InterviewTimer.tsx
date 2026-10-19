@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InterviewTimerProps {
@@ -13,7 +14,11 @@ function formatTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
+export default function InterviewTimer({
+  totalSeconds,
+  onExpired,
+  running,
+}: InterviewTimerProps) {
   const [remaining, setRemaining] = useState(totalSeconds);
 
   useEffect(() => {
@@ -22,22 +27,30 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
 
   useEffect(() => {
     if (!running) return;
-    if (remaining <= 0) { onExpired?.(); return; }
+    if (remaining <= 0) {
+      onExpired?.();
+      return;
+    }
     const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
     return () => clearTimeout(id);
   }, [running, remaining, onExpired]);
 
-  const isWarning = remaining <= 300; // ≤5 min
+  const isWarning = remaining <= 300;
   const isUrgent = remaining <= 60;
 
   return (
     <span
       className={cn(
-        "font-mono text-sm font-medium tabular-nums",
-        isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground"
+        "inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-medium tabular-nums rounded-full border px-2.5 py-1",
+        isUrgent
+          ? "text-destructive border-destructive/30 bg-destructive/5"
+          : isWarning
+            ? "text-amber-600 border-amber-200 bg-amber-50"
+            : "text-foreground border-border bg-white"
       )}
     >
-      ⏱ {formatTime(remaining)}
+      <Clock className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+      {formatTime(remaining)}
     </span>
   );
 }

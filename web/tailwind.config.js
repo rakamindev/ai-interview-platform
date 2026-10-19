@@ -13,6 +13,13 @@ export default {
                 primary: {
                     DEFAULT: "hsl(var(--primary))",
                     foreground: "hsl(var(--primary-foreground))",
+                    hover: "hsl(var(--primary-hover))",
+                    muted: "hsl(var(--primary-muted))",
+                },
+                success: {
+                    DEFAULT: "hsl(var(--success))",
+                    foreground: "hsl(var(--success-foreground))",
+                    muted: "hsl(var(--success-muted))",
                 },
                 secondary: {
                     DEFAULT: "hsl(var(--secondary))",

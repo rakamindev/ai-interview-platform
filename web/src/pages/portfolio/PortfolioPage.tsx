@@ -23,6 +23,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -46,8 +47,16 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setLoadError(null);
       })
-      .catch(() => {})
+      .catch((err) => {
+        const status = err.response?.status;
+        if (status === 404) {
+          setLoadError("Portfolio tidak ditemukan. Sesi mungkin belum selesai atau Anda tidak memiliki akses.");
+        } else {
+          setLoadError("Gagal memuat portfolio. Silakan coba lagi.");
+        }
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -100,6 +109,18 @@ export default function PortfolioPage() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center space-y-4">
+        <p className="text-sm text-destructive">{loadError}</p>
+        <Button variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Kembali ke sesi assessment
+        </Button>
       </div>
     );
   }

@@ -13,9 +13,11 @@
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        /* Rakamin teal: #0799A3 */
+        --primary: 184 92% 33%;
+        --primary-foreground: 0 0% 100%;
+        --primary-hover: 184 94% 29%;
+        --primary-muted: 180 33% 93%;
 
         /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
         --secondary: 43 96% 60%;
@@ -23,6 +25,10 @@
 
         --muted: 210 40% 96%;
         --muted-foreground: 215 16% 47%;
+
+        --success: 142 76% 36%;
+        --success-foreground: 0 0% 100%;
+        --success-muted: 141 84% 93%;
 
         --accent: 210 40% 96%;
         --accent-foreground: 222 47% 11%;
@@ -32,9 +38,9 @@
 
         --border: 214 32% 91%;
         --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+        --ring: 184 92% 33%;
 
-        --radius: 0.5rem;
+        --radius: 0.625rem;
     }
 
     .dark {
@@ -47,8 +53,13 @@
         --popover: 222 47% 11%;
         --popover-foreground: 210 40% 98%;
 
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        --primary: 184 92% 33%;
+        --primary-foreground: 0 0% 100%;
+        --primary-hover: 184 94% 29%;
+        --primary-muted: 180 33% 93%;
+        --success: 142 76% 36%;
+        --success-foreground: 0 0% 100%;
+        --success-muted: 141 84% 93%;
 
         --secondary: 43 96% 60%;
         --secondary-foreground: 26 47% 25%;

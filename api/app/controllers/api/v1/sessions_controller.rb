@@ -121,9 +121,14 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
+        unless Sessions::AutoEndGate.permitted?(session)
+          return json_error(
+            "Interview is not ready to complete yet",
+            :unprocessable_entity
+          )
+        end
+
+        Sessions::AutoEndGate.clear!(session.id)
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
       end
@@ -145,11 +150,16 @@ module Api
           return json_error("Assessment not found", :not_found)
         end
 
+        if Sessions::RecoverFailedStart.new(session).call
+          session.reload
+        end
+
         json_response(
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason
         )
       end
 

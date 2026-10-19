@@ -258,7 +258,7 @@ class AudioWebSocketMiddleware
             next if state.ending_scheduled
             Rails.logger.warn("[AudioWS] on_model_turn_complete delayed — finalizing via closing-phrase fallback (session=#{session.id})")
             state.ending_scheduled = true
-            send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+            send_preparing_to_end(browser_ws, state, session)
             poll_for_session_end(browser_ws, state, session, attempts: 0)
           end
         end
@@ -384,9 +384,24 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
-      Sessions::EndHandler.new(state.session).call(reason: 'error')
-      send_json(browser_ws, type: 'session_ended', reason: 'error',
-                            message: 'The session encountered a problem. Please contact the interviewer.')
+      session = state.session
+      if interview_substantively_started?(session)
+        Sessions::EndHandler.new(session).call(reason: 'error')
+        send_json(
+          browser_ws,
+          type: 'session_ended',
+          reason: 'error',
+          message: 'The session encountered a problem. Please contact the interviewer.'
+        )
+      else
+        send_json(
+          browser_ws,
+          type: 'error',
+          code: 'gemini_unavailable',
+          message: 'AI interviewer could not connect. Check GEMINI_API_KEY and GEMINI_LIVE_MODEL, then retry.',
+          recoverable: true
+        )
+      end
       browser_ws.close
     end
   end
@@ -562,7 +577,7 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] Wrap-up turn complete — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+    send_preparing_to_end(browser_ws, state, session)
     poll_for_session_end(browser_ws, state, session, attempts: 0)
   end
 
@@ -589,7 +604,7 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] AI closed naturally — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+    send_preparing_to_end(browser_ws, state, session)
     poll_for_session_end(browser_ws, state, session, attempts: 0)
   end
 
@@ -730,6 +745,11 @@ class AudioWebSocketMiddleware
     CLOSING_PHRASES.any? { |phrase| downcased.include?(phrase) }
   end
 
+  # Avoid ending a brand-new session when Gemini never connected (misconfigured model/key).
+  def interview_substantively_started?(session)
+    session.transcript_turns.where(speaker: 'candidate').exists?
+  end
+
   def authenticate_and_load(env, session_id)
     request = Rack::Request.new(env)
 
@@ -754,10 +774,21 @@ class AudioWebSocketMiddleware
     end
 
     return [nil, 'Session not found'] unless session
-    return [nil, 'Session has ended'] if session.ended?
+    if session.ended?
+      if Sessions::RecoverFailedStart.new(session).call
+        session.reload
+      else
+        return [nil, 'Session has ended']
+      end
+    end
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 
     [session, nil]
+  end
+
+  def send_preparing_to_end(browser_ws, _state, session)
+    Sessions::AutoEndGate.permit!(session.id)
+    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
   end
 
   def send_json(ws, **payload)

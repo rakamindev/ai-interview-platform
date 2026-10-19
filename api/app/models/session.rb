@@ -25,9 +25,23 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # Candidate-facing link — must point at the Vite/web app, not the API (PD-004).
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = web_app_base_url
     "#{base}/interview/#{invite_token}"
+  end
+
+  def web_app_base_url
+    ENV['WEB_APP_BASE_URL'].presence ||
+      first_cors_origin ||
+      'http://localhost:5173'
+  end
+
+  def first_cors_origin
+    raw = ENV['ALLOWED_ORIGINS'].to_s.strip
+    return if raw.blank? || raw == '*'
+
+    raw.split(',').map(&:strip).reject(&:blank?).first
   end
 
   private
