@@ -150,11 +150,27 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # 1. Capture existing overrides before modifications keyed by skill_id or normalized skill_label
+      existing_overrides = {}
+      portfolio.portfolio_skills.includes(:assessor_override).each do |ps|
+        if ps.assessor_override.present?
+          key = ps.skill_id.presence || ps.skill_label.downcase.strip
+          existing_overrides[key] = {
+            override_level: ps.assessor_override.override_level,
+            assessor_notes: ps.assessor_override.assessor_notes,
+            overridden_by:  ps.assessor_override.overridden_by,
+            overridden_at:  ps.assessor_override.overridden_at
+          }
+        end
+      end
+
+      existing_skills_by_id    = portfolio.portfolio_skills.where.not(skill_id: nil).index_by(&:skill_id)
+      existing_skills_by_label = portfolio.portfolio_skills.index_by { |s| s.skill_label.downcase.strip }
+
+      incoming_skills = []
 
       (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
+        incoming_skills << {
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
@@ -162,11 +178,11 @@ module Portfolios
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
-        )
+        }
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
+        incoming_skills << {
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
@@ -174,7 +190,43 @@ module Portfolios
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
-        )
+        }
+      end
+
+      saved_skill_ids = []
+
+      ActiveRecord::Base.transaction do
+        incoming_skills.each do |skill_attrs|
+          # Match existing skill by ID or label
+          existing = (skill_attrs[:skill_id].present? && existing_skills_by_id[skill_attrs[:skill_id]]) ||
+                     existing_skills_by_label[skill_attrs[:skill_label].downcase.strip]
+
+          portfolio_skill = if existing
+                              existing.update!(skill_attrs)
+                              existing
+                            else
+                              portfolio.portfolio_skills.create!(skill_attrs)
+                            end
+
+          saved_skill_ids << portfolio_skill.id
+
+          # Reapply or preserve human override
+          match_key = portfolio_skill.skill_id.presence || portfolio_skill.skill_label.downcase.strip
+          if (ov_data = existing_overrides[match_key])
+            override = portfolio_skill.assessor_override || portfolio_skill.build_assessor_override
+            override.assign_attributes(
+              ai_level:       portfolio_skill.ai_level,
+              override_level: ov_data[:override_level],
+              assessor_notes: ov_data[:assessor_notes],
+              overridden_by:  ov_data[:overridden_by],
+              overridden_at:  ov_data[:overridden_at] || Time.current
+            )
+            override.save!
+          end
+        end
+
+        # Remove any stale skills not present in new AI response
+        portfolio.portfolio_skills.where.not(id: saved_skill_ids).destroy_all
       end
     end
   end

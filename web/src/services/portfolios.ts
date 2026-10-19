@@ -13,7 +13,7 @@ export const portfoliosApi = {
     }),
 
   getFitGap: (portfolioId: number, vacancyId: number) =>
-    api.get<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
+    api.get<{ report?: FitGapReport; status?: string; message?: string }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
 
   regenerateFitGap: (portfolioId: number, vacancyId: number) =>
     api.post<{ status: string; message: string }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {

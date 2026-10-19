@@ -92,6 +92,7 @@ module Api
         end
 
         FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
+        FitGapGeneratorWorker.set_in_progress!(portfolio.id, vacancy.id)
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
@@ -113,12 +114,18 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
+        # Return cached report if it exists
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
           return json_response(report: fit_gap_json(existing))
         end
 
+        # If already generating, don't re-queue duplicate background job
+        if FitGapGeneratorWorker.in_progress?(portfolio.id, vacancy.id)
+          return render json: { status: "generating", message: "Fit/gap report generation in progress" }, status: :accepted
+        end
+
+        FitGapGeneratorWorker.set_in_progress!(portfolio.id, vacancy.id)
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
@@ -131,6 +138,10 @@ module Api
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
+          if FitGapGeneratorWorker.in_progress?(portfolio.id, params[:vacancy_id])
+            return render json: { status: "generating", message: "Fit/gap report generation in progress" }, status: :accepted
+          end
+
           return json_error("Fit/gap report not found", :not_found)
         end
 

@@ -69,15 +69,30 @@ export default function AssessmentEditPage() {
     }
   };
 
+  const [deletedSkillIds, setDeletedSkillIds] = useState<number[]>([]);
+
+  const handleRemoveSkill = (index: number) => {
+    const item = fields[index] as any;
+    if (item?.id) {
+      setDeletedSkillIds((prev) => [...prev, item.id]);
+    }
+    remove(index);
+  };
+
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) { setError("Add at least one skill."); return; }
     setError(null);
     setSubmitting(true);
     try {
+      const assessment_skills_attributes = [
+        ...data.skills.map((s, i) => ({ ...s, display_order: i })),
+        ...deletedSkillIds.map((skillId) => ({ id: skillId, _destroy: true })),
+      ];
+
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes,
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -143,7 +158,7 @@ export default function AssessmentEditPage() {
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => handleRemoveSkill(index)} />
                   ))}
                 </div>
               </SortableContext>

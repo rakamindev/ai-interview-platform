@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" width="100%" height="100%" style="background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <!-- Card Container -->
+  <rect x="30" y="25" width="820" height="450" rx="12" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5" />
+  
+  <!-- Header with Shield Icon -->
+  <circle cx="65" cy="60" r="18" fill="#9333ea" />
+  <path d="M65 49 L76 54 L76 63 C76 69 71 74 65 76 C59 74 54 69 54 63 L54 54 Z" fill="none" stroke="#ffffff" stroke-width="2" />
+  <path d="M61 63 L64 66 L70 59" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <text x="95" y="58" font-size="16" font-weight="700" fill="#581c87">Persetujuan Pemrosesan Data Pribadi (UU PDP No. 27/2022)</text>
+  <text x="95" y="74" font-size="11" fill="#7e22ce">Candidate Personal Data Protection &amp; Audio Recording Statutory Notice</text>
+
+  <!-- 4 Pillars Grid -->
+  <!-- Box 1 -->
+  <rect x="55" y="100" width="375" height="75" rx="8" fill="#ffffff" stroke="#e9d5ff" stroke-width="1" />
+  <text x="75" y="125" font-size="12" font-weight="700" fill="#1e1b4b">🔒 Rekaman Suara &amp; Biometrik</text>
+  <text x="75" y="145" font-size="11" fill="#64748b">Data audio dienkripsi dan diproses khusus untuk</text>
+  <text x="75" y="160" font-size="11" fill="#64748b">sesi wawancara kompetensi peran ini (Pasal 4 ayat 2).</text>
+
+  <!-- Box 2 -->
+  <rect x="450" y="100" width="375" height="75" rx="8" fill="#ffffff" stroke="#e9d5ff" stroke-width="1" />
+  <text x="470" y="125" font-size="12" font-weight="700" fill="#1e1b4b">📄 Transkripsi &amp; Analisis AI</text>
+  <text x="470" y="145" font-size="11" fill="#64748b">Transkripsi real-time dianalisis terhadap rubrik</text>
+  <text x="470" y="160" font-size="11" fill="#64748b">kompetensi tanpa digunakan melatih model publik.</text>
+
+  <!-- Box 3 -->
+  <rect x="55" y="190" width="375" height="75" rx="8" fill="#ffffff" stroke="#e9d5ff" stroke-width="1" />
+  <text x="75" y="215" font-size="12" font-weight="700" fill="#1e1b4b">👤 Pengawasan Manusia (Human-in-Loop)</text>
+  <text x="75" y="235" font-size="11" fill="#64748b">Hasil evaluasi AI selalu ditinjau dan dapat di-override</text>
+  <text x="75" y="250" font-size="11" fill="#64748b">oleh penilai manusia sebelum keputusan seleksi dibuat.</text>
+
+  <!-- Box 4 -->
+  <rect x="450" y="190" width="375" height="75" rx="8" fill="#ffffff" stroke="#e9d5ff" stroke-width="1" />
+  <text x="470" y="215" font-size="12" font-weight="700" fill="#1e1b4b">🛡️ Hak Subjek Data &amp; Kerahasiaan</text>
+  <text x="470" y="235" font-size="11" fill="#64748b">Kandidat berhak mengetahui dasar penilaian serta</text>
+  <text x="470" y="250" font-size="11" fill="#64748b">mengakhiri sesi kapan saja dengan tombol End Interview.</text>
+
+  <!-- Terms details box -->
+  <rect x="55" y="280" width="770" height="70" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-dasharray="3 3" />
+  <text x="75" y="303" font-size="11" font-weight="600" fill="#334155">Jaminan Kepatuhan Hukum:</text>
+  <text x="75" y="320" font-size="10.5" fill="#475569">• Sesuai UU No. 27/2022 Pasal 20, pengendali data wajib memperoleh persetujuan eksplisit yang sah dan tercatat.</text>
+  <text x="75" y="337" font-size="10.5" fill="#475569">• Data pribadi kandidat dihapus atau dianonimkan setelah periode seleksi berakhir tanpa retensi liar.</text>
+
+  <!-- Checkbox Container -->
+  <rect x="55" y="365" width="770" height="60" rx="8" fill="#f3e8ff" stroke="#a855f7" stroke-width="1" />
+  <!-- Custom Checkbox -->
+  <rect x="75" y="385" width="20" height="20" rx="4" fill="#9333ea" />
+  <path d="M79 395 L84 399 L91 391" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <text x="110" y="396" font-size="11" font-weight="600" fill="#581c87">Saya telah membaca, memahami, dan secara sukarela memberikan persetujuan eksplisit</text>
+  <text x="110" y="412" font-size="10.5" fill="#6b21a8">untuk perekaman suara, transkripsi, serta pemrosesan evaluasi kompetensi berbasis AI sesuai ketentuan UU No. 27/2022.</text>
+
+  <!-- Footer Micro-copy -->
+  <text x="55" y="450" font-size="10" fill="#9333ea" font-style="italic">✓ Persetujuan aktif diverifikasi sebelum aktivasi mikrofon WebRTC browser.</text>
+</svg>

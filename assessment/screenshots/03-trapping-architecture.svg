@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" width="100%" height="100%" style="background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <rect x="20" y="20" width="860" height="440" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+  
+  <text x="45" y="55" font-size="16" font-weight="700" fill="#0f172a">Architectural Comparison: Interview Wrap-Up Engine</text>
+  <text x="45" y="75" font-size="11" fill="#64748b">Resolving the P1 Candidate Trapping Bug caused by unprobed discovered skills</text>
+
+  <!-- Left: Flawed Implementation -->
+  <rect x="45" y="95" width="380" height="340" rx="10" fill="#fff1f2" stroke="#fecdd3" stroke-width="1" />
+  <rect x="65" y="115" width="140" height="24" rx="4" fill="#f43f5e" />
+  <text x="135" y="131" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">FLAWED BASELINE</text>
+
+  <!-- Flow Steps Baseline -->
+  <rect x="65" y="155" width="340" height="40" rx="6" fill="#ffffff" stroke="#fda4af" />
+  <text x="80" y="179" font-size="11" fill="#475569">1. All configured skills reach state: &quot;covered&quot;</text>
+
+  <line x1="235" y1="195" x2="235" y2="215" stroke="#f43f5e" stroke-width="2" />
+
+  <rect x="65" y="215" width="340" height="50" rx="6" fill="#ffffff" stroke="#fda4af" />
+  <text x="80" y="236" font-size="11" fill="#475569">2. Discovered skill (e.g. GraphQL) created in turn 3</text>
+  <text x="80" y="252" font-size="10.5" fill="#e11d48">   State: &quot;initiated&quot;, Probe count: 1</text>
+
+  <line x1="235" y1="265" x2="235" y2="285" stroke="#f43f5e" stroke-width="2" />
+
+  <rect x="65" y="285" width="340" height="60" rx="6" fill="#ffffff" stroke="#f43f5e" stroke-width="1.5" />
+  <text x="80" y="306" font-size="11" font-weight="600" fill="#b91c1c">3. all_covered? condition evaluates:</text>
+  <text x="80" y="322" font-size="10" font-family="monospace" fill="#be123c">return false if discovered.any?(&amp;:initiated)</text>
+  <text x="80" y="337" font-size="10.5" font-weight="600" fill="#e11d48">X Evaluates to FALSE permanently</text>
+
+  <rect x="65" y="360" width="340" height="55" rx="6" fill="#ffe4e6" />
+  <text x="80" y="380" font-size="10.5" font-weight="600" fill="#9f1239">CRITICAL USER IMPACT:</text>
+  <text x="80" y="396" font-size="10" fill="#9f1239">Candidate is held hostage in call until hard time limit</text>
+  <text x="80" y="409" font-size="10" fill="#9f1239">abruptly aborts session (time_ceiling error).</text>
+
+  <!-- Right: Revamped Robust Implementation -->
+  <rect x="475" y="95" width="380" height="340" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1" />
+  <rect x="495" y="115" width="160" height="24" rx="4" fill="#16a34a" />
+  <text x="575" y="131" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">REVAMPED MONOZUKURI</text>
+
+  <!-- Flow Steps Revamped -->
+  <rect x="495" y="155" width="340" height="40" rx="6" fill="#ffffff" stroke="#86efac" />
+  <text x="510" y="179" font-size="11" fill="#475569">1. All configured skills reach state: &quot;covered&quot;</text>
+
+  <line x1="665" y1="195" x2="665" y2="215" stroke="#16a34a" stroke-width="2" />
+
+  <rect x="495" y="215" width="340" height="50" rx="6" fill="#ffffff" stroke="#86efac" />
+  <text x="510" y="236" font-size="11" fill="#475569">2. Discovered skill state: &quot;initiated&quot;</text>
+  <text x="510" y="252" font-size="10.5" fill="#15803d">   Check: Time remaining &amp; recent activity</text>
+
+  <line x1="665" y1="265" x2="665" y2="285" stroke="#16a34a" stroke-width="2" />
+
+  <rect x="495" y="285" width="340" height="60" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.5" />
+  <text x="510" y="306" font-size="11" font-weight="600" fill="#166534">3. Proactive Auto-Wrap Guard:</text>
+  <text x="510" y="322" font-size="10" font-family="monospace" fill="#15803d">return true if remaining &lt;= 3.min || !recently_active</text>
+  <text x="510" y="337" font-size="10.5" font-weight="600" fill="#16a34a">✓ Evaluates to TRUE gracefully</text>
+
+  <rect x="495" y="360" width="340" height="55" rx="6" fill="#dcfce7" />
+  <text x="510" y="380" font-size="10.5" font-weight="600" fill="#14532d">DELIVERED MONOZUKURI VALUE:</text>
+  <text x="510" y="396" font-size="10" fill="#14532d">AI concludes with natural closing &amp; warm farewell.</text>
+  <text x="510" y="409" font-size="10" fill="#14532d">Portfolio &amp; FitGap generation triggers seamlessly.</text>
+</svg>

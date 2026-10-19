@@ -21,7 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import CandidatePDPNotice from "@/components/interview/CandidatePDPNotice";
+import { CheckCircle, Mic, MicOff, AlertCircle } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -32,6 +33,7 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [pdpConsented, setPdpConsented] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,26 +202,46 @@ export default function InterviewPage() {
           )}
         </div>
 
+        {/* Indonesian UU PDP No. 27/2022 Statutory Notice */}
+        <CandidatePDPNotice
+          consented={pdpConsented}
+          onConsentChange={setPdpConsented}
+        />
+
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
+              <p>• This is a voice interview. Make sure you&apos;re in a quiet place.</p>
               <p>• The AI will ask follow-up questions — there are no scripts.</p>
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            {!pdpConsented ? (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200/80 rounded-lg p-3">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>
+                  Silakan berikan persetujuan pemrosesan data (UU PDP No. 27/2022) di atas sebelum memulai pemeriksaan hardware dan mikrofon.
+                </span>
+              </div>
+            ) : (
+              <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            )}
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
               <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
+              <span>Hardware checks passed. You&apos;re ready to start.</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
+            <Button className="w-full" size="lg" disabled={!pdpConsented} onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
               Start Interview
             </Button>
+            {!pdpConsented && (
+              <p className="text-xs text-center text-destructive">
+                Persetujuan UU PDP diperlukan sebelum mengaktifkan mikrofon dan memulai wawancara.
+              </p>
+            )}
           </div>
         )}
       </div>

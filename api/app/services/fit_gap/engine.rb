@@ -55,11 +55,18 @@ module FitGap
           result          = 'not_assessed'
         end
 
+        is_override = portfolio_skill&.dig(:overridden) || false
+
         {
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          required_level:  expected_level,
+          is_override:     is_override,
+          ai_level:        portfolio_skill&.dig(:ai_level),
+          override_level:  portfolio_skill&.dig(:override_level),
+          assessor_notes:  portfolio_skill&.dig(:assessor_notes),
           result:          result,
           delta:           delta,
           confidence:      portfolio_skill&.dig(:confidence)
@@ -79,6 +86,8 @@ module FitGap
           skill_label:     skill.skill_label,
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
+          override_level:  override&.override_level,
+          assessor_notes:  override&.assessor_notes,
           confidence:      skill.ai_confidence,
           overridden:      override.present?
         }

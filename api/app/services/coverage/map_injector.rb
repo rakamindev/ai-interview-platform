@@ -42,9 +42,10 @@ module Coverage
       "[COVERAGE_MAP]\n#{payload.to_json}\n[/COVERAGE_MAP]"
     end
 
-    # Returns true when every configured skill is covered AND no discovered
-    # skill is still in initiated state. Used by the audio middleware to decide
-    # when it is safe to inject a wrap-up signal and end the session.
+    # Returns true when every configured skill is covered and interview can wrap up.
+    # Discovered skills are emergent topics: if all configured skills are covered,
+    # an initiated discovered skill only delays wrap-up if time remains (> 3 min)
+    # AND it was actively probed within the last 2 minutes.
     def all_covered?
       maps       = @session.coverage_maps
       configured = maps.configured
@@ -52,7 +53,14 @@ module Coverage
 
       return false if configured.empty?
       return false unless configured.all? { |m| m.state == 'covered' }
-      return false if discovered.any? { |m| m.state == 'initiated' }
+
+      if discovered.any? { |m| m.state == 'initiated' }
+        remaining_min = time_remaining_minutes
+        return true if remaining_min.nil? || remaining_min <= 3
+
+        recently_active = discovered.any? { |m| m.state == 'initiated' && m.updated_at && m.updated_at > 2.minutes.ago }
+        return false if recently_active
+      end
 
       true
     end
