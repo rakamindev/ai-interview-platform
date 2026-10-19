@@ -16,6 +16,7 @@ import VoiceBars from "@/components/interview/VoiceBars";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
+import { cn } from "@/lib/utils";
 import { useAudioCapture } from "@/hooks/useAudioCapture";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
@@ -23,6 +24,42 @@ import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import { CheckCircle, Mic, MicOff, RefreshCw } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+
+function SpeakerStage({
+  title,
+  active,
+  label,
+  variant,
+}: {
+  title: string;
+  active: boolean;
+  label: string;
+  variant: "ai" | "candidate";
+}) {
+  const activeStyle = variant === "ai"
+    ? "border-primary/40 bg-primary/5"
+    : "border-secondary/70 bg-secondary/10";
+  const voiceStyle = variant === "ai" ? "bg-primary/10" : "bg-secondary/20";
+
+  return (
+    <section
+      aria-label={`${title}: ${label}`}
+      className={cn(
+        "flex min-h-44 flex-col rounded-xl border p-5 transition-colors sm:min-h-52 sm:p-6",
+        active ? activeStyle : "border-border bg-white"
+      )}
+    >
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <div className="flex flex-1 items-center justify-center py-5">
+        <div className={cn("flex h-28 w-28 items-center justify-center rounded-full", voiceStyle)}>
+          <div className="flex h-24 w-24 items-center justify-center rounded-full border border-border/70 bg-white">
+            <VoiceBars active={active} label={label} variant={variant} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -282,9 +319,12 @@ export default function InterviewPage() {
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
+  const reconnecting = interviewState === "reconnecting";
+  const aiStageActive = !reconnecting && (aiSpeaking || interviewState === "draining_audio");
+  const candidateStageActive = !reconnecting && candidateSpeaking;
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-4">
+    <div className="mx-auto flex h-full w-full max-w-5xl flex-col px-4">
       {/* Top bar */}
       <div className="sticky top-14 z-10 flex items-center justify-between border-b bg-white py-3">
         <span className="text-sm font-medium">AI Interview</span>
@@ -320,40 +360,35 @@ export default function InterviewPage() {
         </div>
       )}
 
-      {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-        {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
-        ) : interviewState === "draining_audio" ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
-            <p className="text-xs text-muted-foreground">Wrapping up...</p>
-          </div>
-        ) : (
-          <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
+      {/* Speaker stage and transcript */}
+      <div className="flex min-h-0 flex-1 flex-col gap-5 py-5">
+        {interviewState === "connecting" && (
+          <p role="status" className="text-center text-sm text-muted-foreground">Connecting to your interview…</p>
+        )}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+          <SpeakerStage
+            title="AI interviewer"
+            active={aiStageActive}
+            label={reconnecting ? "Reconnecting" : interviewState === "draining_audio" ? "Wrapping up" : aiSpeaking ? "AI speaking" : "Waiting"}
+            variant="ai"
+          />
+          <SpeakerStage
+            title="You"
+            active={candidateStageActive}
+            label={reconnecting ? "Reconnecting" : candidateSpeaking ? "Your turn to speak" : aiSpeaking ? "Listening" : "Ready when you are"}
+            variant="candidate"
+          />
+        </div>
 
-            {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
-            )}
-
-            {/* Transcript */}
-            {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
-                {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
-                ))}
-              </div>
-            )}
-          </>
+        {transcript.length > 0 && (
+          <section aria-label="Interview transcript" className="min-h-0 space-y-3">
+            <h2 className="text-sm font-semibold">Conversation</h2>
+            <div className="max-h-[38vh] space-y-2 overflow-y-auto pr-1 lg:max-h-[420px]">
+              {transcript.map((turn, i) => (
+                <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
+              ))}
+            </div>
+          </section>
         )}
       </div>
 

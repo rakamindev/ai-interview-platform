@@ -10,8 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import ApiErrorList from "@/components/ApiErrorList";
+import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, Trash2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 import { apiErrorMessages } from "@/utils/apiErrors";
 
@@ -86,9 +87,22 @@ export default function VacancyEditPage() {
         <Link to="/vacancies" className="flex items-center gap-2 rounded-sm text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Vacancies</Link>
       </div>
 
-      <div className="mb-6 space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Edit vacancy</h1>
-        <p className="text-sm text-muted-foreground">Update the role requirements used in candidate fit analysis.</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Edit vacancy</h1>
+          <p className="text-sm text-muted-foreground">Update the role requirements used in candidate fit analysis.</p>
+        </div>
+        <ConfirmActionDialog
+          trigger={<Button type="button" variant="ghost" className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 /> Delete</Button>}
+          title="Delete this vacancy?"
+          description="It will be removed from active vacancies. Historical fit-gap reports remain saved."
+          actionLabel="Delete vacancy"
+          errorMessage="Could not delete vacancy. Try again."
+          onConfirm={async () => {
+            await vacanciesApi.delete(Number(id));
+            navigate("/vacancies");
+          }}
+        />
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">

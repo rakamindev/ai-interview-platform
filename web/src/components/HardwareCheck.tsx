@@ -254,6 +254,15 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             </div>
                         )}
 
+                        {key === "internet" && (
+                            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>Minimum required:</span>
+                                <span>Download ≥ {thresholds.minDownloadMbps} Mbps</span>
+                                <span>Upload ≥ {thresholds.minUploadMbps} Mbps</span>
+                                <span>Ping ≤ {thresholds.maxPingMs} ms</span>
+                            </p>
+                        )}
+
                         {/* Mic level bar */}
                         {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
                             <div className="mt-2 flex items-center gap-2">

@@ -14,10 +14,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ApiErrorList from "@/components/ApiErrorList";
+import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { apiErrorMessages } from "@/utils/apiErrors";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Trash2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -255,6 +256,17 @@ export default function AssessmentInvitePage() {
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite candidate"}
           </Button>
+          <ConfirmActionDialog
+            trigger={<Button variant="ghost" size="sm" className="flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-none"><Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete</Button>}
+            title="Delete this assessment?"
+            description="It will be removed from active assessments. Existing interview sessions remain stored."
+            actionLabel="Delete assessment"
+            errorMessage="Could not delete assessment. Try again."
+            onConfirm={async () => {
+              await assessmentsApi.delete(Number(id));
+              navigate("/assessments");
+            }}
+          />
         </div>
       </div>
 
