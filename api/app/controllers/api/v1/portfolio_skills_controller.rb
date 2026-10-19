@@ -43,7 +43,7 @@ module Api
         FitGapReport.where(portfolio_id: portfolio.id).each do |report|
           vacancy_id = report.vacancy_id
           report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          FitGapGeneratorWorker.enqueue_once(portfolio.id, vacancy_id)
         end
       end
 
