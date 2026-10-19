@@ -27,6 +27,7 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
+        narrative_status:  narratives[:status],
         generated_at:      Time.current,
         vacancy_updated_at: @vacancy.updated_at
       )
@@ -103,10 +104,16 @@ module FitGap
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
-      rescue => e
+        culture = data['culture_narrative']
+        overall = data['overall_narrative']
+        unless culture.is_a?(String) && culture.present? && overall.is_a?(String) && overall.present?
+          raise JSON::ParserError, 'Narrative response is missing required fields'
+        end
+
+        { culture: culture, overall: overall, status: 'generated' }
+      rescue StandardError => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        { culture: nil, overall: generate_fallback_narrative(skill_comparisons), status: 'fallback' }
       end
     end
 

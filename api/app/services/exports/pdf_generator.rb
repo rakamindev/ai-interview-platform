@@ -139,6 +139,15 @@ module Exports
         t.cells.size = 10
       end
 
+      narrative_notice = case @fit_gap.narrative_status
+                         when 'fallback' then 'AI narrative unavailable. The following summary is rule-based.'
+                         when 'unknown' then 'Narrative source is unknown for this older report.'
+                         end
+      if narrative_notice
+        pdf.move_down 10
+        pdf.font_size(9) { pdf.text narrative_notice }
+      end
+
       if @fit_gap.culture_narrative.present?
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }

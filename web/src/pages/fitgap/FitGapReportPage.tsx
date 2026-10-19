@@ -175,8 +175,18 @@ export default function FitGapReportPage() {
               <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
+              {report.narrative_status === "fallback" && (
+                <p role="status" className="mb-3 text-sm text-muted-foreground">
+                  AI narrative is unavailable. This is a rule-based summary; regenerate to retry.
+                </p>
+              )}
+              {report.narrative_status === "unknown" && (
+                <p role="status" className="mb-3 text-sm text-muted-foreground">
+                  Narrative source is unknown for this older report. Regenerate to refresh it.
+                </p>
+              )}
               <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
+                {report.culture_narrative || report.overall_narrative || "Narrative unavailable. Regenerate the report to retry."}
               </p>
             </CardContent>
           </Card>

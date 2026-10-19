@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_19_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_19_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -90,6 +90,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_19_000002) do
     t.jsonb "skill_comparisons", null: false
     t.text "culture_narrative"
     t.text "overall_narrative"
+    t.string "narrative_status", default: "unknown", null: false
     t.datetime "generated_at", default: -> { "now()" }
     t.datetime "vacancy_updated_at"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true

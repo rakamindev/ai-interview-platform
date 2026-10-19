@@ -143,6 +143,7 @@ export interface FitGapReport {
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
+  narrative_status: "generated" | "fallback" | "unknown";
   generated_at: string;
   stale: boolean;
 }

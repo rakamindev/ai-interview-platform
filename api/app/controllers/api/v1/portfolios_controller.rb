@@ -212,6 +212,7 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          narrative_status:  report.narrative_status,
           generated_at:      report.generated_at,
           stale:             fit_gap_report_stale?(report)
         }
