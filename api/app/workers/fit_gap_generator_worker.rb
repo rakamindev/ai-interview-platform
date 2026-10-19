@@ -5,6 +5,15 @@ class FitGapGeneratorWorker
 
   sidekiq_options queue: :default, retry: 2
 
+  sidekiq_retries_exhausted do |job, _exception|
+    portfolio_id, vacancy_id, token = job['args']
+    if token.present?
+      FitGapGeneratorWorker.release_lock(
+        FitGapGeneratorWorker.lock_key(portfolio_id, vacancy_id), token
+      )
+    end
+  end
+
   # ponytail: the 30-minute lease covers normal Sidekiq retries; extend it if
   # generation timeouts or retry backoff are increased beyond that window.
   LOCK_TTL = 30.minutes.to_i
