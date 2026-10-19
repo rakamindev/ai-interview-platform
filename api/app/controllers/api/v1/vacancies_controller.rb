@@ -9,7 +9,7 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.active.order(created_at: :desc))
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
@@ -45,14 +45,17 @@ module Api
 
       # DELETE /api/v1/vacancies/:id
       def destroy
-        @vacancy.destroy
-        json_response(message: "Vacancy deleted")
+        if @vacancy.archive
+          json_response(message: "Vacancy archived")
+        else
+          json_error("Vacancy could not be archived", :unprocessable_entity)
+        end
       end
 
       private
 
       def set_vacancy
-        @vacancy = Vacancy.find(params[:id])
+        @vacancy = Vacancy.active.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Vacancy not found", :not_found)
       end
