@@ -66,6 +66,7 @@ export default function FitGapReportPage() {
     setRegenerating(true);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
+      setReport(null);
       setGenerating(true);
     } finally {
       setRegenerating(false);
