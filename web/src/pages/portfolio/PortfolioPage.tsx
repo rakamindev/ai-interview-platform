@@ -48,7 +48,7 @@ export default function PortfolioPage() {
     try {
       const [, vRes, sRes] = await Promise.all([
         fetchPortfolio(),
-        vacanciesApi.list(),
+        vacanciesApi.list({ status: "active" }),
         sessionsApi.get(Number(sessionId)),
       ]);
       setVacancies(vRes.data.vacancies);

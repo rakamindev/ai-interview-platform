@@ -5,11 +5,15 @@ module Api
     class VacanciesController < ApiController
       authorize_auth_token! :assessor
 
-      before_action :set_vacancy, only: %i[show update destroy]
+      before_action :set_vacancy, only: %i[show update update_status destroy]
 
       # GET /api/v1/vacancies
       def index
-        scope = Vacancy.active.order(created_at: :desc)
+        status = query_params[:status]
+        return json_error('Invalid vacancy status filter', :bad_request) if status.present? && !Vacancy::STATUSES.include?(status)
+
+        scope = Vacancy.unarchived.includes(:vacancy_skills).order(created_at: :desc)
+        scope = scope.where(status:) if status.present?
         search = query_params[:search].to_s.strip
         scope = scope.where('role_title ILIKE ?', "%#{Vacancy.sanitize_sql_like(search)}%") if search.present?
         vacancies = paginate(scope, per_page: 10)
@@ -39,8 +43,16 @@ module Api
 
       # PUT /api/v1/vacancies/:id
       def update
-        if @vacancy.update(vacancy_params)
+        if @vacancy.update(vacancy_params.except(:status))
           json_response(vacancy: vacancy_with_skills_json(@vacancy))
+        else
+          json_validation_errors(@vacancy)
+        end
+      end
+
+      def update_status
+        if @vacancy.update_status(params.require(:vacancy).permit(:status)[:status])
+          json_response(vacancy: vacancy_json(@vacancy))
         else
           json_validation_errors(@vacancy)
         end
@@ -58,7 +70,7 @@ module Api
       private
 
       def set_vacancy
-        @vacancy = Vacancy.active.find(params[:id])
+        @vacancy = Vacancy.unarchived.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Vacancy not found", :not_found)
       end
@@ -68,6 +80,7 @@ module Api
           :role_title,
           :culture_dimensions,
           :competency_expectations,
+          :status,
           vacancy_skills_attributes: %i[
             id skill_id skill_label expected_level _destroy
           ]
@@ -75,9 +88,14 @@ module Api
       end
 
       def vacancy_json(vacancy)
+        skills = vacancy.vacancy_skills.to_a.sort_by(&:id)
+
         {
           id:                       vacancy.id,
           role_title:               vacancy.role_title,
+          status:                   vacancy.status,
+          skill_count:              skills.length,
+          skill_preview:            skills.first(3).map(&:skill_label),
           culture_dimensions:       vacancy.culture_dimensions,
           competency_expectations:  vacancy.competency_expectations,
           created_by:               vacancy.created_by,

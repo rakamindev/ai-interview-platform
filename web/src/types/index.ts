@@ -115,9 +115,14 @@ export interface AssessorOverride {
   overridden_at?: string;
 }
 
+export type VacancyStatus = "active" | "closed";
+
 export interface Vacancy {
   id: number;
   role_title: string;
+  status: VacancyStatus;
+  skill_count: number;
+  skill_preview: string[];
   culture_dimensions: string;
   competency_expectations: string;
   created_by?: number;

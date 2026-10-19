@@ -42,6 +42,7 @@ export default function VacancyNewPage() {
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
+        status: "active",
       });
       navigate("/vacancies");
     } catch (e: any) {

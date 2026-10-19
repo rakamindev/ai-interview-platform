@@ -4,6 +4,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +14,7 @@ import ApiErrorList from "@/components/ApiErrorList";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2, Trash2 } from "lucide-react";
-import type { VacancySkill } from "@/types";
+import type { VacancySkill, VacancyStatus } from "@/types";
 import { apiErrorMessages } from "@/utils/apiErrors";
 
 interface VacancyFormValues {
@@ -29,6 +30,10 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [savedStatus, setSavedStatus] = useState<VacancyStatus>("active");
+  const [pendingStatus, setPendingStatus] = useState<VacancyStatus>("active");
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [statusErrors, setStatusErrors] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<string[]>([]);
 
@@ -43,6 +48,8 @@ export default function VacancyEditPage() {
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
       reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
+      setSavedStatus(v.status);
+      setPendingStatus(v.status);
     }).catch(() => setLoadError(true)).finally(() => setLoading(false));
   }, [id, reset]);
 
@@ -63,6 +70,20 @@ export default function VacancyEditPage() {
       setServerErrors(apiErrorMessages(e, "Failed to save vacancy."));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const saveStatus = async () => {
+    if (pendingStatus === savedStatus) return;
+    setStatusErrors([]);
+    setSavingStatus(true);
+    try {
+      await vacanciesApi.updateStatus(Number(id), pendingStatus);
+      setSavedStatus(pendingStatus);
+    } catch (e: any) {
+      setStatusErrors(apiErrorMessages(e, "Could not update vacancy status."));
+    } finally {
+      setSavingStatus(false);
     }
   };
 
@@ -103,6 +124,29 @@ export default function VacancyEditPage() {
             navigate("/vacancies");
           }}
         />
+      </div>
+
+      <div className="mb-7 space-y-3 rounded-lg border bg-white p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1.5">
+            <Label htmlFor="vacancy-status">Vacancy status</Label>
+            <Select value={pendingStatus} onValueChange={(value) => setPendingStatus(value as VacancyStatus)}>
+              <SelectTrigger id="vacancy-status" className="sm:w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="button" variant="outline" onClick={saveStatus} disabled={savingStatus || pendingStatus === savedStatus}>
+            {savingStatus && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save status
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Only active vacancies appear in new Fit/Gap assessments. Closed vacancies stay available here for historical reports.</p>
+        <ApiErrorList errors={statusErrors} />
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
