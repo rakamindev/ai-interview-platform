@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,45 +21,119 @@ export default function FitGapReportPage() {
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [portfolioGenerating, setPortfolioGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<{ scope: "portfolio" | "report" | "regenerate"; message: string } | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [retryingPortfolio, setRetryingPortfolio] = useState(false);
+  const fetchingReport = useRef(false);
+  const fetchingPortfolio = useRef(false);
 
   const fetchReport = useCallback(async () => {
-    if (!portfolio) return;
+    if (!portfolio || fetchingReport.current) return;
+    fetchingReport.current = true;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
+      setError(null);
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
+          const res = await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+          if ("report" in res.data) {
+            setReport(res.data.report);
+            setGenerating(false);
+          } else {
+            setGenerating(true);
+          }
+          setError(null);
+        } catch (triggerError: any) {
           setGenerating(false);
+          setError({
+            scope: "report",
+            message: triggerError?.response?.data?.errors?.[0]?.message ?? "Could not start Fit/Gap generation.",
+          });
         }
+      } else {
+        setGenerating(false);
+        setError({
+          scope: "report",
+          message: e?.response?.data?.errors?.[0]?.message ?? "Could not load the Fit/Gap report.",
+        });
       }
+    } finally {
+      fetchingReport.current = false;
     }
   }, [portfolio, vacancyId]);
 
-  useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
+  const fetchPortfolio = useCallback(async () => {
+    if (fetchingPortfolio.current) return;
+    fetchingPortfolio.current = true;
+    try {
+      const res = await sessionsApi.getPortfolio(Number(sessionId));
+      const data = res.data as any;
+      if (data.status === "generating") {
+        setPortfolioGenerating(true);
+        setError(null);
+      } else if (data.portfolio) {
+        setPortfolio(data.portfolio);
+        const status = data.portfolio.generation_status;
+        setPortfolioGenerating(status === "pending" || status === "generating");
+        if (status === "failed") {
+          setError({
+            scope: "portfolio",
+            message: data.error ?? data.portfolio.generation_error ?? "Portfolio generation failed.",
+          });
+        } else {
+          setError(null);
         }
-      })
-      .finally(() => setLoading(false));
+      } else {
+        setError({ scope: "portfolio", message: "Portfolio is not available for this session." });
+      }
+    } catch (e: any) {
+      setError({
+        scope: "portfolio",
+        message: e?.response?.data?.errors?.[0]?.message ?? "Could not load the portfolio.",
+      });
+    } finally {
+      setLoading(false);
+      fetchingPortfolio.current = false;
+    }
   }, [sessionId]);
 
   useEffect(() => {
-    if (portfolio) fetchReport();
+    fetchPortfolio();
+  }, [fetchPortfolio]);
+
+  useEffect(() => {
+    if (portfolio?.generation_status === "complete") fetchReport();
   }, [portfolio, fetchReport]);
 
   usePolling(fetchReport, 5000, generating && !!portfolio);
+  usePolling(fetchPortfolio, 5000, portfolioGenerating);
+
+  const retryPortfolio = async () => {
+    setRetryingPortfolio(true);
+    try {
+      if (portfolio?.generation_status === "failed") {
+        await sessionsApi.regeneratePortfolio(Number(sessionId));
+        setPortfolio(null);
+        setPortfolioGenerating(true);
+        setError(null);
+      } else {
+        await fetchPortfolio();
+      }
+    } catch (e: any) {
+      setError({
+        scope: "portfolio",
+        message: e?.response?.data?.errors?.[0]?.message ?? "Could not retry portfolio generation.",
+      });
+    } finally {
+      setRetryingPortfolio(false);
+    }
+  };
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
@@ -68,6 +142,12 @@ export default function FitGapReportPage() {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+      setError(null);
+    } catch (e: any) {
+      setError({
+        scope: "regenerate",
+        message: e?.response?.data?.errors?.[0]?.message ?? "Could not regenerate the Fit/Gap report.",
+      });
     } finally {
       setRegenerating(false);
     }
@@ -91,6 +171,12 @@ export default function FitGapReportPage() {
     } finally {
       setExporting(null);
     }
+  };
+
+  const retry = () => {
+    if (error?.scope === "portfolio") return retryPortfolio();
+    if (error?.scope === "regenerate") return handleRegenerate();
+    return fetchReport();
   };
 
   if (loading) {
@@ -139,6 +225,29 @@ export default function FitGapReportPage() {
           </div>
         )}
       </div>
+
+      {error && (
+        <div role="alert" className="rounded-lg border border-destructive/50 p-3 text-sm space-y-2">
+          <p>{error.message}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={retry}
+            disabled={retryingPortfolio || regenerating}
+          >
+            {error.scope === "portfolio" && portfolio?.generation_status === "failed"
+              ? "Retry portfolio generation"
+              : "Retry"}
+          </Button>
+        </div>
+      )}
+
+      {portfolioGenerating && (
+        <div className="border rounded-lg p-8 text-center space-y-2">
+          <Loader2 className="h-7 w-7 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Generating portfolio...</p>
+        </div>
+      )}
 
       {/* Generating */}
       {generating && (
