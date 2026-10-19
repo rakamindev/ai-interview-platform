@@ -5,8 +5,8 @@ export default function CandidateLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Minimal header — no nav */}
       <header className="border-b bg-white">
-        <div className="max-w-2xl mx-auto px-4 h-12 flex items-center">
-          <span className="font-semibold text-sm text-muted-foreground">AI Interview</span>
+        <div className="mx-auto flex h-14 w-full max-w-5xl items-center px-4">
+          <span className="font-semibold text-sm text-foreground">Rakamin AI Interview</span>
         </div>
       </header>
 

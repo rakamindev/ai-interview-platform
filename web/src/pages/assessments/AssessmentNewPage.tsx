@@ -109,18 +109,21 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-3xl">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" className="flex items-center gap-2 rounded-sm text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
+          Assessments
         </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Assessment</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Create an assessment</h1>
+        <p className="text-sm text-muted-foreground">Set the interview length and skills. You can create candidate invite links next.</p>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
         {/* Role title */}
         <div className="space-y-1.5">
           <Label htmlFor="name">
@@ -128,24 +131,26 @@ export default function AssessmentNewPage() {
           </Label>
           <Input
             id="name"
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? "role-title-error" : undefined}
             placeholder="Senior Frontend Engineer"
             {...register("name", { required: "Role title is required" })}
           />
           {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+            <p id="role-title-error" className="text-sm text-destructive">{errors.name.message}</p>
           )}
         </div>
 
         {/* Time limit */}
         <div className="space-y-1.5">
-          <Label>
+          <Label htmlFor="time-limit">
             Session time limit <span className="text-destructive">*</span>
           </Label>
           <Select
             defaultValue="45"
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger id="time-limit" className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -160,12 +165,12 @@ export default function AssessmentNewPage() {
 
         {/* Language */}
         <div className="space-y-1.5">
-          <Label>Interview language</Label>
+          <Label htmlFor="language">Interview language</Label>
           <Select
             defaultValue="en"
             onValueChange={(v) => setValue("language", v as "en" | "id")}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger id="language" className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -211,7 +216,7 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
               variant="outline"
@@ -238,7 +243,7 @@ export default function AssessmentNewPage() {
         <ApiErrorList errors={serverErrors} />
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -248,7 +253,7 @@ export default function AssessmentNewPage() {
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            Create assessment
           </Button>
         </div>
       </form>

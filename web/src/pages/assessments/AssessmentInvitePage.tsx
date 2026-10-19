@@ -40,13 +40,13 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
         <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
+        <div className="min-w-0 space-y-0.5">
+          <div className="truncate text-sm font-medium">{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -55,9 +55,9 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
+          <span className="flex items-center gap-1 text-xs text-amber-800">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
           </span>
@@ -75,7 +75,7 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="flex items-center gap-1 text-xs text-green-700">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
           </span>
@@ -128,6 +128,7 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -141,15 +142,24 @@ export default function AssessmentInvitePage() {
     setSessions(res.data.sessions);
   }, [id]);
 
-  useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
+  const loadAssessmentPage = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [aRes, sRes] = await Promise.all([
+        assessmentsApi.get(Number(id)),
+        assessmentsApi.getSessions(Number(id)),
+      ]);
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => { loadAssessmentPage(); }, [loadAssessmentPage]);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -205,16 +215,31 @@ export default function AssessmentInvitePage() {
     );
   }
 
+  if (loadError || !assessment) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div role="alert" className="space-y-3 rounded-xl border bg-white p-6">
+          <div>
+            <h1 className="font-semibold">Assessment details could not be loaded</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Candidate sessions may not be up to date. Try loading this page again.</p>
+          </div>
+          <Button variant="outline" onClick={loadAssessmentPage}>Try again</Button>
+          <Button asChild variant="ghost"><Link to="/assessments">Back to assessments</Link></Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-7">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+          <Link to="/assessments" aria-label="Back to assessments" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{assessment.name}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
@@ -223,12 +248,12 @@ export default function AssessmentInvitePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button size="sm" className="flex-1 sm:flex-none" onClick={openInviteDialog} disabled={creatingSession}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            {creatingSession ? "Creating..." : "Invite Candidate"}
+            {creatingSession ? "Creating..." : "Invite candidate"}
           </Button>
         </div>
       </div>
@@ -289,12 +314,15 @@ export default function AssessmentInvitePage() {
       {/* Sessions list */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            Candidates
+          <div>
+            <h2 className="text-lg font-semibold">Candidates</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Share a unique interview link with each candidate.</p>
+          </div>
+          <span className="text-sm text-muted-foreground">
             {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
+              <span>{sessions.length} total</span>
             )}
-          </h2>
+          </span>
         </div>
 
         {sessions.length === 0 ? (

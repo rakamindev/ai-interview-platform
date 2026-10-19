@@ -10,16 +10,13 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   const label = FIT_GAP_RESULT_LABELS[comparison.result];
   const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
 
-  let icon = "";
   let suffix = "";
-  if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
-  else icon = "—";
+  if (comparison.result === "exceed") suffix = comparison.delta ? ` +${comparison.delta}` : "";
+  else if (comparison.result === "gap") suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : "";
 
   return (
     <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
-      {icon} {label}{suffix}
+      {label}{suffix}
     </span>
   );
 }
@@ -32,7 +29,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
+      <div role="region" aria-label="Skill comparison table" tabIndex={0} className="overflow-x-auto rounded-lg border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
@@ -53,7 +50,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
                   {c.candidate_level != null ? (
                     <span>
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.is_override && <span className="ml-1 text-xs text-muted-foreground">(Assessor-adjusted)</span>}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -69,11 +66,11 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        {matchCount > 0 && <span>Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
+        {gapCount > 0 && <span>Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
+        {exceedCount > 0 && <span>Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
+        <span className="sm:ml-auto">Assessor-adjusted scores are marked</span>
       </div>
     </div>
   );

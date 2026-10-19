@@ -189,23 +189,24 @@ export default function FitGapReportPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-7">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link
               to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
+              aria-label="Back to candidate results"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Role fit report</h1>
           </div>
         </div>
 
         {portfolio && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
               Regenerate

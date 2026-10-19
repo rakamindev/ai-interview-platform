@@ -62,8 +62,8 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
         <button
           type="button"
           onClick={onRemove}
-          className="text-muted-foreground hover:text-destructive transition-colors"
-          aria-label="Remove skill"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+          aria-label={`Remove ${skillLabel || "skill"}`}
         >
           <X className="h-4 w-4" />
         </button>
@@ -79,7 +79,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             <button
               type="button"
               onClick={() => setAnchorsOpen((o) => !o)}
-              className="flex items-center gap-1 text-xs text-primary hover:underline"
+              className="flex min-h-11 items-center gap-1 text-xs text-primary hover:underline"
             >
               {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {anchorsOpen ? "Hide L1–L5 anchors" : "Show L1–L5 anchors"}

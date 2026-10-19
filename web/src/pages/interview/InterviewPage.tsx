@@ -21,12 +21,14 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, RefreshCw } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [candidateInfoLoading, setCandidateInfoLoading] = useState(true);
+  const [candidateInfoError, setCandidateInfoError] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
@@ -39,17 +41,27 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
-  // Fetch candidate info
-  useEffect(() => {
-    if (!token) return;
-    sessionsApi.getCandidateInfo(token)
-      .then((res) => {
-        setCandidateInfo(res.data);
-        setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
-      })
-      .catch(() => setInterviewState("complete"));
+  const loadCandidateInfo = useCallback(async () => {
+    if (!token) {
+      setCandidateInfoLoading(false);
+      setCandidateInfoError(true);
+      return;
+    }
+    setCandidateInfoLoading(true);
+    setCandidateInfoError(false);
+    try {
+      const res = await sessionsApi.getCandidateInfo(token);
+      setCandidateInfo(res.data);
+      setSessionId(res.data.session_id);
+      if (res.data.session_status === "ended") setInterviewState("complete");
+    } catch {
+      setCandidateInfoError(true);
+    } finally {
+      setCandidateInfoLoading(false);
+    }
   }, [token]);
+
+  useEffect(() => { loadCandidateInfo(); }, [loadCandidateInfo]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -188,25 +200,49 @@ export default function InterviewPage() {
       : "reconnecting";
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
+  if (candidateInfoLoading) {
+    return (
+      <div role="status" className="mx-auto flex w-full max-w-xl flex-1 items-center justify-center px-4 py-12">
+        <p className="text-sm text-muted-foreground">Loading your interview details…</p>
+      </div>
+    );
+  }
+
+  if (candidateInfoError) {
+    return (
+      <div className="mx-auto flex w-full max-w-xl flex-1 items-center px-4 py-12">
+        <div role="alert" className="w-full space-y-4 rounded-xl border bg-white p-6 text-center sm:p-8">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold">Interview link unavailable</h1>
+            <p className="text-sm text-muted-foreground">We couldn’t load this interview. Check your connection or ask the interviewer for a new link.</p>
+          </div>
+          <Button variant="outline" onClick={loadCandidateInfo}>Try again</Button>
+        </div>
+      </div>
+    );
+  }
+
   if (interviewState === "idle") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      <div className="mx-auto w-full max-w-xl space-y-6 px-4 py-8 sm:py-12">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
             <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
+              Interview time: {candidateInfo.time_limit_min} minutes
             </p>
           )}
         </div>
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
+            <div className="rounded-xl border bg-white p-5 text-sm sm:p-6">
+              <h2 className="font-semibold">Before you begin</h2>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
+                <li>Find a quiet place for this voice interview.</li>
+                <li>The interviewer may ask follow-up questions.</li>
+                <li>Your microphone will be used during the interview. You can end at any time.</li>
+              </ul>
             </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
@@ -229,14 +265,16 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
+      <div className="mx-auto flex w-full max-w-xl flex-1 items-center px-4 py-12">
+        <div className="w-full space-y-4 rounded-xl border bg-white p-6 text-center sm:p-8">
+          <CheckCircle className="mx-auto h-9 w-9 text-primary" aria-hidden="true" />
+          <h2 className="text-xl font-semibold">Interview complete</h2>
+          <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
-        </p>
+          </p>
+        </div>
       </div>
     );
   }
@@ -246,9 +284,9 @@ export default function InterviewPage() {
   const candidateSpeaking = speaker === "candidate";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-4">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="sticky top-14 z-10 flex items-center justify-between border-b bg-white py-3">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -320,10 +358,10 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="sticky bottom-0 flex flex-col gap-3 border-t bg-white py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <ConnectionStatus state={wsConnectionStatus} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
           <Button
             variant={micMuted ? "destructive" : "outline"}
             size="sm"
@@ -356,7 +394,7 @@ export default function InterviewPage() {
         {import.meta.env.DEV && (
           <Button variant="outline" size="sm" className="text-xs opacity-50"
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
+            <><RefreshCw className="h-3.5 w-3.5 mr-1" />Force reconnect</>
           </Button>
         )}
         </div>

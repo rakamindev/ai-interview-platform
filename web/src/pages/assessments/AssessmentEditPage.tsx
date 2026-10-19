@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -35,6 +35,7 @@ export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<string[]>([]);
@@ -46,16 +47,20 @@ export default function AssessmentEditPage() {
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
-  useEffect(() => {
+  const loadAssessment = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
     assessmentsApi
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [id, reset]);
+
+  useEffect(() => loadAssessment(), [loadAssessment]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -89,41 +94,58 @@ export default function AssessmentEditPage() {
     }
   };
 
-  if (loading) {
+  if (loading || loadError) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-24 w-full" />
+      <div className="mx-auto max-w-3xl space-y-4">
+        {loadError ? (
+          <div role="alert" className="space-y-3 rounded-lg border border-destructive/40 bg-white p-5">
+            <div>
+              <h1 className="font-semibold">Assessment could not be loaded</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Your changes have not been saved. Try loading it again.</p>
+            </div>
+            <Button variant="outline" onClick={loadAssessment}>Try again</Button>
+            <Button asChild variant="ghost"><Link to="/assessments">Back to assessments</Link></Button>
+          </div>
+        ) : (
+          <>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-24 w-full" />
+          </>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-3xl">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" className="flex items-center gap-2 rounded-sm text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
+          Assessments
         </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Edit Assessment</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Edit assessment</h1>
+        <p className="text-sm text-muted-foreground">Update the role, interview length, or skills for future candidates.</p>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
         <div className="space-y-1.5">
           <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
+          <Input id="name" aria-invalid={!!errors.name} aria-describedby={errors.name ? "role-title-error" : undefined} {...register("name", { required: "Role title is required" })} />
+          {errors.name && <p id="role-title-error" className="text-sm text-destructive">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label>Session time limit <span className="text-destructive">*</span></Label>
+          <Label htmlFor="time-limit">Session time limit <span className="text-destructive">*</span></Label>
           <Select
             value={String(form.watch("time_limit_min"))}
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="time-limit" className="w-full sm:w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
@@ -151,7 +173,7 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
             </Button>
@@ -164,11 +186,11 @@ export default function AssessmentEditPage() {
         <Separator />
         <ApiErrorList errors={serverErrors} />
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Changes
+            Save changes
           </Button>
         </div>
       </form>

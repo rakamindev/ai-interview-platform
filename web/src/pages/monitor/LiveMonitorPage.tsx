@@ -56,6 +56,7 @@ export default function LiveMonitorPage() {
   const [assessmentName, setAssessmentName] = useState<string>("");
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
   const [sessionActive, setSessionActive] = useState(true);
@@ -73,26 +74,32 @@ export default function LiveMonitorPage() {
     }
   }, [sessionEnded]);
 
-  // Initial load
-  useEffect(() => {
-    Promise.all([
-      sessionsApi.get(Number(sessionId)),
-      sessionsApi.getTranscript(Number(sessionId)),
-    ])
-      .then(([sRes, tRes]) => {
-        const s = sRes.data.session as any;
-        setStartedAt(s.started_at ?? null);
-        setAssessmentName(s.assessment?.name ?? "");
-        if (s.status !== "active") setSessionActive(false);
+  const loadSession = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [sRes, tRes] = await Promise.all([
+        sessionsApi.get(Number(sessionId)),
+        sessionsApi.getTranscript(Number(sessionId)),
+      ]);
+      const s = sRes.data.session as any;
+      setStartedAt(s.started_at ?? null);
+      setAssessmentName(s.assessment?.name ?? "");
+      if (s.status !== "active") setSessionActive(false);
 
-        const turns = tRes.data.turns;
-        setTranscript(turns.slice(-10));
-        if (turns.length > 0) {
-          lastTurnRef.current = turns[turns.length - 1].turn_number;
-        }
-      })
-      .finally(() => setLoading(false));
+      const turns = tRes.data.turns;
+      setTranscript(turns.slice(-10));
+      if (turns.length > 0) {
+        lastTurnRef.current = turns[turns.length - 1].turn_number;
+      }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [sessionId]);
+
+  useEffect(() => { loadSession(); }, [loadSession]);
 
   // Poll transcript every 3s while session is active
   const fetchNewTurns = useCallback(async () => {
@@ -137,40 +144,53 @@ export default function LiveMonitorPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div role="alert" className="mx-auto max-w-3xl space-y-3 rounded-xl border bg-white p-6">
+        <div>
+          <h1 className="font-semibold">Live interview could not be loaded</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+        </div>
+        <Button variant="outline" onClick={loadSession}>Try again</Button>
+        <Button asChild variant="ghost"><Link to={`/assessments/${id}/invite`}>Back to candidates</Link></Button>
+      </div>
+    );
+  }
+
   const configuredSkills = coverageMap?.skills ?? [];
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-7">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link to={`/assessments/${id}/invite`} aria-label="Back to candidates" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Live interview</h1>
           </div>
           {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
+            <p className="pl-6 text-sm text-muted-foreground">{assessmentName}</p>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
+          <span role="status" className={cn(
+            "flex items-center gap-1 text-sm",
+            isConnected ? "text-foreground" : "text-muted-foreground"
           )}>
             <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
+            {isConnected ? "Connected" : "Reconnecting"}
           </span>
         </div>
       </div>
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
+        <div className="flex flex-col gap-3 rounded-lg border bg-white px-4 py-3 text-sm sm:flex-row sm:items-center">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>
@@ -183,7 +203,7 @@ export default function LiveMonitorPage() {
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto"
+            className="sm:ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
             View portfolio →

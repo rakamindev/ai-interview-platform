@@ -52,27 +52,34 @@ export default function VacancyNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-3xl">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
+        <Link to="/vacancies" className="flex items-center gap-2 rounded-sm text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
+          Vacancies
         </Link>
-        <span className="text-sm text-muted-foreground">Vacancies</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Vacancy</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Create a vacancy</h1>
+        <p className="text-sm text-muted-foreground">Add the skills and expectations used to compare candidates for this role.</p>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Input id="role_title" aria-invalid={!!errors.role_title} aria-describedby={errors.role_title ? "role-title-error" : undefined} placeholder="Senior Frontend Engineer" {...register("role_title", { required: "Role title is required" })} />
+          {errors.role_title && <p id="role-title-error" className="text-sm text-destructive">{errors.role_title.message}</p>}
         </div>
 
         <Separator />
 
         {/* Expected skills */}
         <div className="space-y-3">
-          <Label>Expected skills</Label>
+          <div>
+            <Label>Expected skills</Label>
+            <p className="mt-1 text-sm text-muted-foreground">Choose a skill and set the level expected for this role.</p>
+          </div>
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
@@ -84,7 +91,7 @@ export default function VacancyNewPage() {
                 <div key={field.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                    <button type="button" aria-label={`Remove ${watch(`skills.${index}.skill_label`)}`} onClick={() => remove(index)} className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -108,32 +115,34 @@ export default function VacancyNewPage() {
         <Separator />
 
         <div className="space-y-1.5">
-          <Label htmlFor="culture_dimensions">Company culture (used in AI narrative)</Label>
+          <Label htmlFor="culture_dimensions">Company culture</Label>
           <Textarea
             id="culture_dimensions"
             placeholder="Ownership-driven, async-first, direct feedback culture..."
             rows={3}
             {...register("culture_dimensions")}
           />
+          <p className="text-xs text-muted-foreground">Optional. These details inform the culture-fit summary.</p>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="competency_expectations">Competency expectations (used in AI narrative)</Label>
+          <Label htmlFor="competency_expectations">Competency expectations</Label>
           <Textarea
             id="competency_expectations"
             placeholder="Strong communicator who can align cross-functional teams..."
             rows={3}
             {...register("competency_expectations")}
           />
+          <p className="text-xs text-muted-foreground">Optional. Describe the behaviors that matter most in this role.</p>
         </div>
 
         <ApiErrorList errors={serverErrors} />
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Vacancy
+            Create vacancy
           </Button>
         </div>
       </form>

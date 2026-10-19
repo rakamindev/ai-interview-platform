@@ -34,11 +34,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-sm space-y-6 rounded-xl border bg-white p-6 shadow-sm sm:p-8">
+        <div className="space-y-2 text-center">
+          <p className="text-sm font-semibold text-primary">Rakamin</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <p className="text-sm text-muted-foreground">Sign in to manage interviews and candidate results.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -66,11 +67,11 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign in
+            {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>
 

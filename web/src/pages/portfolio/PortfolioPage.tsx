@@ -18,6 +18,7 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
@@ -41,15 +42,25 @@ export default function PortfolioPage() {
     }
   }, [sessionId]);
 
-  useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [, vRes, sRes] = await Promise.all([
+        fetchPortfolio(),
+        vacanciesApi.list(),
+        sessionsApi.get(Number(sessionId)),
+      ]);
+      setVacancies(vRes.data.vacancies);
+      setCandidateName(sRes.data.session.candidate_name ?? null);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [fetchPortfolio, sessionId]);
+
+  useEffect(() => { loadPage(); }, [loadPage]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -104,26 +115,39 @@ export default function PortfolioPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div role="alert" className="mx-auto max-w-3xl space-y-3 rounded-xl border bg-white p-6">
+        <div>
+          <h1 className="font-semibold">Candidate results could not be loaded</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+        </div>
+        <Button variant="outline" onClick={loadPage}>Try again</Button>
+        <Button asChild variant="ghost"><Link to={`/assessments/${id}/invite`}>Back to candidates</Link></Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-7">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+          <Link to={`/assessments/${id}/invite`} aria-label="Back to candidates" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Candidate results</h1>
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            className="inline-flex min-h-11 items-center gap-1 rounded-md border px-3 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-9"
           >
             <FileText className="h-3.5 w-3.5" />
             Transcript
@@ -232,9 +256,9 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-64">
                 <SelectValue placeholder="Choose vacancy..." />
               </SelectTrigger>
               <SelectContent>
@@ -246,7 +270,7 @@ export default function PortfolioPage() {
               </SelectContent>
             </Select>
             <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
+              Compare with vacancy
             </Button>
           </div>
         </>
