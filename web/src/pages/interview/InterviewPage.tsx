@@ -50,13 +50,14 @@ function SpeakerStage({
       )}
     >
       <h2 className="text-sm font-semibold">{title}</h2>
-        <div className="flex flex-1 items-center justify-center py-3 sm:py-5">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-3 sm:py-5">
           <div className={cn("flex h-24 w-24 items-center justify-center rounded-full sm:h-28 sm:w-28", voiceStyle)}>
             <div className="flex h-20 w-20 items-center justify-center rounded-full border border-border/70 bg-white sm:h-24 sm:w-24">
-            <VoiceBars active={active} label={label} variant={variant} />
+              <VoiceBars active={active} variant={variant} />
+            </div>
           </div>
+          <span className="max-w-[14ch] break-words text-center text-sm leading-snug text-muted-foreground sm:max-w-full">{label}</span>
         </div>
-      </div>
     </section>
   );
 }
@@ -472,7 +473,7 @@ export default function InterviewPage() {
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-5xl flex-1 flex-col px-3 sm:px-4">
       {/* Top bar */}
-      <div className="sticky top-14 z-20 flex min-w-0 items-center justify-between gap-3 border-b bg-white py-3">
+      <div className="sticky top-14 z-20 flex min-w-0 items-center justify-between gap-3 border-b bg-white px-4 py-3 sm:px-5">
         <span className="min-w-0 truncate text-sm font-medium">AI Interview</span>
         {interviewState === "ending" ? (
           <span role="status" aria-live="polite" className="shrink-0 text-sm text-muted-foreground">Ending interview...</span>
@@ -557,7 +558,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="sticky bottom-0 z-20 flex flex-col gap-3 border-t bg-white py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="sticky bottom-0 z-20 flex flex-col gap-3 border-t bg-white px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
         {interviewState === "ending" ? (
           <p role="status" aria-live="polite" className="text-sm text-muted-foreground">Saving your responses. Please keep this page open.</p>
         ) : (
