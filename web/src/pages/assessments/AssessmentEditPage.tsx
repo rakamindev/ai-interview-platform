@@ -23,9 +23,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ApiErrorList from "@/components/ApiErrorList";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import { apiErrorMessages } from "@/utils/apiErrors";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
 
@@ -35,7 +37,7 @@ export default function AssessmentEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverErrors, setServerErrors] = useState<string[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -70,8 +72,8 @@ export default function AssessmentEditPage() {
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) { setError("Add at least one skill."); return; }
-    setError(null);
+    if (data.skills.length === 0) { setServerErrors(["Add at least one skill."]); return; }
+    setServerErrors([]);
     setSubmitting(true);
     try {
       await assessmentsApi.update(Number(id), {
@@ -81,7 +83,7 @@ export default function AssessmentEditPage() {
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
+      setServerErrors(apiErrorMessages(e, "Failed to save assessment."));
     } finally {
       setSubmitting(false);
     }
@@ -160,7 +162,7 @@ export default function AssessmentEditPage() {
         </div>
 
         <Separator />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <ApiErrorList errors={serverErrors} />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>

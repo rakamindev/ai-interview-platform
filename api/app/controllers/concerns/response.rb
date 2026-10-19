@@ -14,6 +14,14 @@ module Response
     render json: payload, status:
   end
 
+  def json_validation_errors(record)
+    status = Rack::Utils.status_code(:unprocessable_entity)
+    errors = record.errors.map do |error|
+      { status:, field: error.attribute.to_s, message: error.full_message }
+    end
+    render json: { errors: }, status: :unprocessable_entity
+  end
+
   def paginated_response(collection, serializer: nil, **extra)
     meta = {
       current_page: collection.current_page,

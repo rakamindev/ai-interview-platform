@@ -37,7 +37,7 @@ module Api
             :created
           )
         else
-          json_error(session.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(session)
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)

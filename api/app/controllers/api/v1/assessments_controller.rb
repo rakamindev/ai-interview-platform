@@ -33,7 +33,7 @@ module Api
           SystemPromptGeneratorWorker.perform_async(assessment.id)
           json_response({ assessment:, system_prompt_generated: true }, :created)
         else
-          json_error(assessment.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(assessment)
         end
       end
 
@@ -43,7 +43,7 @@ module Api
           SystemPromptGeneratorWorker.perform_async(@assessment.id)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
         else
-          json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(@assessment)
         end
       end
 
@@ -52,7 +52,7 @@ module Api
         if @assessment.archive
           json_response({ message: "Assessment archived" })
         else
-          json_error(@assessment.errors.full_messages.first || "Assessment could not be archived", :unprocessable_entity)
+          json_validation_errors(@assessment)
         end
       end
 

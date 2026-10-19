@@ -4,9 +4,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
+import ApiErrorList from "@/components/ApiErrorList";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, Pencil } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
+import { apiErrorMessages } from "@/utils/apiErrors";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface OverridePanelProps {
@@ -20,13 +22,13 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveErrors, setSaveErrors] = useState<string[]>([]);
 
   const hasOverride = !!existingOverride;
 
   const handleSave = async () => {
     setSaving(true);
-    setSaveError(false);
+    setSaveErrors([]);
     try {
       const res = await portfoliosApi.getOverride(skill.id, {
         override_level: overrideLevel,
@@ -34,8 +36,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       });
       onSaved(res.data.override);
       setOpen(false);
-    } catch {
-      setSaveError(true);
+    } catch (e: any) {
+      setSaveErrors(apiErrorMessages(e, "Failed to save override."));
     } finally {
       setSaving(false);
     }
@@ -88,9 +90,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         />
       </div>
 
-      {saveError && (
-        <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
-      )}
+      <ApiErrorList errors={saveErrors} />
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>

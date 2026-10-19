@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ApiErrorList from "@/components/ApiErrorList";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
+import { apiErrorMessages } from "@/utils/apiErrors";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
@@ -132,6 +134,7 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [inviteErrors, setInviteErrors] = useState<string[]>([]);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -158,18 +161,22 @@ export default function AssessmentInvitePage() {
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
+    setInviteErrors([]);
     setShowInviteDialog(true);
   };
 
   const handleInviteCandidate = async () => {
     setCreatingSession(true);
-    setShowInviteDialog(false);
+    setInviteErrors([]);
     setNewSession(null);
     try {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+      setShowInviteDialog(false);
+    } catch (e: any) {
+      setInviteErrors(apiErrorMessages(e, "Could not create the interview invite."));
     } finally {
       setCreatingSession(false);
     }
@@ -242,11 +249,12 @@ export default function AssessmentInvitePage() {
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
             />
+            <ApiErrorList errors={inviteErrors} />
             <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
-            <Button onClick={handleInviteCandidate}>Create Link</Button>
+            <Button variant="outline" onClick={() => setShowInviteDialog(false)} disabled={creatingSession}>Cancel</Button>
+            <Button onClick={handleInviteCandidate} disabled={creatingSession}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

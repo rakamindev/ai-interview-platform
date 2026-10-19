@@ -23,9 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ApiErrorList from "@/components/ApiErrorList";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import { apiErrorMessages } from "@/utils/apiErrors";
 import type { AssessmentSkill } from "@/types";
 
 export interface AssessmentFormValues {
@@ -39,7 +41,7 @@ export default function AssessmentNewPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverErrors, setServerErrors] = useState<string[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
@@ -82,10 +84,10 @@ export default function AssessmentNewPage() {
 
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
+      setServerErrors(["Add at least one skill to continue."]);
       return;
     }
-    setError(null);
+    setServerErrors([]);
     setSubmitting(true);
     try {
       const payload = {
@@ -100,7 +102,7 @@ export default function AssessmentNewPage() {
       const res = await assessmentsApi.create(payload);
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+      setServerErrors(apiErrorMessages(e, "Failed to save assessment."));
     } finally {
       setSubmitting(false);
     }
@@ -233,9 +235,7 @@ export default function AssessmentNewPage() {
 
         <Separator />
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        <ApiErrorList errors={serverErrors} />
 
         {/* Actions */}
         <div className="flex justify-end gap-2">

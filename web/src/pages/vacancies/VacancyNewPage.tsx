@@ -8,9 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ApiErrorList from "@/components/ApiErrorList";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
+import { apiErrorMessages } from "@/utils/apiErrors";
 
 interface VacancyFormValues {
   role_title: string;
@@ -23,7 +25,7 @@ export default function VacancyNewPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverErrors, setServerErrors] = useState<string[]>([]);
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -32,7 +34,7 @@ export default function VacancyNewPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   const onSubmit = async (data: VacancyFormValues) => {
-    setError(null);
+    setServerErrors([]);
     setSubmitting(true);
     try {
       await vacanciesApi.create({
@@ -43,7 +45,7 @@ export default function VacancyNewPage() {
       });
       navigate("/vacancies");
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
+      setServerErrors(apiErrorMessages(e, "Failed to save vacancy."));
     } finally {
       setSubmitting(false);
     }
@@ -125,7 +127,7 @@ export default function VacancyNewPage() {
           />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <ApiErrorList errors={serverErrors} />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>

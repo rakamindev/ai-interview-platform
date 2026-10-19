@@ -9,9 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ApiErrorList from "@/components/ApiErrorList";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
+import { apiErrorMessages } from "@/utils/apiErrors";
 
 interface VacancyFormValues {
   role_title: string;
@@ -26,6 +28,7 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [serverErrors, setServerErrors] = useState<string[]>([]);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -40,6 +43,7 @@ export default function VacancyEditPage() {
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
+    setServerErrors([]);
     setSubmitting(true);
     try {
       await vacanciesApi.update(Number(id), {
@@ -49,6 +53,8 @@ export default function VacancyEditPage() {
         vacancy_skills_attributes: data.skills,
       });
       navigate("/vacancies");
+    } catch (e: any) {
+      setServerErrors(apiErrorMessages(e, "Failed to save vacancy."));
     } finally {
       setSubmitting(false);
     }
@@ -68,6 +74,7 @@ export default function VacancyEditPage() {
           <Label>Role title <span className="text-destructive">*</span></Label>
           <Input {...register("role_title", { required: true })} />
         </div>
+        <ApiErrorList errors={serverErrors} />
         <Separator />
         <div className="space-y-3">
           <Label>Expected skills</Label>

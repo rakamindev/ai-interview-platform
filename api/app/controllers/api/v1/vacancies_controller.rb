@@ -30,7 +30,7 @@ module Api
         if vacancy.save
           json_response({ vacancy: vacancy_with_skills_json(vacancy) }, :created)
         else
-          json_error(vacancy.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(vacancy)
         end
       end
 
@@ -39,7 +39,7 @@ module Api
         if @vacancy.update(vacancy_params)
           json_response(vacancy: vacancy_with_skills_json(@vacancy))
         else
-          json_error(@vacancy.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(@vacancy)
         end
       end
 
