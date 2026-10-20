@@ -7,7 +7,11 @@ import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
 
-function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
+function SessionSummary({
+  session,
+}: {
+  session?: Assessment["latest_session"];
+}) {
   if (!session) return null;
 
   if (session.status === "active")
@@ -22,9 +26,13 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     return <span className="text-xs text-destructive">Last: failed</span>;
 
   if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
+    return (
+      <span className="text-xs text-muted-foreground">Last: completed</span>
+    );
 
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  return (
+    <span className="text-xs text-muted-foreground">Awaiting candidate</span>
+  );
 }
 
 export default function AssessmentListPage() {
@@ -36,16 +44,19 @@ export default function AssessmentListPage() {
   useEffect(() => {
     assessmentsApi
       .list()
-      .then((res) => setAssessments(res.data.assessments))
+      .then(res => setAssessments(res.data.assessments))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-lg sm:text-xl font-semibold">Assessments</h1>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => navigate("/assessments/new")}
+        >
           <Plus className="h-4 w-4 mr-1.5" /> New Assessment
         </Button>
       </div>
@@ -58,27 +69,33 @@ export default function AssessmentListPage() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
         </div>
       ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
+        <div className="border rounded-lg p-6 sm:p-12 text-center text-sm text-muted-foreground">
           <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => navigate("/assessments/new")}
+          >
             <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
           </Button>
         </div>
       ) : (
         <div className="space-y-2">
-          {assessments.map((a) => (
+          {assessments.map(a => (
             <Card
               key={a.id}
               className="cursor-pointer hover:border-primary/40 transition-colors"
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+              <CardContent className="py-3 px-3 sm:px-4 flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm truncate">{a.name}</p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {a.time_limit_min} min
@@ -91,7 +108,7 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
               </CardContent>
             </Card>
           ))}
