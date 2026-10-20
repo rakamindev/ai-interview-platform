@@ -1,0 +1,45 @@
+
+Randomized with seed 1
+FFF2026-10-19T06:15:36.235Z pid=11261 tid=c9 INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+FF..
+
+Failures:
+
+  1) Portfolio tenant isolation does not export another tenant portfolio
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 200
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:20:in `block (2 levels) in <top (required)>'
+
+  2) Portfolio tenant isolation does not show another tenant fit/gap report
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 200
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:44:in `block (2 levels) in <top (required)>'
+
+  3) Portfolio tenant isolation does not let an assessor override another tenant skill rating
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 201
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:27:in `block (2 levels) in <top (required)>'
+
+  4) Portfolio tenant isolation does not queue a fit/gap report for another tenant portfolio
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 202
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:35:in `block (2 levels) in <top (required)>'
+
+  5) Portfolio tenant isolation does not regenerate another tenant fit/gap report
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 202
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:53:in `block (2 levels) in <top (required)>'
+
+Finished in 0.31494 seconds (files took 0.93497 seconds to load)
+7 examples, 5 failures
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:17 # Portfolio tenant isolation does not export another tenant portfolio
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:39 # Portfolio tenant isolation does not show another tenant fit/gap report
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:23 # Portfolio tenant isolation does not let an assessor override another tenant skill rating
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:31 # Portfolio tenant isolation does not queue a fit/gap report for another tenant portfolio
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:47 # Portfolio tenant isolation does not regenerate another tenant fit/gap report
+
+Randomized with seed 1
+

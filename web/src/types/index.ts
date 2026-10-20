@@ -31,6 +31,8 @@ export interface AssessmentSkill {
   _destroy?: boolean;
 }
 
+export type EndReason = "manual_candidate" | "manual_assessor" | "all_covered" | "time_ceiling" | "error";
+
 export interface Session {
   id: number;
   assessment_id: number;
@@ -39,8 +41,8 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
-  end_reason?: string;
+  status: "pending" | "active" | "ended" | "failed";
+  end_reason?: EndReason | null;
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
@@ -85,15 +87,20 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export type AssessmentStatus = "assessed" | "insufficient_evidence" | "not_assessed";
+
+export type Confidence = "high" | "medium" | "low";
+
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  assessment_status: AssessmentStatus;
+  ai_level: number | null;
+  ai_confidence: Confidence | null;
   evidence: string[];
-  competency_summary: string;
+  competency_summary: string | null;
 }
 
 export interface AssessorOverride {
@@ -127,13 +134,18 @@ export interface VacancySkill {
 
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+export type NotAssessedReason = "not_covered" | "insufficient_evidence" | "not_in_assessment";
+
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  expected_level: number;
+  candidate_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta: number | null;
+  confidence?: Confidence | null;
   is_override?: boolean;
+  not_assessed_reason?: NotAssessedReason | null;
 }
 
 export interface FitGapReport {
@@ -141,8 +153,8 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
   generated_at: string;
 }
 

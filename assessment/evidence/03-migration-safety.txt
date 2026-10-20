@@ -1,0 +1,23 @@
+$ rails db:migrate   # dev DB with a pre-existing portfolio row
+== 20261019000000 AddAssessmentStatusToPortfolioSkills: migrated (0.0119s) ====
+== 20261019000001 AddGenerationStartedAtToPortfolios: migrated (0.0012s) ======
+[[1, "assessed", 1]]
+
+$ rails runner insert_rows.rb
+assessed + NULL level: rejected -> PG::CheckViolation: violates check constraint "chk_portfolio_skills_level_matches_status"
+not_assessed + NULL level: inserted
+
+$ rails db:rollback STEP=2   # must refuse while an unassessed row exists
+1 portfolio skills have no AI level.
+reverted (0.0038s)
+   up     20261019000000  Add assessment status to portfolio skills
+  down    20261019000001  Add generation started at to portfolios
+
+$ delete probe row; rails db:migrate; rails db:rollback STEP=2; rails db:migrate
+== 20261019000001 AddGenerationStartedAtToPortfolios: migrated (0.0019s) ======
+== 20261019000001 AddGenerationStartedAtToPortfolios: reverted (0.0030s) ======
+== 20261019000000 AddAssessmentStatusToPortfolioSkills: reverted (0.0107s) ====
+== 20261019000000 AddAssessmentStatusToPortfolioSkills: migrated (0.0106s) ====
+== 20261019000001 AddGenerationStartedAtToPortfolios: migrated (0.0018s) ======
+   up     20261019000000  Add assessment status to portfolio skills
+   up     20261019000001  Add generation started at to portfolios

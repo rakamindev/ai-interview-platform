@@ -4,6 +4,11 @@ module FitGap
   # N13: Generates a fit/gap report comparing a portfolio against a vacancy.
   # Uses rule-based comparison for skill levels + Gemini Flash for culture narrative.
   class Engine
+    NOT_ASSESSED_REASONS = {
+      'not_assessed'          => 'not_covered',
+      'insufficient_evidence' => 'insufficient_evidence'
+    }.freeze
+
     def initialize(portfolio:, vacancy:, gemini_client: nil)
       @portfolio = portfolio
       @vacancy   = vacancy
@@ -13,74 +18,70 @@ module FitGap
       )
     end
 
-    # Returns the FitGapReport record.
     def call
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
 
-      report = FitGapReport.find_or_initialize_by(
-        portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
-      )
-
-      report.update!(
-        skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+      FitGapReport.upsert(
+        {
+          portfolio_id:      @portfolio.id,
+          vacancy_id:        @vacancy.id,
+          skill_comparisons: skill_comparisons,
+          culture_narrative: narratives[:culture],
+          overall_narrative: narratives[:overall],
+          generated_at:      Time.current
+        },
+        unique_by: %i[portfolio_id vacancy_id]
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
-      report
+      FitGapReport.find_by!(portfolio_id: @portfolio.id, vacancy_id: @vacancy.id)
     end
 
     private
 
     def build_skill_comparisons
-      vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
-      portfolio_skills = effective_portfolio_skills  # includes overrides
+      portfolio_skills = effective_portfolio_skills
 
-      comparisons = vacancy_skills.map do |label, vacancy_skill|
-        portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
+      @vacancy.vacancy_skills.map do |vacancy_skill|
+        portfolio_skill = find_portfolio_skill(portfolio_skills, vacancy_skill.skill_label, vacancy_skill.skill_id)
+        candidate_level = portfolio_skill&.dig(:effective_level)
+        expected_level  = vacancy_skill.expected_level
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        if candidate_level
+          delta  = candidate_level - expected_level
+          result = delta.zero? ? 'match' : (delta.positive? ? 'exceed' : 'gap')
+          reason = nil
         else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
+          delta  = nil
+          result = 'not_assessed'
+          reason = portfolio_skill ? NOT_ASSESSED_REASONS[portfolio_skill[:assessment_status]] : 'not_in_assessment'
         end
 
         {
-          skill_label:     label,
-          skill_id:        vacancy_skill.skill_id,
-          candidate_level: candidate_level,
-          expected_level:  expected_level,
-          result:          result,
-          delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          skill_label:         vacancy_skill.skill_label,
+          skill_id:            vacancy_skill.skill_id,
+          candidate_level:     candidate_level,
+          expected_level:      expected_level,
+          result:              result,
+          delta:               delta,
+          confidence:          portfolio_skill&.dig(:confidence),
+          is_override:         portfolio_skill&.dig(:overridden) || false,
+          not_assessed_reason: reason
         }
       end
-
-      comparisons
     end
 
-    # Returns portfolio skills with overrides applied.
     def effective_portfolio_skills
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
-        override = skill.assessor_override
+        override = skill.assessor_override if skill.assessed?
         {
-          id:              skill.id,
-          skill_id:        skill.skill_id,
-          skill_label:     skill.skill_label,
-          ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
-          confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          skill_id:          skill.skill_id,
+          skill_label:       skill.skill_label,
+          assessment_status: skill.assessment_status,
+          effective_level:   override ? override.override_level : skill.ai_level,
+          confidence:        skill.ai_confidence,
+          overridden:        override.present?
         }
       end
     end
@@ -103,7 +104,7 @@ module FitGap
         data = response.is_a?(Hash) ? response : JSON.parse(response)
         { culture: data['culture_narrative'], overall: data['overall_narrative'] }
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
       end
     end
@@ -126,6 +127,10 @@ module FitGap
         - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (+#{c[:delta]})" }.join(', ')}
         - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
 
+        Not assessed means the interview did not produce enough evidence for that skill.
+        It is NOT evidence of weakness. Do not describe it as a gap. Say the level is unknown
+        and recommend verifying it before a hiring decision.
+
         Write two short narrative paragraphs:
         1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
         2. overall_narrative: 2-3 sentence overall hiring recommendation summary.
@@ -142,8 +147,12 @@ module FitGap
       gaps    = comparisons.count { |c| c[:result] == 'gap' }
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      summary = "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      return summary if not_assessed.zero?
+
+      "#{summary} #{not_assessed} required skills were not assessed and should be verified before a decision."
     end
   end
 end

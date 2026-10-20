@@ -1,0 +1,16 @@
+$ rails db:migrate   # dev DB with a pre-existing portfolio row
+[[1, "assessed", 1]]
+
+$ rails runner insert_rows.rb
+assessed + NULL level: inserted (BAD)
+not_assessed + NULL level: inserted
+
+$ rails db:rollback STEP=2   # must refuse while an unassessed row exists
+reverted
+1 portfolio skills have no AI level.
+1 portfolio skills have no AI level.
+   up     20261019000000  Add assessment status to portfolio skills
+  down    20261019000001  Add generation started at to portfolios
+
+$ delete probe row; rails db:rollback STEP=2; rails db:migrate
+== 20261019000001 AddGenerationStartedAtToPortfolios: migrated (0.0015s) ======

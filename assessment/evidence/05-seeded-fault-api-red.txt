@@ -1,0 +1,124 @@
+
+Randomized with seed 1
+2026-10-19T06:29:01.628Z pid=24659 tid=enz INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+.FF..F....FFF........F.F.......................PDF's built-in fonts have very limited support for internationalized text.
+If you need full UTF-8 support, consider using an external font instead.
+
+To disable this warning, add the following line to your code:
+Prawn::Fonts::AFM.hide_m17n_warning = true
+..
+
+Failures:
+
+  1) Portfolios::Generator when the model returns level 0 for a discussed skill records insufficient evidence and never falls back to L1
+     Failure/Error: expect(skill('System Design')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 55, portfolio_id: 49, skill_id: nil, skill_label: "System Design", is_discovered...i_confidence: "medium", evidence: [], competency_summary: "Unclear.", assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:117:in `block (4 levels) in <main>'
+
+  2) Portfolios::Generator when the model returns level "" for a discussed skill records insufficient evidence and never falls back to L1
+     Failure/Error: expect(skill('System Design')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 57, portfolio_id: 50, skill_id: nil, skill_label: "System Design", is_discovered...i_confidence: "medium", evidence: [], competency_summary: "Unclear.", assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:117:in `block (4 levels) in <main>'
+
+  3) Portfolios::Generator when the model returns level 6 for a discussed skill records insufficient evidence and never falls back to L1
+     Failure/Error: expect(skill('System Design')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 63, portfolio_id: 53, skill_id: nil, skill_label: "System Design", is_discovered...i_confidence: "medium", evidence: [], competency_summary: "Unclear.", assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:117:in `block (4 levels) in <main>'
+
+  4) Portfolios::Generator when the model returns level 3.5 for a discussed skill records insufficient evidence and never falls back to L1
+     Failure/Error: expect(skill('System Design')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 69, portfolio_id: 58, skill_id: nil, skill_label: "System Design", is_discovered...i_confidence: "medium", evidence: [], competency_summary: "Unclear.", assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:117:in `block (4 levels) in <main>'
+
+  5) Portfolios::Generator when the model returns level "three" for a discussed skill records insufficient evidence and never falls back to L1
+     Failure/Error: expect(skill('System Design')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 71, portfolio_id: 59, skill_id: nil, skill_label: "System Design", is_discovered...i_confidence: "medium", evidence: [], competency_summary: "Unclear.", assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:117:in `block (4 levels) in <main>'
+
+  6) Portfolios::Generator when the model leaves out a discussed skill records insufficient evidence for the missing skill
+     Failure/Error: expect(skill('Testing')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 74, portfolio_id: 60, skill_id: nil, skill_label: "Testing", is_discovered: fals...evel: 1, ai_confidence: "low", evidence: [], competency_summary: nil, assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:132:in `block (3 levels) in <main>'
+
+  7) Portfolios::Generator when the model returns level "N/A" for a discussed skill records insufficient evidence and never falls back to L1
+     Failure/Error: expect(skill('System Design')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 86, portfolio_id: 69, skill_id: nil, skill_label: "System Design", is_discovered...i_confidence: "medium", evidence: [], competency_summary: "Unclear.", assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:117:in `block (4 levels) in <main>'
+
+  8) Portfolios::Generator when the model returns level nil for a discussed skill records insufficient evidence and never falls back to L1
+     Failure/Error: expect(skill('System Design')).to have_attributes(assessment_status: 'insufficient_evidence', ai_level: nil)
+
+       expected #<PortfolioSkill id: 90, portfolio_id: 71, skill_id: nil, skill_label: "System Design", is_discovered...i_confidence: "medium", evidence: [], competency_summary: "Unclear.", assessment_status: "assessed"> to have attributes {:ai_level => nil, :assessment_status => "insufficient_evidence"} but had attributes {:ai_level => 1, :assessment_status => "assessed"}
+       Diff:
+       @@ -1,2 +1,2 @@
+       -:ai_level => nil,
+       -:assessment_status => "insufficient_evidence",
+       +:ai_level => 1,
+       +:assessment_status => "assessed",
+     # ./spec/services/portfolios/generator_spec.rb:117:in `block (4 levels) in <main>'
+
+Finished in 0.97618 seconds (files took 0.99276 seconds to load)
+49 examples, 8 failures
+
+Failed examples:
+
+rspec './spec/services/portfolios/generator_spec.rb[1:6:1]' # Portfolios::Generator when the model returns level 0 for a discussed skill records insufficient evidence and never falls back to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:10:1]' # Portfolios::Generator when the model returns level "" for a discussed skill records insufficient evidence and never falls back to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:7:1]' # Portfolios::Generator when the model returns level 6 for a discussed skill records insufficient evidence and never falls back to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:9:1]' # Portfolios::Generator when the model returns level 3.5 for a discussed skill records insufficient evidence and never falls back to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:11:1]' # Portfolios::Generator when the model returns level "three" for a discussed skill records insufficient evidence and never falls back to L1
+rspec ./spec/services/portfolios/generator_spec.rb:129 # Portfolios::Generator when the model leaves out a discussed skill records insufficient evidence for the missing skill
+rspec './spec/services/portfolios/generator_spec.rb[1:8:1]' # Portfolios::Generator when the model returns level "N/A" for a discussed skill records insufficient evidence and never falls back to L1
+rspec './spec/services/portfolios/generator_spec.rb[1:5:1]' # Portfolios::Generator when the model returns level nil for a discussed skill records insufficient evidence and never falls back to L1
+
+Randomized with seed 1
+

@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Honest Skill Assessment — Case Study Report</title>
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --teal: #01959f;
+    --teal-soft: #e6f6f7;
+    --amber-soft: #fffbeb;
+    --amber-line: #fde68a;
+    --red: #b91c1c;
+  }
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.55; margin: 0; }
+  h1 { font-size: 22pt; line-height: 1.2; margin: 0 0 6px; }
+  h2 { font-size: 14pt; margin: 28px 0 8px; padding-top: 6px; border-top: 2px solid var(--teal); }
+  h3 { font-size: 11.5pt; margin: 18px 0 6px; }
+  p { margin: 0 0 8px; max-width: 72ch; }
+  ul, ol { margin: 0 0 8px; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 9pt; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; }
+  pre { font-family: ui-monospace, Menlo, monospace; font-size: 8.5pt; background: #f8fafc; border: 1px solid var(--line); padding: 8px 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.5pt; }
+  th, td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f8fafc; font-weight: 600; }
+  .lede { font-size: 12pt; color: #334155; max-width: 70ch; }
+  .meta { color: var(--muted); font-size: 9.5pt; margin-bottom: 14px; }
+  .callout { border: 1px solid var(--amber-line); background: var(--amber-soft); padding: 10px 12px; border-radius: 6px; margin: 10px 0; }
+  .key { border-left: 4px solid var(--teal); background: var(--teal-soft); padding: 10px 12px; margin: 10px 0; }
+  .p0 { color: var(--red); font-weight: 700; }
+  .tag { font-size: 8.5pt; padding: 0 5px; border-radius: 3px; border: 1px solid var(--line); white-space: nowrap; }
+  figure { margin: 10px 0 16px; page-break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+  figcaption { font-size: 9pt; color: var(--muted); margin-top: 4px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .break { page-break-before: always; }
+  .toc li { margin-bottom: 1px; }
+</style>
+</head>
+<body>
+
+<h1>No evidence is not weak evidence</h1>
+<p class="lede">Making "not assessed" an honest, first-class state in the AI interview platform, from the database to the recruiter's screen.</p>
+<p class="meta">Fullstack Product Engineer case study · Branch <code>feat/honest-skill-assessment</code> · PR #178</p>
+
+<table>
+  <tr><th style="width:28%">Pull request</th><td><a href="https://github.com/rakamindev/ai-interview-platform/pull/178"><strong>github.com/rakamindev/ai-interview-platform/pull/178</strong></a>. Option A: one PR containing the full change across <code>api/</code> and <code>web/</code>. Seeded fault history is on branch <code>scratch/seeded-fault</code> and merged into the PR.</td></tr>
+  <tr><th>Video walkthrough</th><td><a href="https://drive.google.com/file/d/1Ptd_P6mKq94j2U8jNOzbM2IHgl8FKYKc/view?usp=sharing"><strong>drive.google.com/file/d/1Ptd_P6mKq94j2U8jNOzbM2IHgl8FKYKc</strong></a>. About 4 minutes, in Bahasa Indonesia: end-to-end flow before and after.</td></tr>
+  <tr><th>Claimed depth</th><td><strong>Backend-heavy</strong>: generator rewrite, migration, idempotent jobs, tenant isolation, response validation. Plus a full frontend slice: new states, the API seam fix, and responsive layout.</td></tr>
+  <tr><th>Tests</th><td>49 RSpec examples (from zero) and 18 Vitest tests (no runner before), all green. CI runs both on every PR.</td></tr>
+</table>
+
+<ol class="toc">
+  <li>Summary</li>
+  <li>Execution narrative, step by step</li>
+  <li>Product context: users, candidates, UU PDP</li>
+  <li>Problem and gap analysis (P0–P3) and constraint signals</li>
+  <li>Options and trade-off matrix</li>
+  <li>Acceptance criteria and edge cases</li>
+  <li>What shipped</li>
+  <li>Screenshots: before and after, states, responsive</li>
+  <li>Test evidence, seeded fault test, AI verification moments</li>
+  <li>Known limitations and follow-ups</li>
+</ol>
+
+<h2>1. Summary</h2>
+<div class="key">
+<p><strong>The core problem.</strong> When an interview ends before every skill is discussed (time limit, connection error, candidate leaves), the platform still gives each undiscussed skill a level. Any missing or invalid model level is silently coerced to <strong>L1</strong> by <code>.to_i.clamp(1, 5)</code>. The fit/gap report then shows that fabricated L1 as <strong>"Gap −2"</strong>, the AI writes a hiring recommendation from it, and the screen presents it with the same authority as a well-evidenced rating.</p>
+<p style="margin:0">A candidate who was never asked about a skill is reported as weak at it. They did not choose this tool and cannot see or contest the result.</p>
+</div>
+<p><strong>What I changed.</strong> Whether a skill was assessed is now decided from data the system already has (the coverage map), not guessed by the model. Each skill is <code>assessed</code>, <code>insufficient_evidence</code>, or <code>not_assessed</code>. Only assessed skills carry a level, and confidence is computed rather than self-reported. That one rule flows through storage, fit/gap, the narrative prompt, the PDF export, and the UI.</p>
+<p>Along the way I found and fixed a <span class="p0">cross-tenant data leak (P0)</span>, verified against the running API, plus a broken API/UI field contract that left the "Required" column blank in every report.</p>
+
+<h2>2. Execution narrative</h2>
+<h3>Step 1 — Setup and local exploration</h3>
+<ul>
+  <li>Cloned the repo and the wiki (PRD-01, PRD-02). Installed Ruby 3.3.2 and ran PostgreSQL 14, Redis, Rails, Sidekiq, and Vite locally.</li>
+  <li>Hit two environment issues worth knowing about. Puma's cluster mode crashes on macOS without <code>OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES</code>. CORS only allows origins listed in <code>ALLOWED_ORIGINS</code>.</li>
+  <li>No Gemini key was available, so the live voice interview was not exercised. Everything after the interview (portfolio, overrides, fit/gap, export) was exercised with synthetic data and a stubbed model (<code>rails demo:seed</code>), and also with the real Sidekiq job hitting a deliberately invalid key, which exercised the real failure path.</li>
+</ul>
+<h3>Step 2 — Context and domain immersion</h3>
+<p>Read the product spec before the code, then traced the post-interview pipeline: <code>Sessions::EndHandler</code> → <code>PortfolioGeneratorWorker</code> → <code>Portfolios::Generator</code> → <code>FitGap::Engine</code> → API → React pages. Key observation: PRD-02 only simulates the happy path ("all covered before ceiling"). Behaviour for early endings is never specified, so <code>clamp(1, 5)</code> decides it implicitly.</p>
+<h3>Step 3 — Problem definition</h3>
+<p>Static review, then runtime confirmation where possible. Findings are separated into <em>missing specification</em> and <em>defective implementation</em>, ranked P0–P3 (section 4). Escalation items are listed as constraint signals.</p>
+<h3>Step 4 — Strategy, acceptance criteria, trade-offs</h3>
+<p>Wrote and committed the option comparison and acceptance criteria <em>before</em> implementation (<code>assessment/02-options-and-acceptance-criteria.md</code>, commit <code>6eeed98</code>).</p>
+<h3>Step 5 — Implementation</h3>
+<p>Test-first where it mattered: the tenant-isolation specs were committed failing (<code>2d394fb</code>), then the fix (<code>046ffa7</code>). Small commits: harness → security fix → docs → migration and generator → fit/gap → web harness → web → CI → seeded fault → screenshots.</p>
+<h3>Step 6 — Verification</h3>
+<p>Ran the new specs against the original code, the seeded fault test with visible history, a migration up/down/up on a database with existing rows, browser checks at 1280 px and 375 px, and a CI simulation on a freshly created test database.</p>
+
+<h2>3. Product context</h2>
+<h3>What the product is for</h3>
+<p>It replaces a first-round human technical interview with an AI voice interviewer that probes skills, then produces an evidence-backed L1–L5 portfolio that a recruiter compares against a vacancy. The outcome it exists to produce is a <strong>trustworthy hiring signal at scale</strong>. Everything rests on that signal being trustworthy: if recruiters learn that a level can be invented, they stop relying on any level, and the product loses its reason to exist.</p>
+<h3>The industry</h3>
+<p>In Indonesian tech hiring, the scarce resource is senior interviewer time, not candidate volume. Screening tools such as CV parsing and generic aptitude tests are commoditised. The leverage is in <em>depth</em>: evidence of how someone thinks, at a level a hiring manager will act on. That only works if the system is honest about where its evidence stops.</p>
+<h3>The users</h3>
+<table>
+  <tr><th>User</th><th>What they are trying to get done</th><th>What hurt them</th></tr>
+  <tr><td>Recruiter / assessor</td><td>Shortlist quickly and defend the shortlist to a hiring manager.</td><td>Couldn't tell "weak" from "never asked". The Required column was blank, so gaps had no reference point. Overrides were invisible in the report.</td></tr>
+  <tr><td>Hiring manager</td><td>Decide from a one-page fit/gap summary.</td><td>The AI recommendation was built on fabricated gaps, and the overall recommendation paragraph was effectively never shown.</td></tr>
+  <tr><td>Candidate (did not choose this tool)</td><td>Be judged on what they actually said.</td><td>Marked L1 / "Gap" for topics never raised. Personal data could be read by another tenant's assessors. Not told the session was recorded until afterwards.</td></tr>
+</table>
+<h3>UU PDP implications (Law No. 27 of 2022 on Personal Data Protection)</h3>
+<ul>
+  <li><strong>Accuracy.</strong> Storing and sharing an invented assessment about a person conflicts with the controller's duty to keep personal data accurate. The fix stores "unknown" instead of a false value.</li>
+  <li><strong>Confidentiality and access control.</strong> The cross-tenant leak exposed candidate transcripts, quotes, and ratings to other organisations. Fixed in this PR.</li>
+  <li><strong>Automated decision-making.</strong> The law gives data subjects rights regarding decisions based solely on automated processing, including profiling. Keeping a human override, making it visible, and never presenting missing evidence as a judgement all reduce that risk. Whether this product needs an explicit objection channel for candidates is a legal question I'm escalating (constraint signal 2).</li>
+  <li><strong>Lawful basis and transparency.</strong> Candidates are told "The interview has been recorded" only after the session. This is <em>Pending legal/product decision</em>; I did not change the consent flow because the lawful basis is not an engineering call.</li>
+  <li><strong>Logs.</strong> Error messages could carry raw model output, which can include candidate quotes, into logs, the database, and API responses. These are now generic.</li>
+</ul>
+
+<h2>4. Problem and gap analysis</h2>
+<p><span class="tag">SPEC</span> missing specification (never defined) · <span class="tag">DEFECT</span> defined but broken · <strong>✔</strong> fixed in this PR</p>
+<table>
+  <tr><th>#</th><th>Type</th><th>Where</th><th>Finding</th><th>Impact (one line)</th><th></th></tr>
+  <tr><td class="p0">P0-1</td><td>SPEC + DEFECT</td><td>api → web</td><td>Unassessed or invalid levels coerced to L1 (<code>generator.rb</code> <code>clamp(1,5)</code>, NOT NULL <code>ai_level</code>, web <code>parseLevel</code> fallback to 1).</td><td>A candidate never asked about a skill is reported as L1 and a hiring "Gap".</td><td>✔</td></tr>
+  <tr><td class="p0">P0-2</td><td>DEFECT</td><td>api</td><td><code>Portfolio</code>/<code>PortfolioSkill</code>/<code>FitGapReport</code> not tenant-scoped; <code>Portfolio.find(id)</code> in 4 actions + override lookup. <strong>Verified at runtime</strong>: tenant A token exported tenant B portfolio (200) and overwrote its rating (201).</td><td>Cross-organisation personal data breach and tampering.</td><td>✔</td></tr>
+  <tr><td class="p0">P0-3</td><td>DEFECT</td><td>api</td><td><code>audio_complete</code> (invite token, no JWT) ends a session as <code>all_covered</code> with no coverage check.</td><td>Anyone with the link can end an interview early. After this PR, that no longer fabricates scores.</td><td>Harm removed; hardening is a follow-up</td></tr>
+  <tr><td>P1-1</td><td>DEFECT</td><td>seam</td><td>API sends <code>expected_level</code>, web reads <code>required_level</code>.</td><td>"Required" column blank in every fit/gap report.</td><td>✔</td></tr>
+  <tr><td>P1-2</td><td>DEFECT</td><td>seam</td><td>Engine never emits <code>is_override</code>.</td><td>Human adjustments invisible in reports.</td><td>✔</td></tr>
+  <tr><td>P1-3</td><td>DEFECT</td><td>api</td><td>Portfolio save: <code>destroy_all</code> then per-row <code>create!</code>, no transaction; one bad model field aborts mid-way.</td><td>Partial writes; each retry repeats a 180 s model call.</td><td>✔</td></tr>
+  <tr><td>P1-4</td><td>DEFECT</td><td>web + api</td><td>Fit/gap page re-triggers generation on every 5 s poll; no dedupe.</td><td>N parallel paid LLM calls and <code>RecordNotUnique</code> races.</td><td>✔</td></tr>
+  <tr><td>P1-5</td><td>DEFECT</td><td>api</td><td>No guard against duplicate portfolio jobs.</td><td>Racing <code>destroy_all</code>, duplicate rows.</td><td>✔ (atomic claim)</td></tr>
+  <tr><td>P1-6</td><td>DEFECT</td><td>web</td><td>Overall recommendation shown only when the culture narrative is empty.</td><td>Hiring summary effectively never visible.</td><td>✔</td></tr>
+  <tr><td>P1-7</td><td>DEFECT</td><td>api</td><td>Fallback narrative ignores unassessed skills.</td><td>LLM outage silently hides unknowns.</td><td>✔</td></tr>
+  <tr><td>P1-8</td><td>SPEC</td><td>web</td><td>No consent or notice before recording.</td><td>Lawful-basis risk under UU PDP.</td><td>Escalated</td></tr>
+  <tr><td>P2-1</td><td>DEFECT</td><td>api</td><td>Raw model output (may contain candidate quotes) stored in <code>generation_error</code>, logged, returned by the API.</td><td>Personal data in logs and error payloads.</td><td>✔</td></tr>
+  <tr><td>P2-2</td><td>DEFECT</td><td>web</td><td>Blank screens on load failure or when the portfolio isn't ready; errors swallowed.</td><td>Dead ends with no next step.</td><td>✔</td></tr>
+  <tr><td>P2-3</td><td>DEFECT</td><td>web</td><td>Discovered skills print a raw number and call medium confidence "confirmed".</td><td>Overstates certainty.</td><td>✔</td></tr>
+  <tr><td>P2-4</td><td>DEFECT</td><td>web</td><td>Summary omits the not-assessed count.</td><td>Unknowns vanish from the at-a-glance view.</td><td>✔</td></tr>
+  <tr><td>P2-5</td><td>DEFECT</td><td>web</td><td>Assessor header overflows to 550 px at a 375 px viewport.</td><td>Horizontal scroll on phones.</td><td>✔</td></tr>
+  <tr><td>P2-6</td><td>DEFECT</td><td>api</td><td><code>regenerate_fitgap</code> deletes the old report before the new one succeeds.</td><td>A failed regeneration loses the last good report.</td><td>Follow-up</td></tr>
+  <tr><td>P2-7</td><td>SPEC</td><td>api</td><td>Confidence self-reported by the LLM although the rule is deterministic from coverage.</td><td>Confidence can contradict coverage data.</td><td>✔</td></tr>
+  <tr><td>P3</td><td>DEFECT</td><td>web</td><td>Copy ("You Overridden ✓"), all-caps labels, long quotes never collapse.</td><td>Polish.</td><td>✔</td></tr>
+</table>
+
+<h3>Constraint signals (what I would escalate to a Tech Lead)</h3>
+<ol>
+  <li><strong>Tenant isolation is a live breach.</strong> I'd ship that commit on its own first, ahead of the larger revamp, and audit access logs for cross-tenant portfolio IDs.</li>
+  <li><strong>Consent, retention, and automated-decision rights</strong> need a legal/product owner. Engineering can only make the gap visible.</li>
+  <li><strong>Shared database.</strong> The README says <code>rakamin-api</code> shares this PostgreSQL. Making <code>portfolio_skills.ai_level</code> nullable needs confirmation that no other consumer assumes NOT NULL.</li>
+  <li><strong>Historical reports</strong> computed with the old logic still contain fabricated gaps. Re-generating them is an ops decision, and so is whether to tell affected tenants.</li>
+  <li><strong>Production boot.</strong> <code>RAILS_ENV=production rails runner</code> fails locally with <code>undefined method 'active_job'</code>, and eager loading fails on a Zeitwerk name mismatch (<code>audio_websocket_middleware.rb</code> vs <code>AudioWebSocketMiddleware</code>). Both predate this work and were left untouched to keep scope tight. CI therefore runs without eager loading.</li>
+  <li><strong>Auth trusts JWT claims without a user lookup</strong>, with a 3-day TTL in the sample config. A revoked assessor keeps access for days.</li>
+</ol>
+
+<h2>5. Options and trade-off matrix</h2>
+<table>
+  <tr><th></th><th>A. Hide it in the UI</th><th>B. Ask the model to return null</th><th>C. Decide from coverage; model only judges evidence (chosen)</th></tr>
+  <tr><th>Product impact</th><td>Low. Exports, fit/gap, and the narrative still say "Gap".</td><td>Medium. Fixes common cases.</td><td>High. One rule, correct in DB, API, fit/gap, narrative, PDF, and UI.</td></tr>
+  <tr><th>Cost</th><td>~0.5 day</td><td>~1 day</td><td>~2–3 days</td></tr>
+  <tr><th>Maintainability</th><td>Two sources of truth; every consumer re-implements the rule.</td><td>Correctness depends on prompt obedience.</td><td>The rule lives in the generator plus <code>Portfolios::Confidence</code>. Additive migration with a guarded <code>down</code>.</td></tr>
+  <tr><th>Failure modes</th><td>Any non-UI consumer shows the fake L1.</td><td>The model still invents levels for skills never discussed, and output varies by run.</td><td>The coverage analyzer can lag (<code>retry: 0</code>), so a briefly discussed skill may read as <code>not_yet</code>. It then shows as "Not assessed": the safe direction, and visible in the transcript.</td></tr>
+  <tr><th>Walk-back</th><td>Trivial</td><td>Prompt revert</td><td>Revert commits plus one migration rollback. The rollback refuses to run while unrated rows exist, rather than inventing levels.</td></tr>
+  <tr><th>Contextual fit</th><td>Hides the defect.</td><td>Kept as a secondary input (null = insufficient evidence).</td><td>Uses data that already exists. No new infrastructure. Fits the deadline.</td></tr>
+</table>
+<p><strong>Smaller decisions and rejected options.</strong></p>
+<ul>
+  <li><code>string</code> + CHECK constraint instead of a PG enum for the status, because enum values can't be removed cleanly in a rollback.</li>
+  <li>No unique index on <code>(portfolio_id, skill_label)</code> yet. Existing rows may hold duplicates, so the deploy could fail. Duplicates are prevented at the job level instead.</li>
+  <li>Overrides are disallowed on unrated skills. Inventing a level without evidence recreates the bug; the UI suggests a follow-up session instead.</li>
+  <li>A Redis <code>SET NX</code> lock for fit/gap enqueue plus an upsert in the engine. Either alone leaves a gap: the lock prevents wasted LLM calls, and the upsert makes a duplicate harmless.</li>
+</ul>
+
+<h2>6. Acceptance criteria and edge cases</h2>
+<p>Full list in <code>assessment/02-options-and-acceptance-criteria.md</code>. Each row below is covered by an automated test.</p>
+<table>
+  <tr><th>Input / edge case</th><th>Correct behaviour</th></tr>
+  <tr><td>Skill with coverage <code>not_yet</code>, or no coverage row at all</td><td><code>not_assessed</code>, level null, <em>not sent to the model</em>, even if the model returns a level for it.</td></tr>
+  <tr><td>Model level <code>null</code>, <code>0</code>, <code>6</code>, <code>"N/A"</code>, <code>3.5</code>, <code>""</code>, <code>"three"</code>, or skill omitted</td><td><code>insufficient_evidence</code>, level null. Never L1.</td></tr>
+  <tr><td>Model level <code>"3"</code> / <code>"L3"</code></td><td>Accepted as 3.</td></tr>
+  <tr><td>Model confidence <code>"very high"</code></td><td>Ignored. Computed from coverage: covered and ≥ 3 probes → high; initiated or ≤ 1 probe → low; otherwise medium. On overlap, the lower wins.</td></tr>
+  <tr><td>Skill label the model invents</td><td>Ignored.</td></tr>
+  <tr><td>Evidence: non-strings, blanks, > 3 quotes, 900-char quote</td><td>Strings only, trimmed, max 3, max 500 chars each. The UI collapses long quotes.</td></tr>
+  <tr><td>Nothing discussed at all</td><td>Model not called; every skill <code>not_assessed</code>; status complete.</td></tr>
+  <tr><td>Model output not JSON / wrong shape</td><td>Status failed with a generic message (no transcript text); job retries.</td></tr>
+  <tr><td>Model timeout</td><td>Status failed: "The AI model timed out"; job retries.</td></tr>
+  <tr><td>Save fails half-way</td><td>Transaction rollback; previous skills intact.</td></tr>
+  <tr><td>Duplicate job / job for a complete portfolio</td><td>No-op; model not called; no duplicate rows.</td></tr>
+  <tr><td>Portfolio stuck in <code>generating</code> &gt; 15 min</td><td>A new job may reclaim it.</td></tr>
+  <tr><td>Retries exhausted</td><td>Stored message "Failed after N retries" without the raw error text.</td></tr>
+  <tr><td>Vacancy skill unassessed / insufficient / not in interview</td><td><code>not_assessed</code> with reason <code>not_covered</code> / <code>insufficient_evidence</code> / <code>not_in_assessment</code>; never a gap.</td></tr>
+  <tr><td>Concurrent fit/gap jobs; repeated POSTs</td><td>Upsert, no unique-index error; one job enqueued.</td></tr>
+  <tr><td>Override on an unrated skill; level 9; student token</td><td>422; 422; 403.</td></tr>
+  <tr><td>Cross-tenant export / override / fit/gap read, trigger, regenerate</td><td>404 and no side effects.</td></tr>
+  <tr><td>DB write bypassing validations (<code>update_columns(ai_level: nil)</code>)</td><td>Rejected by the CHECK constraint.</td></tr>
+  <tr><td>Web: report never arrives</td><td>Stops after 24 polls (2 min) with "Check again". Polling never re-triggers generation.</td></tr>
+  <tr><td>Web: portfolio not ready; load failure</td><td>Explanatory state with a link back; error state with retry.</td></tr>
+  <tr><td>Web: 375 px viewport</td><td>No horizontal scroll; comparison table becomes stacked rows.</td></tr>
+</table>
+
+<h2>7. What shipped</h2>
+<h3>Backend (api/)</h3>
+<ul>
+  <li><strong>Migration</strong> <code>20261019000000</code>: adds <code>assessment_status</code> (default <code>assessed</code>, so existing rows stay valid), makes level, confidence, and summary nullable, and replaces the level CHECK with a NULL-safe status/level constraint. The <code>down</code> refuses while unrated rows exist. <code>20261019000001</code> adds <code>generation_started_at</code> for stale-claim recovery.</li>
+  <li><strong><code>Portfolios::Generator</code></strong>: builds rows from coverage maps; only discussed skills are rated by the model; atomic claim (<code>update_all</code> on <code>pending|failed|stale generating</code>); one transaction; safe error messages; the model client is built lazily (not needed when nothing was discussed).</li>
+  <li><strong><code>Portfolios::ResponseParser</code></strong> validates the model JSON. <strong><code>Portfolios::Confidence</code></strong> encodes the PRD rule.</li>
+  <li><strong><code>FitGap::Engine</code></strong>: <code>not_assessed</code> with a reason, <code>is_override</code>, upsert, a narrative prompt that forbids treating unknowns as weakness, and an honest fallback.</li>
+  <li><strong>Tenant scoping</strong> via <code>for_current_tenant</code> scopes that go through the tenant-scoped <code>Session</code>.</li>
+  <li><strong><code>FitGapGeneratorWorker.enqueue_once</code></strong> (Redis <code>SET NX EX</code>, released in <code>ensure</code>). Override guard. PDF export prints unrated skills as such.</li>
+  <li><code>rails demo:seed</code>: synthetic early-ended interview through the real generator with a stubbed model.</li>
+</ul>
+<h3>Frontend (web/)</h3>
+<ul>
+  <li>Types now match the API contract (<code>expected_level</code>, nullable level, <code>assessment_status</code>, <code>is_override</code>, <code>not_assessed_reason</code>). <code>parseLevel</code> and its fallback to 1 are removed.</li>
+  <li><strong>Unrated skill card</strong>: a dashed "No rating" slot in place of a level, an explanation of why, and the next step. No override button.</li>
+  <li><strong>Portfolio summary</strong>: "2 of 5 configured skills rated" with a segmented bar and why the interview ended early.</li>
+  <li><strong>Fit/gap</strong>: the Required column fixed, reason under each unrated row, override marker, not-assessed count, a warning banner, the overall assessment shown, and a stacked layout on mobile.</li>
+  <li>Explicit page states (loading, generating, failed with retry, load error, not ready, timed out). Long text wraps or collapses. The header fits at 375 px.</li>
+  <li>Everything built from the existing tokens and Radix/shadcn primitives; no new visual language.</li>
+</ul>
+
+<h2 class="break">8. Screenshots</h2>
+<h3>Before (original <code>main</code> web against the same API)</h3>
+<div class="pair">
+  <figure><img src="img/before-01-portfolio-fake-L1.png"><figcaption>Skills never discussed show L1 "Foundational" with a generic low-confidence note.</figcaption></figure>
+  <figure><img src="img/before-02-fitgap-blank-required-and-fake-gaps.png"><figcaption>Required column blank (seam bug); never-asked skills reported as "Gap −2". The narrative text in this capture came from the new engine's fallback when the demo data was seeded; the table is what demonstrates the old behaviour.</figcaption></figure>
+</div>
+<h3 class="break">After</h3>
+<div class="pair">
+  <figure><img src="img/after-01-portfolio-summary.png"><figcaption>Summary states how many skills were rated and why the interview ended early. The assessor's adjustment (L2 → L3) is explicit. Long quotes collapse.</figcaption></figure>
+  <figure><img src="img/after-02-portfolio-unrated-skills.png"><figcaption>"Not enough evidence" and "Not assessed" are distinct, explain themselves, give a next step, and offer no override.</figcaption></figure>
+</div>
+<div class="pair">
+  <figure><img src="img/after-04-fitgap-report.png"><figcaption>Required column populated. Each unrated row says why. The overall assessment is visible. Produced by the real Sidekiq job; the narrative is the fallback because the Gemini key was intentionally invalid.</figcaption></figure>
+  <div>
+    <h3 style="margin-top:0">Responsive (375 px)</h3>
+    <div class="pair">
+      <figure><img src="img/after-06-portfolio-mobile.png"><figcaption>Portfolio, no horizontal scroll.</figcaption></figure>
+      <figure><img src="img/after-05-fitgap-mobile.png"><figcaption>Fit/gap as stacked rows.</figcaption></figure>
+    </div>
+  </div>
+</div>
+<h3>States</h3>
+<div class="pair">
+  <figure><img src="img/after-03-fitgap-generating.png"><figcaption>Generating (fit/gap).</figcaption></figure>
+  <figure><img src="img/after-08-state-generating.png"><figcaption>Generating (portfolio).</figcaption></figure>
+  <figure><img src="img/after-07-state-failed.png"><figcaption>Failed, with a safe reason and retry.</figcaption></figure>
+  <figure><img src="img/after-09-state-fitgap-not-ready.png"><figcaption>Fit/gap requested before the portfolio is ready.</figcaption></figure>
+  <figure><img src="img/after-10-state-load-error.png"><figcaption>Load error with retry.</figcaption></figure>
+</div>
+
+<h2 class="break">9. Test evidence</h2>
+<table>
+  <tr><th>Suite</th><th>Files</th><th>Result</th></tr>
+  <tr><td>RSpec (api)</td><td><code>services/portfolios/generator_spec</code>, <code>services/fit_gap/engine_spec</code>, <code>requests/portfolio_tenant_isolation_spec</code>, <code>requests/fit_gap_spec</code>, <code>requests/portfolio_skills_spec</code>, <code>requests/portfolios_spec</code>, <code>models/portfolio_skill_spec</code>, <code>workers/portfolio_generator_worker_spec</code></td><td>49 examples, 0 failures</td></tr>
+  <tr><td>Vitest (web)</td><td><code>utils/skills.test</code>, <code>SkillPortfolioCard.test</code>, <code>ComparisonTable.test</code>, <code>FitGapReportPage.test</code></td><td>18 tests, 0 failures</td></tr>
+  <tr><td>CI</td><td><code>.github/workflows/ci.yml</code>: Postgres + Redis services → migrate → RSpec; <code>npm ci</code> → <code>tsc</code> → Vitest → build</td><td>Simulated locally on a freshly created test DB</td></tr>
+</table>
+<p>Coverage percentage is not measured (no SimpleCov / c8 configured). The claim is behavioural: every acceptance criterion in section 6 maps to a test.</p>
+
+<h3>Watched them fail</h3>
+<ul>
+  <li><strong>Tenant isolation</strong>: committed red first (<code>2d394fb</code>): 5 of 7 failing with 200/201/202 instead of 404. Green after <code>046ffa7</code>. Logs: <code>evidence/01-…-red.txt</code>, <code>02-…-green.txt</code>.</li>
+  <li><strong>Generator spec against the original generator</strong>: 22 of 23 fail (<code>evidence/04-…</code>). To be precise: part of that count comes from the intentional change in the model's output schema, not only from the L1 bug.</li>
+  <li><strong>Fit/gap polling</strong>: temporarily re-introducing "trigger on every poll" made the test fail with <em>expected 1 call, got 6</em>.</li>
+</ul>
+
+<h3>Seeded fault test (branch <code>scratch/seeded-fault</code>, merged with history)</h3>
+<pre>* e12dd4d Merge seeded fault test history
+|\
+| * 17197a5 Revert "SEEDED FAULT: fall back to L1 when the model gives no level"
+| * 2c99c57 Revert "SEEDED FAULT: read required_level in the comparison table"
+| * 2d233a3 SEEDED FAULT: read required_level in the comparison table
+| * 4d3f54f SEEDED FAULT: fall back to L1 when the model gives no level
+|/
+* d01c37e Add CI for API specs and web type-check, tests and build</pre>
+<ul>
+  <li><strong>API fault</strong> (<code>4d3f54f</code>): treat any discussed skill as assessed with <code>level || 1</code>. RSpec: <strong>49 examples, 8 failures</strong>, e.g. <em>expected assessment_status "insufficient_evidence", ai_level nil, but had "assessed", 1</em>.</li>
+  <li><strong>Web fault</strong> (<code>2d233a3</code>): read <code>required_level</code> again. Vitest: <strong>1 failed</strong>, "shows the required level sent by the API".</li>
+  <li>Both reverted; suites green again; the tree is byte-identical to <code>d01c37e</code>. Logs in <code>evidence/05–08</code>.</li>
+</ul>
+
+<h3>AI verification moments</h3>
+<p>I used an AI coding assistant throughout. These are the cases where its output was wrong or risky, and how I caught them.</p>
+<ol>
+  <li><strong>A CHECK constraint that let NULL through.</strong> The generated constraint was <code>(status = 'assessed' AND ai_level BETWEEN 1 AND 5) OR (status &lt;&gt; 'assessed' AND ai_level IS NULL)</code>. It reads correctly, but in SQL's three-valued logic an assessed row with a NULL level evaluates to <code>NULL OR FALSE = NULL</code>, and PostgreSQL treats a NULL CHECK as passing. I caught it by inserting that exact row with raw SQL: it was accepted. Fixed with <code>ai_level IS NOT NULL</code>, re-verified (now <code>PG::CheckViolation</code>), and pinned with a model spec that bypasses validations. Evidence: <code>evidence/03a-…</code> (bug) and <code>03-…</code> (fixed).</li>
+  <li><strong>Status stuck in "generating".</strong> The generated atomic claim used <code>update_all</code>, which bypasses the in-memory object. On failure, <code>portfolio.update!(generation_status: 'failed')</code> saw no change from the stale in-memory value and wrote nothing, so the portfolio would spin forever. The "save fails half-way" spec caught it (<em>expected "failed", got "generating"</em>). Fixed by reloading after a successful claim.</li>
+  <li><strong>A wrong assumption about Rails scopes.</strong> The assistant's plan avoided <code>joins(:session)</code> on the belief that it ignores <code>Session</code>'s tenant <code>default_scope</code>. Checking the generated SQL showed it <em>does</em> apply it. I kept the explicit subquery anyway because it doesn't depend on that subtle behaviour, but the stated reason was wrong.</li>
+  <li><strong>Invalid evidence, caught before it was used.</strong> The first migration-safety log "proved" rollback worked, but the probe row had silently failed to insert because model validations weren't updated yet, so the rollback ran against nothing. I re-ran the check with raw SQL inserts.</li>
+</ol>
+
+<h2>10. Known limitations and follow-ups</h2>
+<ul>
+  <li>The live voice interview was not exercised (no Gemini key). The generator change is covered by specs and the stubbed demo, not by a real model run.</li>
+  <li><code>audio_complete</code> hardening (P0-3): verify coverage or session state server-side. Not done, because its timing with the WebSocket flow can't be tested here.</li>
+  <li><code>regenerate_fitgap</code> should keep the old report until the new one succeeds (P2-6).</li>
+  <li>Unique index on <code>(portfolio_id, skill_label)</code> after a duplicate audit.</li>
+  <li>Candidate notice and consent before recording, and a retention policy: legal decision first.</li>
+  <li>Re-generate historical fit/gap reports affected by fabricated L1s.</li>
+  <li>Production boot and eager-load issues (constraint signal 5).</li>
+</ul>
+
+</body>
+</html>

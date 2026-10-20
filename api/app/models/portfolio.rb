@@ -9,6 +9,7 @@ class Portfolio < ApplicationRecord
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
+  scope :for_current_tenant, -> { where(session_id: Session.select(:id)) }
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }

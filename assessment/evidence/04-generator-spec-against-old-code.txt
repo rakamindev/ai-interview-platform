@@ -1,0 +1,34 @@
+  1) Portfolios::Generator when the model returns level 0 for a discussed skill records insufficient evidence and never falls back to L1
+  2) Portfolios::Generator when the model returns level "" for a discussed skill records insufficient evidence and never falls back to L1
+  3) Portfolios::Generator when the interview ended before a skill was discussed marks it not assessed instead of giving it a level
+  4) Portfolios::Generator when the interview ended before a skill was discussed does not ask the model to rate it
+       expected nil to include "System Design", but it does not respond to `include?`
+  5) Portfolios::Generator when the model returns level 6 for a discussed skill records insufficient evidence and never falls back to L1
+  6) Portfolios::Generator duplicate and stale jobs does nothing when the portfolio is already complete
+           expected: 0 times with any arguments
+  7) Portfolios::Generator duplicate and stale jobs does not create duplicate skills when run twice
+       expected: 1
+            got: 0
+  8) Portfolios::Generator duplicate and stale jobs does nothing when another job started generating recently
+           expected: 0 times with any arguments
+  9) Portfolios::Generator when the model returns level 3.5 for a discussed skill records insufficient evidence and never falls back to L1
+  10) Portfolios::Generator when the model returns level "three" for a discussed skill records insufficient evidence and never falls back to L1
+  11) Portfolios::Generator when the model leaves out a discussed skill records insufficient evidence for the missing skill
+  12) Portfolios::Generator failures does not log transcript content
+        expected Portfolios::ResponseParser::InvalidResponse, got #<JSON::ParserError: unexpected token 'not' at line 1 column 1> with backtrace:
+  13) Portfolios::Generator failures fails with a generic message when the model output is not JSON
+        expected Portfolios::ResponseParser::InvalidResponse, got #<JSON::ParserError: unexpected character: 'Candidate' at line 1 column 1> with backtrace:
+  14) Portfolios::Generator failures keeps the previous skills when saving the new ones fails halfway
+        expected ActiveRecord::RecordInvalid but nothing was raised
+  15) Portfolios::Generator failures fails with a timeout message when the model times out
+        expected: "The AI model timed out"
+             got: "timeout after 180s"
+  16) Portfolios::Generator when nothing was discussed at all does not call the model and marks every skill not assessed
+  17) Portfolios::Generator when the model returns messy evidence and unknown skills ignores the model confidence and skills that were never in the coverage map
+  18) Portfolios::Generator when the model returns messy evidence and unknown skills keeps at most three trimmed string quotes of limited length
+  19) Portfolios::Generator when a configured skill has no coverage row at all adds it as not assessed
+  20) Portfolios::Generator when the model returns level "N/A" for a discussed skill records insufficient evidence and never falls back to L1
+  21) Portfolios::Generator when a skill was covered and the model rates it stores the level and computes confidence from coverage
+  22) Portfolios::Generator when the model returns level nil for a discussed skill records insufficient evidence and never falls back to L1
+23 examples, 22 failures
+Failed examples:

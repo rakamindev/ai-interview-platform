@@ -87,6 +87,26 @@ Runs on **port 5173** by default.
 
 ---
 
+## 8. Run the tests
+
+RSpec needs PostgreSQL and Redis running.
+
+```bash
+RAILS_ENV=test bundle exec rails db:create db:migrate
+bundle exec rspec
+```
+
+## 9. Demo data without a Gemini key
+
+```bash
+bundle exec rails demo:seed
+```
+
+Creates a synthetic interview that hit its time limit before every skill was discussed, plus a
+vacancy to compare it against. It prints the portfolio and fit/gap URLs.
+
+---
+
 ## All services at a glance
 
 | Service | Command | Port |

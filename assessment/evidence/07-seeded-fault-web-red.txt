@@ -1,0 +1,103 @@
+
+ RUN  v3.2.4 /Users/macbook/Documents/proyek mantull/rakamin/ai-interview-platform/web
+
+ ✓ src/utils/skills.test.ts (4 tests) 2ms
+ ❯ src/components/fitgap/ComparisonTable.test.tsx (4 tests | 1 failed) 104ms
+   × ComparisonTable > shows the required level sent by the API 69ms
+     → Unable to find an element with the text: L4. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<tr[39m
+  [33mclass[39m=[32m"border-b last:border-0"[39m
+[36m>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 break-words"[39m
+  [36m>[39m
+    [0mSystem Design[0m
+  [36m</td>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 text-center text-muted-foreground"[39m
+  [36m/>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 text-center"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"inline-flex items-center gap-1"[39m
+    [36m>[39m
+      [0mL2[0m
+    [36m</span>[39m
+  [36m</td>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 text-center"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"inline-flex items-center whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded text-amber-700 bg-amber-50"[39m
+    [36m>[39m
+      [0mGap[0m
+      [0m −2[0m
+    [36m</span>[39m
+  [36m</td>[39m
+[36m</tr>[39m
+   ✓ ComparisonTable > shows an unassessed skill as no rating with the reason, not as a gap 19ms
+   ✓ ComparisonTable > marks only adjusted levels as adjusted by assessor 11ms
+   ✓ ComparisonTable > summarises not assessed skills separately 4ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx (5 tests) 165ms
+ ✓ src/components/portfolio/SkillPortfolioCard.test.tsx (5 tests) 91ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable > shows the required level sent by the API
+TestingLibraryElementError: Unable to find an element with the text: L4. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<tr[39m
+  [33mclass[39m=[32m"border-b last:border-0"[39m
+[36m>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 break-words"[39m
+  [36m>[39m
+    [0mSystem Design[0m
+  [36m</td>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 text-center text-muted-foreground"[39m
+  [36m/>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 text-center"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"inline-flex items-center gap-1"[39m
+    [36m>[39m
+      [0mL2[0m
+    [36m</span>[39m
+  [36m</td>[39m
+  [36m<td[39m
+    [33mclass[39m=[32m"px-4 py-2.5 text-center"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"inline-flex items-center whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded text-amber-700 bg-amber-50"[39m
+    [36m>[39m
+      [0mGap[0m
+      [0m −2[0m
+    [36m</span>[39m
+  [36m</td>[39m
+[36m</tr>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:14:24
+     12| 
+     13|     const row = desktopTable().getByText("System Design").closest("tr"…
+     14|     expect(within(row).getByText("L4")).toBeInTheDocument();
+       |                        ^
+     15|     expect(within(row).getByText("L2")).toBeInTheDocument();
+     16|     expect(within(row).getByText("Gap −2")).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 17 passed (18)
+   Start at  13:29:09
+   Duration  1.60s (transform 248ms, setup 773ms, collect 671ms, tests 363ms, environment 1.89s, prepare 257ms)
+
