@@ -29,7 +29,7 @@ export default function SkillPortfolioCard({
           <LevelBadge level={effectiveLevel} />
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-semibold leading-tight">{skill.skill_label}</h3>
+              <h3 className="break-words font-semibold leading-tight">{skill.skill_label}</h3>
               {skill.is_discovered && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
                   <Zap aria-hidden="true" className="h-3 w-3" /> Discovered
@@ -50,7 +50,7 @@ export default function SkillPortfolioCard({
             <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Competency summary
             </h4>
-            <p className="text-sm leading-6 text-foreground">
+            <p className="break-words text-sm leading-6 text-foreground">
               {skill.competency_summary}
             </p>
           </div>
@@ -65,7 +65,7 @@ export default function SkillPortfolioCard({
               {skill.evidence.map((quote, i) => (
                 <li
                   key={i}
-                  className="border-l-2 border-primary/40 pl-3 text-sm leading-6 text-muted-foreground"
+                  className="break-words border-l-2 border-primary/40 pl-3 text-sm leading-6 text-muted-foreground"
                 >
                   &ldquo;{quote}&rdquo;
                 </li>

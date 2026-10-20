@@ -232,15 +232,16 @@ export default function TranscriptPage() {
             ) : (
               <ul className="space-y-4">
                 {visibleTurns.map((turn) => (
-                  <TranscriptBubble
-                    key={turn.id}
-                    aiLabel="AI interviewer"
-                    candidateLabel="Candidate"
-                    showIcons
-                    speaker={turn.speaker}
-                    text={turn.text}
-                    timestamp={formatTime(turn.created_at)}
-                  />
+                  <li key={turn.id}>
+                    <TranscriptBubble
+                      aiLabel="AI interviewer"
+                      candidateLabel="Candidate"
+                      showIcons
+                      speaker={turn.speaker}
+                      text={turn.text}
+                      timestamp={formatTime(turn.created_at)}
+                    />
+                  </li>
                 ))}
               </ul>
             )}

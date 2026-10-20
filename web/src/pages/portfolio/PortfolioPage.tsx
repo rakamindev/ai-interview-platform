@@ -311,10 +311,18 @@ export default function PortfolioPage() {
                   Summary
                 </h2>
                 <p className="mt-1.5 text-2xl font-semibold tracking-tight">
-                  L{averageLevel.toFixed(1)}
-                  <span className="ml-2 text-base font-normal text-muted-foreground">average level</span>
+                  {assessedSkills.length > 0 ? (
+                    <>
+                      L{averageLevel.toFixed(1)}
+                      <span className="ml-2 text-base font-normal text-muted-foreground">average level</span>
+                    </>
+                  ) : (
+                    "No skills assessed"
+                  )}
                 </p>
-                <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{confidenceSentence}</p>
+                {assessedSkills.length > 0 && (
+                  <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{confidenceSentence}</p>
+                )}
               </div>
               <div className="w-full space-y-2 sm:w-64">
                 <ul className="grid grid-cols-5 gap-1.5">
@@ -323,15 +331,18 @@ export default function PortfolioPage() {
                       key={index}
                       className={cn(
                         "rounded-md border bg-card px-1 py-1.5 text-center",
-                        count === 0 && "opacity-50"
+                        count === 0 && "text-muted-foreground"
                       )}
                     >
                       <span
-                        className={cn("mx-auto mb-1 block h-1 w-5 rounded-full", LEVEL_BAR_CLASSES[index + 1])}
+                        className={cn(
+                          "mx-auto mb-1 block h-1 w-5 rounded-full",
+                          count === 0 ? "bg-border" : LEVEL_BAR_CLASSES[index + 1]
+                        )}
                         aria-hidden="true"
                       />
-                      <span className="block text-base font-semibold tabular-nums">{count}</span>
-                      <span className="block text-[10px] text-muted-foreground">L{index + 1}</span>
+                      <span className={cn("block text-base font-semibold tabular-nums", count === 0 && "font-normal")}>{count}</span>
+                      <span className="block text-[10px]">L{index + 1}</span>
                     </li>
                   ))}
                 </ul>
