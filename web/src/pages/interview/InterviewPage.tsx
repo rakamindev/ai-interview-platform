@@ -45,14 +45,14 @@ function SpeakerStage({
     <section
       aria-label={`${title}: ${label}`}
       className={cn(
-        "flex min-h-36 min-w-0 flex-col rounded-xl border p-3 transition-colors sm:min-h-44 sm:p-5 lg:min-h-52 lg:p-6",
+        "flex min-h-32 min-w-0 flex-col rounded-xl border p-2.5 transition-colors sm:min-h-44 sm:p-5 lg:min-h-52 lg:p-6",
         active ? activeStyle : "border-border bg-white"
       )}
     >
       <h2 className="text-sm font-semibold">{title}</h2>
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-3 sm:py-5">
-          <div className={cn("flex h-24 w-24 items-center justify-center rounded-full sm:h-28 sm:w-28", voiceStyle)}>
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-border/70 bg-white sm:h-24 sm:w-24">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2 sm:py-5">
+          <div className={cn("flex h-16 w-16 items-center justify-center rounded-full sm:h-28 sm:w-28", voiceStyle)}>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-white sm:h-24 sm:w-24">
               <VoiceBars active={active} variant={variant} />
             </div>
           </div>
@@ -357,7 +357,7 @@ export default function InterviewPage() {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 px-4 py-6 sm:px-6 sm:py-10">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{candidateInfo?.role_title ?? "AI Interview"}</h1>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
             <p className="text-sm text-muted-foreground">
               Interview time: {candidateInfo.time_limit_min} minutes
@@ -521,7 +521,7 @@ export default function InterviewPage() {
         {interviewState === "connecting" && (
           <p role="status" className="text-center text-sm text-muted-foreground">Connecting to your interview…</p>
         )}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+        <div className="grid grid-cols-2 gap-2 sm:gap-5">
           <SpeakerStage
             title="AI interviewer"
             active={aiStageActive}

@@ -203,7 +203,7 @@ export default function FitGapReportPage() {
         </Link>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">Role fit report</h1>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Role fit report</h1>
             <p className="text-sm leading-6 text-muted-foreground">Compare assessed skills with the selected vacancy requirements.</p>
           </div>
           {portfolio && (
@@ -300,7 +300,7 @@ export default function FitGapReportPage() {
                   Narrative source is unknown for this older report. Regenerate to refresh it.
                 </p>
               )}
-              <p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
+              <p className="whitespace-pre-wrap break-words text-sm leading-7 text-foreground">
                 {report.culture_narrative || report.overall_narrative || "Narrative unavailable. Regenerate the report to retry."}
               </p>
             </CardContent>
@@ -320,8 +320,8 @@ export default function FitGapReportPage() {
                   {portfolio.skills
                     .filter((s) => s.is_discovered)
                     .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
-                        <span className="font-medium">{s.skill_label}</span>
+                      <div key={s.id} className="flex flex-col gap-1 border-b py-2 text-sm last:border-0 sm:flex-row sm:items-start sm:gap-2">
+                        <span className="break-words font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
                           {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
                         </span>

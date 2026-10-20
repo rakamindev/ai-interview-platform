@@ -75,7 +75,7 @@ export default function VacancyListPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Vacancies</h1>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Vacancies</h1>
           <p className="max-w-xl text-sm leading-6 text-muted-foreground">Define role expectations for candidate fit analysis.</p>
         </div>
         <Button className="h-12 w-full px-5 sm:w-auto" onClick={() => navigate("/vacancies/new")}>
@@ -152,7 +152,7 @@ export default function VacancyListPage() {
                 <CardContent className="flex min-h-24 items-center justify-between gap-4 px-4 py-4 sm:px-5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                      <p className="min-w-0 truncate text-base font-semibold">{v.role_title || "Untitled vacancy"}</p>
+                      <p className="min-w-0 break-words text-base font-semibold">{v.role_title || "Untitled vacancy"}</p>
                       <Badge variant="outline" className={statusStyles[v.status]}>{statusLabels[v.status]}</Badge>
                     </div>
                     <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">

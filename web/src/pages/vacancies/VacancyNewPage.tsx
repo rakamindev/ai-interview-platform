@@ -62,7 +62,7 @@ export default function VacancyNewPage() {
       </Link>
 
       <div className="space-y-2 border-b pb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Create a vacancy</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Create a vacancy</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Add the skills and expectations used to compare candidates for this role.</p>
       </div>
 

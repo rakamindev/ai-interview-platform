@@ -41,7 +41,7 @@ function Stat({ label, value, tone = "default" }: StatProps) {
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd
         className={cn(
-          "mt-0.5 text-2xl font-semibold tabular-nums",
+          "mt-0.5 text-xl font-semibold tabular-nums sm:text-2xl",
           tone === "warn" && value > 0 && "text-amber-800"
         )}
       >
@@ -232,7 +232,7 @@ export default function PortfolioPage() {
         </Link>
         <div className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="break-words text-xl font-semibold tracking-tight sm:text-3xl">
               {candidateName || "Candidate results"}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -310,7 +310,7 @@ export default function PortfolioPage() {
                 <h2 id="summary-heading" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Summary
                 </h2>
-                <p className="mt-1.5 text-2xl font-semibold tracking-tight">
+                <p className="mt-1.5 text-xl font-semibold tracking-tight sm:text-2xl">
                   {assessedSkills.length > 0 ? (
                     <>
                       L{averageLevel.toFixed(1)}

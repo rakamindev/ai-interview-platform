@@ -39,7 +39,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             { label: "Not assessed", count: notAssessedCount },
           ].map(({ label, count }) => (
             <div key={label} className="rounded-lg border bg-card px-4 py-3">
-              <p className="text-2xl font-semibold tabular-nums">{count}</p>
+              <p className="text-xl font-semibold tabular-nums sm:text-2xl">{count}</p>
               <p className="mt-1 text-sm text-muted-foreground">{label}</p>
             </div>
           ))}

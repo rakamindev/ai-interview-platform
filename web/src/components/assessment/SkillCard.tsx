@@ -52,7 +52,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">{skillLabel}</span>
+            <span className="break-words text-sm font-medium">{skillLabel}</span>
             <span className="shrink-0 text-xs text-muted-foreground">
               {isCustom ? "Custom" : skill?.skill_id ? `SK-${String(skill.skill_id).padStart(3, "0")}` : ""}
             </span>

@@ -117,7 +117,7 @@ export default function AssessmentNewPage() {
       </Link>
 
       <div className="space-y-2 border-b pb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Create an assessment</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Create an assessment</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Set the interview length, language, and skills to assess. Candidate invite links come next.</p>
       </div>
 

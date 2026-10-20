@@ -172,7 +172,7 @@ export default function LiveMonitorPage() {
         </Link>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">Live interview</h1>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Live interview</h1>
             <p className="text-sm leading-6 text-muted-foreground">
               {assessmentName || "Follow the interview as it happens and see skill coverage in real time."}
             </p>
@@ -224,9 +224,9 @@ export default function LiveMonitorPage() {
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{skill.skill_label}</span>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span className="min-w-0 break-words font-medium">{skill.skill_label}</span>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:shrink-0">
                     {skill.probe_count > 0 && (
                       <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                     )}
@@ -239,7 +239,7 @@ export default function LiveMonitorPage() {
                   className="h-2"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="break-words text-xs text-muted-foreground">
                     "{skill.last_signal}"
                   </p>
                 )}
@@ -257,12 +257,12 @@ export default function LiveMonitorPage() {
                 </p>
                 {discoveredSkills.map((skill) => (
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
+                    <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <span className="min-w-0 break-words flex items-start gap-1">
                         <Zap className="h-3 w-3 text-amber-500" />
                         {skill.skill_label}
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:shrink-0">
                         {skill.probe_count > 0 && (
                           <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                         )}
@@ -275,7 +275,7 @@ export default function LiveMonitorPage() {
                       className="h-2"
                     />
                     {skill.last_signal && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="break-words text-xs text-muted-foreground">
                         "{skill.last_signal}"
                       </p>
                     )}

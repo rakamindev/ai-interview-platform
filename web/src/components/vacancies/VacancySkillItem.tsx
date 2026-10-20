@@ -19,7 +19,7 @@ export default function VacancySkillItem({ skill, onLevelChange, onRemove }: Vac
   return (
     <div className="space-y-3 rounded-lg border bg-background p-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="min-w-0 truncate text-sm font-medium">{label}</span>
+        <span className="min-w-0 break-words text-sm font-medium">{label}</span>
         <button
           type="button"
           aria-label={`Remove ${label}`}

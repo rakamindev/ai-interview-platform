@@ -115,7 +115,7 @@ export default function VacancyEditPage() {
 
       <div className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight">Edit vacancy</h1>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Edit vacancy</h1>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Update the role requirements used in candidate fit analysis.</p>
         </div>
         <ConfirmActionDialog

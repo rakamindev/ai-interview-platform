@@ -80,7 +80,7 @@ export default function AssessmentListPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Assessments</h1>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Assessments</h1>
           <p className="max-w-xl text-sm leading-6 text-muted-foreground">Create interview plans, invite candidates, and review their results.</p>
         </div>
         <Button className="h-12 w-full px-5 sm:w-auto" onClick={() => navigate("/assessments/new")}>
@@ -137,7 +137,7 @@ export default function AssessmentListPage() {
               <Card className="shadow-none transition-colors group-hover:border-primary/50 group-focus-visible:border-primary">
                 <CardContent className="flex min-h-24 items-center justify-between gap-4 px-4 py-4 sm:px-5">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-semibold">{a.name}</p>
+                    <p className="break-words text-base font-semibold">{a.name}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock aria-hidden="true" className="h-3.5 w-3.5" />

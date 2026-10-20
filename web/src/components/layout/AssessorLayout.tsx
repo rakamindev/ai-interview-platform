@@ -25,16 +25,16 @@ export default function AssessorLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex min-h-dvh flex-col bg-background">
       {/* Top header */}
       <header className="sticky top-0 z-40 border-b bg-white">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:py-0">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2 sm:flex sm:h-16 sm:justify-between sm:gap-0 sm:px-4 sm:py-0">
+          <div className="contents sm:flex sm:items-center sm:gap-6">
+            <Link to="/assessments" className="col-start-1 row-start-1 flex min-w-0 items-center gap-2 sm:flex-none">
+              <LayoutDashboard className="h-5 w-5 shrink-0 text-primary" />
+              <span className="truncate text-[13px] font-semibold sm:text-sm">Rakamin AI Interview</span>
             </Link>
-            <nav aria-label="Main navigation" className="grid w-full min-w-0 grid-cols-2 items-center gap-1 sm:flex sm:w-auto">
+            <nav aria-label="Main navigation" className="col-span-2 row-start-2 grid w-full min-w-0 grid-cols-2 items-center gap-1 sm:row-auto sm:flex sm:w-auto">
               {navItems.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
@@ -53,22 +53,22 @@ export default function AssessorLayout() {
               ))}
             </nav>
           </div>
-          <div className="flex items-center justify-between gap-3 sm:justify-end">
+          <div className="col-start-2 row-start-1 flex items-center justify-self-end gap-1 sm:gap-3">
             {tenant.name && (
-              <span className="max-w-[55vw] truncate rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground sm:max-w-[18rem]">
+              <span className="max-w-[28vw] truncate rounded-full border bg-background px-2 py-1 text-xs text-muted-foreground sm:max-w-[18rem] sm:px-3">
                 {tenant.name}
               </span>
             )}
-            <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Log out">
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Log out
+            <Button variant="ghost" size="sm" className="h-11 w-11 px-0 sm:w-auto sm:px-3" onClick={handleLogout} aria-label="Log out">
+              <LogOut className="mr-0 h-4 w-4 sm:mr-1.5" />
+              <span className="sr-only sm:not-sr-only">Log out</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Page content */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:py-8">
+      <main className="mx-auto w-full min-w-0 max-w-7xl flex-1 px-4 py-6 sm:py-8">
         <Outlet />
       </main>
     </div>

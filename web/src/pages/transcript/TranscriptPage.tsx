@@ -105,7 +105,7 @@ export default function TranscriptPage() {
         </Link>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">Interview transcript</h1>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Interview transcript</h1>
             <p className="text-sm leading-6 text-muted-foreground">
               {[
                 candidateName ? `${candidateName}'s conversation with the AI interviewer` : "The full conversation between the candidate and the AI interviewer",
@@ -150,15 +150,15 @@ export default function TranscriptPage() {
           <section aria-label="Transcript overview" className="grid grid-cols-2 divide-y rounded-xl border bg-card sm:grid-cols-4 sm:divide-x sm:divide-y-0">
             <div className="px-5 py-4">
               <p className="text-sm text-muted-foreground">Candidate turns</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">{candidateCount}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums sm:text-2xl">{candidateCount}</p>
             </div>
             <div className="px-5 py-4">
               <p className="text-sm text-muted-foreground">AI questions</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">{aiCount}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums sm:text-2xl">{aiCount}</p>
             </div>
             <div className="px-5 py-4">
               <p className="text-sm text-muted-foreground">Total turns</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">{turns.length}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums sm:text-2xl">{turns.length}</p>
             </div>
             <div className="px-5 py-4">
               <p className="text-sm text-muted-foreground">Interview length</p>

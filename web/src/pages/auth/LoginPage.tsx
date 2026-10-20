@@ -38,7 +38,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6 rounded-xl border bg-white p-6 shadow-sm sm:p-8">
         <div className="space-y-2 text-center">
           <p className="text-sm font-semibold text-primary">Rakamin</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Welcome back</h1>
           <p className="text-sm text-muted-foreground">Sign in to manage interviews and candidate results.</p>
         </div>
 

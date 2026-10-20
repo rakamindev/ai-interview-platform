@@ -47,7 +47,7 @@ function SessionRow({
           {index}
         </div>
         <div className="min-w-0 space-y-0.5">
-          <div className="truncate text-sm font-medium">{displayName}</div>
+          <div className="break-words text-sm font-medium">{displayName}</div>
           {session.started_at && (
             <div className="text-sm text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -246,7 +246,7 @@ export default function AssessmentInvitePage() {
         </Link>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 space-y-2">
-            <h1 className="break-words text-3xl font-semibold tracking-tight">{assessment.name}</h1>
+            <h1 className="break-words text-xl font-semibold tracking-tight sm:text-3xl">{assessment.name}</h1>
             <p className="text-sm leading-6 text-muted-foreground">Manage candidate invites and review completed interviews for this role.</p>
           </div>
           <div className="flex flex-wrap gap-2 sm:shrink-0">
@@ -343,7 +343,7 @@ export default function AssessmentInvitePage() {
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Candidates</h2>
+            <h2 className="text-lg font-semibold sm:text-xl">Candidates</h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">Share a unique interview link with each candidate.</p>
           </div>
           <span className="text-sm font-medium text-muted-foreground">{sessions.length} {sessions.length === 1 ? "candidate" : "candidates"}</span>
@@ -387,7 +387,7 @@ export default function AssessmentInvitePage() {
       {assessment?.skills && assessment.skills.length > 0 && (
         <section className="space-y-4 border-t pt-7">
           <div>
-            <h2 className="text-xl font-semibold">Skills assessed</h2>
+            <h2 className="text-lg font-semibold sm:text-xl">Skills assessed</h2>
             <p className="mt-1 text-sm text-muted-foreground">Competencies included in this interview plan.</p>
           </div>
           <Card>
