@@ -34,14 +34,14 @@ export default function AssessorLayout() {
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
-            <nav aria-label="Main navigation" className="flex items-center gap-1">
+            <nav aria-label="Main navigation" className="grid w-full min-w-0 grid-cols-2 items-center gap-1 sm:flex sm:w-auto">
               {navItems.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
                   to={href}
                   aria-current={location.pathname.startsWith(href) ? "page" : undefined}
                   className={cn(
-                    "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors sm:flex-none sm:justify-start",
+                    "flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-sm transition-colors sm:flex-none sm:justify-start sm:px-3",
                     location.pathname.startsWith(href)
                       ? "bg-primary/10 text-primary font-semibold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
