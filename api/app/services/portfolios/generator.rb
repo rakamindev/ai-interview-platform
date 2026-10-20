@@ -147,6 +147,17 @@ module Portfolios
       }
     end
 
+    # Accepts 3, "3", and "L3" — the model is inconsistent between runs.
+    # Anything else aborts the job instead of silently rating the candidate L1.
+    LEVEL_FORMAT = /\A(?:L)?([1-5])\z/i
+
+    def level_from(value, skill_label)
+      match = value.to_s.strip.match(LEVEL_FORMAT)
+      raise ArgumentError, "Invalid level #{value.inspect} for skill #{skill_label.inspect}" unless match
+
+      match[1].to_i
+    end
+
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
@@ -158,7 +169,7 @@ module Portfolios
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           level_from(skill_data['level'], skill_data['skill_label']),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
@@ -170,7 +181,7 @@ module Portfolios
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           level_from(skill_data['level'], skill_data['skill_label']),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
