@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
@@ -41,10 +40,10 @@ export default function AssessmentEditPage() {
   const [serverErrors, setServerErrors] = useState<string[]>([]);
 
   const form = useForm<AssessmentFormValues>({
-    defaultValues: { name: "", time_limit_min: 45, skills: [] },
+    defaultValues: { name: "", time_limit_min: 45, language: "en", skills: [] },
   });
 
-  const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
+  const { register, handleSubmit, control, setValue, watch, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   const loadAssessment = useCallback(() => {
@@ -54,7 +53,12 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({
+          name: a.name,
+          time_limit_min: a.time_limit_min,
+          language: a.language ?? "en",
+          skills: a.skills,
+        });
       })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
@@ -77,13 +81,17 @@ export default function AssessmentEditPage() {
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) { setServerErrors(["Add at least one skill."]); return; }
+    if (data.skills.length === 0) {
+      setServerErrors(["Add at least one skill to continue."]);
+      return;
+    }
     setServerErrors([]);
     setSubmitting(true);
     try {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
+        language: data.language,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
       navigate(`/assessments/${id}/invite`);
@@ -96,15 +104,17 @@ export default function AssessmentEditPage() {
 
   if (loading || loadError) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-4xl space-y-6">
         {loadError ? (
-          <div role="alert" className="space-y-3 rounded-lg border border-destructive/40 bg-white p-5">
+          <div role="alert" className="space-y-4 rounded-xl border border-destructive/40 bg-card p-5 sm:p-6">
             <div>
               <h1 className="font-semibold">Assessment could not be loaded</h1>
               <p className="mt-1 text-sm text-muted-foreground">Your changes have not been saved. Try loading it again.</p>
             </div>
-            <Button variant="outline" onClick={loadAssessment}>Try again</Button>
-            <Button asChild variant="ghost"><Link to="/assessments">Back to assessments</Link></Button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={loadAssessment}>Try again</Button>
+              <Button asChild variant="ghost" className="w-full sm:w-auto"><Link to="/assessments">Back to assessments</Link></Button>
+            </div>
           </div>
         ) : (
           <>
@@ -119,53 +129,96 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="flex items-center gap-2 rounded-sm text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-          Assessments
-        </Link>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <Link to={`/assessments/${id}/invite`} className="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        <ArrowLeft className="h-4 w-4" />
+        Back to assessment
+      </Link>
+
+      <div className="space-y-2 border-b pb-6">
+        <h1 className="text-3xl font-semibold tracking-tight">Edit assessment</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Update the role, interview length, or skills. Changes apply to candidates you invite next.</p>
       </div>
 
-      <div className="mb-6 space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Edit assessment</h1>
-        <p className="text-sm text-muted-foreground">Update the role, interview length, or skills for future candidates.</p>
-      </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="overflow-hidden rounded-xl border bg-card">
+        <section aria-labelledby="assessment-details-heading" className="space-y-4 p-5 sm:p-6">
+          <div>
+            <h2 id="assessment-details-heading" className="font-semibold">Assessment details</h2>
+            <p className="mt-1 text-sm text-muted-foreground">The role title, interview length, and the language the AI interviews in.</p>
+          </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" aria-invalid={!!errors.name} aria-describedby={errors.name ? "role-title-error" : undefined} {...register("name", { required: "Role title is required" })} />
-          {errors.name && <p id="role-title-error" className="text-sm text-destructive">{errors.name.message}</p>}
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">
+              Role title <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="name"
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? "role-title-error" : undefined}
+              placeholder="Senior Frontend Engineer"
+              {...register("name", { required: "Role title is required" })}
+            />
+            {errors.name && (
+              <p id="role-title-error" className="text-sm text-destructive">{errors.name.message}</p>
+            )}
+          </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="time-limit">Session time limit <span className="text-destructive">*</span></Label>
-          <Select
-            value={String(form.watch("time_limit_min"))}
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
-            <SelectTrigger id="time-limit" className="w-full sm:w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TIME_LIMIT_OPTIONS.map((min) => (
-                <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="time-limit">
+                Session time limit <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={String(watch("time_limit_min"))}
+                onValueChange={(v) => setValue("time_limit_min", Number(v))}
+              >
+                <SelectTrigger id="time-limit" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_LIMIT_OPTIONS.map((min) => (
+                    <SelectItem key={min} value={String(min)}>
+                      {min} min
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="language">Interview language</Label>
+              <Select
+                value={watch("language")}
+                onValueChange={(v) => setValue("language", v as "en" | "id")}
+              >
+                <SelectTrigger id="language" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">The AI interviewer speaks this language with the candidate.</p>
+            </div>
+          </div>
+        </section>
 
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
+        <section aria-labelledby="assessment-skills-heading" className="space-y-4 border-t p-5 sm:p-6">
+          <div>
+            <h2 id="assessment-skills-heading" className="font-semibold">Skills to assess</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Add the skills this interview should cover and the level expected for each. Drag to reorder the interview flow.</p>
+          </div>
+
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              No skills added yet.
+            <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center">
+              <p className="text-sm font-medium">No skills added yet</p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Add at least one skill so the AI knows what to probe for.</p>
             </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {fields.map((field, index) => (
                     <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
                   ))}
@@ -173,29 +226,46 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setPickerOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Add from skill taxonomy
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}
+            >
+              <Plus className="h-4 w-4" />
+              Add custom skill
+            </Button>
+          </div>
+        </section>
+
+        <div className="space-y-4 border-t bg-muted/20 p-5 sm:px-6">
+          <ApiErrorList errors={serverErrors} />
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
+            <Button type="submit" className="w-full px-5 sm:w-auto" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitting ? "Saving changes..." : "Save changes"}
             </Button>
           </div>
         </div>
-
-        <Separator />
-        <ApiErrorList errors={serverErrors} />
-
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save changes
-          </Button>
-        </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ ...s, display_order: fields.length })} />
+      <SkillPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(s) => append({ ...s, display_order: fields.length })}
+      />
     </div>
   );
 }
