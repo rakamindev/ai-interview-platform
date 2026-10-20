@@ -45,38 +45,32 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
   if (!open) {
     return (
-      <div className="flex items-center gap-2">
-        {hasOverride ? (
-          <>
-            <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
-              <span className="text-muted-foreground text-xs">AI</span>
-              <span className="text-muted-foreground">→</span>
-              <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-700 font-medium">Override saved</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-              <Pencil className="h-3 w-3 mr-1" /> Edit override
-            </Button>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            Override rating ▼
-          </Button>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {hasOverride && (
+          <div className="flex items-center gap-1.5 text-sm">
+            <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
+            <span className="text-xs text-muted-foreground">AI</span>
+            <span className="text-muted-foreground" aria-hidden="true">→</span>
+            <LevelBadge level={existingOverride!.override_level} size="sm" />
+          </div>
         )}
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)} aria-expanded={false}>
+          <Pencil className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+          {hasOverride ? "Edit level" : "Adjust level"}
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+    <div className="w-full border rounded-lg p-4 space-y-3 bg-muted/30">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Override
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-sm">Your rating:</Label>
-        <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
+        <LevelRadio value={overrideLevel} onChange={setOverrideLevel} ariaLabel="Your rating for this skill" />
       </div>
 
       <div className="space-y-1.5">

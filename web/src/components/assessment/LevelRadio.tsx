@@ -9,13 +9,14 @@ interface LevelRadioProps {
   onChange: (level: number) => void;
   disabled?: boolean;
   className?: string;
+  ariaLabel?: string;
 }
 
-export default function LevelRadio({ value, onChange, disabled, className }: LevelRadioProps) {
+export default function LevelRadio({ value, onChange, disabled, className, ariaLabel = "Expected skill level" }: LevelRadioProps) {
   const groupId = useId();
   return (
     <RadioGroup
-      aria-label="Expected skill level"
+      aria-label={ariaLabel}
       value={String(value)}
       onValueChange={(v) => onChange(Number(v))}
       disabled={disabled}
