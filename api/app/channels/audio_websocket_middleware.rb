@@ -59,6 +59,8 @@ class AudioWebSocketMiddleware
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+    send_json(browser_ws, type: 'error', code: 'session_start_failed',
+                          message: 'The interview could not be started.', recoverable: false)
     browser_ws.close
   end
 
@@ -504,7 +506,8 @@ class AudioWebSocketMiddleware
     state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
-          next if state.session.reload.ended?
+          # Pending = start failed before the interview began; ending it would burn the invite link.
+          next unless state.session.reload.active?
 
           Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
           Sessions::EndHandler.new(state.session).call(reason: 'error')

@@ -1,11 +1,26 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
 /** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
+export function parseLevel(level: string | number | null | undefined): number {
+  if (level == null) return 1;
   if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
+  const n = parseInt(String(level).replace(/\D/g, ""), 10);
   return isNaN(n) ? 1 : n;
 }
+
+export function parseOptionalLevel(level: string | number | null | undefined): number | null {
+  if (level == null) return null;
+  if (typeof level === "number") return level >= 1 && level <= 5 ? level : null;
+  const n = parseInt(String(level).replace(/\D/g, ""), 10);
+  return isNaN(n) ? null : (n >= 1 && n <= 5 ? n : null);
+}
+
+export const STATUS_REASON_LABELS: Record<string, string> = {
+  not_covered: "Tidak sempat dibahas di sesi ini",
+  no_valid_evidence: "Tidak ada kutipan yang bisa diverifikasi",
+  invalid_model_output: "Sistem gagal membaca hasil penilaian",
+  missing_from_model_output: "Sistem gagal membaca hasil penilaian",
+};
 
 export const LEVEL_LABELS: Record<number, string> = {
   1: "L1",
@@ -59,7 +74,7 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   match: "Match",
   gap: "Gap",
   exceed: "Exceeds",
-  not_assessed: "Not assessed",
+  not_assessed: "Belum dinilai",
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {

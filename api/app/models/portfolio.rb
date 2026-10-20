@@ -12,7 +12,7 @@ class Portfolio < ApplicationRecord
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
-
+  scope :for_current_tenant, -> { joins(:session).where(sessions: { tenant_id: Current.tenant_id }) }
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'

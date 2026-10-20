@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_05_06_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
 
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
+  create_enum "assessment_status", ["assessed", "insufficient_evidence", "not_assessed"]
   create_enum "confidence_level", ["high", "medium", "low"]
   create_enum "coverage_state", ["not_yet", "initiated", "partial", "covered"]
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
@@ -58,13 +59,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
   end
 
@@ -89,6 +90,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "narrative_status", limit: 20, default: "generated"
+    t.string "source_fingerprint", limit: 64
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -112,12 +115,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
-    t.text "competency_summary", null: false
+    t.text "competency_summary"
+    t.enum "assessment_status", default: "assessed", null: false, enum_type: "assessment_status"
+    t.string "status_reason", limit: 50
+    t.integer "legacy_ai_level"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "assessment_status = 'not_assessed'::assessment_status AND ai_level IS NULL OR (assessment_status = ANY (ARRAY['assessed'::assessment_status, 'insufficient_evidence'::assessment_status])) AND ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_status_and_level"
+    t.check_constraint "assessment_status = 'not_assessed'::assessment_status OR (assessment_status = ANY (ARRAY['assessed'::assessment_status, 'insufficient_evidence'::assessment_status])) AND ai_confidence IS NOT NULL", name: "chk_portfolio_skills_confidence"
+    t.check_constraint "assessment_status = 'not_assessed'::assessment_status OR (assessment_status = ANY (ARRAY['assessed'::assessment_status, 'insufficient_evidence'::assessment_status])) AND competency_summary IS NOT NULL", name: "chk_portfolio_skills_summary"
+    t.check_constraint "status_reason IS NULL OR (status_reason::text = ANY (ARRAY['not_covered'::character varying, 'no_valid_evidence'::character varying, 'missing_from_model_output'::character varying, 'invalid_model_output'::character varying]::text[]))", name: "chk_portfolio_skills_status_reason"
   end
 
   create_table "portfolios", force: :cascade do |t|

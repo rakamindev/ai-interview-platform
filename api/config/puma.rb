@@ -7,7 +7,9 @@ max_threads_count = ENV.fetch('RAILS_MAX_THREADS', 16)
 min_threads_count = ENV.fetch('RAILS_MIN_THREADS') { max_threads_count }
 threads min_threads_count, max_threads_count
 
-workers ENV.fetch('WEB_CONCURRENCY', 2)
+# Development defaults to single mode: forking after the EventMachine thread has started
+# makes macOS kill every worker (objc fork-safety), and Puma respawns them in an endless loop.
+workers ENV.fetch('WEB_CONCURRENCY') { ENV.fetch('RAILS_ENV', 'development') == 'development' ? 0 : 2 }
 
 worker_timeout 3600 if ENV.fetch('RAILS_ENV', 'development') == 'development'
 

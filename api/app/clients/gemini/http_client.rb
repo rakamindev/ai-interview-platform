@@ -45,10 +45,11 @@ module Gemini
       { 'Content-Type' => 'application/json', 'x-goog-api-key' => @api_key }
     end
 
+    # All callers (coverage analyzer, portfolio, fit/gap narrative) expect a JSON object back.
     def request_body(prompt, temperature)
       {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: temperature }
+        generationConfig: { temperature: temperature, responseMimeType: 'application/json' }
       }.to_json
     end
 
@@ -80,9 +81,12 @@ module Gemini
       end
 
       data = JSON.parse(response.body)
-      text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
+      candidate = data.dig('candidates', 0) || {}
+      # Newer models may split the answer across several parts and add thought parts.
+      text = Array(candidate.dig('content', 'parts')).reject { |p| p['thought'] }.filter_map { |p| p['text'] }.join
 
-      raise ApiError.new("No content in Gemini response") unless text
+      raise ApiError.new("No content in Gemini response (finishReason=#{candidate['finishReason']})") if text.empty?
+      raise ApiError.new("Gemini response truncated (finishReason=MAX_TOKENS)") if candidate['finishReason'] == 'MAX_TOKENS'
 
       # Strip markdown code fences if present (e.g. ```json ... ```)
       cleaned = text.strip.sub(/\A```(?:json)?\s*/, '').sub(/\s*```\z/, '')

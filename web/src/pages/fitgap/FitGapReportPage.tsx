@@ -8,7 +8,7 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, AlertTriangle } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
@@ -151,6 +151,28 @@ export default function FitGapReportPage() {
       {/* Report ready */}
       {report && (
         <>
+          {/* AC-W6: Stale report warning banner */}
+          {report.stale && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/50 rounded-lg text-amber-900 dark:text-amber-200 gap-3">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <p className="text-sm">
+                  <span className="font-semibold">Laporan usang:</span> Laporan ini dibuat sebelum ada perubahan pada portfolio, nilai override, atau vacancy.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={regenerating || generating}
+                className="border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 shrink-0"
+              >
+                {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                Buat Ulang Laporan
+              </Button>
+            </div>
+          )}
+
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
@@ -169,9 +191,19 @@ export default function FitGapReportPage() {
               <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
+              {report.narrative_status === "skipped" ? (
+                <p className="text-sm text-muted-foreground italic">
+                  Narasi tidak dibuat karena belum ada skill yang dinilai.
+                </p>
+              ) : report.narrative_status === "failed" ? (
+                <p className="text-sm text-destructive italic">
+                  Narasi gagal dibuat.
+                </p>
+              ) : (
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.culture_narrative || report.overall_narrative || "Belum ada narasi."}
+                </p>
+              )}
             </CardContent>
           </Card>
 

@@ -6,7 +6,7 @@ import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, Pencil } from "lucide-react";
-import { parseLevel } from "@/utils/constants";
+import { parseOptionalLevel, LEVEL_LABELS } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface OverridePanelProps {
@@ -17,25 +17,58 @@ interface OverridePanelProps {
 
 export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
-  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+  const parsedAiLevel = parseOptionalLevel(skill.ai_level);
+  const isNotAssessed = skill.assessment_status === "not_assessed" || parsedAiLevel == null;
+
+  const [overrideLevel, setOverrideLevel] = useState<number>(
+    existingOverride?.override_level ?? parsedAiLevel ?? 3
+  );
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const hasOverride = !!existingOverride;
 
   const handleSave = async () => {
+    if (!notes.trim()) {
+      setErrorMessage("Catatan assessor wajib diisi (tidak boleh kosong).");
+      return;
+    }
+    if (notes.length > 2000) {
+      setErrorMessage("Catatan assessor maksimal 2.000 karakter.");
+      return;
+    }
+
     setSaving(true);
-    setSaveError(false);
+    setErrorMessage(null);
     try {
       const res = await portfoliosApi.getOverride(skill.id, {
         override_level: overrideLevel,
-        assessor_notes: notes,
+        assessor_notes: notes.trim(),
       });
       onSaved(res.data.override);
       setOpen(false);
-    } catch {
-      setSaveError(true);
+    } catch (err: unknown) {
+      let apiMsg = "Gagal menyimpan override. Silakan periksa koneksi dan coba lagi.";
+      if (err && typeof err === "object" && "response" in err) {
+        const resp = err.response;
+        if (resp && typeof resp === "object" && "data" in resp) {
+          const data = resp.data;
+          if (data && typeof data === "object") {
+            if ("errors" in data && Array.isArray(data.errors) && data.errors.length > 0) {
+              const first = data.errors[0];
+              if (first && typeof first === "object" && "message" in first && typeof first.message === "string") {
+                apiMsg = first.message;
+              }
+            } else if ("error" in data && typeof data.error === "string") {
+              apiMsg = data.error;
+            } else if ("message" in data && typeof data.message === "string") {
+              apiMsg = data.message;
+            }
+          }
+        }
+      }
+      setErrorMessage(apiMsg);
     } finally {
       setSaving(false);
     }
@@ -47,11 +80,12 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         {hasOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
-              <span className="text-muted-foreground text-xs">AI</span>
+              <span className="text-xs text-muted-foreground font-medium">
+                {parsedAiLevel != null ? `AI: ${LEVEL_LABELS[parsedAiLevel]}` : "AI: Belum dinilai"}
+              </span>
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
+              <span className="text-xs text-green-700 font-medium">Override ✓</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <Pencil className="h-3 w-3 mr-1" /> Edit override
@@ -59,7 +93,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
           </>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            Override rating ▼
+            {isNotAssessed ? "Beri nilai manual" : "Override rating ▼"}
           </Button>
         )}
       </div>
@@ -69,34 +103,47 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   return (
     <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Override
+        {isNotAssessed ? "Penilaian Manual Assessor" : "Override Nilai AI"}
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-sm">Your rating:</Label>
+        <Label className="text-xs">Level</Label>
         <LevelRadio value={overrideLevel} onChange={setOverrideLevel} />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor={`notes-${skill.id}`} className="text-sm">Notes (optional):</Label>
+        <Label htmlFor="notes" className="text-xs">
+          Catatan Assessor <span className="text-destructive">*</span>
+        </Label>
         <Textarea
-          id={`notes-${skill.id}`}
+          id="notes"
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => {
+            setNotes(e.target.value);
+            if (errorMessage) setErrorMessage(null);
+          }}
+          placeholder="Jelaskan alasan penetapan atau pengubahan level ini berdasarkan bukti..."
           rows={3}
-          placeholder="Add context for your override..."
+          maxLength={2000}
         />
+        <p className="text-[11px] text-muted-foreground">
+          {notes.length}/2000 karakter. Wajib diisi sebagai jejak keputusan.
+        </p>
       </div>
 
-      {saveError && (
-        <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
+      {errorMessage && (
+        <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded p-2">
+          {errorMessage}
+        </p>
       )}
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
         <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-          Save override
+          {saving && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+          Simpan
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={saving}>
+          Batal
         </Button>
       </div>
     </div>

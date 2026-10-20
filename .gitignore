@@ -17,3 +17,11 @@ web/.vite/
 
 # OS
 .DS_Store
+.memory/local.md
+.memory/inbox.md
+.memory/.stats.tsv
+.memory/.approvals
+.claude/*
+.codex/*
+.agents/*
+

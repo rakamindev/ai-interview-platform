@@ -9,8 +9,38 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Clock, AlertTriangle } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+
+function getErrorMessage(code?: string): string {
+  switch (code) {
+    case "model_timeout":
+      return "Waktu permintaan ke model AI habis (timeout). Silakan coba lagi.";
+    case "model_unavailable":
+      return "Layanan model AI sedang tidak tersedia atau kelebihan beban (rate limit / 5xx). Coba lagi beberapa saat lagi.";
+    case "model_not_found":
+      return "Model AI yang dikonfigurasi tidak ditemukan atau tidak tersedia.";
+    case "invalid_model_output":
+      return "Format respons dari model AI tidak valid dan tidak dapat diproses.";
+    case "model_output_truncated":
+      return "Respons model AI terpotong karena melebihi batas token maksimum.";
+    default:
+      return "Pembuatan portfolio mengalami kendala. Silakan coba lagi.";
+  }
+}
+
+function formatSessionEndReason(reason?: string | null): string {
+  switch (reason) {
+    case "manual_candidate":
+      return "Sesi diakhiri lebih awal oleh kandidat";
+    case "time_limit":
+      return "Batas waktu wawancara tercapai";
+    case "ai_completed":
+      return "Wawancara diselesaikan oleh AI interviewer";
+    default:
+      return "Sesi selesai";
+  }
+}
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -23,10 +53,10 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
-
+  const [retrying, setRetrying] = useState(false);
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
+    const data = res.data as { status?: string; portfolio?: Portfolio; error?: string };
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
     } else if (data.portfolio) {
@@ -34,7 +64,7 @@ export default function PortfolioPage() {
       setGenerating(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
+      (data.portfolio.overrides || []).forEach((o: AssessorOverride) => {
         overrideMap[o.portfolio_skill_id] = o;
       });
       setOverrides(overrideMap);
@@ -167,22 +197,81 @@ export default function PortfolioPage() {
       )}
 
       {/* Failed state */}
+      {/* AC-W4: Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+        <div className="border border-destructive/40 bg-destructive/5 rounded-lg p-6 text-center space-y-3">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-destructive">Gagal membuat portfolio</p>
+            <p className="text-sm text-muted-foreground">
+              {getErrorMessage(portfolio.generation_error)}
+            </p>
+          </div>
           <Button
             variant="outline"
             size="sm"
+            disabled={retrying}
             onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
+              setRetrying(true);
+              try {
+                await sessionsApi.regeneratePortfolio(Number(sessionId));
+                setGenerating(true);
+              } catch (err: unknown) {
+                if (
+                  typeof err === "object" &&
+                  err !== null &&
+                  "response" in err &&
+                  typeof err.response === "object" &&
+                  err.response !== null &&
+                  "status" in err.response &&
+                  err.response.status === 409
+                ) {
+                  setGenerating(true);
+                }
+              }
             }}
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+            {retrying ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Coba Lagi
           </Button>
         </div>
       )}
 
+      {/* AC-W4: Regeneration failed but previous complete portfolio preserved */}
+      {!generating && portfolio?.generation_status === "complete" && portfolio.generation_error && (
+        <div className="flex items-start gap-2.5 p-3.5 border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/50 rounded-lg text-amber-900 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold">Regenerasi terakhir mengalami kendala</p>
+            <p className="text-xs mt-0.5">
+              {getErrorMessage(portfolio.generation_error)} Menampilkan hasil evaluasi sebelumnya yang tersimpan.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* AC-W3: Session duration and context banner */}
+      {!generating && portfolio?.generation_status === "complete" && (portfolio.duration_seconds !== undefined || portfolio.time_limit_min !== undefined) && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 border rounded-lg bg-muted/40 text-sm gap-2">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="h-4 w-4 shrink-0 text-foreground" />
+            <span>
+              {formatSessionEndReason(portfolio.end_reason)} (
+              {portfolio.duration_seconds ? Math.max(1, Math.ceil(portfolio.duration_seconds / 60)) : 1} menit
+              {portfolio.time_limit_min ? ` dari batas ${portfolio.time_limit_min} menit` : ""})
+            </span>
+          </div>
+          {portfolio.skills && (
+            <div className="text-xs font-medium bg-background px-2.5 py-1 rounded border text-muted-foreground">
+              {portfolio.skills.filter((s) => !s.is_discovered && s.assessment_status !== "not_assessed").length} dari{" "}
+              {portfolio.skills.filter((s) => !s.is_discovered).length} skill dinilai
+            </div>
+          )}
+        </div>
+      )}
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>

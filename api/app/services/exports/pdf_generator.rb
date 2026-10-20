@@ -81,12 +81,20 @@ module Exports
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        if skill.assessment_status == 'not_assessed' && override.nil?
+          reason_text = skill.status_reason.present? ? " (#{skill.status_reason.humanize})" : ""
+          pdf.text "Status: Belum dinilai#{reason_text}"
+        else
+          level_text = "Level: #{LEVEL_LABELS[effective_level] || '—'}"
+          if override
+            ai_text = skill.ai_level ? LEVEL_LABELS[skill.ai_level] : 'Belum dinilai'
+            level_text += " (AI: #{ai_text} → Override: #{LEVEL_LABELS[override.override_level]})"
+          end
+          conf = CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence
+          level_text += "  |  Confidence: #{conf}" if conf.present?
+          pdf.text level_text
+        end
       end
-
       pdf.move_down 4
 
       if skill.competency_summary.present?
@@ -123,9 +131,10 @@ module Exports
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
+        req_lvl = c['required_level'] || c['expected_level']
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
+          req_lvl ? "L#{req_lvl}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
