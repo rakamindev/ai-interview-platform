@@ -146,7 +146,7 @@ export default function LiveMonitorPage() {
 
   if (loadError) {
     return (
-      <div role="alert" className="mx-auto max-w-3xl space-y-3 rounded-xl border bg-white p-6">
+      <div role="alert" className="mx-auto max-w-4xl space-y-3 rounded-xl border bg-card p-6">
         <div>
           <h1 className="font-semibold">Live interview could not be loaded</h1>
           <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
@@ -161,52 +161,54 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-7">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} aria-label="Back to candidates" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-2xl font-semibold tracking-tight">Live interview</h1>
+    <div className="mx-auto max-w-5xl space-y-8">
+      <div className="space-y-5 border-b pb-6">
+        <Link
+          to={`/assessments/${id}/invite`}
+          className="inline-flex min-h-11 items-center gap-2 rounded-md pr-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Candidates
+        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">Live interview</h1>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {assessmentName || "Follow the interview as it happens and see skill coverage in real time."}
+            </p>
           </div>
-          {assessmentName && (
-            <p className="pl-6 text-sm text-muted-foreground">{assessmentName}</p>
-          )}
-        </div>
 
-        <div className="flex items-center gap-3">
-          {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span role="status" className={cn(
-            "flex items-center gap-1 text-sm",
-            isConnected ? "text-foreground" : "text-muted-foreground"
-          )}>
-            <Radio className="h-3 w-3" />
-            {isConnected ? "Connected" : "Reconnecting"}
-          </span>
+          <div className="flex items-center gap-4 sm:shrink-0">
+            {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
+            <span role="status" className={cn(
+              "flex items-center gap-1.5 text-sm",
+              isConnected ? "text-foreground" : "text-muted-foreground"
+            )}>
+              <Radio aria-hidden="true" className="h-3.5 w-3.5" />
+              {isConnected ? "Connected" : "Reconnecting"}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex flex-col gap-3 rounded-lg border bg-white px-4 py-3 text-sm sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 rounded-lg border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>
             {sessionEndReason && (
               <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
+                ({sessionEndReason.replace(/_/g, " ")})
               </span>
             )}
           </div>
           <Button
-            size="sm"
             variant="outline"
-            className="sm:ml-auto"
+            className="min-h-11 sm:ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            View results
           </Button>
         </div>
       )}
@@ -296,7 +298,13 @@ export default function LiveMonitorPage() {
           ) : (
             <div className="space-y-2">
               {transcript.map((turn) => (
-                <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
+                <TranscriptBubble
+                  key={turn.id}
+                  aiLabel="AI interviewer"
+                  candidateLabel="Candidate"
+                  speaker={turn.speaker}
+                  text={turn.text}
+                />
               ))}
             </div>
           )}
@@ -334,9 +342,10 @@ export default function LiveMonitorPage() {
         ) : (
           <Button
             variant="outline"
+            className="min-h-11"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            View results
           </Button>
         )}
       </div>
