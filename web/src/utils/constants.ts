@@ -1,11 +1,33 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+/**
+ * Reads a level from the API: 3, "3" and "L3" give 3. Anything that isn't a whole level from 1 to 5
+ * gives null, which means "not assessed". Never guess a level: an unreadable value used to become L1
+ * (Step 3, P0-1), and a missing one crashed the portfolio page (P2-11).
+ */
+export function parseLevel(level: unknown): number | null {
+  if (typeof level === "number") return Number.isInteger(level) && level >= 1 && level <= 5 ? level : null;
+  if (typeof level !== "string") return null;
+  const match = /^\s*L?([1-5])\s*$/i.exec(level);
+  return match ? Number(match[1]) : null;
 }
+
+// Plain-language reasons a skill has no level (AC-22, AC-25). Wording matches the API's PDF export.
+export const NOT_ASSESSED_REASON_LABELS: Record<string, string> = {
+  not_reached: "Not reached before the interview ended",
+  insufficient_evidence: "Not enough evidence to rate",
+  omitted_by_model: "Missing from the AI's output",
+  not_in_assessment: "Not part of this interview",
+};
+
+// How a session ended, for the portfolio summary. "all_covered" is left out on purpose: anyone with
+// the invite link can send it (Step 3, P1-10), so it's never repeated as a fact.
+export const END_REASON_LABELS: Record<string, string> = {
+  manual_candidate: "ended by the candidate",
+  manual_assessor: "ended by the assessor",
+  time_ceiling: "time limit reached",
+  error: "ended by a connection error",
+};
 
 export const LEVEL_LABELS: Record<number, string> = {
   1: "L1",

@@ -62,8 +62,10 @@ class AudioWebSocketMiddleware
     browser_ws.close
   end
 
+  # Faye hands over binary frames (the microphone) as BINARY strings and text frames (control JSON) as UTF-8.
+  # Telling them apart by the first byte dropped every audio frame that happened to start with "{" (P2-20).
   def handle_browser_frame(event, browser_ws, state, session_id)
-    if event.data.is_a?(String) && !event.data.start_with?('{')
+    if event.data.is_a?(String) && event.data.encoding == Encoding::BINARY
       forward_audio_frame(event.data, state, session_id)
     else
       handle_browser_message(event.data, browser_ws, state)
@@ -258,8 +260,7 @@ class AudioWebSocketMiddleware
             next if state.ending_scheduled
             Rails.logger.warn("[AudioWS] on_model_turn_complete delayed — finalizing via closing-phrase fallback (session=#{session.id})")
             state.ending_scheduled = true
-            send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
-            poll_for_session_end(browser_ws, state, session, attempts: 0)
+            ask_page_to_finish(browser_ws, state, session)
           end
         end
       end
@@ -419,6 +420,9 @@ class AudioWebSocketMiddleware
     message = JSON.parse(data)
 
     case message['type']
+    when 'proctoring'
+      # The page reports the camera or screen share stopping and coming back; the model keeps only known events.
+      state.session&.record_proctoring_event!(message['event'].to_s)
     when 'debug_force_reconnect'
       if Rails.env.development?
         Rails.logger.warn("[AudioWS] DEBUG: forcing Gemini disconnect for session #{state.session&.id}")
@@ -562,8 +566,7 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] Wrap-up turn complete — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
-    poll_for_session_end(browser_ws, state, session, attempts: 0)
+    ask_page_to_finish(browser_ws, state, session)
   end
 
   # Wait for candidate response before injecting wrap-up so silence pump doesn't fire premature close;
@@ -589,8 +592,26 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] AI closed naturally — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
-    poll_for_session_end(browser_ws, state, session, attempts: 0)
+    ask_page_to_finish(browser_ws, state, session)
+  end
+
+  # Tells the page to play out the closing words and then end the interview (audio_complete), and waits for it.
+  # The request is recorded first, so audio_complete can tell a session the server is finishing from a link holder
+  # ending one (P1-10). If the record fails, the page is still told: the poll then ends the session itself.
+  def ask_page_to_finish(browser_ws, state, session)
+    Thread.new do
+      begin
+        ActiveRecord::Base.connection_pool.with_connection do
+          session.update_columns(ending_requested_at: Time.current)
+        end
+      rescue StandardError => e
+        Rails.logger.error("[AudioWS] Could not record the end request for session #{session.id}: #{e.class}")
+      end
+      EM.schedule do
+        send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+        poll_for_session_end(browser_ws, state, session, attempts: 0)
+      end
+    end
   end
 
   # Polls until the session is ended (via audio_complete API call) or max_attempts is reached.

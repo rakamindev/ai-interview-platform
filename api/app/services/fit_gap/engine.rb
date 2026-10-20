@@ -27,7 +27,9 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        generated_at:      Time.current,
+        generation_status: 'complete',
+        requested_at:      nil
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -42,27 +44,30 @@ module FitGap
 
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
+        candidate_level = portfolio_skill&.dig(:effective_level)
+        expected_level  = vacancy_skill.expected_level
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        # No level means the interview didn't measure the skill: an unknown, not a gap (AC-13).
+        if candidate_level
+          delta  = candidate_level - expected_level
+          result = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
+          delta  = nil
+          result = 'not_assessed'
         end
 
         {
-          skill_label:     label,
-          skill_id:        vacancy_skill.skill_id,
-          candidate_level: candidate_level,
-          expected_level:  expected_level,
-          result:          result,
-          delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          skill_label:         label,
+          skill_id:            vacancy_skill.skill_id,
+          candidate_level:     candidate_level,
+          expected_level:      expected_level,
+          # Same value as expected_level. The web reads required_level until it moves over (AC-15, P1-2).
+          required_level:      expected_level,
+          result:              result,
+          delta:               delta,
+          confidence:          portfolio_skill&.dig(:confidence),
+          is_override:         portfolio_skill&.dig(:overridden) || false,
+          not_assessed_reason: candidate_level ? nil : (portfolio_skill&.dig(:not_assessed_reason) || 'not_in_assessment')
         }
       end
 
@@ -80,7 +85,8 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          overridden:      override.present?,
+          not_assessed_reason: skill.not_assessed_reason
         }
       end
     end
@@ -103,7 +109,8 @@ module FitGap
         data = response.is_a?(Hash) ? response : JSON.parse(response)
         { culture: data['culture_narrative'], overall: data['overall_narrative'] }
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
+        # The class only: a parser message quotes the model's reply (AC-10).
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
       end
     end
@@ -126,6 +133,10 @@ module FitGap
         - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (+#{c[:delta]})" }.join(', ')}
         - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
 
+        The not-assessed skills were not measured: the interview didn't reach them, or there wasn't enough evidence
+        to rate them. They are unknowns, not weaknesses. Don't count them against the candidate; suggest probing
+        them in the next interview instead.
+
         Write two short narrative paragraphs:
         1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
         2. overall_narrative: 2-3 sentence overall hiring recommendation summary.
@@ -139,11 +150,13 @@ module FitGap
     end
 
     def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      gaps         = comparisons.count { |c| c[:result] == 'gap' }
+      matches      = comparisons.count { |c| c[:result] == 'match' }
+      exceeds      = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, #{gaps} gaps, and #{not_assessed} not assessed " \
+        'against role requirements.'
     end
   end
 end

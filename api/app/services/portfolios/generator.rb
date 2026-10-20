@@ -5,8 +5,17 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
-    def initialize(session:, gemini_client: nil)
+    # The model's answer isn't a portfolio. The message is fixed on purpose: the parser's own message quotes
+    # the model's text, and Sidekiq logs and stores the message of every failed job (AC-10).
+    class InvalidResponse < StandardError
+      def initialize(msg = "The model's answer couldn't be read as a portfolio") = super
+    end
+
+    # mark_failed: false leaves a failed attempt "generating", for a caller that will try again. The worker passes it,
+    # because Sidekiq retries the job and only its retries-exhausted hook knows the portfolio has really failed (P2-26).
+    def initialize(session:, gemini_client: nil, mark_failed: true)
       @session = session
+      @mark_failed = mark_failed
       @gemini_client = gemini_client || Gemini::HttpClient.new(
         model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
         timeout: 180  # up to 3 minutes for large transcripts
@@ -22,21 +31,100 @@ module Portfolios
 
       portfolio.update!(generation_status: 'generating')
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      # The model is called before the transaction opens, so a slow call never holds the database.
+      response = @gemini_client.generate_content(build_prompt, temperature: 0.2)
+      rows     = resolver.call(parse(response))
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      # All or nothing: a failure partway leaves the previous skills, and their overrides, as they were (AC-8).
+      Portfolio.transaction do
+        write_skills(portfolio, rows)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current,
+                          generation_error: nil, generation_error_category: nil)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
+    rescue JSON::ParserError
+      fail_with(portfolio, 'model_invalid_response', JSON::ParserError)
+      raise InvalidResponse
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      fail_with(portfolio, error_category(e), e.class)
       raise
     end
 
     private
+
+    def parse(response)
+      data = response.is_a?(Hash) ? response : JSON.parse(response.to_s)
+      raise InvalidResponse unless data.is_a?(Hash) && data['configured_skills'].is_a?(Array)
+
+      data
+    end
+
+    def resolver
+      SkillResolver.new(
+        configured_skills: @session.assessment.assessment_skills.order(:display_order).to_a,
+        coverage_maps:     @session.coverage_maps.to_a,
+        candidate_texts:   @session.transcript_turns.where(speaker: 'candidate').pluck(:text)
+      )
+    end
+
+    # Updates rows in place by skill identity, so an assessor's override stays on its skill (AC-9).
+    def write_skills(portfolio, rows)
+      existing = portfolio.portfolio_skills.includes(:assessor_override).to_a
+      kept     = []
+
+      rows.each do |attributes|
+        # PortfolioSkill.new rather than the association's build: if the transaction fails, an unsaved row
+        # left in the association would be saved along with the portfolio's "failed" status.
+        record = existing.find { |skill| !kept.include?(skill) && same_skill?(skill, attributes) } ||
+                 PortfolioSkill.new(portfolio_id: portfolio.id)
+        record.assign_attributes(attributes)
+        record.save!
+        kept << record
+      end
+
+      (existing - kept).each do |dropped|
+        # The model no longer mentions this skill. An assessor's rating of it is kept, not silently deleted.
+        if dropped.assessor_override
+          Rails.logger.warn("[N10] Kept skill #{dropped.id} for session #{@session.id}: dropped by the model, rated by an assessor")
+        else
+          dropped.destroy!
+        end
+      end
+
+      portfolio.portfolio_skills.reset
+    end
+
+    def same_skill?(skill, attributes)
+      return false unless skill.is_discovered == attributes[:is_discovered]
+      return skill.skill_id == attributes[:skill_id] if skill.skill_id.present? && attributes[:skill_id].present?
+
+      skill.skill_label.casecmp?(attributes[:skill_label])
+    end
+
+    def fail_with(portfolio, category, error_class)
+      # Only the category and the class are logged: the message can quote the model's answer.
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{category} (#{error_class})")
+      return unless portfolio&.persisted?
+
+      # The category is kept either way: the retries-exhausted hook builds its message from it.
+      if @mark_failed
+        portfolio.reload.update!(generation_status: 'failed', generation_error_category: category,
+                                 generation_error: Portfolio.generation_error_message(category))
+      else
+        portfolio.reload.update!(generation_error_category: category)
+      end
+    end
+
+    def error_category(error)
+      case error
+      when Gemini::HttpClient::TimeoutError then 'model_timeout'
+      when Gemini::HttpClient::ApiError     then 'model_unavailable'
+      when InvalidResponse                  then 'model_invalid_response'
+      else 'internal_error'
+      end
+    end
 
     def build_prompt
       assessment       = @session.assessment
@@ -78,19 +166,23 @@ module Portfolios
         TASK
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        For EACH skill in the coverage map (both configured and discovered):
+        For EACH skill in the coverage map (both configured and discovered). Quote evidence word for word:
+        a quote that isn't in the candidate's turns is discarded.
 
         1. FIND THE EVIDENCE
            Read all transcript turns where this skill was discussed.
            Identify the 2-3 most revealing quotes from the CANDIDATE (not the AI).
            A quote is revealing if it shows HOW they think, not just WHAT they know.
 
-        2. ASSIGN A LEVEL
+        2. ASSIGN A LEVEL, OR NONE
            Compare the candidate's actual behavior to the L1-L5 anchors.
            Assign the highest level where you see CONSISTENT evidence, not just one strong moment.
            If evidence is mixed (mostly L2 with one L3 moment), assign L2.
+           If the skill was never discussed (state not_yet), or the transcript has too little to place it on an
+           anchor, answer "level": null with "confidence": null and empty evidence. Never guess a level: a low
+           level is a claim about the candidate, and no level means the interview didn't measure it.
 
-        3. WRITE THE COMPETENCY SUMMARY
+        3. WRITE THE COMPETENCY SUMMARY (null when there is no level)
            2-3 sentences. Focus on patterns, not individual answers.
            What does this person reliably do at this skill? What's the ceiling? What's missing?
 
@@ -109,6 +201,14 @@ module Portfolios
               "confidence": "high",
               "evidence": ["quote 1", "quote 2", "quote 3"],
               "competency_summary": "2-3 sentence summary"
+            },
+            {
+              "skill_id": "sk-soft-001",
+              "skill_label": "Communication",
+              "level": null,
+              "confidence": null,
+              "evidence": [],
+              "competency_summary": null
             }
           ],
           "discovered_skills": [
@@ -145,37 +245,6 @@ module Portfolios
         probe_count: map.probe_count,
         is_discovered: map.is_discovered
       }
-    end
-
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
-
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
     end
   end
 end

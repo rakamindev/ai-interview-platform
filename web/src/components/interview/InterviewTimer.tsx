@@ -13,7 +13,14 @@ function formatTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
+/** Red in the last minute, amber in the last five, otherwise the normal text colour. */
+function timerColor(remaining: number) {
+  if (remaining <= 60) return "text-destructive";
+  if (remaining <= 300) return "text-amber-500";
+  return "text-foreground";
+}
+
+export default function InterviewTimer({ totalSeconds, onExpired, running }: Readonly<InterviewTimerProps>) {
   const [remaining, setRemaining] = useState(totalSeconds);
 
   useEffect(() => {
@@ -27,16 +34,8 @@ export default function InterviewTimer({ totalSeconds, onExpired, running }: Int
     return () => clearTimeout(id);
   }, [running, remaining, onExpired]);
 
-  const isWarning = remaining <= 300; // ≤5 min
-  const isUrgent = remaining <= 60;
-
   return (
-    <span
-      className={cn(
-        "font-mono text-sm font-medium tabular-nums",
-        isUrgent ? "text-destructive" : isWarning ? "text-amber-500" : "text-foreground"
-      )}
-    >
+    <span className={cn("font-mono text-sm font-medium tabular-nums", timerColor(remaining))}>
       ⏱ {formatTime(remaining)}
     </span>
   );

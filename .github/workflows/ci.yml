@@ -1,0 +1,272 @@
+name: CI
+
+# Runs both test suites on every push and pull request, so a change can't land
+# without them. Nothing here calls Gemini: model responses are stubbed in the
+# API specs, and the web tests fake the network.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (RSpec)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          # A database that lives only for this job and listens only on the runner: no password at all.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      REDIS_URL: redis://localhost:6379/1
+      # Throwaway values for the test run only; no real secret is needed or used.
+      SECRET_KEY_BASE: ci-only-secret-key-base-not-used-anywhere-else-0000000000000000
+      GEMINI_API_KEY: ci-dummy-key-never-sent
+      ALLOWED_ORIGINS: http://localhost:5173
+      APP_BASE_URL: http://localhost:5173
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libpq
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpq-dev
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+          working-directory: api
+
+      # CI=true turns on eager loading in config/environments/test.rb, as in
+      # production; this check fails fast if a file and its constant don't match.
+      - name: Check autoloading
+        run: bundle exec rails zeitwerk:check
+
+      - name: Set up the test database
+        run: bundle exec rails db:create db:schema:load
+
+      # With line coverage (SimpleCov). The floor is a point under the coverage measured when it was added: the
+      # suite fails if coverage drops, without inventing a target.
+      - name: Run specs, with coverage
+        env:
+          COVERAGE: "1"
+          COVERAGE_FLOOR: "76"
+        run: bundle exec rspec --format progress
+
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: api/coverage/
+          if-no-files-found: ignore
+
+  web:
+    name: Web (type check + Vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # The API contract test needs a running API and is skipped here
+      # (API_INTEGRATION_URL is not set).
+      - name: Run tests, with coverage
+        env:
+          COVERAGE_FLOOR: "67"
+        run: npm run test:coverage
+
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage
+          path: web/coverage/
+          if-no-files-found: ignore
+
+  security:
+    name: Security scans (Brakeman, bundle-audit, npm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+          working-directory: api
+
+      # Fails on any warning in the code. The one known warning (Rails 7.0 end of life) is in
+      # api/config/brakeman.ignore, with the reason.
+      - name: Brakeman
+        working-directory: api
+        run: bundle exec brakeman --no-pager --exit-on-warn
+
+      # Fails on any gem with a known advisory. The advisories that need a major upgrade are listed, each with its
+      # reason, in api/.bundler-audit.yml.
+      - name: bundle-audit
+        working-directory: api
+        run: bundle exec bundle-audit check --update
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # What ships to users: production dependencies, failing on high or critical.
+      - name: npm audit (production dependencies)
+        working-directory: web
+        run: npm audit --omit=dev --audit-level=high
+
+      # Build and test tooling: reported, not blocking.
+      - name: npm audit (all dependencies, report only)
+        working-directory: web
+        continue-on-error: true
+        run: npm audit
+
+  e2e:
+    name: E2E (Playwright, 1280px and 375px)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+
+    # The real API in development mode, with no Sidekiq: nothing the tests do can reach a model. The seeded
+    # portfolios and fit/gap reports are already generated (rails e2e:seed).
+    env:
+      RAILS_ENV: development
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      REDIS_URL: redis://localhost:6379/1
+      SECRET_KEY_BASE: ci-only-secret-key-base-not-used-anywhere-else-0000000000000000
+      GEMINI_API_KEY: ci-dummy-key-never-sent
+      GEMINI_LIVE_MODEL: none
+      GEMINI_FLASH_MODEL: none
+      GEMINI_PRO_MODEL: none
+      ALLOWED_ORIGINS: http://localhost:5173
+      APP_BASE_URL: http://localhost:5173
+      VITE_API_BASE_URL: http://localhost:3001/api/v1
+      VITE_WS_BASE_URL: ws://localhost:3001
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libpq
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpq-dev
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+          working-directory: api
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # A password made for this job only, masked in the log, shared by the seed and the tests.
+      - name: Make the admin password
+        run: |
+          password=$(openssl rand -hex 24)
+          echo "::add-mask::$password"
+          echo "DEV_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "E2E_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Set up the database and the synthetic data
+        working-directory: api
+        run: bundle exec rails db:create db:schema:load db:seed e2e:seed
+
+      # The built app (vite build + preview), as users get it, rather than the dev server.
+      - name: Start the API and the web app
+        run: |
+          (cd api && bundle exec rails server -p 3001 -b 127.0.0.1 > ../api.log 2>&1 &)
+          (cd web && npm ci && npx vite build && (npx vite preview --port 5173 --strictPort > ../web.log 2>&1 &))
+          curl --retry 30 --retry-delay 2 --retry-all-errors -sf http://localhost:3001/health > /dev/null
+          curl --retry 30 --retry-delay 2 --retry-all-errors -sf http://localhost:5173 > /dev/null
+
+      - name: Install Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the browser tests, and save the report's screenshots
+        working-directory: web
+        run: npm run e2e:screenshots
+
+      - name: Upload the Playwright report, screenshots and server logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e
+          path: |
+            web/e2e/.report/
+            web/e2e/.results/
+            assessment/report/screenshots/
+            api.log
+            web.log
+          if-no-files-found: ignore

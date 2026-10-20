@@ -4,7 +4,7 @@
 
 - **Node.js** (v18+ recommended)
 - **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
+- A running backend API server (default: `http://localhost:3001`)
 
 ## Quick Start
 

@@ -21,16 +21,16 @@ export function getBrowserInfo() {
     let version = "";
     if (/chrome|crios|crmo/i.test(userAgent)) {
         browser = "Chrome";
-        version = userAgent.match(/(chrome|crios|crmo)\/([\d.]+)/i)?.[2] || "";
+        version = /(chrome|crios|crmo)\/([\d.]+)/i.exec(userAgent)?.[2] ?? "";
     } else if (/firefox|fxios/i.test(userAgent)) {
         browser = "Firefox";
-        version = userAgent.match(/(firefox|fxios)\/([\d.]+)/i)?.[2] || "";
+        version = /(firefox|fxios)\/([\d.]+)/i.exec(userAgent)?.[2] ?? "";
     } else if (/safari/i.test(userAgent)) {
         browser = "Safari";
-        version = userAgent.match(/version\/([\d.]+)/i)?.[1] || "";
+        version = /version\/([\d.]+)/i.exec(userAgent)?.[1] ?? "";
     } else if (/edg/i.test(userAgent)) {
         browser = "Edge";
-        version = userAgent.match(/edg\/([\d.]+)/i)?.[1] || "";
+        version = /edg\/([\d.]+)/i.exec(userAgent)?.[1] ?? "";
     }
     return { browser, version };
 }

@@ -47,6 +47,7 @@ export default function TranscriptPage() {
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
             className="text-muted-foreground hover:text-foreground"
+            aria-label="Back to the portfolio"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>

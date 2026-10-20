@@ -6,7 +6,7 @@ ruby '3.3.2'
 
 gem 'pg', '~> 1.3'
 gem 'puma', '~> 5.6'
-gem 'rails', '~> 7.0.8'
+gem 'rails', '~> 8.1.0'
 
 # Auth
 gem 'bcrypt', '~> 3.1.7'
@@ -48,7 +48,11 @@ group :development, :test do
   gem 'factory_bot_rails'
   gem 'faker'
   gem 'pry-rails'
-  gem 'rspec-rails', '~> 6.0'
+  gem 'rspec-rails', '~> 8.0'
+
+  # Security scans, run in CI (job security): code patterns, and gems with known advisories.
+  gem 'brakeman', '8.1.0', require: false
+  gem 'bundler-audit', '0.9.3', require: false
 end
 
 group :development do
@@ -59,5 +63,7 @@ end
 
 group :test do
   gem 'database_cleaner'
+  # Line coverage report, started by spec/spec_helper.rb when COVERAGE=1.
+  gem 'simplecov', '1.3.2', require: false
   gem 'timecop'
 end

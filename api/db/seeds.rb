@@ -77,6 +77,30 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Dev admin user ───────────────────────────────────────────────────────────
+#
+# Lets you sign in at /login. Only admins can log in via POST /api/v1/auth/login. The password comes from
+# DEV_ADMIN_PASSWORD (the root .env under Docker) and is never printed; no password is kept in the repo.
+
+DEV_ADMIN_EMAIL    = "admin@example.com"
+dev_admin_password = ENV["DEV_ADMIN_PASSWORD"].to_s
+
+if dev_admin_password.empty?
+  puts "  DEV_ADMIN_PASSWORD is not set: no dev admin created (see .env.example)"
+else
+  admin = User.find_or_initialize_by(email: DEV_ADMIN_EMAIL)
+  if admin.new_record?
+    admin.assign_attributes(password: dev_admin_password, role: "admin")
+    admin.save!
+    puts "  Created admin user: #{DEV_ADMIN_EMAIL}"
+  elsif admin.authenticate(dev_admin_password)
+    puts "  Admin user already exists: #{DEV_ADMIN_EMAIL} (skipped)"
+  else
+    admin.update!(password: dev_admin_password)
+    puts "  Admin user exists: #{DEV_ADMIN_EMAIL} (password reset to DEV_ADMIN_PASSWORD)"
+  end
+end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [
@@ -381,6 +405,8 @@ puts ""
 puts "Your test organization:"
 puts "  id     : #{org['id']}"
 puts "  scheme : #{org['scheme']}"
+puts ""
+puts "Sign in to the web app with: #{DEV_ADMIN_EMAIL} and DEV_ADMIN_PASSWORD from .env"
 puts ""
 puts "To mint a JWT for testing, open the Rails console:"
 puts ""

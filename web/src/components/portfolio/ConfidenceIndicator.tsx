@@ -14,7 +14,7 @@ export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorP
 
   if (label === "HIGH") {
     return (
-      <span className="flex items-center gap-1 text-xs text-green-600">
+      <span className="flex items-center gap-1 text-xs text-green-700">
         <span className="h-2 w-2 rounded-full bg-green-500" />
         Confidence: HIGH
       </span>

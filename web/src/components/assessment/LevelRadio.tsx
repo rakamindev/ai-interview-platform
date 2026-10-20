@@ -4,7 +4,7 @@ import { LEVEL_LABELS } from "@/utils/constants";
 import { cn } from "@/lib/utils";
 
 interface LevelRadioProps {
-  value: number;
+  value: number | null;  // null: nothing selected yet
   onChange: (level: number) => void;
   disabled?: boolean;
   className?: string;
@@ -13,7 +13,7 @@ interface LevelRadioProps {
 export default function LevelRadio({ value, onChange, disabled, className }: LevelRadioProps) {
   return (
     <RadioGroup
-      value={String(value)}
+      value={value === null ? "" : String(value)}
       onValueChange={(v) => onChange(Number(v))}
       disabled={disabled}
       className={cn("flex items-center gap-3", className)}

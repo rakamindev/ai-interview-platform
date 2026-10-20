@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Case Study Report: Honest Results</title>
+<!--
+  Source of the submission PDF (brief, Step 6). Build with assessment/report/build.sh.
+  Sections marked .todo are filled in when Step 5 lands; the DRAFT banner goes when none are left.
+-->
+<style>
+  :root {
+    --ink: #1a1d21;
+    --muted: #5b6370;
+    --line: #d9dde3;
+    --soft: #f4f6f8;
+    --accent: #1f5fbf;
+    --p0: #b42318;
+    --p1: #b54708;
+    --p2: #4a5565;
+    --ok: #157f3b;
+    --todo: #8a5a00;
+    --todo-bg: #fff8e6;
+  }
+  @page {
+    size: A4;
+    margin: 18mm 17mm 20mm;
+    @bottom-left { content: "Honest results · Fullstack Product Engineer case study"; font: 8pt "Segoe UI", sans-serif; color: #8a919c; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 8pt "Segoe UI", sans-serif; color: #8a919c; }
+  }
+  @page :first { @bottom-left { content: none; } @bottom-right { content: none; } }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #fff; color: var(--ink); font: 9.6pt/1.5 "Segoe UI", system-ui, sans-serif; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; }
+  h2 { font-size: 17pt; margin: 0 0 4mm; letter-spacing: -0.01em; }
+  h2 .step { display: block; font-size: 8.5pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 1.5mm; }
+  h3 { font-size: 11pt; margin: 6mm 0 2mm; }
+  p { margin: 0 0 2.6mm; }
+  ul, ol { margin: 0 0 2.6mm; padding-left: 5mm; }
+  li { margin-bottom: 1mm; }
+  a { color: var(--accent); text-decoration: none; }
+  code { font: 8.6pt Consolas, "Cascadia Mono", monospace; background: var(--soft); padding: 0 1mm; border-radius: 1mm; }
+  strong { font-weight: 650; }
+  section { break-before: page; }
+  .lead { font-size: 11pt; line-height: 1.5; color: #2a2f36; }
+  .muted { color: var(--muted); }
+  .small { font-size: 8.4pt; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; font-size: 8.6pt; }
+  th, td { text-align: left; vertical-align: top; padding: 1.6mm 2mm; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: 7.8pt; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1.5px solid #b9c0ca; }
+  tr { break-inside: avoid; }
+  td.n { white-space: nowrap; font-weight: 600; }
+  .chosen { background: #eef4fd; }
+  .tight table { font-size: 8.2pt; }
+  .tight th, .tight td { padding: 1.2mm 2mm; }
+  .tight h3 { margin-top: 4mm; }
+  .tight .card p { font-size: 8.2pt; }
+  .tight .grid2 { gap: 3mm; }
+
+  .tag { display: inline-block; white-space: nowrap; font-size: 7.4pt; font-weight: 700; padding: 0.3mm 1.6mm; border-radius: 1mm; color: #fff; letter-spacing: 0.03em; }
+  .tag.p0 { background: var(--p0); } .tag.p1 { background: var(--p1); } .tag.p2 { background: var(--p2); }
+  .tag.seam { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--soft); padding: 3mm 4mm; margin: 3mm 0 4mm; break-inside: avoid; }
+  .callout p:last-child { margin: 0; }
+  .todo { border: 1.5px dashed #d9a520; background: var(--todo-bg); color: var(--todo); padding: 3mm 4mm; margin: 2mm 0 4mm; border-radius: 1.5mm; break-inside: avoid; }
+  .todo::before { content: "TO FILL IN · "; font-weight: 700; font-size: 7.6pt; letter-spacing: 0.06em; }
+  .todo p:last-child, .todo ul:last-child { margin-bottom: 0; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
+  .card { border: 1px solid var(--line); border-radius: 1.5mm; padding: 3mm 3.5mm; break-inside: avoid; }
+  .card h4 { margin: 0 0 1.5mm; font-size: 9.4pt; }
+  .card p { margin: 0; font-size: 8.6pt; }
+  .stat { font-size: 18pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .stat-label { font-size: 8pt; color: var(--muted); }
+
+  /* pipeline diagram */
+  .pipe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 3mm 0 4mm; break-inside: avoid; }
+  .pipe .stage { position: relative; border: 1px solid var(--line); border-right: none; padding: 3mm; background: #fff; }
+  .pipe .stage:last-child { border-right: 1px solid var(--line); }
+  .pipe .stage + .stage::before { content: "→"; position: absolute; left: -2.4mm; top: 2.6mm; background: #fff; color: var(--muted); font-size: 9pt; line-height: 1; }
+  .pipe .name { font-size: 7.6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .pipe .where { font: 7.8pt Consolas, monospace; color: var(--muted); margin-bottom: 1.5mm; }
+  .pipe .bug { font-size: 8.4pt; color: var(--p0); }
+  .pipe .fix { font-size: 8.4pt; color: var(--ok); border-top: 1px dashed var(--line); margin-top: 2mm; padding-top: 1.5mm; }
+
+  /* cover */
+  .cover { height: 255mm; display: flex; flex-direction: column; }
+  .draft { align-self: flex-start; border: 1.5px solid var(--todo); color: var(--todo); background: var(--todo-bg); font-weight: 700; font-size: 8pt; letter-spacing: 0.08em; padding: 1mm 3mm; border-radius: 1mm; margin-bottom: 30mm; }
+  .cover .kicker { color: var(--accent); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 9pt; }
+  .cover h1 { font-size: 30pt; letter-spacing: -0.02em; margin: 3mm 0 5mm; max-width: 150mm; }
+  .cover .lead { max-width: 150mm; }
+  .cover .meta { margin-top: auto; display: grid; grid-template-columns: 34mm 1fr; row-gap: 2mm; font-size: 9.4pt; border-top: 1px solid var(--line); padding-top: 5mm; }
+  .cover .meta dt { color: var(--muted); }
+  .cover .meta dd { margin: 0; }
+  .missing { color: var(--todo); font-weight: 600; }
+
+  /* screenshots: a desktop shot beside its 375px version, then smaller state shots */
+  .shots2, .shots4 { display: grid; gap: 4mm; margin: 3mm 0 4mm; break-inside: avoid; align-items: start; }
+  .shots2 { grid-template-columns: 1fr 42mm; }
+  .shots2.even { grid-template-columns: 1fr 1fr; }
+  .shots4 { grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+  figure { margin: 0; break-inside: avoid; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 1mm; }
+  figure.phone img { max-height: 120mm; object-fit: cover; object-position: top; }
+  figure img.crop { height: 62mm; object-fit: cover; object-position: top; }
+  .shots4 figure img { max-height: 42mm; object-fit: cover; object-position: top; }
+  .page-break { break-before: page; }
+  figcaption { font-size: 7.8pt; color: var(--muted); margin-top: 1.5mm; line-height: 1.35; }
+  figcaption strong { color: var(--ink); }
+  ol.moments li { margin-bottom: 2.4mm; }
+  .diagram { margin: 3mm 0 4mm; text-align: center; break-inside: avoid; }
+  .diagram svg { max-width: 100%; max-height: 105mm; height: auto; }
+  .diagram.tall svg { max-height: 125mm; }
+  .diagram + .caption { margin-top: -2mm; }
+  .caption { font-size: 8pt; color: var(--muted); text-align: center; margin-bottom: 4mm; }
+</style>
+<script type="module">
+  // Diagrams are written in Mermaid and rendered when the page loads; build.sh waits for them before printing.
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: "base",
+    themeVariables: {
+      fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "13px",
+      primaryColor: "#f4f6f8", primaryBorderColor: "#b9c0ca", primaryTextColor: "#1a1d21",
+      lineColor: "#5b6370", clusterBkg: "#fbfcfd", clusterBorder: "#d9dde3",
+      edgeLabelBackground: "#ffffff",
+    },
+    flowchart: { curve: "basis", padding: 10, nodeSpacing: 28, rankSpacing: 34 },
+  });
+  // Sources sit in script tags so the browser leaves <br/> alone. One at a time: rendering them together in headless Chrome overlapped the diagrams.
+  const blocks = [...document.querySelectorAll('script[type="text/x-mermaid"]')];
+  for (const [i, src] of blocks.entries()) {
+    const { svg } = await mermaid.render(`diagram-${i}`, src.textContent);
+    src.outerHTML = svg;
+  }
+  document.body.dataset.diagrams = "ready";
+</script>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<div class="cover">
+  <div class="kicker">Fullstack Product Engineer · Case study report</div>
+  <h1>Making the AI interview honest about what it didn't measure</h1>
+  <p class="lead">An AI interviewer turns a voice conversation into a level per skill. Today, a skill nobody asked
+    about is stored as L1 and reported as a gap. This report covers why that is the most important thing to fix in
+    this product, how I found it, the options I weighed, and the change I made across the API and the web app.</p>
+  <dl class="meta">
+    <dt>Candidate</dt><dd>Muhammad Wyzer</dd>
+    <dt>Pull request</dt><dd><a href="https://github.com/rakamindev/ai-interview-platform/pull/167">rakamindev/ai-interview-platform#167</a> (umbrella) · sub-PRs, stacked in the fork:
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/1">1</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/2">2</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/3">3</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/4">4</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/5">5</a>; follow-ups
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/6">6</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/7">7</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/8">8</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/9">9</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/11">10</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/10">11</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/12">12</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/13">13</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/14">14</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/15">15</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/16">16</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/17">17</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/18">18</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/19">19</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/20">20</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/21">21</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/22">22</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/23">23</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/24">24</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/25">25</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/26">26</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/27">27</a>,
+      <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/28">28</a></dd>
+    <dt>Video (3–5 min)</dt><dd><a href="https://drive.google.com/file/d/16tFmF__U1cvyYbDWRMrgp91GKFdZaVOL/view?usp=drive_link">Google Drive</a></dd>
+    <dt>Working docs</dt><dd><code>assessment/</code> in the PR branch: work log, Steps 2–4, testing overview, GUARDRAILS</dd>
+    <dt>Date</dt><dd>October 2026</dd>
+  </dl>
+</div>
+
+<!-- ============================== SUMMARY ============================== -->
+<section>
+  <h2><span class="step">Summary</span>One defect, four layers, and the person it hurts most never sees it</h2>
+
+  <p class="lead">The product exists to produce one thing: <strong>a skill rating an assessor can defend</strong>.
+    I found that the pipeline producing that rating fabricates certainty. If an interview ends before a skill is
+    discussed (the candidate's connection drops, or they press "End interview", which the product tells them they
+    can do at any time), that skill is stored as <strong>L1</strong>, and the fit/gap report calls it a
+    <strong>gap</strong>.</p>
+
+  <div class="pipe">
+    <div class="stage"><div class="name">Model output</div><div class="where">Portfolios::Generator</div>
+      <div class="bug">Prompt forces a level; <code>level.to_i.clamp(1,5)</code> turns <code>null</code> into 1.</div>
+      <div class="fix">Strict parsing; coverage map overrules the model for unprobed skills.</div></div>
+    <div class="stage"><div class="name">Storage</div><div class="where">portfolio_skills</div>
+      <div class="bug"><code>ai_level NOT NULL 1..5</code>: "not assessed" can't be stored.</div>
+      <div class="fix">Nullable level + <code>not_assessed_reason</code>, reversible migration.</div></div>
+    <div class="stage"><div class="name">Fit/gap</div><div class="where">FitGap::Engine</div>
+      <div class="bug">The fake L1 is compared to the requirement: "Gap −2".</div>
+      <div class="fix"><code>not_assessed</code> verdict, counted separately.</div></div>
+    <div class="stage"><div class="name">Screen</div><div class="where">web parseLevel</div>
+      <div class="bug">Falls back to L1 too; a real <code>null</code> crashes the page.</div>
+      <div class="fix">A distinct "Not assessed" state with the reason and "Add rating".</div></div>
+  </div>
+
+  <div class="grid3">
+    <div class="card"><h4>Why this, first</h4><p>It is a <strong>silent false low</strong>: a qualified candidate is
+      rejected for a skill nobody asked about, and nobody re-checks a rejection.</p></div>
+    <div class="card"><h4>Why it matters commercially</h4><p>"Errors caused by AI" and "risk of bias" are top reasons
+      Indonesian companies don't use AI in hiring. One visible fabricated rating confirms both.</p></div>
+    <div class="card"><h4>Why it's verifiable</h4><p>The pipeline starts from a model <em>response</em>, so every
+      case can be tested with a stubbed model. No live calls, no flaky tests.</p></div>
+  </div>
+
+  <h3>What I did</h3>
+  <table>
+    <tr><th style="width:22%">Step</th><th>Outcome</th></tr>
+    <tr><td class="n">1 · Setup</td><td>Docker Compose stack; fixed the API crashing on boot; seeded a dev admin.
+      Built the test harness the repo didn't have: <strong>195 API specs</strong> and <strong>97 web tests</strong>
+      across unit, integration and functional layers, plus CI. Known defects are pinned by tests that fail today.</td></tr>
+    <tr><td class="n">2 · Domain</td><td>Five pillars, from the Indonesian hiring market to UU PDP (Law 27/2022).
+      Found that the Gemini free tier forbids personal data, so production needs a paid tier.</td></tr>
+    <tr><td class="n">3 · Gap</td><td>2 P0, 14 P1, 17 P2 findings, each reproduced; 8 constraint signals for a Tech Lead.</td></tr>
+    <tr><td class="n">4 · Strategy</td><td>30 acceptance criteria written before code; three options compared;
+      chose a real "not assessed" state end to end.</td></tr>
+    <tr><td class="n">5 · Build</td><td>Five sub-PRs: tenant scoping, then "not assessed" through storage, generator,
+      fit/gap and both screens. <strong>263 API specs</strong> (0 failures) and <strong>126 web tests</strong> passing;
+      118 known-defect or new-AC tests flipped to passing. The seeded fault (the clamp put back) was caught by 13 specs.</td></tr>
+    <tr><td class="n">Test gaps</td><td>Covered the pages and API pieces no test touched: <strong>293 API specs</strong> and
+      <strong>149 web tests</strong> at that point, web line coverage 50.6% → 68.3%. That found five more defects (P1-14, P2-14 to
+      P2-17), each pinned by a test that fails today.</td></tr>
+    <tr><td class="n">Follow-ups</td><td>Two more sub-PRs from the Step 4 list: the request log filters passwords, notes and
+      candidate names (P1-7), and the server queues one fit/gap job per report (P1-6). Then a
+      route-by-route tenant check: no route leaks, and C2 (pick any company at login) pinned.
+      Then production guards (paid model tier, one login company per deployment), browser tests at 1280px and 375px,
+      clearer login errors, accessibility fixes, and coverage floors and security scans in CI.
+      The PDF export works for overridden portfolios (P1-13), and the audio proxy is under test, which found P2-20.
+      Sub-PRs 16 to 27 upgrade Rails to 8.1, fix invite links (P1-15), redesign the candidate's pages, and add optional
+      proctoring (camera, entire screen, one screen; P2-28), monitored and never recorded. They fix what that work turned up:
+      portfolio retries (P2-26), an end screen that says what happened and turns the microphone off (P2-27, P1-11), and a
+      production header that blocked the camera (P1-16). Sub-PR 28 stops the invite link alone from ending an interview
+      as "all covered" (P1-10). <strong>404 API specs</strong> and <strong>206 web tests</strong>, 0 failures, plus browser tests in CI.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== STEP 2 ============================== -->
+<section>
+  <h2><span class="step">Step 2 · Domain immersion</span>What does it take for a rating to be worth trusting?</h2>
+
+  <p>An assessor configures the skills a role needs and what each level (L1–L5) looks like. The candidate opens a
+    link and talks to an AI interviewer that probes their answers. A <strong>coverage map</strong>
+    (<code>not_yet → initiated → partial → covered</code>) steers the next question. After the session, a model
+    writes a <strong>skill portfolio</strong> (level, confidence, evidence quotes, summary), and a
+    <strong>fit/gap report</strong> compares it with a vacancy. I asked one question from five angles.</p>
+
+  <div class="diagram tall"><script type="text/x-mermaid">
+flowchart TB
+  subgraph A["Assessor · before"]
+    direction LR
+    a1["Configure skills,<br/>L1–L5 anchors"] --> a2["Create an<br/>invite link"]
+  end
+  subgraph C["Candidate"]
+    direction LR
+    c1["Open the link,<br/>hardware check"] --> c2["Voice interview<br/>with the AI"]
+  end
+  subgraph S["System"]
+    direction LR
+    s1["Coverage map<br/>not_yet → covered"]
+    s2["Portfolio<br/>level · confidence · quotes"]
+    s3["Fit/gap<br/>vs the vacancy"]
+  end
+  subgraph R["Reviewers · after"]
+    direction LR
+    r1["Review, override<br/>with a note"] --> r2["Next round, hire,<br/>or what to probe"]
+  end
+  a2 -->|"email, WhatsApp"| c1
+  c2 <-->|"every turn"| s1
+  c2 -->|"session ends"| s2
+  s2 --> s3
+  s2 --> r1
+  s3 --> r2
+  classDef trust fill:#eef4fd,stroke:#1f5fbf,color:#1a1d21,stroke-width:1.5px
+  class s2,s3,r1 trust
+</script></div>
+  <p class="caption">Blue: where trust is won or lost. Everyone downstream acts on the portfolio, not on the interview.</p>
+
+  <div class="grid2">
+    <div class="card"><h4>1 · The product, used end to end</h4>
+      <p>The center of gravity is the <strong>result review</strong>, not the interview. The interview impresses;
+        the portfolio and fit/gap are what someone acts on. Also found: the candidate page is English only even for
+        a Bahasa Indonesia interview, and the interviewer is told never to switch language, though mixing Indonesian
+        and English is normal in Indonesian tech workplaces.</p></div>
+    <div class="card"><h4>2 · The industry</h4>
+      <p>In a Jobstreet by SEEK survey of 1,273 HR practitioners (2024), <strong>80% of Indonesian companies don't use
+        AI in recruitment</strong>. Top reasons: no human touch (44%), cost (40%), risk of bias (38%), AI errors (27%).
+        The product sells into skepticism; its weakest point is exactly the one buyers fear.</p></div>
+    <div class="card"><h4>3 · What it's for</h4>
+      <p><em>Give a hiring team a level per skill they can defend, without spending an engineer's hour on every
+        first-round candidate.</em> The two errors aren't symmetric: a false high costs one more interview; a
+        <strong>false low is silent</strong>. The output must stay decision <em>support</em>, never auto-reject.</p></div>
+    <div class="card"><h4>4 · The users who act on it</h4>
+      <p>The <strong>assessor</strong> needs to tell measured-low from never-measured. The <strong>recruiter</strong>
+        needs to see what's waiting. The <strong>hiring manager</strong> needs real gaps vs unknowns, and what to
+        probe next. Today one admin role does all three jobs, and the override only works if the assessor knows
+        when to doubt the AI.</p></div>
+  </div>
+
+  <h3>5 · The candidate who never chose this</h3>
+  <p>The candidate can't see the output and usually can't refuse without losing the opportunity. The page says
+    <em>"You can end anytime"</em>, and ending early silently turns every skill not yet reached into L1. They're
+    penalized for using an option the product offered, and never told. In Indonesia, a dropped mobile connection
+    does the same.</p>
+
+  <table>
+    <tr><th style="width:16%">UU PDP</th><th style="width:44%">Requirement (paraphrased)</th><th>Today</th></tr>
+    <tr><td class="n">Art. 20–22</td><td>Lawful basis; recorded consent; purpose, data types, retention and rights stated before processing.</td><td>No notice or consent before the mic opens. "Has been recorded" appears only after.</td></tr>
+    <tr><td class="n">Art. 10</td><td>Right to object to decisions based solely on automated processing, including profiling.</td><td>A skill rating is profiling. Human review is possible but not guaranteed or shown.</td></tr>
+    <tr><td class="n">Art. 7, 8, 44</td><td>Access, erasure, destruction at the end of retention.</td><td>No retention period and no erasure path.</td></tr>
+    <tr><td class="n">Art. 34, 56</td><td>Impact assessment for high-risk processing; safeguards for cross-border transfer.</td><td>Audio and transcripts go to Google's API. Escalated.</td></tr>
+  </table>
+
+  <div class="callout"><p><strong>The model tier is a legal question.</strong> The Gemini API terms say the free tier
+    may use inputs to improve products, human reviewers may read them, and users must not submit personal
+    information. A real candidate's interview is personal information. Production must run on a paid tier, and that
+    should be a deploy-time check, not a convention.</p></div>
+
+  <p><strong>Where the five pillars point:</strong> all of them land on the step that turns an interview into a
+    rating. That became the Step 4 focus. Candidate notice and consent is next in line.</p>
+</section>
+
+<!-- ============================== STEP 3 ============================== -->
+<section>
+  <h2><span class="step">Step 3 · Problem and gap</span>The system can't tell "measured and low" from "never measured"</h2>
+
+  <p><strong>How I checked.</strong> I traced each node of the product spec to the code, ran the stack, called the
+    API with tokens from two different organizations, read the Sidekiq and Rails logs, walked the screens at desktop
+    and 375px, and reproduced the result pipeline against the real services with a stubbed model response. Every
+    finding below was reproduced; most are now pinned by a test that fails until it's fixed.</p>
+
+  <div class="callout small"><p><strong>Reproduction.</strong> <em>Senior Frontend Engineer</em>, three skills. The
+    candidate's connection drops at minute 6, after only React was discussed. The model honestly answers
+    <code>"level": null</code> for the other two.<br>
+    Stored: React <strong>L3</strong> · Communication <strong>L1</strong> (probes: 0) · System Design <strong>L1</strong> (probes: 0)<br>
+    Fit/gap: Communication <strong>gap</strong> · System Design <strong>gap</strong> · "1 skill matches, 0 exceeds, and 2 gaps".</p></div>
+
+  <div class="diagram"><script type="text/x-mermaid">
+flowchart TB
+  e1["Candidate presses<br/>End interview"] --> n
+  e2["Connection drops"] --> n
+  e3["Anyone with the link<br/>ends it as all covered<br/>(P1-10)"] --> n
+  n["Skill never probed<br/>coverage: not_yet"] --> m["Model answers<br/>level: null"]
+  m -->|"clamp(1, 5)"| l1["Stored as L1<br/>(column NOT NULL)"]
+  m -.->|"or leaves it out"| gone["Skill vanishes<br/>(P1-3)"]
+  l1 --> g["Fit/gap:<br/>Gap −2"]
+  l1 --> w["Screen: an L1 badge,<br/>like any rating"]
+  g --> x["Rejected.<br/>Nobody re-checks."]
+  w --> x
+  classDef cause fill:#f4f6f8,stroke:#b9c0ca,color:#1a1d21
+  classDef bug fill:#fdecea,stroke:#b42318,color:#7a1a12,stroke-width:1.5px
+  classDef out fill:#1a1d21,stroke:#1a1d21,color:#ffffff
+  class e1,e2,e3,n cause
+  class l1,g,w,gone bug
+  class x out
+</script></div>
+  <p class="caption">How a rating nobody measured becomes a rejection. Red: the defects (P0-1, P1-1, P1-3).</p>
+
+  <p class="small muted"><strong>Type</strong>: missing specification (never defined) vs defective implementation
+    (defined, but broken). <span class="tag seam">SEAM</span> marks a break between the API's data and the web's
+    presentation.</p>
+
+  <table>
+    <tr><th style="width:9%"></th><th style="width:41%">Finding</th><th>Impact</th><th style="width:15%">Type</th></tr>
+    <tr><td><span class="tag p0">P0-1</span></td><td><strong>Unassessed skills are stored as L1</strong>: prompt, clamp, <code>NOT NULL</code> column and the web fallback. <span class="tag seam">SEAM</span></td><td>A candidate whose interview ended early gets the lowest level for skills nobody asked about.</td><td>Spec + defect</td></tr>
+    <tr><td><span class="tag p0">P0-2</span></td><td><strong>Cross-tenant read and write</strong> of portfolios, skills and fit/gap reports.</td><td>An admin at Company B exported Company A's candidate evidence and set a rating to L5 (HTTP 201).</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-1</span></td><td>Fit/gap treats fabricated and low-confidence levels as real.</td><td>"Gap −2" for a skill never discussed.</td><td>Spec</td></tr>
+    <tr><td><span class="tag p1">P1-2</span></td><td>API sends <code>expected_level</code>, web reads <code>required_level</code>; the override marker never shows. <span class="tag seam">SEAM</span></td><td>The report's core table has a blank "Required" column.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-3</span></td><td>Skills the model leaves out disappear.</td><td>1 skill shown for a 3-skill assessment, with no sign anything is missing.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-4</span></td><td>Portfolio writes aren't atomic; regenerating deletes overrides.</td><td>Half-written portfolios; a retry erases the assessor's judgement.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-5</span></td><td>Evidence quotes aren't checked against the transcript.</td><td>An invented quote is shown as "Evidence from interview".</td><td>Spec</td></tr>
+    <tr><td><span class="tag p1">P1-6</span></td><td>Duplicate fit/gap jobs race.</td><td>3 requests → 3 jobs, 2 crashed on a unique index.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-7</span></td><td>Passwords and assessor notes in the request log.</td><td>Secrets and personal data in plain text.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-8/9</span></td><td>Assessment list loads page 1 only; every ended session reads "completed". <span class="tag seam">SEAM</span></td><td>Assessments past the 20th are unreachable; early-ended interviews look complete.</td><td>Defect / spec</td></tr>
+    <tr><td><span class="tag p1">P1-10</span></td><td>Anyone with the invite link can end the interview as "all skills covered", no auth. Fixed in sub-PR 28.</td><td>A leaked link ends a never-started session and stores a "complete" portfolio with 0 skills.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-11</span></td><td>A broken invite link says "The interview has been recorded." Fixed in sub-PR 26.</td><td>A candidate who never interviewed waits for a reply that never comes.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-12</span></td><td>The hardware check depends on third-party hosts. Without a CSP it calls them before any notice; under the repo's own production CSP they're blocked and the check can never pass.</td><td>Either the candidate's IP leaves before consent, or <strong>Start stays disabled for every candidate</strong>. P0 if production serves that CSP (C8).</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-13</span></td><td>PDF export crashes on any overridden portfolio (an <code>→</code> the font can't encode). Fixed in sub-PR 14.</td><td>It fails on exactly the portfolios a human reviewed most closely.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-14</span></td><td>Removing a skill on the assessment or vacancy edit form doesn't remove it: the web leaves it out instead of sending <code>_destroy</code>, and the API keeps it. <span class="tag seam">SEAM</span></td><td>The interviewer still asks about a deleted skill, and on a vacancy it keeps counting in every fit/gap report.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-15</span></td><td>Invite links point at the API, not the web app (<code>APP_BASE_URL</code> fell back to the API's port). Fixed in sub-PR 17.</td><td>On a setup that follows the README, every link an assessor sends is a 404 and no candidate can start.</td><td>Defect</td></tr>
+    <tr><td><span class="tag p1">P1-16</span></td><td>The production headers in <code>vercel.json</code> turn the camera off (<code>Permissions-Policy: camera=()</code>). Fixed in sub-PR 27.</td><td>Wherever that file is served, no candidate can get past the camera step of a proctored interview (C8).</td><td>Defect</td></tr>
+  </table>
+
+  <p class="small"><strong>P2 (17)</strong>: failure states are dead ends (endless spinner, blank page); retries never
+    fire because the HTTP client only retries idempotent methods and every model call is a POST; no candidate
+    notice or consent; a <code>null</code> level would crash the portfolio page, so the API fix must ship with the web
+    fix; invite links never expire; list cards aren't keyboard reachable; the live monitor gives up silently.
+    Found later, while filling test gaps: a level label on the second skill sets the first (duplicate ids, P2-14); the
+    skill picker drops the taxonomy id, so fit/gap can only match by label (P2-15); required fields and some saves fail
+    with no message (P2-16); the edit and invite pages hide a load failure behind an empty form (P2-17).
+    <strong>P3</strong>: copy, 375px header, payload size. Full list: <code>assessment/03-problem-and-gap.md</code>.</p>
+
+  <h3>Constraint signal: what I'd escalate to a Tech Lead</h3>
+  <table>
+    <tr><td class="n" style="width:9%">C2</td><td><strong>Auth trusts JWT claims without a user lookup.</strong> Any token signed with the secret shared with <code>rakamin-api</code> is accepted, so tenant isolation rests entirely on model scoping, which is what failed in P0-2. Worse, login
+      itself takes the company from an <code>X-Tenant-Scheme</code> header and users belong to no company, so any admin
+      can sign in to any company (pinned in sub-PR 8; since sub-PR 9 production names one company per deployment).</td></tr>
+    <tr><td class="n">C3</td><td><strong>Shared database with another service.</strong> Migrations must be coordinated and reversible.</td></tr>
+    <tr><td class="n">C4</td><td><strong>No retention or erasure policy.</strong> A product and legal decision, not an engineering default.</td></tr>
+    <tr><td class="n">C8</td><td><strong>The production web config can't be verified from the repo.</strong> Under the CSP in <code>vercel.json</code>, no candidate can start (P1-12), and its Permissions-Policy blocked the camera (P1-16, fixed). I'd ask first whether production serves it; if so, it outranks everything else.</td></tr>
+    <tr><td class="n">C1, C6, C7</td><td>Model IDs were retired and the free tier forbids personal data; the candidate is whoever holds the link; CORS allows any origin.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== STEP 4 ============================== -->
+<section class="tight">
+  <h2><span class="step">Step 4 · Strategy</span>Make "not assessed" a real state, end to end</h2>
+
+  <p>A skill the interview never reached, or that the model couldn't rate, is stored with <strong>no level</strong>
+    and a reason. It reaches fit/gap as <em>not assessed</em>, not as a gap. The assessor sees a neutral state that
+    says why, and can add a rating. Along the way the write becomes atomic, keeps overrides, accounts for every
+    configured skill, and drops quotes that aren't in the transcript.</p>
+
+  <h3>Options compared</h3>
+  <table>
+    <tr><th style="width:17%"></th><th>A · Hide it in the UI</th><th class="chosen">B · Real state, end to end</th><th>C · B + verdicts + backfill</th></tr>
+    <tr><td class="n">Product impact</td><td>Low. The screen looks right, but fit/gap, PDF and export still say L1. The lie moves to what leaves the building.</td><td class="chosen">High. Screen, fit/gap, PDF and export tell the same truth.</td><td>Highest on paper, but rewrites results people may have acted on.</td></tr>
+    <tr><td class="n">Cost</td><td>Small, web only</td><td class="chosen">Medium: 1 migration, generator, engine, 2 serializers, 2 screens</td><td>Large</td></tr>
+    <tr><td class="n">Maintainability</td><td>Poor. Inferred, fuzzily, in every reader.</td><td class="chosen">Good. One field, one place decides it.</td><td>Needs thresholds I'd be guessing.</td></tr>
+    <tr><td class="n">Reversibility</td><td>Trivial</td><td class="chosen">Good. Relaxes constraints, adds nullable columns; rollback stops clearly if NULLs exist.</td><td>Weak. A rewrite of ratings can't be undone without a snapshot.</td></tr>
+    <tr><td class="n">Failure mode</td><td>A real L1 gets hidden.</td><td class="chosen">If coverage is wrong, a discussed skill shows "not assessed": the <strong>safe</strong> direction, visible and fixable.</td><td>A wrong threshold silently changes verdicts.</td></tr>
+  </table>
+
+  <p><strong>Decision: B.</strong> The smallest change that makes every output honest. C's extras need product
+    decisions (verdict thresholds; what to do with past ratings), so they're follow-ups. Past ratings are not
+    rewritten; a read-only task reports how many are affected. The session's end reason isn't trusted
+    either (anyone with the link could end it as "all covered", P1-10, fixed later in sub-PR 28), so "assessed" is decided by the coverage map
+    and the model output only.</p>
+
+  <h3>Acceptance criteria (30, written before code)</h3>
+  <div class="grid2">
+    <div class="card"><h4>Generator (AC-1 to AC-12)</h4><p><code>null</code> or junk levels
+      (<code>0</code>, <code>6</code>, <code>"N/A"</code>, <code>"high"</code>, <code>[]</code>) are never clamped;
+      the coverage map overrules a level for a skill never probed; every configured skill gets exactly one row;
+      unverifiable quotes are dropped and confidence lowered; any failure leaves the previous portfolio intact;
+      overrides survive regeneration; model errors are stored as a category, never raw text; a very long
+      quote or summary (say 20,000 characters) is capped at 500 or 2,000 instead of failing the write.</p></div>
+    <div class="card"><h4>Fit/gap, data model, API (AC-13 to AC-21)</h4><p>Not assessed is its own verdict
+      with no delta; an override on it counts and is flagged; the payload carries both <code>expected_level</code> and
+      <code>required_level</code> during the transition; the fallback narrative counts unknowns; the migration
+      changes no existing row and its rollback refuses to invent levels; adding a rating to an unassessed skill
+      requires a note.</p></div>
+    <div class="card"><h4>Screens (AC-22 to AC-30)</h4><p>A "Not assessed" badge with the reason in plain language
+      and "Add rating"; <code>null</code> is never shown as L1; a summary line ("2 of 3 skills weren't assessed");
+      error states with Retry instead of a spinner or a blank page; long text collapsed; stacked rows at 375px;
+      not conveyed by color alone; reachable by keyboard.</p></div>
+    <div class="card"><h4>Delivery</h4><p>Umbrella PR + sub-PRs: (1) tenant scoping, (2) web tolerates a missing
+      level, which must land before (3) data model + generator, (4) fit/gap engine + payload, (5) portfolio and
+      fit/gap screens. Each sub-PR flips its pinned known-defect tests to passing.</p></div>
+  </div>
+
+</section>
+
+<!-- ============================== STEP 4 DESIGN ============================== -->
+<section>
+  <h2><span class="step">Step 4 · Design</span>Who decides "assessed", and the order it ships in</h2>
+
+  <p>One place decides, the generator, and every reader (fit/gap, API, screens, PDF) only displays the result.
+    The coverage map is checked first: a rating with zero probes has no evidence by definition, whatever the model
+    says. The model is called <strong>before</strong> the transaction opens, so a slow call never holds the
+    database.</p>
+
+  <div class="diagram"><script type="text/x-mermaid">
+flowchart TD
+  start(["For each configured skill"]) --> q1["Coverage not_yet,<br/>or no coverage row?"]
+  q1 -->|yes| nr["Not assessed<br/>not_reached"]
+  q1 -->|no| q2["In the model's<br/>output?"]
+  q2 -->|no| om["Not assessed<br/>omitted_by_model"]
+  q2 -->|yes| q3["Level is an integer 1–5?<br/>3 · '3' · 'L3' · 3.0"]
+  q3 -->|"no: null, 0, 6, 'N/A', 'high'"| ie["Not assessed<br/>insufficient_evidence"]
+  q3 -->|yes| q4["Any quote found in<br/>a candidate turn?"]
+  q4 -->|yes| ok["Assessed<br/>level + confidence"]
+  q4 -->|no| low["Assessed<br/>confidence: low"]
+  nr --> tx
+  om --> tx
+  ie --> tx
+  ok --> tx
+  low --> tx
+  tx[["One transaction: replace the skills,<br/>carry overrides over by skill identity"]]
+  classDef q fill:#ffffff,stroke:#1a1d21,color:#1a1d21,stroke-width:1.5px
+  class q1,q2,q3,q4 q
+  classDef na fill:#f4f6f8,stroke:#5b6370,color:#1a1d21,stroke-dasharray:4 3
+  classDef yes fill:#e8f5ed,stroke:#157f3b,color:#0f4d25
+  class nr,om,ie na
+  class ok,low yes
+</script></div>
+  <p class="caption">Unverifiable quotes are dropped one by one. Any failure rolls back and leaves the previous portfolio intact.</p>
+
+  <h3>Delivery: umbrella PR, five sub-PRs</h3>
+  <div class="diagram"><script type="text/x-mermaid">
+flowchart LR
+  p1["1 · Tenant<br/>scoping"]
+  p2["2 · Web handles<br/>a null level"]
+  p3["3 · Data model,<br/>generator"]
+  p4["4 · Fit/gap<br/>engine"]
+  p5["5 · Portfolio,<br/>fit/gap screens"]
+  u(["Umbrella PR"])
+  p2 -->|"lands first"| p3
+  p3 --> p4 --> p5
+  p1 --> u
+  p5 --> u
+  classDef pr fill:#ffffff,stroke:#b9c0ca,color:#1a1d21
+  classDef umb fill:#1f5fbf,stroke:#1f5fbf,color:#ffffff
+  class p1,p2,p3,p4,p5 pr
+  class u umb
+</script></div>
+  <p class="caption">2 lands before 3 because a null level crashes the portfolio page today (P2-11). Each sub-PR is
+    reviewable on its own and flips its pinned known-defect tests to passing.</p>
+  <p class="small">The sub-PRs are in the public fork, each targeting the one before it so its diff is only its own
+    change: <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/1">mwyzer/ai-interview-platform-fs#1</a> tenant scoping,
+    <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/2">#2</a> web null level,
+    <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/3">#3</a> generator and migration,
+    <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/4">#4</a> fit/gap,
+    <a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/5">#5</a> screens.</p>
+</section>
+
+<!-- ============================== STEP 5 ============================== -->
+<section>
+  <h2><span class="step">Step 5 · Implementation</span>What shipped</h2>
+
+  <p class="lead">A skill nobody asked about is now stored, scored and shown as <strong>not assessed, and why</strong>,
+    never as L1. Five sub-PRs, each with its tests written first and checked to fail on their assertion.</p>
+
+  <table>
+    <tr><th style="width:4%">#</th><th style="width:24%">Sub-PR (branch)</th><th>What it changes</th><th style="width:20%">Commits</th></tr>
+    <tr><td class="n">1</td><td><code>fix/tenant-scoping</code></td><td>Every portfolio, skill and fit/gap lookup is scoped to the
+      caller's tenant (P0-2), including two fit/gap write routes Step 3 hadn't pinned. No migration.</td>
+      <td><code>d7e58ac</code> <code>ecd3124</code></td></tr>
+    <tr><td class="n">2</td><td><code>fix/web-null-level</code></td><td>The web reads a missing level as "not assessed" instead
+      of L1 or a crash (AC-23, P2-11). Ships before the API can send one.</td>
+      <td><code>8292c0a</code> <code>79328eb</code> <code>9907398</code></td></tr>
+    <tr><td class="n">3</td><td><code>feat/not-assessed-generator</code></td><td>Reversible migration; the generator stores
+      "not assessed" with a reason, writes atomically and keeps overrides, verifies quotes (P0-1, P1-3..P1-5).</td>
+      <td><code>4a4f5ca</code> <code>69aebe4</code> <code>8cb0a9d</code> <code>841fb35</code> <code>5192358</code></td></tr>
+    <tr><td class="n">4</td><td><code>feat/fitgap-not-assessed</code></td><td>Fit/gap reports an unassessed skill as an unknown,
+      not a gap, and the narrative says so (P1-1).</td>
+      <td><code>bb4b797</code> <code>dedee56</code> <code>054c6b9</code></td></tr>
+    <tr><td class="n">5</td><td><code>feat/not-assessed-screens</code></td><td>Portfolio and fit/gap screens: the reason, a
+      summary line, rating with a required source, error and retry states, long text, 375px (AC-20, AC-22, AC-24..AC-30).</td>
+      <td><code>5e30533</code> <code>342adec</code> <code>c40c78d</code> <code>8e0a650</code></td></tr>
+    <tr><td colspan="4" class="small">Two follow-ups from the Step 4 list, stacked on top of the five:</td></tr>
+    <tr><td class="n">6</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/6"><code>fix/filter-log-params</code></a></td><td>Passwords, emails, tokens, assessor notes and
+      candidate names are <code>[FILTERED]</code> in the request log (P1-7).</td>
+      <td><code>1305216</code> <code>4f844a1</code></td></tr>
+    <tr><td class="n">7</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/7"><code>fix/fitgap-single-job</code></a></td><td>Reversible migration; the report row is claimed
+      before the job is queued, so one fit/gap job runs per report, and a claim whose job died is taken over (P1-6).</td>
+      <td><code>b5ac8bb</code></td></tr>
+    <tr><td class="n">8</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/8"><code>test/tenant-routes</code></a></td><td>Every API route, called by another
+      company with this company's IDs: 404 and nothing changed. A new route without a case fails the suite. No leaks
+      found; C2 pinned as pending.</td>
+      <td><code>d19c866</code></td></tr>
+    <tr><td class="n">9</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/9"><code>fix/production-guards</code></a></td><td>Production refuses to boot on the
+      free model tier or without a server-set login company, and login can't name another company (C2 mitigation).
+      Found on the way: production didn't boot at all (an Active Job setting the app never loads), now fixed and
+      tested by booting it.</td>
+      <td><code>c59b784</code> <code>6a855f2</code> <code>5220a2e</code></td></tr>
+    <tr><td class="n">10</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/11"><code>test/e2e-playwright</code></a></td><td>Synthetic data for
+      every screen state (<code>rails e2e:seed</code>) and Playwright tests in a real browser at 1280px and 375px, with a
+      CI job; the screenshots below come from it.</td>
+      <td><code>e92b9e2</code> <code>7c90446</code> <code>371b649</code></td></tr>
+    <tr><td class="n">11</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/10"><code>fix/login-feedback</code></a></td><td>A wrong password
+      now shows "Invalid email or password." instead of reloading the page, and an eye button shows or hides the
+      password.</td>
+      <td><code>ea1300b</code> <code>842118a</code></td></tr>
+    <tr><td class="n">12</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/12"><code>test/a11y-axe</code></a></td><td>axe
+      and keyboard-only checks on every page in the browser tests. Fixed what they found: low contrast (P2-18) and
+      unnamed controls (P2-19); the assessment card is now a link (P2-8).</td>
+      <td><code>4a91b24</code> <code>1122996</code> <code>1f4eedd</code></td></tr>
+    <tr><td class="n">13</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/13"><code>ci/coverage-security</code></a></td><td>Coverage
+      floors and security scans in CI; 147 gem advisories down to 14, all needing the Rails or puma major upgrade.</td>
+      <td><code>5c1a3f7</code> <code>4fd4c00</code> <code>40d4ed0</code></td></tr>
+    <tr><td class="n">14</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/14"><code>fix/pdf-export-encoding</code></a></td><td>The PDF export no longer
+      fails on an overridden portfolio or an unusual quote (P1-13): the override line uses <code>-&gt;</code>, and a
+      character the built-in font can't show becomes <code>?</code>. The JSON export keeps everything.</td>
+      <td><code>990effd</code> <code>ae52a76</code></td></tr>
+    <tr><td class="n">15</td><td><a href="https://github.com/mwyzer/ai-interview-platform-fs/pull/15"><code>test/audio-websocket</code></a></td><td>40 specs for the audio proxy
+      between the browser and Gemini Live, with both sockets faked: who may connect, the echo gate, transcripts,
+      reconnects, the time limit and every way an interview ends. They found P2-20: about one microphone frame in 256
+      was dropped because it started with <code>{</code>; the frame type now decides.</td>
+      <td><code>faa77af</code> <code>a6273ad</code></td></tr>
+  </table>
+
+  <h3>Before and after: the Step 3 reproduction</h3>
+  <p>Same synthetic interview (React discussed, two skills never reached), run through the real model on the dev stack.</p>
+  <table>
+    <tr><th></th><th>Communication (role needs L3)</th><th>System Design (role needs L2)</th></tr>
+    <tr><td><strong>Before</strong></td><td>Stored <strong>L1</strong>; fit/gap: <strong>gap</strong></td><td>Stored <strong>L1</strong>; fit/gap: <strong>gap</strong></td></tr>
+    <tr><td><strong>Model's answer now</strong></td><td><code>null</code></td><td><code>null</code></td></tr>
+    <tr><td><strong>After</strong></td><td>Not assessed, <code>not_reached</code>; fit/gap: not assessed</td><td>Not assessed, <code>not_reached</code>; fit/gap: not assessed</td></tr>
+    <tr><td><strong>Narrative</strong></td><td colspan="2">Before: "1 skill matches, 0 exceeds, and 2 gaps". After: the unassessed skills
+      "remain unassessed… the upcoming round should focus specifically on probing these open areas."</td></tr>
+  </table>
+
+  <h3>Tests</h3>
+  <div class="grid3">
+    <div class="card"><div class="stat">404</div><div class="stat-label">API examples, 0 failures (263 after sub-PR 5,
+      30 filling test gaps, 8 in sub-PRs 6 and 7, 30 in sub-PR 8, 9 in sub-PR 9, 2 in sub-PR 14, 40 in sub-PR 15, 16 more in sub-PRs 16 to 25, 3 in sub-PR 27, 3 in sub-PR 28). 2 pending, both known
+      defects outside this change (P2-3, C2).</div></div>
+    <div class="card"><div class="stat">206</div><div class="stat-label">web tests passing (126 after sub-PR 5, 149 after
+      filling test gaps, 1 in sub-PR 11, 30 more in sub-PRs 16 to 25, 9 in sub-PR 26, 17 in sub-PR 27); 21 expected to fail (other known defects), 7 skipped without a live API.
+      <code>tsc</code> clean. Browser tests (sub-PRs 10 and 12) run separately, in CI.</div></div>
+    <div class="card"><div class="stat">118</div><div class="stat-label">known-defect or new-AC tests flipped to passing
+      across the five sub-PRs (API 5 + 46 + 9, web 29 + 29).</div></div>
+  </div>
+
+  <table>
+    <tr><th style="width:26%">Failure path</th><th>What happens now</th><th style="width:22%">Pinned by</th></tr>
+    <tr><td>Model timeout, 503, rate limit</td><td>Portfolio marked <code>failed</code> with a category and a fixed, safe
+      message; the previous skills stay as they were; Retry. Seen for real: a 503 during the live run.</td><td>Generator spec, API journey, web page</td></tr>
+    <tr><td>Reply isn't JSON, or a level is junk</td><td><code>0, 6, -1, 2.5, "", "N/A", "high", "L3.5"</code> → not assessed
+      (<code>insufficient_evidence</code>); unreadable reply → <code>model_invalid_response</code>. The reply is never logged.</td><td>AC-3, AC-4, privacy specs</td></tr>
+    <tr><td>Partial write</td><td>All rows in one transaction, updated in place by skill, so overrides survive a regenerate (P1-4).</td><td>Generator spec ×2</td></tr>
+    <tr><td>Duplicate fit/gap jobs</td><td>The page requests generation once per visit (P1-6, web), and the server queues one job per report: the
+      first request claims the row (sub-PR 7).</td><td>Fit/gap page; fit/gap request specs</td></tr>
+    <tr><td>Quote not in the transcript</td><td>Dropped; a rating left with none drops to low confidence (P1-5).</td><td>Generator spec</td></tr>
+    <tr><td>Load fails, or generation hangs</td><td>Alert with Try again instead of a blank page (P2-1); fit/gap gives up waiting after two minutes.</td><td>Portfolio and fit/gap pages</td></tr>
+    <tr><td>Long text</td><td>Long quotes and summaries collapse behind Show more (<code>aria-expanded</code>); unbroken strings wrap.</td><td><code>ExpandableText</code> tests</td></tr>
+  </table>
+
+  <h3>Filling the test gaps</h3>
+  <p>After the five sub-PRs, a search for source files no test mentions still listed whole pages (creating, editing and
+    inviting on an assessment; vacancies; the transcript) and API pieces (the skill library, the tenant resolver, the
+    coverage analyzer worker). Coverage was measured once by hand, without adding gems or packages.</p>
+  <table>
+    <tr><th style="width:26%"></th><th>API</th><th>Web</th></tr>
+    <tr><td class="n">Added</td><td>30 examples: skill library model and endpoints; tenant resolver order (JWT, then
+      header, then Referer); the coverage analyzer worker (session-scoped updates, discovered skills capped at ten,
+      auto-advancing stale partials, failures)</td><td>32 tests: <code>LevelRadio</code>, <code>SkillPicker</code>, and
+      functional tests for the assessment form, invites, vacancies and transcript</td></tr>
+    <tr><td class="n">Line coverage</td><td>69.7% → 71.6%, measured by hand over a narrower set of files; SimpleCov
+      over all of them gives 62.1% (sub-PR 13), so the two don't compare</td><td>50.6% → 68.3%</td></tr>
+    <tr><td class="n">Checked against a fault</td><td colspan="2">Three faults put into the worker and middleware were each
+      caught, then reverted.</td></tr>
+    <tr><td class="n">What's left</td><td colspan="2">Mostly the audio path, which needs a live model. Its proxy is now covered with both sockets faked (sub-PR 15); the Gemini Live client itself still isn't.</td></tr>
+  </table>
+  <p>They found five defects, each now an <code>it.fails</code> marker that fails on its own assertion: P1-14, and P2-14
+    to P2-17 (Step 3). The most serious, P1-14, is a seam bug: an API spec shows <code>_destroy</code> works, so the fix
+    is on the web side.</p>
+
+  <p><strong>Migration</strong> (AC-17, AC-18). It only relaxes <code>NOT NULL</code> and adds nullable columns, plus three
+    check constraints that keep "not assessed" whole (no level ⇔ a reason; no confidence without a level). On the dev
+    database a digest of every rating and override was identical before, after <code>db:rollback</code> and after
+    <code>db:migrate</code>. Rollback refuses, with counts, while any row has no level, rather than invent one.</p>
+
+  <div>
+  <h3>In a real browser, at 1280px and 375px</h3>
+  <p>jsdom has no layout, so until now "no sideways scroll at 375px" (AC-29) was checked by eye, and the screenshots
+    below came from a script that no longer exists. Sub-PR 10 makes both repeatable.</p>
+  <table>
+    <tr><th style="width:24%"></th><th>What it does</th></tr>
+    <tr><td class="n">Synthetic data</td><td><code>rails e2e:seed</code>: a session for each screen state (mixed, all
+      assessed, failed, generating, long text) and a fit/gap report made by the real engine with its counted fallback.
+      Nothing calls the model; a second run changes nothing; it refuses to run in production.</td></tr>
+    <tr><td class="n">Tests</td><td>Playwright, 14 tests at 1280px and again at 375px with phone emulation: <strong>28
+      passing</strong>, against the built web app and the real API. Each checks what the screen shows and that nothing
+      is wider than the screen.</td></tr>
+    <tr><td class="n">Checked against a fault</td><td>A 600px table at 375px. The first version of the check passed it:
+      a phone zooms out to fit, and the window's width grew with the page. It now measures against the 375px screen
+      and fails ("wider than the 375px screen: 634").</td></tr>
+    <tr><td class="n">Accessibility</td><td>axe (WCAG 2.1 A/AA) on every page above plus login, the assessment list, the
+      invite page and vacancies, at both widths; keyboard-only specs for Show more, Add rating and opening an assessment.
+      It found low contrast (P2-18) and unnamed controls (P2-19), now fixed, and closed P2-8: the assessment card is a
+      link. The brand teal is darkened from <code>#01959f</code> to <code>#007780</code> so white text on it reads at
+      5.09:1 (was 3.55); approved as a design change.</td></tr>
+    <tr><td class="n">Screenshots</td><td>The ten below are regenerated by <code>npm run e2e:screenshots</code>, locally or
+      as an artifact of the CI job <code>e2e</code>.</td></tr>
+  </table>
+  </div>
+
+  <div>
+  <h3>Coverage and security, in CI</h3>
+  <table>
+    <tr><th style="width:24%"></th><th>Result (sub-PR 13)</th></tr>
+    <tr><td class="n">Line coverage</td><td>API <strong>62.1%</strong> (SimpleCov), web <strong>68.5%</strong> (Vitest). CI fails
+      if either drops more than a point below (floors 61 and 67): a floor, not a target. With the audio proxy
+      specs (sub-PR 15) the API is at 77.8%, and its floor is 76.</td></tr>
+    <tr><td class="n">Code (Brakeman)</td><td>No warnings in the code. One about the platform: Rails 7.0 left support in
+      April 2025, so it's escalated.</td></tr>
+    <tr><td class="n">Gems (bundle-audit)</td><td><strong>147 advisories in 20 gems</strong>. Patch and minor updates to 15
+      of them closed all but 14; each new version was released at least two weeks ago. The 14 need Rails 7.2 or 8 and
+      puma 7: 9 can't be reached here (Active Storage isn't loaded, the PROXY protocol is off), 5 are in Action View
+      and Active Support. Each is listed with its reason, and any new advisory fails CI.</td></tr>
+    <tr><td class="n">Web (npm audit)</td><td>0 in what ships to users. Build and test tooling: 7, reported, not
+      blocking.</td></tr>
+  </table>
+  </div>
+
+  <h3>Seeded fault test</h3>
+  <p>On <code>scratch/seeded-fault-clamp</code>, commit <code>27f49f3</code> put the original bug back:
+    <code>value.to_i.clamp(1, 5)</code> in the level parser. <strong>13 specs failed</strong>, each on its assertion
+    (<code>had attributes {:ai_level =&gt; 1}</code>): AC-1, AC-3
+    (<code>"L3"</code>, <code>"l3"</code>), AC-4 (eight junk values), AC-12 and the discovered-skill case. Commit
+    <code>5b34128</code> reverts it; both stay in the history.</p>
+  <div class="callout"><p>The older P0-1 specs did <em>not</em> fail. Their unrated skill was also never probed, so the
+    coverage rule caught it before the parser ran. That is two independent layers, and it's why the new specs use a
+    skill that <em>was</em> probed: a test should be able to see the layer it's named after.</p></div>
+
+  <h3 class="page-break">Screens</h3>
+  <p class="small">Synthetic candidates from <code>rails e2e:seed</code>, captured by
+    <code>npm run e2e:screenshots</code> at 1280px and 375px.</p>
+  <div class="shots2">
+    <figure><img src="screenshots/portfolio-mixed.png" alt="Portfolio with one rated and two not-assessed skills"><figcaption><strong>Portfolio, mixed.</strong> The summary says how many skills weren't assessed and why the interview ended; each card gives the reason and a next step.</figcaption></figure>
+    <figure class="phone"><img src="screenshots/mobile-portfolio.png" alt="The same portfolio at 375px"><figcaption><strong>375px.</strong> Header collapses to icons; actions stack. No sideways scroll.</figcaption></figure>
+  </div>
+  <div class="shots2 even">
+    <figure><img src="screenshots/not-assessed-card.png" alt="Add rating panel on a not-assessed skill"><figcaption><strong>Add rating.</strong> Rating a skill the AI didn't rate needs a source; Save waits for it (AC-20).</figcaption></figure>
+    <figure><img class="crop" src="screenshots/long-text.png" alt="Long quote collapsed behind Show more"><figcaption><strong>Long text.</strong> Collapsed behind Show more; a long URL wraps.</figcaption></figure>
+  </div>
+  <div class="shots2">
+    <figure><img src="screenshots/fitgap-mixed.png" alt="Fit/gap with two not-assessed rows"><figcaption><strong>Fit/gap, mixed.</strong> Required is filled again (P1-2); unknowns are counted apart from gaps, and the narrative asks for a probe, not a rejection.</figcaption></figure>
+    <figure class="phone"><img src="screenshots/mobile-fitgap.png" alt="Fit/gap at 375px"><figcaption><strong>375px.</strong> Each row becomes a block with labelled values.</figcaption></figure>
+  </div>
+  <div class="shots4">
+    <figure><img src="screenshots/portfolio-all-assessed.png" alt="Portfolio with every skill rated"><figcaption>All assessed: no summary line.</figcaption></figure>
+    <figure><img src="screenshots/portfolio-generating.png" alt="Portfolio generating"><figcaption>Portfolio generating.</figcaption></figure>
+    <figure><img src="screenshots/fitgap-generating.png" alt="Fit/gap generating"><figcaption>Fit/gap generating; Regenerate disabled.</figcaption></figure>
+    <figure><img src="screenshots/portfolio-failed.png" alt="Portfolio generation failed with Retry"><figcaption>Failed: the safe message and Retry.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============================== AI VERIFICATION ============================== -->
+<section>
+  <h2><span class="step">AI verification</span>Where the AI was wrong, and how it was caught</h2>
+
+  <p>I used an AI assistant throughout. Every claim it made about the system was checked against something
+    observable: a log, a real request, a failure message. Eleven moments are logged in the work log; these are the
+    ones that mattered most.</p>
+
+  <ol class="moments">
+    <li><strong>A test that would have "proved" a bug for the wrong reason.</strong> Writing the tenant-isolation
+      specs, the assistant used a factory that didn't exist. The spec was marked <code>pending</code> (a known
+      defect), and <code>pending</code> accepts <em>any</em> failure, so it would have shown as proof of the
+      cross-tenant leak while actually failing on <code>Factory not registered</code>. <em>Caught by</em> reviewing
+      the code before the run, then reading every pending spec's failure message instead of the count.
+      <em>Rule now:</em> every known-defect test is run as a normal test and must fail on its assertion.</li>
+    <li><strong>Known-defect web tests that "passed" for the wrong reason.</strong> The first web run reported the
+      expected failures, but every render was failing with "act(...) is not supported in production builds",
+      because the shell had <code>NODE_ENV=production</code>. <em>Caught by</em> reading the failure output, not the
+      summary line. <em>Fixed</em> by pinning <code>NODE_ENV=test</code>.</li>
+    <li><strong>A safety check written from memory of an older library.</strong> The assistant used MSW 2's option to
+      fail on unexpected requests; MSW 3 renamed it and silently ignores the old name, so the check was off.
+      <em>Caught by</em> the type checker, then a probe test. Turning the check on immediately exposed the hardware
+      check's calls to third-party hosts (P1-12).</li>
+    <li><strong>Retry configuration that reads right but does nothing.</strong> The model client's retry block looks
+      careful. At runtime, the retry middleware only retries idempotent methods, and every model call is a POST
+      (P2-3). <em>Caught by</em> checking the middleware's constant at runtime, not reading the config.</li>
+    <li><strong>An empty queue read as "no duplicate jobs".</strong> The queue was empty because the jobs had already
+      run, and two had crashed (P1-6). <em>Caught by</em> the worker logs.</li>
+    <li><strong>"Up" doesn't mean running.</strong> Docker reported the API as up; Puma had already crashed.
+      <em>Caught by</em> the logs and a real request.</li>
+  </ol>
+
+  <h3>During the build</h3>
+  <ol class="moments" start="7">
+    <li><strong>A wrong expectation hidden by the bug it pinned.</strong> The assistant wrote a test expecting the override
+      request body <code>{ override_level: 2 }</code>; the client actually sends <code>{ override: { … } }</code>. Against
+      the old code the test failed earlier, on the <code>null</code> crash, so it looked like a correctly pinned defect.
+      <em>Caught by</em> running the suite after the fix: it was the only test still failing. <em>Fixed</em> in its own
+      commit, with the reason. <em>Rule now:</em> a test that fails on a crash hasn't had its assertions checked yet.</li>
+    <li><strong>A confident claim about a testing library that was false.</strong> For the write-failure spec the
+      assistant stated that RSpec's <code>any_instance</code> blocks receive the record first, and built a stub on it. The
+      stub worked by luck. <em>Caught by</em> a second stub built on the same belief, which recorded <code>nil</code> for
+      every call; a throwaway probe spec settled it. <em>Fixed</em>: both stubs and the comment.</li>
+    <li><strong>Privacy specs that could not fail.</strong> The specs checking that the model's reply never reaches the
+      logs fed replies starting "Sure! Here is the portfolio for…" and checked the name wasn't logged. A JSON parser
+      error only quotes the first token, so the name could never appear: the specs would pass with the leak in place.
+      <em>Caught by</em> a mutation check (put the error message back into the log; the spec still passed).
+      <em>Fixed</em>: the replies now start with the personal data, and the specs fail with the leak put back.
+      <em>Rule now:</em> for a "never X" assertion, first show the test can see X at all.</li>
+    <li><strong>An install that removed the test runner.</strong> To measure web coverage without touching
+      <code>package.json</code>, the assistant ran <code>npm i --no-save</code>. The shell had
+      <code>NODE_ENV=production</code>, so npm removed every devDependency, Vitest included. <em>Caught by</em> the
+      coverage run failing on a missing module. <em>Fixed</em>: <code>npm ci --include=dev</code>, with
+      <code>git status</code> clean. <em>Rule now:</em> check the environment before installing, and run a test straight after.</li>
+    <li><strong>A failure blamed on the wrong test.</strong> A new vacancy test failed on a request it never made. The
+      request came from the test before it, which stopped at the list's heading while the list was still loading.
+      <em>Caught by</em> running the failing test alone: it passed. <em>Fixed</em>: the earlier tests now wait for the
+      list's rows, a stricter assertion, not a weaker one.</li>
+  </ol>
+</section>
+
+<!-- ============================== PRIVACY ROADMAP ============================== -->
+<section>
+  <h2><span class="step">Privacy roadmap · UU PDP</span>Compliant by default, ready for the decisions only legal can make</h2>
+
+  <p>I don't decide the law. My job is to make the product safe by default, and to make sure that whatever legal
+    decides can be enforced by the system instead of by convention. So the roadmap splits into work that needs no
+    decision (stop the leaks now) and mechanisms whose settings legal fills in (retention, consent wording).</p>
+
+  <h3>What personal data exists, and where it goes</h3>
+  <table>
+    <tr><th style="width:24%">Data</th><th style="width:24%">Lives in</th><th>Goes to</th><th style="width:16%">Retention today</th></tr>
+    <tr><td><strong>Voice audio</strong></td><td>60-second memory buffer on the API</td><td>Google Gemini Live, outside Indonesia</td><td>Not stored by us</td></tr>
+    <tr><td><strong>Transcript</strong></td><td><code>transcript_turns</code></td><td>Gemini, for coverage analysis and the portfolio</td><td>None set</td></tr>
+    <tr><td><strong>Ratings, quotes, summaries</strong> (profiling)</td><td><code>portfolio_skills</code></td><td>Assessors, hiring managers, the PDF export</td><td>None set</td></tr>
+    <tr><td><strong>Candidate name</strong> (optional)</td><td><code>sessions</code></td><td>Portfolio, PDF export</td><td>None set</td></tr>
+    <tr><td><strong>Assessor notes</strong></td><td><code>assessor_overrides</code></td><td>The request log, in plain text (P1-7; filtered since sub-PR 6)</td><td>None set</td></tr>
+    <tr><td><strong>IP and device details</strong></td><td>Not stored</td><td>Five third-party hosts during the hardware check, before any notice, where no CSP blocks them (P1-12)</td><td>Their policies</td></tr>
+  </table>
+
+  <div class="diagram"><script type="text/x-mermaid">
+flowchart LR
+  cand["Candidate's<br/>browser"]
+  api["Interview API"]
+  db[("Postgres<br/>transcript, portfolio")]
+  gem["Google Gemini<br/>outside Indonesia"]
+  rev["Assessor and<br/>hiring manager"]
+  pdf["PDF export<br/>leaves the system"]
+  third["5 third-party hosts<br/>(P1-12)"]
+  logs["Request log<br/>(P1-7)"]
+  other["Admin at<br/>another company (P0-2)"]
+  cand -->|"audio, every turn"| api
+  api -->|"audio, transcript"| gem
+  api --> db
+  db --> rev
+  rev --> pdf
+  cand -.->|"IP, device"| third
+  api -.->|"passwords, notes"| logs
+  db -.->|"read and write"| other
+  classDef leak fill:#fdecea,stroke:#b42318,color:#7a1a12,stroke-width:1.5px
+  classDef ext fill:#fff8e6,stroke:#d9a520,color:#5c3d00
+  class third,logs,other leak
+  class gem,pdf ext
+</script></div>
+  <p class="caption">As found in Step 3. Red, dashed: flows that shouldn't exist; two are now closed, cross-tenant access in sub-PR 1 (P0-2) and the request log in sub-PR 6 (P1-7). Amber: data that leaves our control and needs a documented basis.</p>
+
+  <h3>The roadmap</h3>
+  <table>
+    <tr><th style="width:21%">Phase</th><th>What I'd build</th><th style="width:14%">UU PDP</th><th style="width:15%">Needs a decision?</th></tr>
+    <tr><td class="n">0 · Stop the leaks</td><td>Tenant scoping (P0-2, sub-PR 1 of this change). Filter passwords and notes from logs (P1-7, sub-PR 6). All three speed tests against our own API (P1-12): this removes the leak <em>and</em> the production block, so it goes first. A deploy check that refuses the free model tier in production. CORS limited to the web app's origin.</td><td>Security of processing; Art. 5, 21</td><td>No. Small PRs, ship now</td></tr>
+    <tr><td class="n">1 · Notice and recorded consent</td><td>A notice before the mic opens, in the interview's language: AI interview and AI rating, purpose, who sees it, Google processes the audio, retention, how to ask for deletion. Consent stored as a record (session, notice version, language, time), and a session can't start without one. Declining leads to "contact the recruiter", with no penalty. Fix the broken-link message (P1-11).</td><td>Art. 5, 20–22</td><td>Wording only. The mechanism doesn't wait: the text is versioned</td></tr>
+    <tr><td class="n">2 · A human stays accountable</td><td>No auto-reject, ever. Record who reviewed a portfolio and when, and show it. A channel for the candidate to object. Ratings that say "not assessed" instead of a fabricated L1 (this change).</td><td>Art. 10</td><td>Who handles objections</td></tr>
+    <tr><td class="n">3 · Retention, access, erasure</td><td>Retention configurable per tenant, enforced by a scheduled purge. Erase one candidate's data: transcript, portfolio, overrides, export. Export it for an access request. Every deletion in an audit log.</td><td>Art. 7, 8, 44</td><td><strong>Yes</strong>: the retention period</td></tr>
+    <tr><td class="n">4 · Incident readiness</td><td>An audit log of access to candidate data, an alert on cross-tenant access attempts, and a runbook. Without a log, a breach can't be detected, let alone reported in time.</td><td>Art. 46 (3×24 hours)</td><td>Who notifies</td></tr>
+  </table>
+
+  <div class="callout small"><p><strong>Data minimization in the consent record.</strong> It stores the session,
+    the notice version, the language and the time. It doesn't store the IP address or a device fingerprint, because
+    proving consent doesn't need them.</p></div>
+
+  <h3>What I'd escalate, and what I'd bring</h3>
+  <div>
+  <p class="small">Each one comes with my recommendation, so the decision is a yes or a correction rather than a blank
+    page. They're proposals for legal and product to test, not legal advice. Everything that doesn't depend on the
+    answer is designed in <code>07-next-steps.md</code>, to build either way.</p>
+  <table>
+    <tr><th style="width:20%">Decision</th><th style="width:24%">Why it isn't an engineering call</th><th>My recommendation</th><th style="width:20%">What I bring</th></tr>
+    <tr><td><strong>Controller vs processor</strong></td><td>It decides who owns the notice, the objection channel and the erasure flow.</td>
+      <td>The client company is the controller (it decides why candidates are assessed); the platform processes on its
+      instruction, under a data processing agreement.</td><td>The data map above</td></tr>
+    <tr><td><strong>Lawful basis</strong>: consent or legitimate interest</td><td>It changes whether declining must be possible without consequence.</td>
+      <td>Whichever basis legal picks, let a candidate decline the AI interview and be assessed by a person instead:
+      in hiring, consent without a real alternative isn't freely given.</td><td>Consent design that works for both (next steps 1.2)</td></tr>
+    <tr><td><strong>Retention period</strong></td><td>Re-review and disputes vs exposure.</td>
+      <td>A starting point to test: transcript and portfolio kept for six months after the hiring decision, set per
+      company; never longer than the notice says.</td><td>Purge, erasure and export design (next steps 3.1)</td></tr>
+    <tr><td><strong>Impact assessment</strong> (Art. 34), <strong>cross-border basis</strong> (Art. 56)</td><td>Automated profiling with significant effects is high risk; the transfer needs safeguards.</td>
+      <td>Run the impact assessment before the first real candidate. Production only on the paid tier, now enforced at
+      boot (sub-PR 9).</td><td>Data flow, Step 3 risk list, model tier terms</td></tr>
+    <tr><td><strong>Users and their company</strong> (C2)</td><td>The user data lives next to <code>rakamin-api</code>'s, in a shared database.</td>
+      <td>A membership table in this service's schema, unless <code>rakamin-api</code> already has one to reuse. Until
+      then, one company per deployment, set on the server (sub-PR 9).</td><td>The pinned C2 spec; an ADR with both options</td></tr>
+    <tr><td><strong>Who sees what</strong> (roles)</td><td>It shapes each user's job.</td>
+      <td>Recruiter: invites and status. Hiring manager: portfolio, evidence, fit/gap, ratings. Admin: configuration.
+      Taken from the Step 2 user research.</td><td>Route × role matrix (next steps 2.1)</td></tr>
+    <tr><td><strong>Nice-to-have skills, capped verdict</strong></td><td>They change what a result means.</td>
+      <td>Every skill stays required by default, so nothing changes until a vacancy opts in. Show an "incomplete" verdict
+      beside the narrative behind a flag, and decide on real reports.</td><td>The Step 3 reproduction as the example</td></tr>
+    <tr><td><strong>Who answers objections and incidents</strong></td><td>An organisational role, which follows from the controller decision.</td>
+      <td>Objections go to a named recruiter lead per company, with a response time product sets. Incidents go from the
+      on-call engineer to the controller's privacy contact, within hours.</td><td>Runbook outline (next steps 3.2)</td></tr>
+    <tr><td><strong>Should candidates see their own portfolio?</strong></td><td>Good for trust and access, but it changes the product.</td>
+      <td>Yes, on request through the export first; self-service later, once ratings are reviewed.</td><td>Effort estimate; the export</td></tr>
+  </table>
+  </div>
+
+  <div>
+  <h3>Compliance tracker</h3>
+  <p>To close before the product sees a real candidate's data. Owners are roles; who fills each one depends on the
+    controller decision above. Status is as of this branch.</p>
+  <table>
+    <tr><th style="width:12%">UU PDP</th><th style="width:20%">Risk</th><th>Technical control</th><th style="width:13%">Owner</th><th style="width:6%">Prio</th><th style="width:19%">Status</th></tr>
+    <tr><td class="n">Art. 20–22</td><td>Processing with no notice and no lawful basis.</td><td>Versioned notice before the
+      mic opens; a consent record; no session without one.</td><td>Engineering; wording: legal</td><td><span class="tag p0">P0</span></td><td>Not started (phase 1).</td></tr>
+    <tr><td class="n">Security of processing</td><td>Another company's admin reads or changes data; secrets in logs.</td>
+      <td>Tenant scoping; request-log filtering; the free model tier refused in production.</td><td>Engineering</td>
+      <td><span class="tag p0">P0</span></td><td><strong>Partly.</strong> Scoping (sub-PR 1), every route pinned (sub-PR 8), log filter (sub-PR 6), free
+      tier refused at boot and login pinned to one company per deployment (sub-PR 9). Open: users linked to a company
+      (C2).</td></tr>
+    <tr><td class="n">Art. 56</td><td>Audio and transcripts leave Indonesia with no documented basis.</td><td>A paid tier
+      with data terms; a recorded transfer basis.</td><td>Legal; engineering for the tier check</td><td><span class="tag p0">P0</span></td><td>Paid tier enforced at boot
+      (sub-PR 9). Transfer basis escalated.</td></tr>
+    <tr><td class="n">Art. 10</td><td>A rating acts as a decision nobody reviewed.</td><td>No auto-reject; reviewer,
+      time and reason recorded; an objection channel.</td><td>Product and engineering</td><td><span class="tag p1">P1</span></td><td><strong>Partly.</strong> Overrides record who and when.</td></tr>
+    <tr><td class="n">Art. 7, 8, 44</td><td>Data kept forever, with no way to erase or export it.</td><td>Retention per
+      tenant with a scheduled purge; erasure and export per candidate; deletions in an audit log.</td><td>Engineering; the period: legal</td><td><span class="tag p1">P1</span></td><td>Not started (phase 3).</td></tr>
+    <tr><td class="n">Art. 34</td><td>High-risk profiling with no impact assessment.</td><td>The data map and the Step 3
+      risk list as inputs.</td><td>Legal</td><td><span class="tag p1">P1</span></td><td>Escalated.</td></tr>
+    <tr><td class="n">Art. 46</td><td>A breach found late, or never.</td><td>Access audit log, cross-tenant alert,
+      runbook.</td><td>Engineering on call; notice: the controller</td><td><span class="tag p1">P1</span></td><td>Not started (phase 4).</td></tr>
+  </table>
+
+  <h3>Four more pieces of work, one done</h3>
+  <div class="grid2">
+    <div class="card"><h4>Tenant isolation, route by route: done in sub-PR 8</h4><p>A spec walks the route table:
+      another company's admin calls every route with this company's IDs in the URL and the body, and gets 404 with
+      nothing changed; a new route without a case fails the suite. No route leaked, and two planted faults were
+      caught. <strong>Still open (C2):</strong> login lets the caller name the company in a header, and users belong
+      to no company, so any admin can sign in to company A. Sub-PR 9 contains it: production names one company per
+      deployment, and login refuses any other. The real fix, a user-to-company link in a database shared with
+      <code>rakamin-api</code>, is a Tech Lead decision.</p></div>
+    <div class="card"><h4>Human review on record</h4><p>Today an override records who and when, asks for a reason
+      only when the AI gave no rating, and keeps only the latest change per skill. I'd require a reason for every
+      change, keep the full history, record "reviewed by, on" even when nothing changed, and add the candidate's
+      objection channel (phase 2). The AI supports the assessor; it never decides alone.</p></div>
+    <div class="card"><h4>Rating quality and bias</h4><p>The tests check states and quotes, not whether a level is
+      right. I'd build a set of answers in Indonesian, English, a mix of both, and short but relevant, rated by
+      people, using synthetic or consented data only. Measure agreement between AI and human ratings, the share of
+      invalid quotes, and the gap between languages. It calls the real model, so it runs on a schedule, not in CI.
+      Targets come after the baseline is measured, not before.</p></div>
+    <div class="card"><h4>Monitoring and incident response</h4><p>Phase 4, made concrete: the on-call engineer gets
+      the alert, escalates to the controller's privacy contact within hours, and the 3×24-hour notice clock starts at
+      discovery. Logs keep IDs and event types, never passwords, full transcripts or personal data. Sub-PR 6 filters
+      the request log; a test should also fail if transcript text ever reaches it.</p></div>
+  </div>
+  </div>
+  <p class="small muted">Articles refer to Law 27/2022 and are paraphrased; I'm not a lawyer, and the mapping should be
+    checked by legal counsel.</p>
+</section>
+
+<!-- ============================== ASSUMPTIONS ============================== -->
+<section>
+  <h2><span class="step">Assumptions and open questions</span>What I decided without being able to ask</h2>
+
+  <p>The brief has no live Q&amp;A, so these are stated rather than assumed silently. Each one picks the direction
+    that is safer for the candidate and clearer for the assessor: show uncertainty, keep evidence that can be checked,
+    and never hide thin data behind a level. The "Today" column separates what this change built from what is still
+    a call I'd make.</p>
+
+  <h3>The change I built</h3>
+  <table>
+    <tr><th style="width:30%">Assumption or question</th><th>What I did, and why</th></tr>
+    <tr><td><strong>The coverage map may overrule the model</strong> for a skill never probed.</td><td>Assumed yes: a rating with zero probes has no evidence by definition. If the analyzer lags one turn, a skill discussed at the very end may show "not assessed", which is the safe direction. Worth confirming with the Tech Lead.</td></tr>
+    <tr><td><strong>Past ratings stay as they are.</strong></td><td>People may have acted on them. A read-only task reports how many L1s have no probes behind them, so the team can decide.</td></tr>
+    <tr><td><strong>Keeping <code>required_level</code> beside <code>expected_level</code></strong> for one release.</td><td>Only this web app and the PDF consume the payload today.</td></tr>
+    <tr><td><strong>Quotes must be verbatim</strong> to count as evidence.</td><td>Normalized (case, whitespace, quote marks) but exact. A paraphrase is dropped and lowers confidence; it never erases a rating.</td></tr>
+  </table>
+
+  <div>
+  <h3>Assessment</h3>
+  <table>
+    <tr><th style="width:28%">Assumption or question</th><th>My call, and why</th><th style="width:28%">Today</th></tr>
+    <tr><td><strong>A short answer can still be evidence.</strong></td><td>Length isn't competence. A one-sentence answer
+      supports a low-to-mid level unless a follow-up probes it; thin evidence shows as low confidence, not a fail.</td>
+      <td><strong>Partly.</strong> A rating left with no verified quote drops to low confidence (P1-5). No rule on
+      answer length.</td></tr>
+    <tr><td><strong>A transcription error must never change a verdict silently.</strong></td><td>When transcript quality
+      is doubtful (accent, noise, a weak signal), the report says so and asks the assessor to check the quotes before
+      relying on the rating. The rating stays.</td><td><strong>Not yet.</strong> We keep no quality signal from the speech
+      pipeline. For now the check is that every quote must appear verbatim in the transcript.</td></tr>
+    <tr><td><strong>Re-assessment on request</strong>, without a new interview.</td><td>Not in this release. Transcript,
+      ratings and quotes are kept, so a person can review. An automatic re-run waits on cost, consistency and an audit
+      trail.</td><td>Assessors can regenerate a portfolio, and overrides survive it. The candidate has no way to ask.</td></tr>
+    <tr><td><strong>No rating of personality, voice or appearance.</strong></td><td>Only the skills in the rubric are
+      rated. Demographics, emotion, accent and physical traits are never inputs: it keeps the rating job-related and
+      cuts a source of bias.</td><td><strong>Holds by construction.</strong> The portfolio is generated from transcript
+      text and the rubric only; no audio reaches it, and there is no video.</td></tr>
+    <tr><td><strong>A skill the role doesn't require can't lower the outcome.</strong></td><td>Only required skills drive
+      fit/gap. Nice-to-have skills are shown apart, so a junior doesn't look weak for lacking advanced
+      experience.</td><td><strong>Not yet.</strong> Every configured skill has a required level; there is no
+      nice-to-have tier.</td></tr>
+    <tr><td><strong>One strong answer can't cover a skill never asked about.</strong></td><td>The overall result can't
+      be better than the evidence on required skills. A core skill not assessed makes it <em>incomplete</em>, not
+      <em>fit</em>.</td><td><strong>Per skill, built:</strong> not assessed is its own verdict (sub-PR 4). The overall
+      narrative is still the model's; capping it is next in line.</td></tr>
+    <tr><td><strong>Response time isn't a competence signal.</strong></td><td>Thinking time, answering in a second
+      language or a slow connection is never penalized.</td><td><strong>Holds.</strong> Duration is stored on the session
+      and never sent to the rating.</td></tr>
+    <tr><td><strong>A leading question still counts as a probe</strong>, flagged.</td><td>If the interviewer nearly gave
+      the answer, confidence drops: the evidence may reflect help rather than the candidate's own
+      ability.</td><td><strong>Not yet.</strong> Coverage counts probes, not how leading they were.</td></tr>
+  </table>
+
+  <h3>Privacy and data</h3>
+  <table>
+    <tr><th style="width:28%">Assumption or question</th><th>My call, and why</th><th style="width:28%">Today</th></tr>
+    <tr><td><strong>Consent to AI analysis is its own choice</strong>, not folded into general terms.</td><td>Separate
+      choices for audio processing by Google, AI rating and retention, recorded with the time, notice version and
+      session.</td><td><strong>Not yet.</strong> Privacy phase 1.</td></tr>
+    <tr><td><strong>Declining AI analysis doesn't end the candidacy.</strong></td><td>Otherwise consent isn't freely
+      given. The candidate gets a human-assessed route instead.</td><td>Phase 1 sends a decline to "contact the
+      recruiter", with no penalty. A full alternative route depends on the lawful basis (escalated).</td></tr>
+    <tr><td><strong>Raw audio goes before the report does.</strong></td><td>Data minimization and storage limitation:
+      keep what a decision needs, for as long as it needs it.</td><td><strong>Already true for audio:</strong> it is
+      never stored, only buffered in memory. Transcript and report wait for a retention period (phase 3).</td></tr>
+    <tr><td><strong>No training on candidate data</strong> without a separate permission.</td><td>Training or product
+      improvement needs its own opt-in, anonymized data or synthetic data. Anything else reuses data beyond the purpose
+      of hiring.</td><td>We train nothing. The model tier's terms matter, hence the phase 0 check that refuses the free
+      tier in production.</td></tr>
+    <tr><td><strong>Erasure covers every derived copy.</strong></td><td>Erasing a candidate removes or anonymizes the
+      transcript, ratings, overrides, fit/gap and anything traceable to them.</td><td><strong>Not yet.</strong> Phase 3.
+      A PDF already exported can't be recalled; the notice has to say so.</td></tr>
+    <tr><td><strong>The platform processes on the client's instruction</strong> (processor, not controller).</td>
+      <td>Provisional. It decides who answers candidate requests, owns the notice and handles a breach.</td>
+      <td>Escalated to legal.</td></tr>
+    <tr><td><strong>Access follows the role.</strong></td><td>Recruiters read reports, hiring managers the summary and
+      evidence, admins the configuration; engineers don't open production transcripts by default.</td><td><strong>Not
+      yet.</strong> One admin role does all of it. Tenant scoping (sub-PR 1) is the first boundary.</td></tr>
+  </table>
+
+  <h3>Operating in Indonesia</h3>
+  <table>
+    <tr><th style="width:28%">Assumption or question</th><th>My call, and why</th><th style="width:28%">Today</th></tr>
+    <tr><td><strong>Mixing Indonesian and English is the norm</strong>, not the exception.</td><td>The transcript and
+      the model handle a switch inside one answer. Quotes are shown as said, so the assessor can check the original
+      meaning.</td><td><strong>Partly.</strong> Quotes are verbatim in any language, but the interviewer is still told
+      never to switch language (Step 2).</td></tr>
+    <tr><td><strong>Candidates use low-cost phones on mobile networks.</strong></td><td>A light page, automatic
+      reconnect and a connection indicator. A technical failure must never read as weak communication.</td>
+      <td><strong>Partly.</strong> A dropped connection now gives "not assessed, not reached", never L1 (this change).
+      The interview page reconnects three times (1, 2, 4 s) and shows the connection state; the model's side resumes
+      where it left off. A drop longer than about seven seconds still ends the interview.</td></tr>
+    <tr><td><strong>A non-technical assessor reads the report in minutes.</strong></td><td>The first screen holds the
+      verdict, the required skills, confidence and the one to three strongest quotes; detail goes below.</td>
+      <td><strong>Partly.</strong> The summary line ("2 of 3 skills weren't assessed") and plain-language reasons
+      are there.</td></tr>
+    <tr><td><strong>Many applicants, few roles each.</strong></td><td>Optimize reading one candidate's report, not an
+      analytics dashboard. Aggregates come once individual review is stable.</td><td>The scope of this change.</td></tr>
+    <tr><td><strong>"L1" and "L3" mean nothing outside engineering.</strong></td><td>Plain labels (not yet seen, basic,
+      capable, strong), with the role's definition on hover or tap.</td><td><strong>Not yet.</strong> Levels show as
+      L1–L5 with the role's rubric.</td></tr>
+    <tr><td><strong>The recruiter may decide on information outside the system.</strong></td><td>The AI recommends; the
+      decision and its reason belong to a person. Hiring is never decided by the AI.</td><td>Adding a rating the AI
+      didn't give requires a note. Recording who reviewed, and when, is phase 2.</td></tr>
+  </table>
+
+  <h3>To confirm with the Tech Lead</h3>
+  <ul>
+    <li>Can "not assessed" appear in a final report, or should the interviewer have to probe the skill before the
+      session ends?</li>
+    <li>Who may read a raw transcript, and is that access logged?</li>
+    <li>How long are transcript and report kept for a candidate who isn't hired?</li>
+    <li>Is an automatic re-assessment needed, or is manual review enough?</li>
+    <li>Should consent allow a partial "no", such as transcription yes, AI rating no?</li>
+    <li>Can a client's policy or a local retention duty override the default erasure rules?</li>
+  </ul>
+  </div>
+
+  <h3>Next, in order</h3>
+  <ol>
+    <li><strong>Privacy phases 0 and 1</strong> (see the privacy roadmap): stop the leaks, then notice and recorded
+      consent before the mic opens, with the broken-link message (P1-11) and the hardware check (P1-12).</li>
+    <li>Removed skills that stay on edit forms (P1-14), with the label and picker fixes on the same forms (P2-14,
+      P2-15): small, web-only, and already pinned by tests.</li>
+    <li>Retries that actually fire (P2-3); a deploy check for the paid model tier.</li>
+    <li>Confidence-aware fit/gap verdicts and a decision on past ratings (Option C), with product sign-off.</li>
+  </ol>
+</section>
+
+</body>
+</html>

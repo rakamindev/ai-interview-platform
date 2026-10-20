@@ -1,0 +1,6 @@
+# Files executed or rewritten inside the Linux containers must keep LF endings,
+# even on a Windows checkout (otherwise: "shebang line ending with \r", and
+# `rails db:migrate` rewrites schema.rb with different line endings).
+api/bin/* text eol=lf
+api/db/schema.rb text eol=lf
+*.sh text eol=lf

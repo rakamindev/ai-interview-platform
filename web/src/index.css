@@ -13,9 +13,12 @@
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
+        /* Rakamin teal, darkened from #01959f (184 99% 31%) to #007780 so white text on it, and it on its own 10%
+           tint, reach WCAG AA 4.5:1 (5.09 and 4.61; was 3.55 and 3.28). P2-18. */
+        --primary: 184 100% 25%;
         --primary-foreground: 0 0% 98%;
+        /* The same teal, deep (#003F44), behind white text on the login header: 11.7:1 (white at 60%: 5.2:1). */
+        --primary-deep: 184 100% 13%;
 
         /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
         --secondary: 43 96% 60%;
@@ -27,7 +30,8 @@
         --accent: 210 40% 96%;
         --accent-foreground: 222 47% 11%;
 
-        --destructive: 0 84% 60%;
+        /* Red 700 (#b91c1c): small red text and white on red reach 4.5:1 (was #ef4343, 3.76). P2-18. */
+        --destructive: 0 74% 42%;
         --destructive-foreground: 0 0% 98%;
 
         --border: 214 32% 91%;

@@ -18,7 +18,8 @@ export interface SpeedThresholds {
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     minDownloadMbps: 8,
-    minUploadMbps: 4,
+    // The interview streams the mic as 16 kHz mono PCM, 256 kbps; 1 Mbps leaves about four times that.
+    minUploadMbps: 1,
     maxPingMs: 300,
 };
 
@@ -76,10 +77,17 @@ async function measureDownloadSpeed(): Promise<number> {
         const start = performance.now();
         await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
         const duration = (performance.now() - start) / 1000;
-        return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
+        return roughSpeedFromFavicon(duration);
     } catch {
         return 0;
     }
+}
+
+/** A guess in MB/s from how long a tiny request took, when no test file could be downloaded. */
+function roughSpeedFromFavicon(seconds: number): number {
+    if (seconds < 1) return 2;
+    if (seconds < 2) return 1;
+    return 0.5;
 }
 
 async function measureUploadSpeed(): Promise<number> {
@@ -105,12 +113,14 @@ async function measureUploadSpeed(): Promise<number> {
     return 0.5; // conservative fallback
 }
 
+// One run after another on purpose: parallel runs of the same measurement would share the line and each would
+// report a fraction of its speed.
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {
     const results: T[] = [];
     for (let i = 0; i < count; i++) {
         try {
-            results.push(await testFn());
-            await new Promise((r) => setTimeout(r, 100));
+            results.push(await testFn()); // NOSONAR: sequential by design (see above)
+            await new Promise((r) => setTimeout(r, 100)); // NOSONAR: the pause between runs
         } catch {
             // skip failed test
         }

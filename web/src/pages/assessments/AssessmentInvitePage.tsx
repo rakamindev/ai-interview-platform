@@ -55,7 +55,7 @@ function SessionRow({
 
       <div className="flex items-center gap-3">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
+          <span className="flex items-center gap-1 text-xs text-amber-700">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
           </span>
@@ -73,7 +73,7 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="flex items-center gap-1 text-xs text-green-700">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
           </span>
@@ -203,7 +203,7 @@ export default function AssessmentInvitePage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+          <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>

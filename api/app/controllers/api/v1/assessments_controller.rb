@@ -66,6 +66,7 @@ module Api
           :name,
           :time_limit_min,
           :language,
+          :proctoring_required,
           assessment_skills_attributes: %i[
             id skill_id skill_label is_custom
             scope_include scope_exclude
@@ -83,6 +84,7 @@ module Api
           name:           assessment.name,
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
+          proctoring_required: assessment.proctoring_required,
           system_prompt:  assessment.system_prompt,
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,

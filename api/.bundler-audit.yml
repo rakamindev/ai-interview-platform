@@ -1,0 +1,8 @@
+---
+# Advisories bundle-audit may skip, each with the reason. Everything here needs a major upgrade (puma 5 -> 7 or 8),
+# escalated in assessment/07-next-steps.md. Remove an entry the day its upgrade lands; any new advisory still fails
+# CI (job security).
+ignore:
+  # puma 5: both are in the PROXY protocol v1 parser, which is off (config/puma.rb doesn't enable it).
+  - GHSA-qpgp-93vx-g8v8
+  - GHSA-2vqw-3mp8-cgmx

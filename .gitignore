@@ -17,3 +17,12 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Playwright
+web/e2e/.results/
+web/e2e/.report/
+web/e2e/.auth/
+
+# Coverage reports
+api/coverage/
+web/coverage/

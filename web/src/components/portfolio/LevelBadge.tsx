@@ -19,7 +19,7 @@ export default function LevelBadge({ level, size = "md", className }: LevelBadge
     >
       <span>{LEVEL_LABELS[level]}</span>
       {size === "md" && (
-        <span className="text-[10px] font-normal opacity-70">{LEVEL_DESCRIPTIONS[level]}</span>
+        <span className="text-[10px] font-normal">{LEVEL_DESCRIPTIONS[level]}</span>
       )}
     </div>
   );

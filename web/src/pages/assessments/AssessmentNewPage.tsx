@@ -26,12 +26,14 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import ProctoringField from "@/components/assessment/ProctoringField";
 import type { AssessmentSkill } from "@/types";
 
 export interface AssessmentFormValues {
   name: string;
   time_limit_min: number;
   language: "en" | "id";
+  proctoring_required?: boolean;
   skills: Partial<AssessmentSkill>[];
 }
 
@@ -46,6 +48,7 @@ export default function AssessmentNewPage() {
       name: "",
       time_limit_min: 45,
       language: "en",
+      proctoring_required: false,
       skills: [],
     },
   });
@@ -92,6 +95,7 @@ export default function AssessmentNewPage() {
         name: data.name,
         time_limit_min: data.time_limit_min,
         language: data.language,
+        proctoring_required: !!data.proctoring_required,
         assessment_skills_attributes: data.skills.map((s, i) => ({
           ...s,
           display_order: i,
@@ -110,7 +114,7 @@ export default function AssessmentNewPage() {
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back to assessments">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -172,6 +176,8 @@ export default function AssessmentNewPage() {
             </SelectContent>
           </Select>
         </div>
+
+        <ProctoringField {...register("proctoring_required")} />
 
         <Separator />
 

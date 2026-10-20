@@ -28,6 +28,7 @@ import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
+import ProctoringField from "@/components/assessment/ProctoringField";
 
 export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +39,7 @@ export default function AssessmentEditPage() {
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
-    defaultValues: { name: "", time_limit_min: 45, skills: [] },
+    defaultValues: { name: "", time_limit_min: 45, proctoring_required: false, skills: [] },
   });
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
@@ -49,7 +50,7 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({ name: a.name, time_limit_min: a.time_limit_min, proctoring_required: !!a.proctoring_required, skills: a.skills });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -77,6 +78,7 @@ export default function AssessmentEditPage() {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
+        proctoring_required: !!data.proctoring_required,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
       navigate(`/assessments/${id}/invite`);
@@ -101,7 +103,7 @@ export default function AssessmentEditPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link to="/assessments" className="text-muted-foreground hover:text-foreground" aria-label="Back">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -129,6 +131,8 @@ export default function AssessmentEditPage() {
             </SelectContent>
           </Select>
         </div>
+
+        <ProctoringField {...register("proctoring_required")} />
 
         <Separator />
 

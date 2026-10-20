@@ -103,7 +103,11 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              // The server closes the socket after this, so reconnecting would only fail again (P2-27).
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                onStateChange("interrupted");
+              }
               break;
           }
         } catch {
@@ -127,7 +131,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("interrupted");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);

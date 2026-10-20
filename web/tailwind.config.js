@@ -57,11 +57,17 @@ export default {
                     "0%, 100%": { height: "4px" },
                     "50%": { height: "32px" },
                 },
+                // The login page's level bars: each holds its own height and dips a little, as if speaking.
+                "level-breathe": {
+                    "0%, 100%": { transform: "scaleY(1)" },
+                    "50%": { transform: "scaleY(0.78)" },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
                 "voice-bar": "voice-bar 0.8s ease-in-out infinite",
+                "level-breathe": "level-breathe 2.4s ease-in-out infinite",
             },
         },
     },

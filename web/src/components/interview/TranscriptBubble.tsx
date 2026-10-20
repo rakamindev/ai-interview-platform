@@ -12,14 +12,19 @@ export default function TranscriptBubble({ speaker, text }: TranscriptBubbleProp
     <div className={cn("flex", isCandidate ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+          "max-w-[85%] px-4 py-2.5 text-[15px] leading-relaxed shadow-sm",
           isCandidate
-            ? "bg-primary/10 text-foreground"
-            : "bg-muted text-foreground"
+            ? "rounded-2xl rounded-br-md bg-primary text-primary-foreground"
+            : "rounded-2xl rounded-bl-md border bg-card text-foreground"
         )}
       >
-        <span className="block text-xs font-medium mb-0.5 text-muted-foreground">
-          {isCandidate ? "You" : "AI"}
+        <span
+          className={cn(
+            "mb-1 block text-[11px] font-semibold uppercase tracking-wider",
+            isCandidate ? "text-primary-foreground" : "text-primary"
+          )}
+        >
+          {isCandidate ? "You" : "Interviewer"}
         </span>
         {text}
       </div>

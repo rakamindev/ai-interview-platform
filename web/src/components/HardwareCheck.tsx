@@ -13,9 +13,11 @@ import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
+    // Anything else that must be ready before Start (the camera and screen share, when the assessment requires them).
+    extraReady?: boolean;
 }
 
-function StateIcon({ state }: { state: ProctoringState }) {
+function StateIcon({ state }: Readonly<{ state: ProctoringState }>) {
     if (state === ProctoringState.LOADING)
         return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
     if (state === ProctoringState.PASSED)
@@ -32,9 +34,27 @@ function stateLabel(state: ProctoringState) {
     return "Waiting";
 }
 
+function stateColor(state: ProctoringState) {
+    if (state === ProctoringState.PASSED) return "text-green-700";
+    if (state === ProctoringState.ERROR) return "text-destructive";
+    return "text-muted-foreground";
+}
+
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
-const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
+/** The camera and mic together when the camera is required, otherwise the mic alone; null when refused or missing. */
+async function requestCheckStream(): Promise<MediaStream | null> {
+    if (REQUIRE_CAMERA) return checkCamera();
+    // No mediaDevices on a page served over plain http: report the mic as failed rather than throw.
+    if (!navigator.mediaDevices?.getUserMedia) return null;
+    try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+        return null;
+    }
+}
+
+const HardwareCheck: React.FC<Readonly<HardwareCheckProps>> = ({ onStart, extraReady = true }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
         osAndBrowser: ProctoringState.WAITING,
         internet: ProctoringState.WAITING,
@@ -47,6 +67,24 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
+    // Each run of the checks has a number; Retry starts a new one, and results from an older run are ignored (P2-23).
+    const [runId, setRunId] = useState(0);
+    const runRef = useRef(0);
+    // What the mic check opened, so it's all stopped when the check goes away or reruns (P2-24).
+    const micStreamRef = useRef<MediaStream | null>(null);
+    const meterCtxRef = useRef<AudioContext | null>(null);
+    const meterFrameRef = useRef<number | null>(null);
+
+    const stopMeter = () => {
+        if (meterFrameRef.current !== null) cancelAnimationFrame(meterFrameRef.current);
+        meterFrameRef.current = null;
+        meterCtxRef.current?.close?.()?.catch(() => {});
+        meterCtxRef.current = null;
+        micStreamRef.current?.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+    };
+
+    useEffect(() => stopMeter, []);
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -80,14 +118,18 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             osc.frequency.setValueAtTime(440, ctx.currentTime);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.1);
+            setTimeout(() => ctx.close?.()?.catch(() => {}), 300);
             return true;
         } catch { return false; }
     };
 
     const startAudioLevelMonitoring = (stream: MediaStream) => {
+        stopMeter();
+        micStreamRef.current = REQUIRE_CAMERA ? null : stream; // with the camera, videoStream owns the tracks
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const ctx = new AudioCtx();
+            meterCtxRef.current = ctx;
             const source = ctx.createMediaStreamSource(stream);
             const analyser = ctx.createAnalyser();
             analyser.fftSize = 256;
@@ -96,16 +138,17 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             const update = () => {
                 analyser.getByteFrequencyData(data);
                 setAudioLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
-                requestAnimationFrame(update);
+                meterFrameRef.current = requestAnimationFrame(update);
             };
             update();
         } catch { /* silent */ }
     };
 
-    // Step 1: OS & browser
+    // Step 1: OS & browser (again on every Retry)
     useEffect(() => {
+        runRef.current = runId;
         setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -115,21 +158,24 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
-    }, []);
+        return () => clearTimeout(timer);
+    }, [runId]);
 
     // Step 2: Internet
     useEffect(() => {
         if (progress.internet !== ProctoringState.LOADING) return;
-        testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
+        const run = runRef.current;
+        void testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
+            if (run !== runRef.current) return;
             setInternetResult(result);
+            // The device checks go on either way, so a candidate whose connection fails still learns whether their
+            // mic and speakers work (P2-21). Start still needs every row to pass.
             setProgress((p) => ({
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
             }));
         });
     }, [progress.internet]);
@@ -140,11 +186,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         const micLoading = !REQUIRE_CAMERA && progress.microphone === ProctoringState.LOADING;
         if (!cameraLoading && !micLoading) return;
 
-        const getStream = REQUIRE_CAMERA
-            ? checkCamera()
-            : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
-
-        getStream.then((stream) => {
+        const run = runRef.current;
+        void requestCheckStream().then((stream) => {
+            if (run !== runRef.current) {
+                stream?.getTracks().forEach((t) => t.stop());
+                return;
+            }
             if (stream) {
                 if (REQUIRE_CAMERA) setVideoStream(stream);
                 startAudioLevelMonitoring(stream);
@@ -155,10 +202,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     audio: ProctoringState.LOADING,
                 }));
             } else {
+                // Playing a tone doesn't need the mic, so audio output is still checked.
                 setProgress((p) => ({
                     ...p,
                     ...(REQUIRE_CAMERA ? { camera: ProctoringState.ERROR } : {}),
                     microphone: ProctoringState.ERROR,
+                    audio: ProctoringState.LOADING,
                 }));
             }
         });
@@ -167,7 +216,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     // Step 4: Audio output
     useEffect(() => {
         if (progress.audio !== ProctoringState.LOADING) return;
-        checkAudioPlayback().then((ok) => {
+        void checkAudioPlayback().then((ok) => {
             setProgress((p) => ({
                 ...p,
                 audio: ok ? ProctoringState.PASSED : ProctoringState.ERROR,
@@ -176,16 +225,19 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [progress.audio]);
 
     const retryAll = () => {
+        stopMeter();
+        setAudioLevel(0);
         videoStream?.getTracks().forEach((t) => t.stop());
         setVideoStream(null);
         setInternetResult(null);
         setProgress({
-            osAndBrowser: ProctoringState.LOADING,
+            osAndBrowser: ProctoringState.WAITING,
             internet: ProctoringState.WAITING,
             camera: ProctoringState.WAITING,
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,
         });
+        setRunId((id) => id + 1);
     };
 
     const thresholds = DEFAULT_THRESHOLDS;
@@ -198,7 +250,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         { key: "audio", label: "Audio output" },
     ];
 
-    const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
+    const hasError = Object.values(progress).includes(ProctoringState.ERROR);
 
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
@@ -208,7 +260,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                        <svg className="w-10 h-10 opacity-30" fill="currentColor" viewBox="0 0 20 20">
+                        <svg aria-hidden="true" className="w-10 h-10 opacity-30" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                         </svg>
                         <p className="text-xs">Camera not active</p>
@@ -217,7 +269,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 {progress.camera === ProctoringState.PASSED && videoStream && (
                     <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        LIVE
+                        {"LIVE"}
                     </span>
                 )}
             </div>}
@@ -230,10 +282,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             <span className="text-sm font-medium">{label}</span>
                             <div className="flex items-center gap-2">
                                 <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
-                                    progress[key] === ProctoringState.ERROR ? "text-destructive" :
-                                        "text-muted-foreground"
-                                    }`}>
+                                <span className={`text-xs w-16 text-right ${stateColor(progress[key])}`}>
                                     {stateLabel(progress[key])}
                                 </span>
                             </div>
@@ -242,13 +291,13 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
                             <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-700" : "text-destructive"}>
                                     ↓ {internetResult.download} Mbps
                                 </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-700" : "text-destructive"}>
                                     ↑ {internetResult.upload} Mbps
                                 </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-700" : "text-destructive"}>
                                     {internetResult.ping} ms
                                 </span>
                             </div>
@@ -281,7 +330,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!allPassed || !extraReady}
                     onClick={onStart}
                 >
                     Start Interview
