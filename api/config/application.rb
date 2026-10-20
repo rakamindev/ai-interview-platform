@@ -8,6 +8,7 @@ require 'active_record/railtie'
 require 'action_controller/railtie'
 
 require_relative '../app/middlewares/application_middleware'
+require_relative '../app/middlewares/redacted_rack_logger'
 require_relative '../app/middlewares/tenant_resolver_middleware'
 
 Bundler.require(*Rails.groups)
@@ -18,6 +19,7 @@ module AiInterview
 
     # API-only mode
     config.api_only = true
+    config.filter_parameters += %i[password token invite_token authorization candidate_name email text assessor_notes]
 
     # Auto-load paths
     config.autoload_paths += %W[
@@ -48,5 +50,6 @@ module AiInterview
 
     config.middleware.use Rack::Attack
     config.middleware.use TenantResolverMiddleware
+    config.middleware.swap Rails::Rack::Logger, RedactedRackLogger
   end
 end
