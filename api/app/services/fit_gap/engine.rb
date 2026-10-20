@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.8-flash'),
         timeout: 30
       )
     end
@@ -27,7 +27,9 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        narrative_status:  narratives[:status],
+        generated_at:      Time.current,
+        vacancy_updated_at: @vacancy.updated_at
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -62,7 +64,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
 
@@ -101,10 +104,16 @@ module FitGap
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
-      rescue => e
+        culture = data['culture_narrative']
+        overall = data['overall_narrative']
+        unless culture.is_a?(String) && culture.present? && overall.is_a?(String) && overall.present?
+          raise JSON::ParserError, 'Narrative response is missing required fields'
+        end
+
+        { culture: culture, overall: overall, status: 'generated' }
+      rescue StandardError => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        { culture: nil, overall: generate_fallback_narrative(skill_comparisons), status: 'fallback' }
       end
     end
 

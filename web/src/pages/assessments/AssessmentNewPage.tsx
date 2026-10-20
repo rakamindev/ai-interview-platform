@@ -14,18 +14,19 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import ApiErrorList from "@/components/ApiErrorList";
+import { useToast } from "@/components/ui/toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
+import { apiErrorMessages } from "@/utils/apiErrors";
 import type { AssessmentSkill } from "@/types";
 
 export interface AssessmentFormValues {
@@ -37,9 +38,10 @@ export interface AssessmentFormValues {
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverErrors, setServerErrors] = useState<string[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
@@ -76,16 +78,16 @@ export default function AssessmentNewPage() {
     });
   };
 
-  const addB7Skill = (skill: Partial<AssessmentSkill>) => {
+  const addTaxonomySkill = (skill: Partial<AssessmentSkill>) => {
     append({ ...skill, display_order: fields.length });
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
+      setServerErrors(["Add at least one skill to continue."]);
       return;
     }
-    setError(null);
+    setServerErrors([]);
     setSubmitting(true);
     try {
       const payload = {
@@ -98,91 +100,101 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
+      toast.success("Assessment created.");
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+      setServerErrors(apiErrorMessages(e, "Failed to save assessment."));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Assessment</span>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <Link to="/assessments" className="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        <ArrowLeft className="h-4 w-4" />
+        Assessments
+      </Link>
+
+      <div className="space-y-2 border-b pb-6">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">Create an assessment</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">Set the interview length, language, and skills to assess. Candidate invite links come next.</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Role title */}
-        <div className="space-y-1.5">
-          <Label htmlFor="name">
-            Role title <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="name"
-            placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
-          />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
-          )}
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="overflow-hidden rounded-xl border bg-card">
+        <section aria-labelledby="assessment-details-heading" className="space-y-4 p-5 sm:p-6">
+          <div>
+            <h2 id="assessment-details-heading" className="font-semibold">Assessment details</h2>
+            <p className="mt-1 text-sm text-muted-foreground">The role title, interview length, and the language the AI interviews in.</p>
+          </div>
 
-        {/* Time limit */}
-        <div className="space-y-1.5">
-          <Label>
-            Session time limit <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            defaultValue="45"
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_LIMIT_OPTIONS.map((min) => (
-                <SelectItem key={min} value={String(min)}>
-                  {min} min
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">
+              Role title <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="name"
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? "role-title-error" : undefined}
+              placeholder="Senior Frontend Engineer"
+              {...register("name", { required: "Role title is required" })}
+            />
+            {errors.name && (
+              <p id="role-title-error" className="text-sm text-destructive">{errors.name.message}</p>
+            )}
+          </div>
 
-        {/* Language */}
-        <div className="space-y-1.5">
-          <Label>Interview language</Label>
-          <Select
-            defaultValue="en"
-            onValueChange={(v) => setValue("language", v as "en" | "id")}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="id">Indonesian</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="time-limit">
+                Session time limit <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={String(watch("time_limit_min"))}
+                onValueChange={(v) => setValue("time_limit_min", Number(v))}
+              >
+                <SelectTrigger id="time-limit" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_LIMIT_OPTIONS.map((min) => (
+                    <SelectItem key={min} value={String(min)}>
+                      {min} min
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="language">Interview language</Label>
+              <Select
+                value={watch("language")}
+                onValueChange={(v) => setValue("language", v as "en" | "id")}
+              >
+                <SelectTrigger id="language" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">The AI interviewer speaks this language with the candidate.</p>
+            </div>
+          </div>
+        </section>
 
-        {/* Skills section */}
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
+        <section aria-labelledby="assessment-skills-heading" className="space-y-4 border-t p-5 sm:p-6">
+          <div>
+            <h2 id="assessment-skills-heading" className="font-semibold">Skills to assess</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Add the skills this interview should cover and the level expected for each. Drag to reorder the interview flow.</p>
+          </div>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              <p className="mb-1">No skills added yet.</p>
-              <p>Add at least one skill to continue.</p>
+            <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center">
+              <p className="text-sm font-medium">No skills added yet</p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Add at least one skill so the AI knows what to probe for.</p>
             </div>
           ) : (
             <DndContext
@@ -194,7 +206,7 @@ export default function AssessmentNewPage() {
                 items={fields.map((f) => f.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {fields.map((field, index) => (
                     <SkillCard
                       key={field.id}
@@ -209,54 +221,51 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              className="w-full sm:w-auto"
               onClick={() => setPickerOpen(true)}
             >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add from Skill Taxonomy
+              <Plus className="h-4 w-4" />
+              Add from skill taxonomy
             </Button>
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              className="w-full sm:w-auto"
               onClick={addCustomSkill}
             >
-              <Plus className="h-3.5 w-3.5 mr-1" />
+              <Plus className="h-4 w-4" />
               Add custom skill
             </Button>
           </div>
-        </div>
+        </section>
 
-        <Separator />
-
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-
-        {/* Actions */}
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/assessments")}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
-          </Button>
+        <div className="space-y-4 border-t bg-muted/20 p-5 sm:px-6">
+          <ApiErrorList errors={serverErrors} />
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => navigate("/assessments")}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="w-full px-5 sm:w-auto" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitting ? "Creating assessment..." : "Create assessment"}
+            </Button>
+          </div>
         </div>
       </form>
 
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={addB7Skill}
+        onSelect={addTaxonomySkill}
       />
     </div>
   );

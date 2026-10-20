@@ -37,7 +37,7 @@ module Gemini
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.8-live')
       @voice = voice
       @resumption_token = nil
       @connected = false

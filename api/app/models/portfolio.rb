@@ -13,6 +13,10 @@ class Portfolio < ApplicationRecord
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
 
+  # Portfolios have no tenant_id of their own — the tenant boundary lives on the
+  # session. Every lookup from a request must go through this scope.
+  scope :visible_to_current_tenant, -> { joins(:session).merge(Session.all) }
+
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'

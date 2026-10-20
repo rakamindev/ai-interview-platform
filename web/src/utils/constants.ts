@@ -32,6 +32,15 @@ export const LEVEL_BADGE_CLASSES: Record<number, string> = {
   5: "bg-yellow-100 text-yellow-700",
 };
 
+// Solid level colors for bars and dots
+export const LEVEL_BAR_CLASSES: Record<number, string> = {
+  1: "bg-neutral-400",
+  2: "bg-blue-400",
+  3: "bg-teal-500",
+  4: "bg-purple-400",
+  5: "bg-yellow-400",
+};
+
 // Coverage state display
 export const COVERAGE_STATE_LABELS: Record<string, string> = {
   not_yet: "not yet",

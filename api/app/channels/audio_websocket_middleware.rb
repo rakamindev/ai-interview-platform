@@ -732,10 +732,9 @@ class AudioWebSocketMiddleware
 
   def authenticate_and_load(env, session_id)
     request = Rack::Request.new(env)
+    invite_token = request.params['token']
 
     session = begin
-      invite_token = request.params['token']
-
       if invite_token.present?
         Session.unscoped.find_by(invite_token: invite_token)
       else
@@ -754,8 +753,9 @@ class AudioWebSocketMiddleware
     end
 
     return [nil, 'Session not found'] unless session
-    return [nil, 'Session has ended'] if session.ended?
+    return [nil, 'Session has ended'] if session.ended? || session.status == 'failed'
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+    return [nil, 'Privacy notice not acknowledged'] if invite_token.present? && session.privacy_acknowledged_at.nil?
 
     [session, nil]
   end

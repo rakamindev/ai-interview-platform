@@ -3,14 +3,14 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete acknowledge_privacy]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete acknowledge_privacy]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
-        assessment = Assessment.find(params[:assessment_id])
+        assessment = Assessment.active.find(params[:assessment_id])
         sessions = assessment.sessions.order(created_at: :desc)
 
         json_response(sessions: sessions.map(&method(:session_json)))
@@ -20,7 +20,7 @@ module Api
 
       # POST /api/v1/assessments/:assessment_id/sessions
       def create
-        assessment = Assessment.find(params[:assessment_id])
+        assessment = Assessment.active.find(params[:assessment_id])
 
         session = assessment.sessions.new(
           candidate_id:   params.dig(:session, :candidate_id),
@@ -37,7 +37,7 @@ module Api
             :created
           )
         else
-          json_error(session.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(session)
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
@@ -118,6 +118,7 @@ module Api
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Read the voice data notice before starting", :forbidden) unless session.privacy_acknowledged_at
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
@@ -126,6 +127,16 @@ module Api
         # (timing gap between WS detection and HTTP call) that stalled auto-end.
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
+      end
+
+      # POST /sessions/:token/privacy_acknowledgement
+      def acknowledge_privacy
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Interview has already ended", :conflict) if session.ended? || session.status == 'failed'
+
+        session.update_column(:privacy_acknowledged_at, Time.current) unless session.privacy_acknowledged_at
+        json_response(acknowledged: true)
       end
 
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
@@ -149,7 +160,9 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason,
+          privacy_acknowledged: session.privacy_acknowledged_at.present?
         )
       end
 

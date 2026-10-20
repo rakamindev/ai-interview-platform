@@ -36,11 +36,11 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create an account</p>
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-sm space-y-6 rounded-xl border bg-white p-6 sm:p-8">
+        <div className="space-y-2 text-center">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Create an account</h1>
+          <p className="text-sm text-muted-foreground">AI Interview</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

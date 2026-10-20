@@ -8,8 +8,17 @@ export interface Assessment {
   created_at?: string;
   updated_at?: string;
   skills?: AssessmentSkill[];
+  skill_count?: number;
+  skill_preview?: string[];
+  session_summary?: {
+    total: number;
+    pending: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
   latest_session?: {
-    status: "pending" | "active" | "ended";
+    status: "pending" | "active" | "ended" | "failed";
     end_reason?: string | null;
   };
 }
@@ -106,9 +115,14 @@ export interface AssessorOverride {
   overridden_at?: string;
 }
 
+export type VacancyStatus = "active" | "closed";
+
 export interface Vacancy {
   id: number;
   role_title: string;
+  status: VacancyStatus;
+  skill_count: number;
+  skill_preview: string[];
   culture_dimensions: string;
   competency_expectations: string;
   created_by?: number;
@@ -119,9 +133,14 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   expected_level: number;
+  l1_anchor?: string;
+  l2_anchor?: string;
+  l3_anchor?: string;
+  l4_anchor?: string;
+  l5_anchor?: string;
   _destroy?: boolean;
 }
 
@@ -129,11 +148,11 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  expected_level: number;
+  candidate_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  is_override: boolean;
 }
 
 export interface FitGapReport {
@@ -143,7 +162,9 @@ export interface FitGapReport {
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
+  narrative_status: "generated" | "fallback" | "unknown";
   generated_at: string;
+  stale: boolean;
 }
 
 export interface SkillTaxonomy {
@@ -164,6 +185,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  privacy_acknowledged: boolean;
 }
 
 export interface PaginationMeta {
@@ -182,7 +205,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "failed";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

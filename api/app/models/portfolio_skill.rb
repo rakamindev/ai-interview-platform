@@ -6,6 +6,9 @@ class PortfolioSkill < ApplicationRecord
   belongs_to :portfolio
   has_one :assessor_override, dependent: :destroy
 
+  # Same tenant boundary as Portfolio, reached through the session.
+  scope :visible_to_current_tenant, -> { joins(portfolio: :session).merge(Session.all) }
+
   validates :skill_label, presence: true
   validates :ai_level, numericality: { only_integer: true, in: 1..5 }
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }

@@ -4,17 +4,17 @@
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
+        --background: 180 20% 98%;
+        --foreground: 196 35% 13%;
 
         --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --card-foreground: 196 35% 13%;
 
         --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+        --popover-foreground: 196 35% 13%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
+        /* Darker Rakamin teal keeps filled controls and teal text readable. */
+        --primary: 184 99% 25%;
         --primary-foreground: 0 0% 98%;
 
         /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
@@ -22,17 +22,17 @@
         --secondary-foreground: 26 47% 25%;
 
         --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+        --muted-foreground: 204 16% 38%;
 
         --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
+        --accent-foreground: 196 35% 13%;
 
-        --destructive: 0 84% 60%;
+        --destructive: 0 72% 42%;
         --destructive-foreground: 0 0% 98%;
 
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+        --border: 198 24% 88%;
+        --input: 198 16% 52%;
+        --ring: 184 99% 25%;
 
         --radius: 0.5rem;
     }
@@ -75,5 +75,10 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+
+    :focus-visible {
+        outline: 2px solid hsl(var(--ring));
+        outline-offset: 2px;
     }
 }

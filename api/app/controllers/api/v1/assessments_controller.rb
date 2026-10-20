@@ -9,9 +9,10 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.active.includes(:sessions, :assessment_skills).order(created_at: :desc)
+        search = query_params[:search].to_s.strip
+        scope = scope.where('name ILIKE ?', "%#{Assessment.sanitize_sql_like(search)}%") if search.present?
+        assessments = paginate(scope, per_page: 10)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -33,7 +34,7 @@ module Api
           SystemPromptGeneratorWorker.perform_async(assessment.id)
           json_response({ assessment:, system_prompt_generated: true }, :created)
         else
-          json_error(assessment.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(assessment)
         end
       end
 
@@ -43,20 +44,23 @@ module Api
           SystemPromptGeneratorWorker.perform_async(@assessment.id)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
         else
-          json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
+          json_validation_errors(@assessment)
         end
       end
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.archive
+          json_response({ message: "Assessment archived" })
+        else
+          json_validation_errors(@assessment)
+        end
       end
 
       private
 
       def set_assessment
-        @assessment = Assessment.find(params[:id])
+        @assessment = Assessment.active.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -76,7 +80,9 @@ module Api
       end
 
       def assessment_json(assessment)
-        latest = assessment.sessions.max_by(&:created_at)
+        sessions = assessment.sessions
+        skills = assessment.assessment_skills.sort_by(&:display_order)
+        latest = sessions.max_by(&:created_at)
 
         {
           id:             assessment.id,
@@ -87,6 +93,15 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          skill_count:    skills.length,
+          skill_preview:  skills.first(3).map(&:skill_label),
+          session_summary: {
+            total:     sessions.length,
+            pending:  sessions.count(&:pending?),
+            active:   sessions.count(&:active?),
+            completed: sessions.count { |session| session.ended? && session.end_reason != 'error' },
+            failed:   sessions.count { |session| session.status == 'failed' || (session.ended? && session.end_reason == 'error') }
+          },
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_20_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -52,6 +52,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.datetime "archived_at"
+    t.index ["archived_at"], name: "index_assessments_on_archived_at"
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
@@ -89,6 +91,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.datetime "vacancy_updated_at"
+    t.string "narrative_status", default: "unknown", null: false
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -143,6 +147,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "privacy_acknowledged_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
@@ -193,7 +198,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "archived_at"
+    t.string "status", default: "active", null: false
+    t.index ["archived_at"], name: "index_vacancies_on_archived_at"
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'closed'::character varying]::text[])", name: "chk_vacancies_status"
   end
 
   create_table "vacancy_skills", force: :cascade do |t|

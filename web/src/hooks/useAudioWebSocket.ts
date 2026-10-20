@@ -9,6 +9,8 @@ interface UseAudioWebSocketOptions {
   onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text">) => void;
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
+  onSessionEnded?: (reason: string, message?: string) => void;
+  onFatalError?: (message: string) => void;
   onReconnected?: () => void;
 }
 
@@ -21,6 +23,8 @@ export function useAudioWebSocket({
   onTranscript,
   onStateChange,
   onSpeakerChange,
+  onSessionEnded,
+  onFatalError,
   onReconnected,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -100,10 +104,14 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              onSessionEnded?.(msg.reason ?? "manual_candidate", msg.message);
+              onStateChange(msg.reason === "error" ? "failed" : "complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                onFatalError?.(msg.message ?? "The interview connection ended unexpectedly.");
+                onStateChange("failed");
+              }
               break;
           }
         } catch {
@@ -127,10 +135,11 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onFatalError?.("The interview connection could not be restored.");
+        onStateChange("failed");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onSessionEnded, onFatalError, onReconnected]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

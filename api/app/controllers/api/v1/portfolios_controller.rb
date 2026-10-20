@@ -57,12 +57,19 @@ module Api
           return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})", :unprocessable_entity)
         end
 
+        if params[:vacancy_id].present?
+          report = FitGapReport.find_by(portfolio_id: @portfolio.id, vacancy_id: params[:vacancy_id])
+          if report && fit_gap_report_stale?(report)
+            return json_error("Fit/gap report is stale. Regenerate it before export", :conflict)
+          end
+        end
+
         if format == "pdf"
           vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
-                           filename:    "portfolio-#{@portfolio.id}.pdf",
+                           filename:    export_filename("pdf"),
                            type:        "application/pdf",
                            disposition: "attachment"
         end
@@ -72,19 +79,19 @@ module Api
         export_data = build_export_json(@portfolio, vacancy_id)
 
         send_data export_data.to_json,
-                  filename:    "portfolio-#{@portfolio.id}.json",
+                  filename:    export_filename("json"),
                   type:        "application/json",
                   disposition: "attachment"
       end
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.visible_to_current_tenant.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
 
-        vacancy = Vacancy.find_by(id: vacancy_id)
+        vacancy = Vacancy.active.find_by(id: vacancy_id)
         return json_error("Vacancy not found", :not_found) unless vacancy
 
         unless portfolio.complete?
@@ -92,7 +99,7 @@ module Api
         end
 
         FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        FitGapGeneratorWorker.enqueue_once(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
@@ -101,12 +108,12 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.visible_to_current_tenant.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
 
-        vacancy = Vacancy.find_by(id: vacancy_id)
+        vacancy = Vacancy.active.find_by(id: vacancy_id)
         return json_error("Vacancy not found", :not_found) unless vacancy
 
         unless portfolio.complete?
@@ -119,7 +126,7 @@ module Api
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        FitGapGeneratorWorker.enqueue_once(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -127,7 +134,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.visible_to_current_tenant.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -153,7 +160,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.visible_to_current_tenant.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -205,14 +212,28 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          narrative_status:  report.narrative_status,
+          generated_at:      report.generated_at,
+          stale:             fit_gap_report_stale?(report)
         }
+      end
+
+      def fit_gap_report_stale?(report)
+        # A missing vacancy means the requirements can no longer be verified.
+        vacancy = report.vacancy
+        vacancy.nil? || report.vacancy_updated_at != vacancy.updated_at
+      end
+
+      def export_filename(format)
+        slug = @portfolio.session.candidate_name.to_s.parameterize.presence || "candidate"
+        "portfolio-#{slug}-#{@portfolio.id}.#{format}"
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
         data = {
-          exported_at: Time.current.iso8601,
-          portfolio:   portfolio_json(portfolio)
+          exported_at:    Time.current.iso8601,
+          candidate_name: portfolio.session.candidate_name,
+          portfolio:      portfolio_json(portfolio)
         }
 
         if vacancy_id.present?

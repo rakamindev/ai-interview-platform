@@ -35,6 +35,7 @@ Rails.application.routes.draw do
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      post 'sessions/:token/privacy_acknowledgement', to: 'sessions#acknowledge_privacy'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do
@@ -48,7 +49,9 @@ Rails.application.routes.draw do
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
       # Vacancies
-      resources :vacancies
+      resources :vacancies do
+        member { patch :status, action: :update_status }
+      end
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do
