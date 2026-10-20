@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
@@ -27,6 +26,7 @@ export default function FitGapReportPage() {
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [retryingPortfolio, setRetryingPortfolio] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const fetchingReport = useRef(false);
   const fetchingPortfolio = useRef(false);
 
@@ -156,6 +156,7 @@ export default function FitGapReportPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
       const ext = format;
@@ -168,6 +169,8 @@ export default function FitGapReportPage() {
       a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setExportError(`Could not export the report as ${format.toUpperCase()}. Try again.`);
     } finally {
       setExporting(null);
     }
@@ -189,50 +192,51 @@ export default function FitGapReportPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-7">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              aria-label="Back to candidate results"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-2xl font-semibold tracking-tight">Role fit report</h1>
+    <div className="mx-auto max-w-5xl space-y-8">
+      <div className="space-y-5 border-b pb-6">
+        <Link
+          to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+          className="inline-flex min-h-11 items-center gap-2 rounded-md pr-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Candidate results
+        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">Role fit report</h1>
+            <p className="text-sm leading-6 text-muted-foreground">Compare assessed skills with the selected vacancy requirements.</p>
           </div>
-        </div>
-
-        {portfolio && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+          {portfolio && (
+            <div className="flex flex-wrap gap-2 sm:shrink-0">
+            <Button variant="outline" className="min-h-11" onClick={handleRegenerate} disabled={regenerating || generating}>
+              {regenerating ? <Loader2 aria-hidden="true" className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw aria-hidden="true" className="mr-1.5 h-4 w-4" />}
               Regenerate
             </Button>
             {report && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting || report.stale}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
+                <Button variant="outline" className="min-h-11" onClick={() => handleExport("pdf")} disabled={!!exporting || report.stale}>
+                  {exporting === "pdf" ? <Loader2 aria-hidden="true" className="mr-1.5 h-4 w-4 animate-spin" /> : <Download aria-hidden="true" className="mr-1.5 h-4 w-4" />}
+                  Export PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting || report.stale}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
+                <Button variant="outline" className="min-h-11" onClick={() => handleExport("json")} disabled={!!exporting || report.stale}>
+                  {exporting === "json" ? <Loader2 aria-hidden="true" className="mr-1.5 h-4 w-4 animate-spin" /> : <Download aria-hidden="true" className="mr-1.5 h-4 w-4" />}
+                  Export JSON
                 </Button>
               </>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {exportError && <div role="alert" className="rounded-lg border border-destructive/40 bg-card p-4 text-sm text-destructive">{exportError}</div>}
 
       {error && (
         <div role="alert" className="rounded-lg border border-destructive/50 p-3 text-sm space-y-2">
           <p>{error.message}</p>
           <Button
             variant="outline"
-            size="sm"
+            className="min-h-11"
             onClick={retry}
             disabled={retryingPortfolio || regenerating}
           >
@@ -244,17 +248,19 @@ export default function FitGapReportPage() {
       )}
 
       {portfolioGenerating && (
-        <div className="border rounded-lg p-8 text-center space-y-2">
-          <Loader2 className="h-7 w-7 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating portfolio...</p>
+        <div role="status" className="space-y-3 rounded-xl border bg-card px-6 py-12 text-center">
+          <Loader2 aria-hidden="true" className="mx-auto h-7 w-7 animate-spin text-primary" />
+          <p className="font-medium">Preparing candidate data</p>
+          <p className="text-sm text-muted-foreground">The portfolio is still being generated. This report will load when it is ready.</p>
         </div>
       )}
 
       {/* Generating */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+        <div role="status" className="space-y-3 rounded-xl border bg-card px-6 py-12 text-center">
+          <Loader2 aria-hidden="true" className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="font-medium">Generating fit and gap report</p>
+          <p className="text-sm text-muted-foreground">This report will appear here when the comparison is complete.</p>
         </div>
       )}
 
@@ -262,27 +268,26 @@ export default function FitGapReportPage() {
       {report && (
         <>
           {report.stale && (
-            <div role="alert" className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+            <div role="alert" className="rounded-lg border border-amber-700/40 bg-amber-50 p-4 text-sm text-amber-900">
               Vacancy requirements have changed. Regenerate this report before using it for a decision.
             </div>
           )}
 
           {/* Skill comparison */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Skill comparison</CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">Review each required skill against the candidate’s assessed level.</p>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <ComparisonTable comparisons={report.skill_comparisons} />
             </CardContent>
           </Card>
 
-          <Separator />
-
           {/* Culture & competency */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Culture and competency fit</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               {report.narrative_status === "fallback" && (
@@ -295,7 +300,7 @@ export default function FitGapReportPage() {
                   Narrative source is unknown for this older report. Regenerate to refresh it.
                 </p>
               )}
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+              <p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
                 {report.culture_narrative || report.overall_narrative || "Narrative unavailable. Regenerate the report to retry."}
               </p>
             </CardContent>
@@ -304,11 +309,10 @@ export default function FitGapReportPage() {
           {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
             <>
-              <Separator />
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Zap aria-hidden="true" className="h-4 w-4 text-amber-700" />
                     Discovered Skills (not in vacancy requirements)
                   </CardTitle>
                 </CardHeader>
@@ -321,7 +325,7 @@ export default function FitGapReportPage() {
                         <span className="text-muted-foreground">
                           {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
                         </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
+                        <span className="text-sm text-muted-foreground">Not required for this role, may be additive.</span>
                       </div>
                     ))}
                 </CardContent>

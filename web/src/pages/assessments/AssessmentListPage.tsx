@@ -78,65 +78,69 @@ export default function AssessmentListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Assessments</h1>
-          <p className="text-sm text-muted-foreground">Create interview plans and invite candidates.</p>
+      <div className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">Assessments</h1>
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground">Create interview plans, invite candidates, and review their results.</p>
         </div>
-        <Button onClick={() => navigate("/assessments/new")}>
+        <Button className="h-12 w-full px-5 sm:w-auto" onClick={() => navigate("/assessments/new")}>
           <Plus className="h-4 w-4" /> New assessment
         </Button>
       </div>
 
-      <div className="relative max-w-md">
-        <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          aria-label="Search assessments by name"
-          autoComplete="off"
-          className="pl-9"
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search assessments"
-          type="search"
-          value={search}
-        />
+      <div className="rounded-xl border bg-card p-4">
+        <label className="mb-2 block text-sm font-medium" htmlFor="assessment-search">Find an assessment</label>
+        <div className="relative max-w-xl">
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="assessment-search"
+            autoComplete="off"
+            className="pl-9"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by role title"
+            type="search"
+            value={search}
+          />
+        </div>
       </div>
 
       {error && (
-        <div role="alert" className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-white p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <div role="alert" className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-card p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p className="text-destructive">Assessments could not be loaded. Check your connection and try again.</p>
-          <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>Try again</Button>
+          <Button variant="outline" className="min-h-11" onClick={() => setRetry((value) => value + 1)}>Try again</Button>
         </div>
       )}
 
       {error ? null : loading ? (
-        <div className="space-y-2">
+        <div aria-busy="true" className="space-y-3">
+          <p role="status" className="sr-only">Loading assessments</p>
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : !error && assessments.length === 0 && !debouncedSearch ? (
-        <div className="rounded-xl border bg-white px-6 py-12 text-center">
-          <h2 className="font-medium">No assessments yet</h2>
-          <p className="mx-auto mb-5 mt-1 max-w-sm text-sm text-muted-foreground">Create an interview plan with the role and skills you want to assess.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
+        <div className="rounded-xl border bg-card px-6 py-14 text-center">
+          <h2 className="text-lg font-semibold">No assessments yet</h2>
+          <p className="mx-auto mb-6 mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Create an interview plan with the role and skills you want to assess.</p>
+          <Button className="h-12 px-5" onClick={() => navigate("/assessments/new")}>
             <Plus className="h-4 w-4" /> Create assessment
           </Button>
         </div>
       ) : !error && assessments.length === 0 ? (
-        <div className="rounded-xl border bg-white px-6 py-12 text-center">
-          <h2 className="font-medium">No matching assessments</h2>
-          <p className="mb-5 mt-1 text-sm text-muted-foreground">Try another name or clear your search.</p>
-          <Button variant="outline" onClick={clearSearch}>Clear search</Button>
+        <div className="rounded-xl border bg-card px-6 py-12 text-center">
+          <h2 className="text-lg font-semibold">No matching assessments</h2>
+          <p className="mb-6 mt-2 text-sm text-muted-foreground">Try another role title or clear your search.</p>
+          <Button variant="outline" className="min-h-11" onClick={clearSearch}>Clear search</Button>
         </div>
       ) : (
         <div className="space-y-3">
           {assessments.map((a) => (
             <Link key={a.id} to={`/assessments/${a.id}/invite`} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              <Card className="transition-colors group-hover:border-primary/40 group-focus-visible:border-primary">
-                <CardContent className="flex items-center justify-between gap-4 px-5 py-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{a.name}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+              <Card className="shadow-none transition-colors group-hover:border-primary/50 group-focus-visible:border-primary">
+                <CardContent className="flex min-h-24 items-center justify-between gap-4 px-4 py-4 sm:px-5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-semibold">{a.name}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
+                        <Clock aria-hidden="true" className="h-3.5 w-3.5" />
                         {a.time_limit_min} min
                       </span>
                       <span aria-hidden="true">·</span>
@@ -147,7 +151,7 @@ export default function AssessmentListPage() {
                     {a.skill_preview && a.skill_preview.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {a.skill_preview.map((skill, index) => (
-                          <span key={`${skill}-${index}`} className="max-w-48 truncate rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                          <span key={`${skill}-${index}`} className="max-w-48 truncate rounded-md bg-muted px-2.5 py-1.5 text-xs text-foreground">
                             {skill}
                           </span>
                         ))}
@@ -160,7 +164,11 @@ export default function AssessmentListPage() {
                       <SessionSummary summary={a.session_summary} />
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  <span className="hidden shrink-0 items-center gap-2 text-sm font-medium text-primary sm:flex">
+                    Manage assessment
+                    <ChevronRight aria-hidden="true" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                  <ChevronRight aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground sm:hidden" />
                 </CardContent>
               </Card>
             </Link>
@@ -172,6 +180,7 @@ export default function AssessmentListPage() {
               </p>
               <div className="flex items-center gap-2">
                 <Button
+                  className="min-h-11"
                   disabled={meta.current_page <= 1 || loading}
                   onClick={() => setPage((current) => current - 1)}
                   variant="outline"
@@ -182,6 +191,7 @@ export default function AssessmentListPage() {
                   Page {meta.current_page} of {meta.total_pages}
                 </span>
                 <Button
+                  className="min-h-11"
                   disabled={meta.current_page >= meta.total_pages || loading}
                   onClick={() => setPage((current) => current + 1)}
                   variant="outline"

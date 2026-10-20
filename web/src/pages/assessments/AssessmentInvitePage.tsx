@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -38,18 +37,18 @@ function SessionRow({
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
-  const displayName = session.candidate_name || `Candidate ${index}`;
+  const displayName = session.candidate_name || "Unnamed candidate";
 
   return (
-    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+        <div aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-sm font-semibold text-foreground">
           {index}
         </div>
         <div className="min-w-0 space-y-0.5">
           <div className="truncate text-sm font-medium">{displayName}</div>
           {session.started_at && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
             </div>
           )}
@@ -58,26 +57,26 @@ function SessionRow({
 
       <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span className="flex items-center gap-2 text-sm text-amber-800">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-amber-500" />
             Awaiting candidate
           </span>
         )}
         {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="flex items-center gap-2 text-sm font-medium text-primary">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-primary" />
             Live
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+          <span className="flex items-center gap-2 text-sm text-destructive">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-destructive" />
             Failed
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span className="flex items-center gap-2 text-sm text-green-700">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-green-700" />
             Completed
           </span>
         )}
@@ -87,7 +86,7 @@ function SessionRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="min-h-11 px-3 text-sm"
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
@@ -101,7 +100,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="min-h-11 px-3 text-sm"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
@@ -111,7 +110,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="min-h-11 px-3 text-sm"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
             >
               Results
@@ -224,7 +223,7 @@ export default function AssessmentInvitePage() {
             <h1 className="font-semibold">Assessment details could not be loaded</h1>
             <p className="mt-1 text-sm text-muted-foreground">Candidate sessions may not be up to date. Try loading this page again.</p>
           </div>
-          <Button variant="outline" onClick={loadAssessmentPage}>Try again</Button>
+          <Button variant="outline" className="min-h-11" onClick={loadAssessmentPage}>Try again</Button>
           <Button asChild variant="ghost"><Link to="/assessments">Back to assessments</Link></Button>
         </div>
       </div>
@@ -232,32 +231,27 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-7">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" aria-label="Back to assessments" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{assessment.name}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
-            </div>
+    <div className="mx-auto max-w-5xl space-y-8">
+      <div className="space-y-5 border-b pb-6">
+        <Link to="/assessments" className="inline-flex min-h-11 items-center gap-2 rounded-md pr-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Assessments
+        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <h1 className="break-words text-3xl font-semibold tracking-tight">{assessment.name}</h1>
+            <p className="text-sm leading-6 text-muted-foreground">Manage candidate invites and review completed interviews for this role.</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => navigate(`/assessments/${id}/edit`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-          </Button>
-          <Button size="sm" className="flex-1 sm:flex-none" onClick={openInviteDialog} disabled={creatingSession}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
+            <Button variant="outline" className="min-h-11 flex-1 sm:flex-none" onClick={() => navigate(`/assessments/${id}/edit`)}>
+              <Pencil aria-hidden="true" className="mr-1.5 h-4 w-4" /> Edit assessment
+            </Button>
+            <Button className="min-h-11 flex-1 sm:flex-none" onClick={openInviteDialog} disabled={creatingSession}>
+              <Plus aria-hidden="true" className="mr-1.5 h-4 w-4" />
             {creatingSession ? "Creating..." : "Invite candidate"}
           </Button>
           <ConfirmActionDialog
-            trigger={<Button variant="ghost" size="sm" className="flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-none"><Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete</Button>}
+            trigger={<Button variant="ghost" className="min-h-11 text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 aria-hidden="true" className="mr-1.5 h-4 w-4" /> Delete</Button>}
             title="Delete this assessment?"
             description="It will be removed from active assessments. Existing interview sessions remain stored."
             actionLabel="Delete assessment"
@@ -267,8 +261,24 @@ export default function AssessmentInvitePage() {
               navigate("/assessments");
             }}
           />
+          </div>
         </div>
       </div>
+
+      <section aria-label="Assessment overview" className="grid grid-cols-1 divide-y rounded-xl border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="px-5 py-4">
+          <p className="text-sm text-muted-foreground">Interview length</p>
+          <p className="mt-1 flex items-center gap-2 font-semibold"><Clock aria-hidden="true" className="h-4 w-4 text-primary" />{assessment.time_limit_min} minutes</p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-sm text-muted-foreground">Interview language</p>
+          <p className="mt-1 font-semibold">{assessment.language === "id" ? "Bahasa Indonesia" : "English"}</p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-sm text-muted-foreground">Skills assessed</p>
+          <p className="mt-1 font-semibold">{assessment.skills?.length ?? 0} skills</p>
+        </div>
+      </section>
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -287,11 +297,11 @@ export default function AssessmentInvitePage() {
               autoFocus
             />
             <ApiErrorList errors={inviteErrors} />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-sm text-muted-foreground">Optional. Helps you identify this session later.</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)} disabled={creatingSession}>Cancel</Button>
-            <Button onClick={handleInviteCandidate} disabled={creatingSession}>Create Link</Button>
+            <Button variant="outline" className="min-h-11" onClick={() => setShowInviteDialog(false)} disabled={creatingSession}>Cancel</Button>
+            <Button className="min-h-11" onClick={handleInviteCandidate} disabled={creatingSession}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -302,15 +312,15 @@ export default function AssessmentInvitePage() {
           <CardContent className="pt-4 space-y-2">
             <p className="text-sm font-medium">
               {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
+                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> is ready. Share it with your candidate:</>
+                : <>New invite link is ready. Share it with your candidate:</>}
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
+            <Button variant="outline" onClick={copyNewSessionLink} className="min-h-11 w-full">
               {newSessionCopied ? (
                 <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
               ) : (
@@ -321,31 +331,28 @@ export default function AssessmentInvitePage() {
         </Card>
       )}
 
-      <Separator />
-
       {/* Sessions list */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Candidates</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">Share a unique interview link with each candidate.</p>
+            <h2 className="text-xl font-semibold">Candidates</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">Share a unique interview link with each candidate.</p>
           </div>
-          <span className="text-sm text-muted-foreground">
-            {sessions.length > 0 && (
-              <span>{sessions.length} total</span>
-            )}
-          </span>
+          <span className="text-sm font-medium text-muted-foreground">{sessions.length} {sessions.length === 1 ? "candidate" : "candidates"}</span>
         </div>
 
         {sessions.length === 0 ? (
-          <div className="border rounded-lg p-10 text-center space-y-3">
-            <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
+          <div className="space-y-4 rounded-xl border bg-card px-6 py-12 text-center">
+            <UserRound aria-hidden="true" className="mx-auto h-8 w-8 text-muted-foreground" />
             <div>
-              <p className="text-sm font-medium">No candidates yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click "Invite Candidate" to generate an interview link.
+              <p className="font-semibold">No candidates invited</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Create an interview link to start collecting candidate results.
               </p>
             </div>
+            <Button className="min-h-11" onClick={openInviteDialog}>
+              <Plus aria-hidden="true" className="mr-1.5 h-4 w-4" /> Invite candidate
+            </Button>
           </div>
         ) : (
           <Card>
@@ -366,25 +373,26 @@ export default function AssessmentInvitePage() {
             </CardContent>
           </Card>
         )}
-      </div>
+      </section>
 
       {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
+        <section className="space-y-4 border-t pt-7">
+          <div>
+            <h2 className="text-xl font-semibold">Skills assessed</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Competencies included in this interview plan.</p>
           </div>
-        </>
+          <Card>
+            <CardContent className="divide-y p-0">
+              {assessment.skills.map((s) => (
+                <div key={s.id ?? s.skill_label} className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <span className="font-medium">{s.skill_label}</span>
+                  <span className="text-sm text-muted-foreground">Expected level: {LEVEL_LABELS[s.expected_level]}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
       )}
     </div>
   );

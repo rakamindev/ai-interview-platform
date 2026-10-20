@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
@@ -122,77 +121,72 @@ export default function PortfolioPage() {
           <h1 className="font-semibold">Candidate results could not be loaded</h1>
           <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
         </div>
-        <Button variant="outline" onClick={loadPage}>Try again</Button>
+        <Button variant="outline" className="min-h-11" onClick={loadPage}>Try again</Button>
         <Button asChild variant="ghost"><Link to={`/assessments/${id}/invite`}>Back to candidates</Link></Button>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-7">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} aria-label="Back to candidates" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Candidate results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+    <div className="mx-auto max-w-5xl space-y-8">
+      <div className="space-y-5 border-b pb-6">
+        <Link to={`/assessments/${id}/invite`} className="inline-flex min-h-11 items-center gap-2 rounded-md pr-3 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Candidates
+        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">Candidate results</h1>
+            {candidateName ? <p className="text-base text-muted-foreground">{candidateName}</p> : <p className="text-sm text-muted-foreground">Interview assessment summary</p>}
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex min-h-11 items-center gap-1 rounded-md border px-3 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-9"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border px-4 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <FileText className="h-3.5 w-3.5" />
+            <FileText aria-hidden="true" className="h-4 w-4" />
             Transcript
           </Link>
           {!generating && portfolio && (
             <>
               <Button
                 variant="outline"
-                size="sm"
+                className="min-h-11"
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
               >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                PDF
+                {exporting === "pdf" ? <Loader2 aria-hidden="true" className="mr-1.5 h-4 w-4 animate-spin" /> : <Download aria-hidden="true" className="mr-1.5 h-4 w-4" />}
+                Export PDF
               </Button>
               <Button
                 variant="outline"
-                size="sm"
+                className="min-h-11"
                 onClick={() => handleExport("json")}
                 disabled={!!exporting}
               >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                JSON
+                {exporting === "json" ? <Loader2 aria-hidden="true" className="mr-1.5 h-4 w-4 animate-spin" /> : <Download aria-hidden="true" className="mr-1.5 h-4 w-4" />}
+                Export JSON
               </Button>
             </>
           )}
+          </div>
         </div>
       </div>
 
       {/* Generating state */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <div role="status" className="space-y-3 rounded-xl border bg-card px-6 py-12 text-center">
+          <Loader2 aria-hidden="true" className="mx-auto h-8 w-8 animate-spin text-primary" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">The interview responses are being analyzed. Results will appear here when ready.</p>
           </div>
         </div>
       )}
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+        <div role="alert" className="space-y-3 rounded-xl border border-destructive/40 bg-card p-6 text-center">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
           <Button
             variant="outline"
@@ -211,9 +205,14 @@ export default function PortfolioPage() {
       {!generating && portfolio?.generation_status === "complete" && (
         <>
           {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">Assessment skills</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Evidence and assessor adjustments for the skills in this interview plan.</p>
+            </div>
+            {portfolio.skills.filter((s) => !s.is_discovered).length === 0 ? (
+              <div className="rounded-xl border bg-card px-5 py-8 text-sm text-muted-foreground">No assessment skills were included in this interview.</div>
+            ) : portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
                 <SkillPortfolioCard
@@ -223,19 +222,18 @@ export default function PortfolioPage() {
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
                 />
               ))}
-          </div>
+          </section>
 
           {/* Discovered skills */}
           {portfolio.skills.some((s) => s.is_discovered) && (
             <>
-              <Separator />
-              <div className="space-y-3">
+              <section className="space-y-4 border-t pt-7">
                 <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
+                  <h2 className="flex items-center gap-2 text-xl font-semibold">
+                    <Zap aria-hidden="true" className="h-4 w-4 text-amber-700" />
                     Discovered Skills
                   </h2>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Skills the AI probed that were not in the original assessment
                   </p>
                 </div>
@@ -249,30 +247,45 @@ export default function PortfolioPage() {
                       onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
                     />
                   ))}
-              </div>
+              </section>
             </>
           )}
 
-          <Separator />
-
-          {/* Fit/Gap */}
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Compare with vacancy
-            </Button>
-          </div>
+          <section className="space-y-4 rounded-xl border bg-card p-5 sm:p-6">
+            <div>
+              <h2 className="text-xl font-semibold">Compare with a vacancy</h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">See how this candidate’s assessed skills align with a role’s requirements.</p>
+            </div>
+            {vacancies.length === 0 ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">There are no active vacancies to compare against.</p>
+                <Button asChild variant="outline" className="min-h-11">
+                  <Link to="/vacancies/new">Create a vacancy</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <label htmlFor="fit-gap-vacancy" className="text-sm font-medium">Vacancy</label>
+                  <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                    <SelectTrigger id="fit-gap-vacancy" className="w-full">
+                      <SelectValue placeholder="Select a vacancy" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vacancies.map((v) => (
+                        <SelectItem key={v.id} value={String(v.id)}>
+                          {v.role_title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button className="min-h-11 w-full sm:w-auto" onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                  Compare with vacancy
+                </Button>
+              </div>
+            )}
+          </section>
         </>
       )}
     </div>
