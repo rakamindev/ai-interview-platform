@@ -53,8 +53,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_20_000000) do
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
     t.datetime "archived_at"
-    t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.index ["archived_at"], name: "index_assessments_on_archived_at"
+    t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
 
@@ -90,9 +90,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_20_000000) do
     t.jsonb "skill_comparisons", null: false
     t.text "culture_narrative"
     t.text "overall_narrative"
-    t.string "narrative_status", default: "unknown", null: false
     t.datetime "generated_at", default: -> { "now()" }
     t.datetime "vacancy_updated_at"
+    t.string "narrative_status", default: "unknown", null: false
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -200,8 +200,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_20_000000) do
     t.datetime "updated_at", null: false
     t.datetime "archived_at"
     t.string "status", default: "active", null: false
-    t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
     t.index ["archived_at"], name: "index_vacancies_on_archived_at"
+    t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'closed'::character varying]::text[])", name: "chk_vacancies_status"
   end
 
