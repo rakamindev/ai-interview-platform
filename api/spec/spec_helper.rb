@@ -4,6 +4,10 @@ ENV['RAILS_ENV'] ||= 'test'
 
 require_relative '../config/environment'
 require 'rspec/rails'
+require 'sidekiq/testing'
+
+# Keep jobs in-memory: request specs must never reach Redis or a real queue.
+Sidekiq::Testing.fake!
 
 Dir[File.join(__dir__, 'support/**/*.rb')].sort.each { |file| require file }
 
