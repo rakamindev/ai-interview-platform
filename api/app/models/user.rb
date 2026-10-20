@@ -6,7 +6,7 @@ class User < ApplicationRecord
   ROLES = %w[admin user].freeze
 
   validates :email, presence: true,
-                    uniqueness: { case_sensitive: false },
+                    uniqueness: { case_sensitive: false,message: 'is already registered' },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :role, inclusion: { in: ROLES }
 

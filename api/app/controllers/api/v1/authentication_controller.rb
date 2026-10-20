@@ -5,7 +5,16 @@ module Api
     class AuthenticationController < ApiController
       skip_before_action :require_tenant!
 
-      # POST /api/v1/auth/login
+      # POST /api/v1/auth/signup  (creates an admin account)
+      def signup
+        user = User.new(email: params[:email], password: params[:password], role: 'admin')
+
+        return json_error(user.errors.full_messages.first) unless user.save
+
+        json_response({ user: { id: user.id, email: user.email, role: user.role } }, :created)
+      end
+
+      # POST /api/v1/auth/login  (unchanged)
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
