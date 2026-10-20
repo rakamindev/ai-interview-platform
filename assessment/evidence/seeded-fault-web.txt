@@ -1,0 +1,263 @@
+
+ RUN  v3.2.7 <repo>/web
+
+ ✓ src/test/smoke.test.ts (1 test) 29ms
+ ✓ src/utils/levels.test.ts (8 tests) 7ms
+ ❯ src/components/fitgap/fitgap-components.test.tsx (7 tests | 1 failed) 155ms
+   × ComparisonTable > shows the required level from expected_level 91ms
+     → Unable to find an element with the text: L4. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b align-middle last:border-0"
+>
+  <th
+    class="max-w-[16rem] break-words py-3 pr-3 text-left font-medium"
+    scope="row"
+  >
+    React
+  </th>
+  <td
+    class="px-3 py-3 tabular-nums text-muted-foreground"
+  >
+    Not assessed
+  </td>
+  <td
+    class="px-3 py-3"
+  >
+    <span
+      class="inline-flex flex-wrap items-center gap-x-1.5 tabular-nums"
+    >
+      L2
+    </span>
+  </td>
+  <td
+    class="px-3 py-3"
+  >
+    <div
+      aria-label="Candidate L2, required L4"
+      class="flex items-end gap-1"
+      role="img"
+    >
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="1"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-evidence"
+          data-state="filled"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="2"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-evidence"
+          data-state="filled"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="3"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-shortfall/25"
+          data-state="shortfall"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="4"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-shortfall/25"
+          data-state="shortfall"
+        />
+        <span
+          class="h-[3px] rounded-full bg-required"
+          data-required="true"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="5"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-muted"
+          data-state="empty"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+    </div>
+  </td>
+  <td
+    class="py-3 pl-3"
+  >
+    <span
+      class="text-sm font-medium text-shortfall"
+    >
+      Below
+      <span
+        class="font-normal"
+      >
+         by 2 levels
+      </span>
+    </span>
+  </td>
+</tr>
+   ✓ ComparisonTable > marks rows where an assessor's rating was used 17ms
+   ✓ ComparisonTable > shows a not-assessed skill as missing evidence, not as a gap 16ms
+   ✓ ComparisonTable > counts every result in the summary, including missing evidence 10ms
+   ✓ ComparisonTable > also renders a stacked list for narrow screens 6ms
+   ✓ EvidenceGapsNotice > explains each reason the recommendation was withheld, with a way to resolve it 10ms
+   ✓ EvidenceGapsNotice > points to the vacancy when it has no skills 4ms
+ ✓ src/components/portfolio/portfolio-components.test.tsx (13 tests) 313ms
+ ✓ src/pages/report-pages.test.tsx (15 tests) 445ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/fitgap/fitgap-components.test.tsx > ComparisonTable > shows the required level from expected_level
+TestingLibraryElementError: Unable to find an element with the text: L4. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b align-middle last:border-0"
+>
+  <th
+    class="max-w-[16rem] break-words py-3 pr-3 text-left font-medium"
+    scope="row"
+  >
+    React
+  </th>
+  <td
+    class="px-3 py-3 tabular-nums text-muted-foreground"
+  >
+    Not assessed
+  </td>
+  <td
+    class="px-3 py-3"
+  >
+    <span
+      class="inline-flex flex-wrap items-center gap-x-1.5 tabular-nums"
+    >
+      L2
+    </span>
+  </td>
+  <td
+    class="px-3 py-3"
+  >
+    <div
+      aria-label="Candidate L2, required L4"
+      class="flex items-end gap-1"
+      role="img"
+    >
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="1"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-evidence"
+          data-state="filled"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="2"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-evidence"
+          data-state="filled"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="3"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-shortfall/25"
+          data-state="shortfall"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="4"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-shortfall/25"
+          data-state="shortfall"
+        />
+        <span
+          class="h-[3px] rounded-full bg-required"
+          data-required="true"
+        />
+      </span>
+      <span
+        class="flex w-5 flex-col items-stretch gap-[3px]"
+        data-rung="5"
+      >
+        <span
+          class="h-2.5 rounded-[2px] bg-muted"
+          data-state="empty"
+        />
+        <span
+          class="h-[3px] rounded-full bg-transparent"
+        />
+      </span>
+    </div>
+  </td>
+  <td
+    class="py-3 pl-3"
+  >
+    <span
+      class="text-sm font-medium text-shortfall"
+    >
+      Below
+      <span
+        class="font-normal"
+      >
+         by 2 levels
+      </span>
+    </span>
+  </td>
+</tr>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/fitgap-components.test.tsx:18:24
+     16| 
+     17|     const row = within(desktopTable()).getByRole("row", { name: /React…
+     18|     expect(within(row).getByText("L4")).toBeInTheDocument();
+       |                        ^
+     19|     expect(within(row).getByText("L2")).toBeInTheDocument();
+     20|     expect(within(row).getByText("Below")).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 43 passed (44)
+   Start at  20:40:13
+   Duration  2.47s (transform 514ms, setup 1.16s, collect 1.44s, tests 949ms, environment 3.28s, prepare 649ms)
+

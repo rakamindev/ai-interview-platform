@@ -79,27 +79,41 @@ export interface Portfolio {
   session_id: number;
   candidate_id?: number;
   generation_status: "pending" | "generating" | "complete" | "failed";
-  generated_at?: string;
-  generation_error?: string;
+  generated_at: string | null;
+  generation_error: string | null;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }
 
+/** GET /sessions/:id/portfolio */
+export type PortfolioResponse =
+  | { status: "not_ready"; session_status: string }
+  | { status: "generating"; last_error: string | null }
+  | { portfolio: Portfolio; error?: string };
+
+export type Confidence = "high" | "medium" | "low";
+
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /** false when the interview produced no evidence: ai_level and ai_confidence are then null */
+  assessed: boolean;
+  ai_level: number | null;
+  ai_confidence: Confidence | null;
+  /** the assessor's override if present, otherwise ai_level */
+  effective_level: number | null;
+  override: AssessorOverride | null;
   evidence: string[];
-  competency_summary: string;
+  competency_summary: string | null;
 }
 
 export interface AssessorOverride {
   id: number;
   portfolio_skill_id: number;
-  ai_level: number;
+  /** null when the AI did not assess the skill */
+  ai_level: number | null;
   override_level: number;
   assessor_notes: string;
   overridden_by?: number;
@@ -129,11 +143,27 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id: string | null;
+  expected_level: number;
+  /** effective level (override wins); null when not assessed */
+  candidate_level: number | null;
+  ai_level: number | null;
+  is_override: boolean;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  confidence: Confidence | null;
+}
+
+export type EvidenceGapReason =
+  | "skills_not_assessed"
+  | "low_confidence"
+  | "interview_incomplete"
+  | "no_vacancy_skills";
+
+export interface EvidenceGap {
+  reason: EvidenceGapReason;
+  skills: string[];
+  end_reason?: string;
 }
 
 export interface FitGapReport {
@@ -141,8 +171,11 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  /** null on reports generated before evidence checks existed */
+  recommendation_status: "sufficient" | "insufficient_evidence" | null;
+  evidence_gaps: EvidenceGap[];
+  culture_narrative: string | null;
+  overall_narrative: string | null;
   generated_at: string;
 }
 

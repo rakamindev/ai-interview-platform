@@ -16,11 +16,12 @@ default: &default
 
 development:
   <<: *default
-  database: rakamin_development
+  database: <%= ENV.fetch('DB_NAME', 'ai_interview_development') %>
 
+# Never point this at a shared database: db:test:prepare purges it.
 test:
   <<: *default
-  database: rakamin_test
+  database: ai_interview_test
 
 staging:
   <<: *default

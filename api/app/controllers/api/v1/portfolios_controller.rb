@@ -10,8 +10,13 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
-          return render json: { status: "generating" }, status: :accepted
+        unless @session.ended?
+          return json_response(status: "not_ready", session_status: @session.status)
+        end
+
+        if @portfolio.nil? || @portfolio.generating? || @portfolio.generation_status == "pending"
+          # last_error: the most recent temporary failure while Sidekiq retries (e.g. "Rate limited").
+          return render json: { status: "generating", last_error: @portfolio&.generation_error }, status: :accepted
         end
 
         if @portfolio.failed?
@@ -32,11 +37,14 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        # Atomic failed -> pending flip: of two simultaneous clicks, only one can win and enqueue.
+        claimed = Portfolio.where(id: portfolio.id, generation_status: "failed")
+                           .update_all(generation_status: "pending", generation_error: nil)
+        if claimed.zero?
+          return json_error("Portfolio is already being generated", :conflict)
         end
 
-        portfolio.update!(generation_status: "pending", generation_error: nil)
+        portfolio.reload
         PortfolioGeneratorWorker.perform_async(@session.id)
 
         json_response(
@@ -79,7 +87,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = tenant_portfolio
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +109,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_portfolio
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +135,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_portfolio
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -153,10 +161,15 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = tenant_portfolio
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
+      end
+
+      # Portfolios have no tenant_id; reach them only through tenant-scoped sessions.
+      def tenant_portfolio
+        Portfolio.where(session_id: Session.select(:id)).find(params[:id])
       end
 
       def portfolio_json(portfolio)
@@ -167,7 +180,7 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          skills:            portfolio.portfolio_skills.includes(:assessor_override).order(:id).map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
       end
@@ -178,8 +191,11 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
+          assessed:          skill.assessed?,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
+          effective_level:   skill.effective_level,
+          override:          skill.assessor_override && override_json(skill.assessor_override),
           evidence:          skill.evidence_quotes,
           competency_summary: skill.competency_summary
         }
@@ -205,6 +221,8 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          recommendation_status: report.recommendation_status,
+          evidence_gaps:     report.evidence_gaps,
           generated_at:      report.generated_at
         }
       end

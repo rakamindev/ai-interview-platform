@@ -48,7 +48,9 @@ module Api
       end
 
       def set_portfolio_skill
+        # Portfolio skills have no tenant_id; reach them only through tenant-scoped sessions.
         @portfolio_skill = PortfolioSkill.joins(:portfolio)
+                                         .where(portfolios: { session_id: Session.select(:id) })
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

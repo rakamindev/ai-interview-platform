@@ -16,7 +16,9 @@ module FitGap
     # Returns the FitGapReport record.
     def call
       skill_comparisons = build_skill_comparisons
-      narratives        = generate_narratives(skill_comparisons)
+      gate              = EvidenceGate.evaluate(comparisons: skill_comparisons, session: @portfolio.session)
+      # No recommendation (and no model call) when the evidence can't support one.
+      narratives = gate[:status] == 'sufficient' ? generate_narratives(skill_comparisons) : {}
 
       report = FitGapReport.find_or_initialize_by(
         portfolio_id: @portfolio.id,
@@ -25,9 +27,11 @@ module FitGap
 
       report.update!(
         skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        culture_narrative:     narratives[:culture],
+        overall_narrative:     narratives[:overall],
+        recommendation_status: gate[:status],
+        evidence_gaps:         gate[:gaps],
+        generated_at:          Time.current
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -43,16 +47,16 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        expected_level  = vacancy_skill.expected_level
+        candidate_level = portfolio_skill&.dig(:effective_level)
+
+        if candidate_level
+          delta  = candidate_level - expected_level
+          result = delta.zero? ? 'match' : (delta.positive? ? 'exceed' : 'gap')
         else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
+          # No AI rating and no assessor rating: missing evidence is not a gap.
+          delta  = nil
+          result = 'not_assessed'
         end
 
         {
@@ -60,6 +64,8 @@ module FitGap
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          ai_level:        portfolio_skill&.dig(:ai_level),
+          is_override:     portfolio_skill&.dig(:overridden) || false,
           result:          result,
           delta:           delta,
           confidence:      portfolio_skill&.dig(:confidence)
@@ -101,7 +107,8 @@ module FitGap
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        { culture: data['culture_narrative'].presence,
+          overall: data['overall_narrative'].presence || generate_fallback_narrative(skill_comparisons) }
       rescue => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }

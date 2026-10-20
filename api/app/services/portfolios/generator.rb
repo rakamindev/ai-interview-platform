@@ -20,18 +20,26 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      portfolio.update!(generation_status: 'generating', generation_error: nil)
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      # No candidate speech means no evidence: record every skill as not assessed without a model call.
+      response = candidate_spoke? ? @gemini_client.generate_content(build_prompt, temperature: 0.2) : {}
+      rows = SkillReconciler.new(assessment_skills: configured_skills, response: response).call
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      # Replace skills atomically: a failure leaves the previous skills (and their overrides) untouched.
+      Portfolio.transaction do
+        portfolio.portfolio_skills.destroy_all
+        rows.each { |attrs| portfolio.portfolio_skills.create!(attrs) }
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      end
 
-      Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
+      Rails.logger.info("[N10] Portfolio generated for session #{@session.id}: " \
+                        "#{rows.count { |r| r[:ai_level] }} of #{rows.size} skills assessed")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # Status stays 'generating' while Sidekiq retries; PortfolioGeneratorWorker marks it 'failed'
+      # only once retries are exhausted, so the UI never offers Retry while a retry is queued.
+      portfolio&.update_columns(generation_error: e.message.truncate(500))
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -39,10 +47,9 @@ module Portfolios
     private
 
     def build_prompt
-      assessment       = @session.assessment
-      configured_skills = assessment.assessment_skills.order(:display_order)
-      coverage_maps     = @session.coverage_maps.order(:id)
-      turns             = @session.transcript_turns.ordered
+      assessment    = @session.assessment
+      coverage_maps = @session.coverage_maps.order(:id)
+      turns         = @session.transcript_turns.ordered
 
       skills_text = configured_skills.map { |s| skill_definition_block(s) }.join("\n\n")
 
@@ -78,23 +85,28 @@ module Portfolios
         TASK
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        For EACH skill in the coverage map (both configured and discovered):
+        For EACH configured skill, and for any additional skill the candidate clearly demonstrated:
 
         1. FIND THE EVIDENCE
            Read all transcript turns where this skill was discussed.
-           Identify the 2-3 most revealing quotes from the CANDIDATE (not the AI).
+           Identify the 2-3 most revealing quotes from the CANDIDATE (not the AI), copied from the transcript.
            A quote is revealing if it shows HOW they think, not just WHAT they know.
+           The coverage map is a hint about what was discussed; it may be incomplete. The transcript is the source of truth.
 
-        2. ASSIGN A LEVEL
+        2. ASSIGN A LEVEL, OR MARK IT NOT ASSESSED
            Compare the candidate's actual behavior to the L1-L5 anchors.
            Assign the highest level where you see CONSISTENT evidence, not just one strong moment.
            If evidence is mixed (mostly L2 with one L3 moment), assign L2.
+           The level must be a plain integer 1-5.
+           If the candidate gave NO evidence for a skill (never discussed, deflected, or only the AI talked about it),
+           set "level": null, "confidence": null, "evidence": [] and say in the summary what was not covered.
+           Never use L1 as a placeholder for missing evidence: L1 means evidence of foundational ability.
 
         3. WRITE THE COMPETENCY SUMMARY
            2-3 sentences. Focus on patterns, not individual answers.
            What does this person reliably do at this skill? What's the ceiling? What's missing?
 
-        4. ASSIGN CONFIDENCE
+        4. ASSIGN CONFIDENCE (only when a level is assigned)
            high — probe_count >= 3 AND state = covered
            medium — probe_count = 2 OR state = partial
            low — probe_count <= 1 OR state = initiated
@@ -109,6 +121,14 @@ module Portfolios
               "confidence": "high",
               "evidence": ["quote 1", "quote 2", "quote 3"],
               "competency_summary": "2-3 sentence summary"
+            },
+            {
+              "skill_id": "sk-eng-004",
+              "skill_label": "Database Design & SQL",
+              "level": null,
+              "confidence": null,
+              "evidence": [],
+              "competency_summary": "Not covered: the candidate did not discuss database work."
             }
           ],
           "discovered_skills": [
@@ -122,6 +142,14 @@ module Portfolios
           ]
         }
       PROMPT
+    end
+
+    def configured_skills
+      @configured_skills ||= @session.assessment.assessment_skills.order(:display_order)
+    end
+
+    def candidate_spoke?
+      @session.transcript_turns.where(speaker: 'candidate').exists?
     end
 
     def skill_definition_block(skill)
@@ -145,37 +173,6 @@ module Portfolios
         probe_count: map.probe_count,
         is_discovered: map.is_discovered
       }
-    end
-
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
-
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
     end
   end
 end

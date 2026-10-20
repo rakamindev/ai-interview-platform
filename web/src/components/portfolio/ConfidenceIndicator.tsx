@@ -1,37 +1,32 @@
+import { cn } from "@/lib/utils";
+import type { Confidence } from "@/types";
+
 interface ConfidenceIndicatorProps {
-  confidence: string; // "high" | "medium" | "low" from API
+  /** null for not-assessed skills: nothing to show. */
+  confidence: Confidence | null;
 }
 
-function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
-  const normalized = c?.toLowerCase();
-  if (normalized === "high") return "HIGH";
-  if (normalized === "medium") return "MEDIUM";
-  return "LOW";
-}
+const STEPS: Confidence[] = ["low", "medium", "high"];
 
+const LABELS: Record<Confidence, string> = {
+  high: "High confidence",
+  medium: "Medium confidence",
+  low: "Low confidence",
+};
+
+// Low confidence is a prompt to look closer, not an error: amber, never destructive red.
 export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
-  const label = getLabel(confidence);
+  if (!confidence) return null;
+  const rank = STEPS.indexOf(confidence);
 
-  if (label === "HIGH") {
-    return (
-      <span className="flex items-center gap-1 text-xs text-green-600">
-        <span className="h-2 w-2 rounded-full bg-green-500" />
-        Confidence: HIGH
-      </span>
-    );
-  }
-  if (label === "MEDIUM") {
-    return (
-      <span className="flex items-center gap-1 text-xs">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        Confidence: MEDIUM
-      </span>
-    );
-  }
   return (
-    <span className="flex items-center gap-1 text-xs text-destructive">
-      <span className="h-2 w-2 rounded-full bg-destructive" />
-      Confidence: LOW
+    <span className={cn("inline-flex items-center gap-1.5 text-xs", confidence === "low" ? "text-attention" : "text-muted-foreground")}>
+      <span aria-hidden className="flex gap-[2px]">
+        {STEPS.map((step, i) => (
+          <span key={step} className={cn("h-2 w-1 rounded-full bg-current", i > rank && "opacity-25")} />
+        ))}
+      </span>
+      {LABELS[confidence]}
     </span>
   );
 }

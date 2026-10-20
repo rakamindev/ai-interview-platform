@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_20_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -58,13 +58,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
   end
 
@@ -89,9 +89,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "recommendation_status", limit: 32
+    t.jsonb "evidence_gaps", default: [], null: false
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.check_constraint "recommendation_status IS NULL OR (recommendation_status::text = ANY (ARRAY['sufficient'::character varying, 'insufficient_evidence'::character varying]::text[]))", name: "chk_fit_gap_reports_recommendation_status"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -112,12 +115,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
-    t.text "competency_summary", null: false
+    t.text "competency_summary"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "(ai_level IS NULL) = (ai_confidence IS NULL)", name: "chk_portfolio_skills_rating_complete"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
   create_table "portfolios", force: :cascade do |t|

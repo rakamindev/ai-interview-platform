@@ -38,6 +38,15 @@ export default {
                     DEFAULT: "hsl(var(--popover))",
                     foreground: "hsl(var(--popover-foreground))",
                 },
+                evidence: "hsl(var(--evidence))",
+                required: "hsl(var(--required))",
+                shortfall: "hsl(var(--shortfall))",
+                attention: {
+                    DEFAULT: "hsl(var(--attention))",
+                    surface: "hsl(var(--attention-surface))",
+                    border: "hsl(var(--attention-border))",
+                },
+                unassessed: "hsl(var(--unassessed))",
             },
             borderRadius: {
                 lg: "var(--radius)",

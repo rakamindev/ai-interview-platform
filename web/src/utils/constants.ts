@@ -1,10 +1,14 @@
+import type { SkillComparisonResult } from "@/types";
+
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+/** True only for an integer level 1–5. Anything else means "no level", never a default L1. */
+export function isLevel(level: number | null | undefined): level is number {
+  return typeof level === "number" && Number.isInteger(level) && level >= 1 && level <= 5;
+}
+
+export function levelLabel(level: number | null | undefined): string {
+  return isLevel(level) ? `L${level}` : "Not assessed";
 }
 
 export const LEVEL_LABELS: Record<number, string> = {
@@ -23,13 +27,14 @@ export const LEVEL_DESCRIPTIONS: Record<number, string> = {
   5: "Expert",
 };
 
-// L-badge colors (Tailwind classes)
+// Level badges: one teal ramp, light to dark. Grey is reserved for "not assessed",
+// so L1 must never look neutral.
 export const LEVEL_BADGE_CLASSES: Record<number, string> = {
-  1: "bg-neutral-200 text-neutral-700",
-  2: "bg-blue-100 text-blue-700",
-  3: "bg-teal-100 text-teal-700",
-  4: "bg-purple-100 text-purple-700",
-  5: "bg-yellow-100 text-yellow-700",
+  1: "bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200",
+  2: "bg-teal-100 text-teal-800",
+  3: "bg-teal-200 text-teal-900",
+  4: "bg-teal-600 text-white",
+  5: "bg-teal-800 text-white",
 };
 
 // Coverage state display
@@ -55,16 +60,16 @@ export const COVERAGE_STATE_COLOR: Record<string, string> = {
 };
 
 // Fit/Gap result display
-export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
-  match: "Match",
-  gap: "Gap",
+export const FIT_GAP_RESULT_LABELS: Record<SkillComparisonResult, string> = {
+  match: "Meets",
   exceed: "Exceeds",
-  not_assessed: "Not assessed",
+  gap: "Below",
+  not_assessed: "No evidence",
 };
 
-export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+export const FIT_GAP_RESULT_CLASSES: Record<SkillComparisonResult, string> = {
+  match: "text-evidence",
+  exceed: "text-evidence",
+  gap: "text-shortfall",
+  not_assessed: "text-muted-foreground",
 };

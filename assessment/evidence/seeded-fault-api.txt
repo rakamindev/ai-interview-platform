@@ -1,0 +1,362 @@
+..............2026-10-20T13:40:11.327Z pid=95517 tid=1x8l INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+......................................................FFFF.FFFFFFFFFFFFFFFFFFFF..F.FFFFFF......FF..........
+
+Failures:
+
+  1) Portfolios::RatingParser.level reads "L3" as 3
+     Failure/Error: expect(described_class.level(input)).to eq(expected)
+
+       expected: 3
+            got: 1
+
+       (compared using ==)
+     # ./spec/services/portfolios/rating_parser_spec.rb:20:in `block (4 levels) in <main>'
+
+  2) Portfolios::RatingParser.level reads "l3" as 3
+     Failure/Error: expect(described_class.level(input)).to eq(expected)
+
+       expected: 3
+            got: 1
+
+       (compared using ==)
+     # ./spec/services/portfolios/rating_parser_spec.rb:20:in `block (4 levels) in <main>'
+
+  3) Portfolios::RatingParser.level reads " L3 " as 3
+     Failure/Error: expect(described_class.level(input)).to eq(expected)
+
+       expected: 3
+            got: 1
+
+       (compared using ==)
+     # ./spec/services/portfolios/rating_parser_spec.rb:20:in `block (4 levels) in <main>'
+
+  4) Portfolios::RatingParser.level reads "L 3" as 3
+     Failure/Error: expect(described_class.level(input)).to eq(expected)
+
+       expected: 3
+            got: 1
+
+       (compared using ==)
+     # ./spec/services/portfolios/rating_parser_spec.rb:20:in `block (4 levels) in <main>'
+
+  5) Portfolios::RatingParser.level treats nil as not assessed
+     Failure/Error: expect(described_class.level(input)).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  6) Portfolios::RatingParser.level treats "" as not assessed
+     Failure/Error: expect(described_class.level(input)).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  7) Portfolios::RatingParser.level treats "N/A" as not assessed
+     Failure/Error: expect(described_class.level(input)).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  8) Portfolios::RatingParser.level treats "not_assessed" as not assessed
+     Failure/Error: expect(described_class.level(input)).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  9) Portfolios::RatingParser.level treats "null" as not assessed
+     Failure/Error: expect(described_class.level(input)).to be_nil
+
+       expected: nil
+            got: 1
+     # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  10) Portfolios::RatingParser.level treats 0 as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 1
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  11) Portfolios::RatingParser.level treats 6 as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 5
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  12) Portfolios::RatingParser.level treats -1 as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 1
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  13) Portfolios::RatingParser.level treats "0" as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 1
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  14) Portfolios::RatingParser.level treats "L6" as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 1
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  15) Portfolios::RatingParser.level treats 3.7 as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 3
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  16) Portfolios::RatingParser.level treats "3.7" as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 3
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  17) Portfolios::RatingParser.level treats "L3+" as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 1
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  18) Portfolios::RatingParser.level treats "3-4" as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 3
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  19) Portfolios::RatingParser.level treats "three" as not assessed
+      Failure/Error: expect(described_class.level(input)).to be_nil
+
+        expected: nil
+             got: 1
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  20) Portfolios::RatingParser.level treats true as not assessed
+      Failure/Error: value.to_i.clamp(1, 5) # SEEDED FAULT: the original parser (generator.rb:161 on main)
+
+      NoMethodError:
+        undefined method `to_i' for true
+      # ./app/services/portfolios/rating_parser.rb:14:in `level'
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  21) Portfolios::RatingParser.level treats [] as not assessed
+      Failure/Error: value.to_i.clamp(1, 5) # SEEDED FAULT: the original parser (generator.rb:161 on main)
+
+      NoMethodError:
+        undefined method `to_i' for an instance of Array
+      # ./app/services/portfolios/rating_parser.rb:14:in `level'
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  22) Portfolios::RatingParser.level treats {} as not assessed
+      Failure/Error: value.to_i.clamp(1, 5) # SEEDED FAULT: the original parser (generator.rb:161 on main)
+
+      NoMethodError:
+        undefined method `to_i' for an instance of Hash
+      # ./app/services/portfolios/rating_parser.rb:14:in `level'
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  23) Portfolios::RatingParser.level treats NaN as not assessed
+      Failure/Error: value.to_i.clamp(1, 5) # SEEDED FAULT: the original parser (generator.rb:161 on main)
+
+      FloatDomainError:
+        NaN
+      # ./app/services/portfolios/rating_parser.rb:14:in `to_i'
+      # ./app/services/portfolios/rating_parser.rb:14:in `level'
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  24) Portfolios::RatingParser.level treats Infinity as not assessed
+      Failure/Error: value.to_i.clamp(1, 5) # SEEDED FAULT: the original parser (generator.rb:161 on main)
+
+      FloatDomainError:
+        Infinity
+      # ./app/services/portfolios/rating_parser.rb:14:in `to_i'
+      # ./app/services/portfolios/rating_parser.rb:14:in `level'
+      # ./spec/services/portfolios/rating_parser_spec.rb:27:in `block (4 levels) in <main>'
+
+  25) Portfolios::SkillReconciler keeps a rating that has a readable level and candidate evidence
+      Failure/Error: expect(row(rows, 'React')).to include(ai_level: 4, ai_confidence: 'high', is_discovered: false)
+
+        expected {:ai_confidence => "high", :ai_level => 1, :competency_summary => "Solid.", :evidence => ["I paginate with cursors."], :is_discovered => false, :skill_id => "SK-ENG-001", :skill_label => "React"} to include {:ai_level => 4}
+        Diff:
+
+        @@ -1,3 +1,7 @@
+         :ai_confidence => "high",
+        -:ai_level => 4,
+        +:ai_level => 1,
+        +:competency_summary => "Solid.",
+        +:evidence => ["I paginate with cursors."],
+         :is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React",
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:25:in `block (2 levels) in <main>'
+
+  26) Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level nil as not assessed
+      Failure/Error: expect(row(rows, 'React')).to include(ai_level: nil, ai_confidence: nil)
+
+        expected {:ai_confidence => "high", :ai_level => 1, :competency_summary => "Solid.", :evidence => ["I paginate with cursors."], :is_discovered => false, :skill_id => "SK-ENG-001", :skill_label => "React"} to include {:ai_level => nil, :ai_confidence => nil}
+        Diff:
+        @@ -1,2 +1,7 @@
+        -:ai_confidence => nil,
+        -:ai_level => nil,
+        +:ai_confidence => "high",
+        +:ai_level => 1,
+        +:competency_summary => "Solid.",
+        +:evidence => ["I paginate with cursors."],
+        +:is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React",
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:34:in `block (4 levels) in <main>'
+
+  27) Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level "N/A" as not assessed
+      Failure/Error: expect(row(rows, 'React')).to include(ai_level: nil, ai_confidence: nil)
+
+        expected {:ai_confidence => "high", :ai_level => 1, :competency_summary => "Solid.", :evidence => ["I paginate with cursors."], :is_discovered => false, :skill_id => "SK-ENG-001", :skill_label => "React"} to include {:ai_level => nil, :ai_confidence => nil}
+        Diff:
+        @@ -1,2 +1,7 @@
+        -:ai_confidence => nil,
+        -:ai_level => nil,
+        +:ai_confidence => "high",
+        +:ai_level => 1,
+        +:competency_summary => "Solid.",
+        +:evidence => ["I paginate with cursors."],
+        +:is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React",
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:34:in `block (4 levels) in <main>'
+
+  28) Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level "not_assessed" as not assessed
+      Failure/Error: expect(row(rows, 'React')).to include(ai_level: nil, ai_confidence: nil)
+
+        expected {:ai_confidence => "high", :ai_level => 1, :competency_summary => "Solid.", :evidence => ["I paginate with cursors."], :is_discovered => false, :skill_id => "SK-ENG-001", :skill_label => "React"} to include {:ai_level => nil, :ai_confidence => nil}
+        Diff:
+        @@ -1,2 +1,7 @@
+        -:ai_confidence => nil,
+        -:ai_level => nil,
+        +:ai_confidence => "high",
+        +:ai_level => 1,
+        +:competency_summary => "Solid.",
+        +:evidence => ["I paginate with cursors."],
+        +:is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React",
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:34:in `block (4 levels) in <main>'
+
+  29) Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level 0 as not assessed
+      Failure/Error: expect(row(rows, 'React')).to include(ai_level: nil, ai_confidence: nil)
+
+        expected {:ai_confidence => "high", :ai_level => 1, :competency_summary => "Solid.", :evidence => ["I paginate with cursors."], :is_discovered => false, :skill_id => "SK-ENG-001", :skill_label => "React"} to include {:ai_level => nil, :ai_confidence => nil}
+        Diff:
+        @@ -1,2 +1,7 @@
+        -:ai_confidence => nil,
+        -:ai_level => nil,
+        +:ai_confidence => "high",
+        +:ai_level => 1,
+        +:competency_summary => "Solid.",
+        +:evidence => ["I paginate with cursors."],
+        +:is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React",
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:34:in `block (4 levels) in <main>'
+
+  30) Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level 6 as not assessed
+      Failure/Error: expect(row(rows, 'React')).to include(ai_level: nil, ai_confidence: nil)
+
+        expected {:ai_confidence => "high", :ai_level => 5, :competency_summary => "Solid.", :evidence => ["I paginate with cursors."], :is_discovered => false, :skill_id => "SK-ENG-001", :skill_label => "React"} to include {:ai_level => nil, :ai_confidence => nil}
+        Diff:
+        @@ -1,2 +1,7 @@
+        -:ai_confidence => nil,
+        -:ai_level => nil,
+        +:ai_confidence => "high",
+        +:ai_level => 5,
+        +:competency_summary => "Solid.",
+        +:evidence => ["I paginate with cursors."],
+        +:is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React",
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:34:in `block (4 levels) in <main>'
+
+  31) Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level 3.7 as not assessed
+      Failure/Error: expect(row(rows, 'React')).to include(ai_level: nil, ai_confidence: nil)
+
+        expected {:ai_confidence => "high", :ai_level => 3, :competency_summary => "Solid.", :evidence => ["I paginate with cursors."], :is_discovered => false, :skill_id => "SK-ENG-001", :skill_label => "React"} to include {:ai_level => nil, :ai_confidence => nil}
+        Diff:
+        @@ -1,2 +1,7 @@
+        -:ai_confidence => nil,
+        -:ai_level => nil,
+        +:ai_confidence => "high",
+        +:ai_level => 3,
+        +:competency_summary => "Solid.",
+        +:evidence => ["I paginate with cursors."],
+        +:is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React",
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:34:in `block (4 levels) in <main>'
+
+  32) Portfolios::SkillReconciler reconciliation with the assessment (AC4) treats an unknown configured skill as discovered, kept only if assessed
+      Failure/Error: expect(row(rows, 'Kubernetes')).to be_nil
+
+        expected: nil
+             got: {:ai_confidence=>"high", :ai_level=>1, :competency_summary=>"Solid.", :evidence=>["I paginate with cursors."], :is_discovered=>true, :skill_id=>nil, :skill_label=>"Kubernetes"}
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:91:in `block (3 levels) in <main>'
+
+  33) Portfolios::SkillReconciler reconciliation with the assessment (AC4) drops discovered skills that are not assessed or duplicate a configured skill
+      Failure/Error: expect(rows.select { |r| r[:is_discovered] }.map { |r| r[:skill_label] }).to eq(['Testing'])
+
+        expected: ["Testing"]
+             got: ["Mobile", "Testing"]
+
+        (compared using ==)
+      # ./spec/services/portfolios/skill_reconciler_spec.rb:97:in `block (3 levels) in <main>'
+
+Finished in 1.43 seconds (files took 1.52 seconds to load)
+121 examples, 33 failures
+
+Failed examples:
+
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:6]' # Portfolios::RatingParser.level reads "L3" as 3
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:7]' # Portfolios::RatingParser.level reads "l3" as 3
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:8]' # Portfolios::RatingParser.level reads " L3 " as 3
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:9]' # Portfolios::RatingParser.level reads "L 3" as 3
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:11]' # Portfolios::RatingParser.level treats nil as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:12]' # Portfolios::RatingParser.level treats "" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:13]' # Portfolios::RatingParser.level treats "N/A" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:14]' # Portfolios::RatingParser.level treats "not_assessed" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:15]' # Portfolios::RatingParser.level treats "null" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:16]' # Portfolios::RatingParser.level treats 0 as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:17]' # Portfolios::RatingParser.level treats 6 as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:18]' # Portfolios::RatingParser.level treats -1 as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:19]' # Portfolios::RatingParser.level treats "0" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:20]' # Portfolios::RatingParser.level treats "L6" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:21]' # Portfolios::RatingParser.level treats 3.7 as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:22]' # Portfolios::RatingParser.level treats "3.7" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:23]' # Portfolios::RatingParser.level treats "L3+" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:24]' # Portfolios::RatingParser.level treats "3-4" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:25]' # Portfolios::RatingParser.level treats "three" as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:26]' # Portfolios::RatingParser.level treats true as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:27]' # Portfolios::RatingParser.level treats [] as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:28]' # Portfolios::RatingParser.level treats {} as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:29]' # Portfolios::RatingParser.level treats NaN as not assessed
+rspec './spec/services/portfolios/rating_parser_spec.rb[1:1:30]' # Portfolios::RatingParser.level treats Infinity as not assessed
+rspec ./spec/services/portfolios/skill_reconciler_spec.rb:22 # Portfolios::SkillReconciler keeps a rating that has a readable level and candidate evidence
+rspec './spec/services/portfolios/skill_reconciler_spec.rb[1:2:1]' # Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level nil as not assessed
+rspec './spec/services/portfolios/skill_reconciler_spec.rb[1:2:2]' # Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level "N/A" as not assessed
+rspec './spec/services/portfolios/skill_reconciler_spec.rb[1:2:3]' # Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level "not_assessed" as not assessed
+rspec './spec/services/portfolios/skill_reconciler_spec.rb[1:2:4]' # Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level 0 as not assessed
+rspec './spec/services/portfolios/skill_reconciler_spec.rb[1:2:5]' # Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level 6 as not assessed
+rspec './spec/services/portfolios/skill_reconciler_spec.rb[1:2:6]' # Portfolios::SkillReconciler not assessed instead of L1 (AC1) stores level 3.7 as not assessed
+rspec ./spec/services/portfolios/skill_reconciler_spec.rb:87 # Portfolios::SkillReconciler reconciliation with the assessment (AC4) treats an unknown configured skill as discovered, kept only if assessed
+rspec ./spec/services/portfolios/skill_reconciler_spec.rb:94 # Portfolios::SkillReconciler reconciliation with the assessment (AC4) drops discovered skills that are not assessed or duplicate a configured skill
+

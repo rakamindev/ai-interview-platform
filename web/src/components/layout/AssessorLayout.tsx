@@ -29,10 +29,10 @@ export default function AssessorLayout() {
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+          <div className="flex items-center gap-3 sm:gap-6">
+            <Link to="/assessments" className="flex items-center gap-2" aria-label="Rakamin AI Interview home">
+              <LayoutDashboard aria-hidden className="h-5 w-5 text-primary" />
+              <span className="hidden font-semibold text-sm sm:inline">Rakamin AI Interview</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -54,13 +54,13 @@ export default function AssessorLayout() {
           </div>
           <div className="flex items-center gap-3">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="hidden text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 md:inline">
                 Tenant: {tenant.name}
               </span>
             )}
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Log out">
+              <LogOut aria-hidden className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>

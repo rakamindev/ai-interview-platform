@@ -35,6 +35,15 @@
         --ring: 184 99% 31%;
 
         --radius: 0.5rem;
+
+        /* Evidence language for assessment results */
+        --evidence: 184 99% 31%;          /* candidate level backed by evidence (teal) */
+        --required: 215 25% 27%;          /* vacancy's required level (slate-700) */
+        --shortfall: 17 88% 40%;          /* measured gap, not an error (orange-700) */
+        --attention: 26 90% 37%;          /* missing or weak evidence text (amber-700) */
+        --attention-surface: 48 100% 96%; /* amber-50 */
+        --attention-border: 46 97% 65%;   /* amber-300 */
+        --unassessed: 215 20% 65%;        /* no evidence (slate-400), always drawn dashed */
     }
 
     .dark {
@@ -65,6 +74,14 @@
         --border: 217 33% 17%;
         --input: 217 33% 17%;
         --ring: 184 99% 31%;
+
+        --evidence: 184 80% 45%;
+        --required: 214 32% 85%;
+        --shortfall: 25 95% 60%;
+        --attention: 43 96% 60%;
+        --attention-surface: 30 40% 15%;
+        --attention-border: 35 60% 35%;
+        --unassessed: 215 16% 47%;
     }
 }
 

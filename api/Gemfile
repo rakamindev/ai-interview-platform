@@ -60,4 +60,6 @@ end
 group :test do
   gem 'database_cleaner'
   gem 'timecop'
+  gem 'pdf-reader'
+  gem 'webmock'
 end
