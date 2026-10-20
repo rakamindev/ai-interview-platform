@@ -21,12 +21,17 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
     env:
       RAILS_ENV: test
       DB_HOST: localhost
       DB_PORT: 5432
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
+      REDIS_URL: redis://localhost:6379/1
       SECRET_KEY_BASE: ci-only-secret-key-base
       ALLOWED_ORIGINS: http://localhost:5173
     defaults:
@@ -57,4 +62,5 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npm test
       - run: npm run build
