@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Unwrap backend envelope: { data: { ... } } → { ... }
-// On 401/403, clear stored credentials and redirect to login.
+// Only 401 means the stored credentials are no longer valid.
 api.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === "object" && "data" in response.data) {
@@ -27,7 +27,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    if (error.response?.status === 401) {
       clearToken();
       window.location.href = "/login";
     }

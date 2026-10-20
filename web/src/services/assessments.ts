@@ -31,6 +31,8 @@ export const assessmentsApi = {
 
   delete: (id: number) => api.delete(`/assessments/${id}`),
 
+  deleteSession: (id: number) => api.delete(`/sessions/${id}`),
+
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 

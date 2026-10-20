@@ -4,7 +4,7 @@
 
 - **Node.js** (v18+ recommended)
 - **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
+- A running backend API server (default: `http://localhost:3001`)
 
 ## Quick Start
 
@@ -25,13 +25,21 @@ VITE_API_BASE_URL=http://localhost:3001/api/v1
 # WebSocket base URL (no /api/v1)
 VITE_WS_BASE_URL=ws://localhost:3001
 
-# Dev auth token — replace with a real JWT from Rakamin platform
+# Dev auth token — generate one with the API's JsonWebToken encoder
 VITE_DEV_TOKEN=<your-jwt-here>
 
 # Dev tenant context
 VITE_DEV_TENANT_ID=1
 VITE_DEV_TENANT_NAME=Demo Tenant
 ```
+
+Generate a local token from the API directory with:
+
+```bash
+bundle exec rails runner 'puts JsonWebToken.encode({ user_id: 1, role: "admin", scheme: "test-corp" })'
+```
+
+Use the actual seeded admin ID and organization scheme for your database.
 
 ```bash
 # 3. Start the dev server

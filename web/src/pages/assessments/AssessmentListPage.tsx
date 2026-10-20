@@ -3,8 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ChevronRight, Trash2 } from "lucide-react";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -31,6 +42,8 @@ export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,6 +53,19 @@ export default function AssessmentListPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  const deleteAssessment = async (assessmentId: number) => {
+    setDeletingId(assessmentId);
+    setDeleteError(null);
+    try {
+      await assessmentsApi.delete(assessmentId);
+      setAssessments((current) => current.filter((assessment) => assessment.id !== assessmentId));
+    } catch {
+      setDeleteError("Unable to delete this assessment. End any active interviews and try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -53,6 +79,12 @@ export default function AssessmentListPage() {
       {error && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
           Failed to load assessments. Please refresh the page.
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive" role="alert">
+          {deleteError}
         </div>
       )}
 
@@ -91,7 +123,41 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-1">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={`Delete assessment ${a.name}`}
+                        title="Delete assessment"
+                        disabled={deletingId === a.id}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent onClick={(event) => event.stopPropagation()}>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this assessment?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This permanently deletes “{a.name}”, its candidates, interview transcripts, and results.
+                          Assessments with an active interview cannot be deleted.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => deleteAssessment(a.id)}
+                        >
+                          Delete assessment
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </CardContent>
             </Card>
           ))}

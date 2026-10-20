@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show destroy end_session coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -54,6 +54,18 @@ module Api
             }
           )
         )
+      end
+
+      # DELETE /api/v1/sessions/:id
+      def destroy
+        if @session.active?
+          return json_error("End the active interview before deleting candidate data", :conflict)
+        end
+
+        @session.destroy!
+        json_response(message: "Candidate data deleted")
+      rescue ActiveRecord::RecordNotDestroyed
+        json_error("Candidate data could not be deleted", :conflict)
       end
 
       # POST /api/v1/sessions/:id/end

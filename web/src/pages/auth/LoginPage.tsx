@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
 import { authAtom, saveToken } from "@/stores/authAtom";
@@ -26,8 +27,17 @@ export default function LoginPage() {
       saveToken(token);
       setAuth({ token });
       navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
+    } catch (error) {
+      if (!axios.isAxiosError(error)) {
+        setError("Sign-in failed. Please try again.");
+      } else if (!error.response) {
+        setError("Unable to reach the server. Check your connection and try again.");
+      } else if (error.response.status === 401) {
+        setError("Invalid email or password.");
+      } else {
+        const apiMessage = error.response.data?.errors?.[0]?.message;
+        setError(typeof apiMessage === "string" ? apiMessage : "Sign-in failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +51,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-md border-2 border-primary p-6">
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <Input

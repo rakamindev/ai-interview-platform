@@ -68,7 +68,7 @@ module Sessions
       portfolio = @session.reload.portfolio
       return unless portfolio
 
-      PortfolioGeneratorWorker.perform_async(@session.id)
+      PortfolioGeneratorWorker.perform_async(@session.id, @session.tenant_id)
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
     end
   end

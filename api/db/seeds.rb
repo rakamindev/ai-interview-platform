@@ -369,6 +369,129 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Senior Frontend demo assessment ──────────────────────────────────────────
+
+demo_org = Organization.find_by!(scheme: TEST_ORG[:scheme])
+demo_assessment = Assessment.unscoped.find_by(id: 1, tenant_id: demo_org.id) ||
+                  Assessment.unscoped.find_or_create_by!(
+                    tenant_id: demo_org.id,
+                    name: "Senior Frontend Engineer"
+                  ) do |assessment|
+                    assessment.time_limit_min = 60
+                    assessment.created_by = 1
+                    assessment.language = "en"
+                  end
+
+taxonomy_skill_ids = %w[SK-ENG-001 SK-ENG-006 SK-ENG-009]
+display_order = demo_assessment.assessment_skills.maximum(:display_order).to_i
+
+taxonomy_skill_ids.each do |skill_id|
+  taxonomy = SkillTaxonomy.find_by!(skill_id:)
+  skill = AssessmentSkill.find_or_initialize_by(
+    assessment: demo_assessment,
+    skill_id:
+  )
+  next unless skill.new_record?
+
+  display_order += 1
+  skill.assign_attributes(
+    skill_label: taxonomy.skill_label,
+    is_custom: false,
+    scope_include: taxonomy.scope_include,
+    scope_exclude: taxonomy.scope_exclude,
+    l1_anchor: taxonomy.l1_anchor,
+    l2_anchor: taxonomy.l2_anchor,
+    l3_anchor: taxonomy.l3_anchor,
+    l4_anchor: taxonomy.l4_anchor,
+    l5_anchor: taxonomy.l5_anchor,
+    expected_level: 4,
+    display_order:
+  )
+  skill.save!
+end
+
+senior_anchors = {
+  l1_anchor: "Implements scoped UI changes with guidance and follows established patterns.",
+  l2_anchor: "Delivers frontend features independently and writes focused tests.",
+  l3_anchor: "Owns complex frontend work, resolves trade-offs, and improves quality across a feature area.",
+  l4_anchor: "Sets frontend direction, mentors engineers, and improves architecture across multiple teams.",
+  l5_anchor: "Shapes organization-wide frontend strategy, standards, and long-term technical direction."
+}.freeze
+
+custom_frontend_skills = [
+  {
+    skill_label: "Frontend Architecture & Design Systems",
+    scope_include: "Component boundaries, design systems, shared UI primitives, frontend architecture, migration strategy"
+  },
+  {
+    skill_label: "State Management & Data Fetching",
+    scope_include: "Server state, client state, caching, optimistic updates, race conditions, API contracts"
+  },
+  {
+    skill_label: "Web Performance & Core Web Vitals",
+    scope_include: "Rendering performance, bundle size, loading strategy, Core Web Vitals, profiling"
+  },
+  {
+    skill_label: "Accessibility & Inclusive UI",
+    scope_include: "Semantic HTML, keyboard navigation, screen readers, focus management, WCAG"
+  },
+  {
+    skill_label: "Frontend Security",
+    scope_include: "XSS prevention, safe rendering, browser storage, authentication flows, dependency risks"
+  }
+].freeze
+
+custom_frontend_skills.each do |attrs|
+  skill = AssessmentSkill.find_or_initialize_by(
+    assessment: demo_assessment,
+    skill_label: attrs[:skill_label]
+  )
+  next unless skill.new_record?
+
+  display_order += 1
+  skill.assign_attributes(
+    attrs.merge(
+      skill_id: nil,
+      is_custom: true,
+      scope_exclude: "Backend implementation and infrastructure outside the browser client.",
+      expected_level: 4,
+      display_order:,
+      **senior_anchors
+    )
+  )
+  skill.save!
+end
+
+demo_candidate_names = (2..10).map { |number| "Demo Candidate %02d" % number }
+candidate_count = Session.unscoped.where(
+  assessment_id: demo_assessment.id,
+  tenant_id: demo_org.id
+).count
+
+demo_candidate_names.each do |candidate_name|
+  break if candidate_count >= 10
+
+  session_exists = Session.unscoped.exists?(
+    assessment_id: demo_assessment.id,
+    tenant_id: demo_org.id,
+    candidate_name:
+  )
+  next if session_exists
+
+  Session.create!(
+    assessment: demo_assessment,
+    tenant_id: demo_org.id,
+    candidate_name:,
+    status: "pending"
+  )
+  candidate_count += 1
+end
+
+puts "== Senior Frontend demo =="
+puts "  Assessment: #{demo_assessment.id} (#{demo_assessment.name})"
+puts "  Skills: #{demo_assessment.assessment_skills.count}"
+puts "  Candidates: #{candidate_count}"
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

@@ -22,7 +22,7 @@ Rails.application.routes.draw do
       end
 
       # Sessions
-      resources :sessions, only: %i[show] do
+      resources :sessions, only: %i[show destroy] do
         member do
           post :end_session
           get  :coverage

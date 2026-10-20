@@ -5,9 +5,23 @@ class CoverageAnalyzerWorker
 
   sidekiq_options queue: :coverage, retry: 0  # non-critical — no retry
 
-  def perform(session_id, turn_number)
-    session = Session.find(session_id)
+  def perform(session_id, turn_number, tenant_id = nil)
+    return Rails.logger.warn("[N7] Missing tenant for session #{session_id} — skipping") if tenant_id.blank?
 
+    Current.using(tenant_id:) do
+      analyze_session(session_id, turn_number)
+    end
+  rescue ActiveRecord::RecordNotFound
+    Rails.logger.warn("[N7] Session #{session_id} not found — skipping")
+  rescue => e
+    # N7 failure is non-critical — log and let the interview continue
+    Rails.logger.error("[N7] Coverage analyzer failed for session #{session_id}: #{e.class} #{e.message}")
+  end
+
+  private
+
+  def analyze_session(session_id, turn_number)
+    session = Session.find(session_id)
     return if session.ended?
 
     result = Coverage::Analyzer.new(session: session).call
@@ -27,14 +41,7 @@ class CoverageAnalyzerWorker
     # the middleware checking it on the next AI turn avoids the duplicate-end race.
 
     Rails.logger.info("[N7] Coverage analyzed for session #{session_id}, turn #{turn_number}")
-  rescue ActiveRecord::RecordNotFound
-    Rails.logger.warn("[N7] Session #{session_id} not found — skipping")
-  rescue => e
-    # N7 failure is non-critical — log and let the interview continue
-    Rails.logger.error("[N7] Coverage analyzer failed for session #{session_id}: #{e.class} #{e.message}")
   end
-
-  private
 
   def apply_updates(session, skill_updates)
     skill_updates.each do |update|

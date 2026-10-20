@@ -11,11 +11,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Trash2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -24,12 +35,16 @@ function SessionRow({
   assessmentId,
   onCopy,
   copiedId,
+  onDelete,
+  deletingId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
   copiedId: number | null;
+  onDelete: (id: number) => void;
+  deletingId: number | null;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
@@ -114,6 +129,37 @@ function SessionRow({
               Results
             </Button>
           )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Delete ${displayName}`}
+                title={isLive ? "End interview before deleting candidate" : "Delete candidate"}
+                disabled={isLive || deletingId === session.id}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this candidate?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently deletes {displayName}’s interview session, transcript, and results. The invite link will stop working.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => onDelete(session.id)}
+                >
+                  Delete candidate
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
@@ -129,6 +175,8 @@ export default function AssessmentInvitePage() {
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
@@ -186,6 +234,20 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
+  };
+
+  const deleteCandidate = async (sessionId: number) => {
+    setDeletingId(sessionId);
+    setDeleteError(null);
+    try {
+      await assessmentsApi.deleteSession(sessionId);
+      setSessions((current) => current.filter((session) => session.id !== sessionId));
+      setNewSession((current) => current?.id === sessionId ? null : current);
+    } catch {
+      setDeleteError("Unable to delete this candidate. End the interview first if it is active.");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (loading) {
@@ -278,6 +340,35 @@ export default function AssessmentInvitePage() {
 
       <Separator />
 
+      {deleteError && (
+        <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive" role="alert">
+          {deleteError}
+        </div>
+      )}
+
+      {assessment?.skills && assessment.skills.length > 0 && (
+        <section className="space-y-3" aria-labelledby="skills-assessed-heading">
+          <div className="flex items-center justify-between">
+            <h2 id="skills-assessed-heading" className="text-sm font-semibold">Skills assessed</h2>
+            <span className="text-xs text-muted-foreground">{assessment.skills.length} skills</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {assessment.skills.map((skill) => (
+              <span
+                key={skill.id ?? skill.skill_label}
+                title={`Expected level: ${LEVEL_LABELS[skill.expected_level]}`}
+                className="inline-flex items-center gap-2 rounded-full border-2 border-transparent bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground transition-all duration-150 hover:border-primary-foreground/60 hover:font-bold hover:shadow-md"
+              >
+                {skill.skill_label}
+                <span className="text-xs">
+                  {LEVEL_LABELS[skill.expected_level]}
+                </span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Sessions list */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -300,7 +391,9 @@ export default function AssessmentInvitePage() {
             </div>
           </div>
         ) : (
-          <Card>
+          <Card
+            className={sessions.length > 8 ? "max-h-[28rem] overflow-y-auto overscroll-contain" : undefined}
+          >
             <CardContent className="p-0 divide-y">
               {sessions.map((session, i) => (
                 <SessionRow
@@ -313,6 +406,8 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onDelete={deleteCandidate}
+                  deletingId={deletingId}
                 />
               ))}
             </CardContent>
@@ -320,24 +415,6 @@ export default function AssessmentInvitePage() {
         )}
       </div>
 
-      {/* Assessment skills detail */}
-      {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      )}
     </div>
   );
 }

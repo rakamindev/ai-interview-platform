@@ -101,7 +101,12 @@ class AudioWebSocketMiddleware
 
   def connect_to_gemini(browser_ws, state)
     session = state.session
+    Current.using(tenant_id: session.tenant_id) do
+      connect_to_gemini_for_session(browser_ws, state, session)
+    end
+  end
 
+  def connect_to_gemini_for_session(browser_ws, state, session)
     ensure_system_prompt(session)
 
     unless session.assessment.system_prompt.present?
@@ -136,18 +141,20 @@ class AudioWebSocketMiddleware
   def build_gemini_client(browser_ws, state)
     session = state.session
 
-    state.gemini_client = Gemini::LiveClient.new(
-      system_prompt: session.assessment.system_prompt,
-      on_audio: build_on_audio(browser_ws, state),
-      on_input_transcription: build_on_input_transcription(browser_ws, state, session),
-      on_output_transcription: build_on_output_transcription(browser_ws, state, session),
-      on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
-      on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
-      on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
-      on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
-      on_resumption_token_update: build_on_resumption_token_update(state, session),
-      on_ready: build_on_ready(browser_ws, state, session)
-    )
+    Current.using(tenant_id: session.tenant_id) do
+      state.gemini_client = Gemini::LiveClient.new(
+        system_prompt: session.assessment.system_prompt,
+        on_audio: build_on_audio(browser_ws, state),
+        on_input_transcription: build_on_input_transcription(browser_ws, state, session),
+        on_output_transcription: build_on_output_transcription(browser_ws, state, session),
+        on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
+        on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
+        on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
+        on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
+        on_resumption_token_update: build_on_resumption_token_update(state, session),
+        on_ready: build_on_ready(browser_ws, state, session)
+      )
+    end
   end
 
   def build_on_audio(browser_ws, state)
@@ -184,7 +191,7 @@ class AudioWebSocketMiddleware
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           save_transcript_turn(session, turn_number, 'candidate', text)
-          CoverageAnalyzerWorker.perform_async(session.id, turn_number)
+          CoverageAnalyzerWorker.perform_async(session.id, turn_number, session.tenant_id)
           refresh_coverage_cache(session, state)
         end
       rescue StandardError => e
@@ -620,28 +627,30 @@ class AudioWebSocketMiddleware
   # Refreshes cached coverage text from a background thread; assigns digest+text atomically on EM thread
   # to prevent a GVL preemption from pairing a new digest with stale text.
   def refresh_coverage_cache(session, state)
-    started  = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
-    injector = Coverage::MapInjector.new(session)
+    Current.using(tenant_id: session.tenant_id) do
+      started  = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
+      injector = Coverage::MapInjector.new(session)
 
-    fingerprint = injector.coverage_fingerprint
-    if state.last_coverage_digest == fingerprint
-      Rails.logger.debug("[AudioWS] Coverage unchanged — cache still valid (session=#{session.id})")
-      return
+      fingerprint = injector.coverage_fingerprint
+      if state.last_coverage_digest == fingerprint
+        Rails.logger.debug("[AudioWS] Coverage unchanged — cache still valid (session=#{session.id})")
+        return
+      end
+
+      text        = injector.injection_text
+      all_covered = injector.all_covered?
+      elapsed     = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond) - started
+
+      EM.schedule do
+        state.last_coverage_digest = fingerprint
+        state.cached_coverage_text = text
+
+        schedule_coverage_wrap_up(state, session) if all_covered
+      end
+
+      Rails.logger.warn("[AudioWS] Coverage cache refresh slow: #{elapsed}ms (session=#{session.id})") if elapsed > 50
+      Rails.logger.debug("[AudioWS] Coverage cache refreshed in #{elapsed}ms")
     end
-
-    text        = injector.injection_text
-    all_covered = injector.all_covered?
-    elapsed     = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond) - started
-
-    EM.schedule do
-      state.last_coverage_digest = fingerprint
-      state.cached_coverage_text = text
-
-      schedule_coverage_wrap_up(state, session) if all_covered
-    end
-
-    Rails.logger.warn("[AudioWS] Coverage cache refresh slow: #{elapsed}ms (session=#{session.id})") if elapsed > 50
-    Rails.logger.debug("[AudioWS] Coverage cache refreshed in #{elapsed}ms")
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Coverage cache refresh failed: #{e.message}")
   end
@@ -659,21 +668,23 @@ class AudioWebSocketMiddleware
   end
 
   def check_time_ceiling(session, state, browser_ws)
-    return unless session.started_at && session.assessment.time_limit_min
-    return if state.ending_scheduled
+    Current.using(tenant_id: session.tenant_id) do
+      return unless session.started_at && session.assessment.time_limit_min
+      return if state.ending_scheduled
 
-    elapsed   = (Time.current - session.started_at).to_i
-    limit     = session.assessment.time_limit_min * 60
-    remaining = limit - elapsed
+      elapsed   = (Time.current - session.started_at).to_i
+      limit     = session.assessment.time_limit_min * 60
+      remaining = limit - elapsed
 
-    if remaining <= 0
-      enforce_time_ceiling(session, state, browser_ws)
-    elsif remaining <= 60 && !state.sent_time_warnings.include?(:warn_60)
-      mark_warning_if_delivered(state, :warn_60,
-        "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"wrap_up\": true }")
-    elsif remaining <= 120 && !state.sent_time_warnings.include?(:warn_120)
-      mark_warning_if_delivered(state, :warn_120,
-        "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"time_warning\": true }")
+      if remaining <= 0
+        enforce_time_ceiling(session, state, browser_ws)
+      elsif remaining <= 60 && !state.sent_time_warnings.include?(:warn_60)
+        mark_warning_if_delivered(state, :warn_60,
+          "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"wrap_up\": true }")
+      elsif remaining <= 120 && !state.sent_time_warnings.include?(:warn_120)
+        mark_warning_if_delivered(state, :warn_120,
+          "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"time_warning\": true }")
+      end
     end
   end
 

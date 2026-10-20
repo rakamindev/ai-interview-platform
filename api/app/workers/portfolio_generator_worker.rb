@@ -6,18 +6,24 @@ class PortfolioGeneratorWorker
   sidekiq_options queue: :portfolio, retry: 3
 
   sidekiq_retries_exhausted do |msg, _ex|
-    session_id = msg['args'].first
-    session = Session.find_by(id: session_id)
-    session&.portfolio&.update(
-      generation_status: 'failed',
-      generation_error:  "Failed after #{msg['retry_count']} retries: #{msg['error_message']}"
-    )
+    session_id, tenant_id = msg['args']
+    Current.using(tenant_id:) do
+      session = Session.find_by(id: session_id)
+      session&.portfolio&.update(
+        generation_status: 'failed',
+        generation_error:  "Failed after #{msg['retry_count']} retries: #{msg['error_message']}"
+      )
+    end
     Rails.logger.error("[N10] Portfolio generation permanently failed for session #{session_id}")
   end
 
-  def perform(session_id)
-    session = Session.find(session_id)
-    Portfolios::Generator.new(session: session).call
+  def perform(session_id, tenant_id = nil)
+    return Rails.logger.warn("[N10] Missing tenant for session #{session_id} — skipping") if tenant_id.blank?
+
+    Current.using(tenant_id:) do
+      session = Session.find(session_id)
+      Portfolios::Generator.new(session: session).call
+    end
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N10] Session #{session_id} not found — skipping")
   end

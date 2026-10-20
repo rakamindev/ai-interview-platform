@@ -14,13 +14,9 @@ module TenantScoped
   extend ActiveSupport::Concern
 
   included do
-    # Default scope: filter by current tenant
+    # Missing tenant context must never expose records from every tenant.
     default_scope do
-      if RequestStore.store.key?(:tenant_id)
-        where(tenant_id: Current.tenant_id)
-      else
-        all
-      end
+      where(tenant_id: RequestStore.store[:tenant_id])
     end
 
     # Set tenant_id before validation on create
@@ -32,6 +28,6 @@ module TenantScoped
   private
 
   def assign_tenant_id
-    self.tenant_id ||= Current.tenant_id
+    self.tenant_id ||= RequestStore.store[:tenant_id]
   end
 end

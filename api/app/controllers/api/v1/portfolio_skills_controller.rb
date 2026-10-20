@@ -43,13 +43,14 @@ module Api
         FitGapReport.where(portfolio_id: portfolio.id).each do |report|
           vacancy_id = report.vacancy_id
           report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id, Current.tenant_id)
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = PortfolioSkill.joins(portfolio: :session)
+                 .merge(Session.all)
+                 .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

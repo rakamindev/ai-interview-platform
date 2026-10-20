@@ -30,7 +30,7 @@ module Api
         assessment.created_by = current_user.id
 
         if assessment.save
-          SystemPromptGeneratorWorker.perform_async(assessment.id)
+          SystemPromptGeneratorWorker.perform_async(assessment.id, Current.tenant_id)
           json_response({ assessment:, system_prompt_generated: true }, :created)
         else
           json_error(assessment.errors.full_messages.first, :unprocessable_entity)
@@ -40,7 +40,7 @@ module Api
       # PUT /api/v1/assessments/:id
       def update
         if @assessment.update(assessment_params)
-          SystemPromptGeneratorWorker.perform_async(@assessment.id)
+          SystemPromptGeneratorWorker.perform_async(@assessment.id, Current.tenant_id)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
         else
           json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
@@ -49,8 +49,14 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
+        if @assessment.sessions.active.exists?
+          return json_error("End active candidate interviews before deleting this assessment", :conflict)
+        end
+
+        @assessment.destroy!
         json_response({ message: "Assessment deleted" })
+      rescue ActiveRecord::RecordNotDestroyed
+        json_error("Assessment could not be deleted", :conflict)
       end
 
       private
