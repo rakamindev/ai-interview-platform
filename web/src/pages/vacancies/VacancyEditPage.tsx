@@ -13,12 +13,9 @@ import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
-interface VacancyFormValues {
-  role_title: string;
-  culture_dimensions: string;
-  competency_expectations: string;
-  skills: Partial<VacancySkill>[];
-}
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "@/components/ui/toast";
+import { vacancySchema, type VacancyFormValues } from "./VacancyNewPage";
 
 export default function VacancyEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,15 +24,17 @@ export default function VacancyEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
+  const { register, handleSubmit, control, setValue, watch, reset, formState: { errors } } = useForm<VacancyFormValues>({
+    resolver: zodResolver(vacancySchema),
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+    mode: "onTouched",
   });
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
+      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions || "", competency_expectations: v.competency_expectations || "", skills: v.skills });
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id, reset]);
 
@@ -48,7 +47,11 @@ export default function VacancyEditPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
+      toast.success("Vacancy changes saved successfully!", "Updated");
       navigate("/vacancies");
+    } catch (e: any) {
+      const errorMsg = e?.response?.data?.errors?.[0]?.message ?? "Failed to update vacancy.";
+      toast.error(errorMsg, "Error");
     } finally {
       setSubmitting(false);
     }

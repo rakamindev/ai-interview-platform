@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -170,6 +171,12 @@ export default function AssessmentInvitePage() {
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+      toast.success(
+        `Interview invitation created for ${created.candidate_name || "Candidate"}!`,
+        "Session Created"
+      );
+    } catch {
+      toast.error("Failed to create interview invitation session.", "Error");
     } finally {
       setCreatingSession(false);
     }
@@ -178,6 +185,7 @@ export default function AssessmentInvitePage() {
   const copyLink = (session: Session, id: number) => {
     navigator.clipboard.writeText(session.invite_url);
     setCopiedId(id);
+    toast.info("Interview link copied to clipboard!", "Copied");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -185,6 +193,7 @@ export default function AssessmentInvitePage() {
     if (!newSession?.invite_url) return;
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
+    toast.info("Interview link copied to clipboard!", "Copied");
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 

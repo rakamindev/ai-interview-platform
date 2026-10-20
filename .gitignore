@@ -17,3 +17,4 @@ web/.vite/
 
 # OS
 .DS_Store
+dump.rdb

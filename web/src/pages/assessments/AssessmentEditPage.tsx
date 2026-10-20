@@ -27,7 +27,9 @@ import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
-import type { AssessmentFormValues } from "./AssessmentNewPage";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "@/components/ui/toast";
+import { assessmentSchema, type AssessmentFormValues } from "./AssessmentNewPage";
 
 export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +40,9 @@ export default function AssessmentEditPage() {
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
-    defaultValues: { name: "", time_limit_min: 45, skills: [] },
+    resolver: zodResolver(assessmentSchema),
+    defaultValues: { name: "", time_limit_min: 45, language: "en", skills: [] },
+    mode: "onTouched",
   });
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
@@ -49,7 +53,7 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({ name: a.name, time_limit_min: a.time_limit_min, language: a.language || "en", skills: a.skills });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -70,18 +74,21 @@ export default function AssessmentEditPage() {
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) { setError("Add at least one skill."); return; }
     setError(null);
     setSubmitting(true);
     try {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
+        language: data.language,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
+      toast.success("Assessment changes saved successfully!", "Updated");
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
+      const errorMsg = e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.";
+      setError(errorMsg);
+      toast.error(errorMsg, "Error");
     } finally {
       setSubmitting(false);
     }

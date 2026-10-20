@@ -28,12 +28,18 @@ import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
-export interface AssessmentFormValues {
-  name: string;
-  time_limit_min: number;
-  language: "en" | "id";
-  skills: Partial<AssessmentSkill>[];
-}
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "@/components/ui/toast";
+
+export const assessmentSchema = z.object({
+  name: z.string().min(3, "Role title is required and must be at least 3 characters"),
+  time_limit_min: z.number().min(15, "Time limit must be at least 15 minutes").max(180),
+  language: z.enum(["en", "id"]),
+  skills: z.array(z.any()).min(1, "Please add at least one skill to assess before continuing."),
+});
+
+export type AssessmentFormValues = z.infer<typeof assessmentSchema>;
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
@@ -42,12 +48,14 @@ export default function AssessmentNewPage() {
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
+    resolver: zodResolver(assessmentSchema),
     defaultValues: {
       name: "",
       time_limit_min: 45,
       language: "en",
       skills: [],
     },
+    mode: "onTouched",
   });
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
@@ -81,10 +89,6 @@ export default function AssessmentNewPage() {
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
-    if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
-      return;
-    }
     setError(null);
     setSubmitting(true);
     try {
@@ -98,9 +102,12 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
+      toast.success("Assessment created successfully!", "Success");
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+      const errorMsg = e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.";
+      setError(errorMsg);
+      toast.error(errorMsg, "Error");
     } finally {
       setSubmitting(false);
     }

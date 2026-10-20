@@ -12,12 +12,18 @@ import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
-interface VacancyFormValues {
-  role_title: string;
-  culture_dimensions: string;
-  competency_expectations: string;
-  skills: Partial<VacancySkill>[];
-}
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "@/components/ui/toast";
+
+export const vacancySchema = z.object({
+  role_title: z.string().min(3, "Role title is required and must be at least 3 characters"),
+  culture_dimensions: z.string(),
+  competency_expectations: z.string(),
+  skills: z.array(z.any()).min(1, "Please add at least one expected skill for this vacancy before saving."),
+});
+
+export type VacancyFormValues = z.infer<typeof vacancySchema>;
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
@@ -26,7 +32,9 @@ export default function VacancyNewPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
+    resolver: zodResolver(vacancySchema),
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+    mode: "onTouched",
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
@@ -41,9 +49,12 @@ export default function VacancyNewPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
+      toast.success("Vacancy created successfully!", "Success");
       navigate("/vacancies");
     } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
+      const errorMsg = e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.";
+      setError(errorMsg);
+      toast.error(errorMsg, "Error");
     } finally {
       setSubmitting(false);
     }
@@ -63,7 +74,10 @@ export default function VacancyNewPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title")} />
+          {errors.role_title && (
+            <p className="text-xs text-destructive mt-1">{errors.role_title.message}</p>
+          )}
         </div>
 
         <Separator />

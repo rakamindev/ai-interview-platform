@@ -31,8 +31,11 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
         <Input
           id={`skills.${index}.skill_label`}
           placeholder="e.g. Communication"
-          {...register(`skills.${index}.skill_label`, { required: true })}
+          {...register(`skills.${index}.skill_label`, { required: "Skill name is required" })}
         />
+        {(errors.skills as any)?.[index]?.skill_label && (
+          <p className="text-xs text-destructive mt-1">{(errors.skills as any)[index].skill_label.message || "Skill name is required"}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -43,8 +46,11 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
           id={`skills.${index}.scope_include`}
           placeholder="Clear technical explanation, stakeholder alignment, async written communication..."
           rows={2}
-          {...register(`skills.${index}.scope_include`, { required: true })}
+          {...register(`skills.${index}.scope_include`, { required: "Scope inclusion guidelines are required" })}
         />
+        {(errors.skills as any)?.[index]?.scope_include && (
+          <p className="text-xs text-destructive mt-1">{(errors.skills as any)[index].scope_include.message || "Scope is required"}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -57,8 +63,11 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
               id={`skills.${index}.${key}`}
               placeholder={LEVEL_PLACEHOLDERS[i + 1]}
               rows={2}
-              {...register(`skills.${index}.${key}`, { required: true })}
+              {...register(`skills.${index}.${key}`, { required: `L${i + 1} anchor description is required` })}
             />
+            {(errors.skills as any)?.[index]?.[key] && (
+              <p className="text-xs text-destructive mt-0.5">{(errors.skills as any)[index][key].message || `L${i + 1} anchor is required`}</p>
+            )}
           </div>
         ))}
       </div>

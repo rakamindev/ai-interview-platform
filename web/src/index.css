@@ -4,37 +4,42 @@
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
+        /* Workspace background: #F7F9FA */
+        --background: 195 20% 97.5%;
+        /* Main text: #1F2937 */
+        --foreground: 215 28% 17%;
 
+        /* Card surface: #FFFFFF */
         --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --card-foreground: 215 28% 17%;
 
         --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+        --popover-foreground: 215 28% 17%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+        /* Primary accent: #0F8F95 → hsl(183, 82%, 32%) */
+        --primary: 183 82% 32%;
+        --primary-foreground: 0 0% 100%;
 
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
+        /* Secondary accent: #FBC037 → hsl(43, 96%, 60%) */
         --secondary: 43 96% 60%;
         --secondary-foreground: 26 47% 25%;
 
-        --muted: 210 40% 96%;
+        --muted: 210 33% 96%;
+        /* Secondary text: #64748B → hsl(215, 16%, 47%) */
         --muted-foreground: 215 16% 47%;
 
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
+        --accent: 195 25% 95%;
+        --accent-foreground: 215 28% 17%;
 
-        --destructive: 0 84% 60%;
+        --destructive: 0 72% 51%;
         --destructive-foreground: 0 0% 98%;
 
+        /* Borders: #E2E8F0 → hsl(214, 32%, 91%) */
         --border: 214 32% 91%;
         --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+        --ring: 183 82% 32%;
 
-        --radius: 0.5rem;
+        --radius: 0.625rem;
     }
 
     .dark {
@@ -47,7 +52,7 @@
         --popover: 222 47% 11%;
         --popover-foreground: 210 40% 98%;
 
-        --primary: 184 99% 31%;
+        --primary: 183 82% 32%;
         --primary-foreground: 0 0% 98%;
 
         --secondary: 43 96% 60%;
@@ -64,7 +69,7 @@
 
         --border: 217 33% 17%;
         --input: 217 33% 17%;
-        --ring: 184 99% 31%;
+        --ring: 183 82% 32%;
     }
 }
 
@@ -74,6 +79,17 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground antialiased;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
     }
 }

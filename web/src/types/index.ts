@@ -74,24 +74,68 @@ export interface TranscriptTurn {
   created_at: string;
 }
 
+export interface SessionSummary {
+  candidate_name?: string | null;
+  status: "pending" | "active" | "ended" | "failed" | string;
+  end_reason?:
+    | "manual_candidate"
+    | "manual_assessor"
+    | "all_covered"
+    | "time_ceiling"
+    | "error"
+    | string
+    | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  duration_seconds?: number | null;
+  configured_skills_count: number;
+  assessed_skills_count: number;
+  covered_skills_count: number;
+  unassessed_skills_count: number;
+}
+
+export type UnassessedSkillReason = "not_probed" | "insufficient_evidence";
+
+export interface UnassessedSkill {
+  skill_id?: string | null;
+  skill_label: string;
+  expected_level?: number | null;
+  state: "not_yet" | "initiated" | "partial" | "covered";
+  probe_count: number;
+  reason: UnassessedSkillReason;
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;
   candidate_id?: number;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
-  generation_error?: string;
+  generation_error?: string | null;
+  error_code?: string | null;
+  session_summary?: SessionSummary;
   skills: PortfolioSkill[];
+  unassessed_skills?: UnassessedSkill[];
   overrides: AssessorOverride[];
+}
+
+export interface PortfolioApiResponse {
+  status?: "generating" | "failed" | "complete";
+  portfolio?: Portfolio;
+  session_summary?: SessionSummary;
+  error?: string;
+  error_code?: string;
 }
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string | number | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: number | string;
+  ai_confidence: "high" | "medium" | "low" | string;
+  coverage_state?: "not_yet" | "initiated" | "partial" | "covered" | null;
+  probe_count?: number | null;
   evidence: string[];
   competency_summary: string;
 }
@@ -119,7 +163,7 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | number;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -127,13 +171,25 @@ export interface VacancySkill {
 
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+export type SkillAssessmentStatus =
+  | "covered"
+  | "partial"
+  | "insufficient_evidence"
+  | "not_probed";
+
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
-  result: SkillComparisonResult;
-  delta?: number;
+  skill_id?: string | null;
+  required_level?: number | null;
+  expected_level?: number | null;
+  candidate_level?: number | null;
+  ai_level?: number | null;
   is_override?: boolean;
+  assessor_notes?: string | null;
+  assessment_status?: SkillAssessmentStatus;
+  result: SkillComparisonResult;
+  delta?: number | null;
+  confidence?: "high" | "medium" | "low" | string | null;
 }
 
 export interface FitGapReport {
@@ -141,9 +197,19 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative?: string | null;
+  overall_narrative?: string | null;
   generated_at: string;
+}
+
+export type FitGapStatus = "not_generated" | "generating" | "ready" | "failed";
+
+export interface FitGapStatusResponse {
+  status?: FitGapStatus;
+  stale?: boolean;
+  error_code?: string;
+  message?: string;
+  report?: FitGapReport | null;
 }
 
 export interface SkillTaxonomy {

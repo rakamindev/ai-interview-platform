@@ -55,6 +55,20 @@ class ApplicationController < ActionController::API
     roles = roles.flatten.map(&:to_s)
     result = AuthorizeApiRequest.new(request.headers, roles).call
     Current.user = result[:user]
+
+    verify_authenticated_tenant!
+  end
+
+  def verify_authenticated_tenant!
+    return unless Current.user
+
+    header_scheme = request.headers['X-Tenant-Scheme'].presence
+    user_scheme   = Current.user.scheme.presence
+    org_scheme    = current_organization&.scheme
+
+    if user_scheme.blank? || org_scheme != user_scheme || (header_scheme && header_scheme != user_scheme)
+      raise ExceptionHandler::Unauthorized, Message.unauthorized
+    end
   end
 
   # ── Params ──────────────────────────────────────────────────────────────────

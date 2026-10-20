@@ -11,16 +11,24 @@ export default function LevelBadge({ level, size = "md", className }: LevelBadge
   return (
     <div
       className={cn(
-        "inline-flex flex-col items-center justify-center rounded font-semibold",
-        size === "md" ? "px-3 py-2 min-w-14 text-base" : "px-2 py-1 min-w-10 text-sm",
-        LEVEL_BADGE_CLASSES[level],
+        "inline-flex items-center gap-1.5 rounded-md font-semibold border shrink-0",
+        size === "md"
+          ? "px-2.5 py-1 text-xs"
+          : "px-2 py-0.5 text-xs",
+        LEVEL_BADGE_CLASSES[level] ?? "bg-slate-100 text-slate-700 border-slate-200",
         className
       )}
     >
-      <span>{LEVEL_LABELS[level]}</span>
-      {size === "md" && (
-        <span className="text-[10px] font-normal opacity-70">{LEVEL_DESCRIPTIONS[level]}</span>
+      <span className="leading-none">{LEVEL_LABELS[level]}</span>
+      {size === "md" && LEVEL_DESCRIPTIONS[level] && (
+        <>
+          <span className="opacity-40" aria-hidden="true">·</span>
+          <span className="font-medium opacity-90 leading-none">
+            {LEVEL_DESCRIPTIONS[level]}
+          </span>
+        </>
       )}
     </div>
   );
 }
+
