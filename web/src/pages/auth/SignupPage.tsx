@@ -1,20 +1,17 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PasswordInput } from "@/components/PasswordInput";
 import { Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/getErrorMessages";
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const setAuth = useSetAtom(authAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,84 +20,90 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await authApi.signup({ email, password, role });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
-      navigate("/assessments");
-    } catch {
-      setError("Signup failed. Please try again.");
+      await authApi.signup({ email, password });
+
+      navigate("/login"); // registered -> straight into the app
+    } catch (err) {
+      // e.g. "Email is already registered" from the backend (422)
+      setError(getErrorMessage(err, "Signup failed. Please try again."));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create an account</p>
+    <main className="min-h-dvh flex items-center justify-center bg-gradient-to-b from-muted/50 to-background px-4 py-8 sm:py-12">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold tracking-tight">AI Interview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create an account
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+        <div className="space-y-6 rounded-xl border bg-card p-5 shadow-sm sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="h-11 text-base sm:h-10 sm:text-sm"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <PasswordInput
+                id="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+              <p className="text-xs text-muted-foreground">
+                At least 8 characters.
+              </p>
+            </div>
 
-          <div className="space-y-1.5">
-            <Label>Role</Label>
-            <RadioGroup
-              value={role}
-              onValueChange={(v) => setRole(v as "admin" | "user")}
-              className="flex gap-4"
+            {error && (
+              <p
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {error}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              className="h-11 w-full sm:h-10"
+              disabled={loading}
             >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="user" id="role-user" />
-                <Label htmlFor="role-user" className="font-normal cursor-pointer">User</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="admin" id="role-admin" />
-                <Label htmlFor="role-admin" className="font-normal cursor-pointer">Admin</Label>
-              </div>
-            </RadioGroup>
-          </div>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading ? "Creating account..." : "Sign up"}
+            </Button>
+          </form>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign up
-          </Button>
-        </form>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-medium text-primary hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
