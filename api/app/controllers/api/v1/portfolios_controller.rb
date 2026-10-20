@@ -69,7 +69,7 @@ module Api
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
-                           filename:    "portfolio-#{@portfolio.id}.pdf",
+                           filename:    export_filename("pdf"),
                            type:        "application/pdf",
                            disposition: "attachment"
         end
@@ -79,7 +79,7 @@ module Api
         export_data = build_export_json(@portfolio, vacancy_id)
 
         send_data export_data.to_json,
-                  filename:    "portfolio-#{@portfolio.id}.json",
+                  filename:    export_filename("json"),
                   type:        "application/json",
                   disposition: "attachment"
       end
@@ -224,10 +224,16 @@ module Api
         vacancy.nil? || report.vacancy_updated_at != vacancy.updated_at
       end
 
+      def export_filename(format)
+        slug = @portfolio.session.candidate_name.to_s.parameterize.presence || "candidate"
+        "portfolio-#{slug}-#{@portfolio.id}.#{format}"
+      end
+
       def build_export_json(portfolio, vacancy_id = nil)
         data = {
-          exported_at: Time.current.iso8601,
-          portfolio:   portfolio_json(portfolio)
+          exported_at:    Time.current.iso8601,
+          candidate_name: portfolio.session.candidate_name,
+          portfolio:      portfolio_json(portfolio)
         }
 
         if vacancy_id.present?
