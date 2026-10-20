@@ -1,4 +1,5 @@
 import { useState, type ReactElement, type MouseEvent } from "react";
+import { useToast } from "@/components/ui/toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,7 @@ interface ConfirmActionDialogProps {
   description: string;
   actionLabel: string;
   errorMessage: string;
+  successMessage?: string;
   onConfirm: () => Promise<void>;
 }
 
@@ -26,8 +28,10 @@ export default function ConfirmActionDialog({
   description,
   actionLabel,
   errorMessage,
+  successMessage,
   onConfirm,
 }: ConfirmActionDialogProps) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
@@ -38,6 +42,7 @@ export default function ConfirmActionDialog({
     setError(false);
     try {
       await onConfirm();
+      if (successMessage) toast.success(successMessage);
       setOpen(false);
     } catch {
       setError(true);

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import VacancySkillItem from "@/components/vacancies/VacancySkillItem";
 import ApiErrorList from "@/components/ApiErrorList";
+import { useToast } from "@/components/ui/toast";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, Loader2, Trash2 } from "lucide-react";
@@ -26,6 +27,7 @@ interface VacancyFormValues {
 export default function VacancyEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -64,6 +66,7 @@ export default function VacancyEditPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
+      toast.success("Vacancy updated.");
       navigate("/vacancies");
     } catch (e: any) {
       setServerErrors(apiErrorMessages(e, "Failed to save vacancy."));
@@ -79,6 +82,7 @@ export default function VacancyEditPage() {
     try {
       await vacanciesApi.updateStatus(Number(id), pendingStatus);
       setSavedStatus(pendingStatus);
+      toast.success("Vacancy status updated.");
     } catch (e: any) {
       setStatusErrors(apiErrorMessages(e, "Could not update vacancy status."));
     } finally {
@@ -120,6 +124,7 @@ export default function VacancyEditPage() {
           description="It will be removed from active vacancies. Historical fit-gap reports remain saved."
           actionLabel="Delete vacancy"
           errorMessage="Could not delete vacancy. Try again."
+          successMessage="Vacancy deleted."
           onConfirm={async () => {
             await vacanciesApi.delete(Number(id));
             navigate("/vacancies");

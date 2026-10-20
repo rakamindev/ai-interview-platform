@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import ApiErrorList from "@/components/ApiErrorList";
+import { useToast } from "@/components/ui/toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
@@ -33,6 +34,7 @@ import type { AssessmentFormValues } from "./AssessmentNewPage";
 export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -94,6 +96,7 @@ export default function AssessmentEditPage() {
         language: data.language,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
+      toast.success("Assessment updated.");
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
       setServerErrors(apiErrorMessages(e, "Failed to save assessment."));

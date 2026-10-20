@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import ApiErrorList from "@/components/ApiErrorList";
+import { useToast } from "@/components/ui/toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
@@ -37,6 +38,7 @@ export interface AssessmentFormValues {
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<string[]>([]);
@@ -98,6 +100,7 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
+      toast.success("Assessment created.");
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
       setServerErrors(apiErrorMessages(e, "Failed to save assessment."));

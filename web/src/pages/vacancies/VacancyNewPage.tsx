@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import VacancySkillItem from "@/components/vacancies/VacancySkillItem";
 import ApiErrorList from "@/components/ApiErrorList";
+import { useToast } from "@/components/ui/toast";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
@@ -22,6 +23,7 @@ interface VacancyFormValues {
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [serverErrors, setServerErrors] = useState<string[]>([]);
@@ -43,6 +45,7 @@ export default function VacancyNewPage() {
         vacancy_skills_attributes: data.skills,
         status: "active",
       });
+      toast.success("Vacancy created.");
       navigate("/vacancies");
     } catch (e: any) {
       setServerErrors(apiErrorMessages(e, "Failed to save vacancy."));

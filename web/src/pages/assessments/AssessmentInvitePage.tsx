@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ApiErrorList from "@/components/ApiErrorList";
+import { useToast } from "@/components/ui/toast";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
@@ -125,6 +126,7 @@ function SessionRow({
 export default function AssessmentInvitePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,6 +187,11 @@ export default function AssessmentInvitePage() {
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
       setShowInviteDialog(false);
+      toast.success(
+        created.candidate_name
+          ? `Invite link created for ${created.candidate_name}.`
+          : "Invite link created."
+      );
     } catch (e: any) {
       setInviteErrors(apiErrorMessages(e, "Could not create the interview invite."));
     } finally {
@@ -256,6 +263,7 @@ export default function AssessmentInvitePage() {
             description="It will be removed from active assessments. Existing interview sessions remain stored."
             actionLabel="Delete assessment"
             errorMessage="Could not delete assessment. Try again."
+            successMessage="Assessment deleted."
             onConfirm={async () => {
               await assessmentsApi.delete(Number(id));
               navigate("/assessments");
