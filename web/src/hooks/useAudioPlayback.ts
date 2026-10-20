@@ -4,13 +4,28 @@ const PLAYBACK_SAMPLE_RATE = 24000; // Gemini outputs 24kHz
 
 export function useAudioPlayback() {
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
   const onDrainedRef = useRef<(() => void) | null>(null);
   const drainCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getCtx = () => {
     if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-      audioCtxRef.current = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
+      const ctx = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
+      audioCtxRef.current = ctx;
+
+      // Attach AnalyserNode to measure live AI voice audio volume
+      if (typeof ctx.createAnalyser === "function") {
+        try {
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 64;
+          analyser.connect(ctx.destination);
+          analyserRef.current = analyser;
+        } catch {
+          // AnalyserNode unsupported or mocked in test environment
+        }
+      }
+
       nextPlayTimeRef.current = 0;
     }
     return audioCtxRef.current;
@@ -32,12 +47,33 @@ export function useAudioPlayback() {
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.connect(ctx.destination);
+
+    if (analyserRef.current) {
+      source.connect(analyserRef.current);
+    } else {
+      source.connect(ctx.destination);
+    }
 
     const now = ctx.currentTime;
     const startTime = Math.max(now, nextPlayTimeRef.current);
     source.start(startTime);
     nextPlayTimeRef.current = startTime + buffer.duration;
+  }, []);
+
+  const getVolume = useCallback((): number => {
+    if (!analyserRef.current || !audioCtxRef.current) return 0;
+    try {
+      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const avg = sum / dataArray.length;
+      return Math.min(1, Math.max(0, avg / 128));
+    } catch {
+      return 0;
+    }
   }, []);
 
   // Registers a one-shot callback that fires when the audio queue drains.
@@ -79,10 +115,12 @@ export function useAudioPlayback() {
 
   const stop = useCallback(() => {
     cancelDrain();
+    analyserRef.current?.disconnect();
+    analyserRef.current = null;
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
     nextPlayTimeRef.current = 0;
   }, [cancelDrain]);
 
-  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain };
+  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain, getVolume };
 }

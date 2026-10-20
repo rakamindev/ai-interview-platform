@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { ErrorState } from "@/components/ui/error-state";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
 import { ArrowLeft, Download } from "lucide-react";
+import { formatTime } from "@/utils/dateTime";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -13,7 +15,9 @@ export default function TranscriptPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const loadTranscript = useCallback(() => {
+    setLoading(true);
+    setError(false);
     Promise.all([
       sessionsApi.getTranscript(Number(sessionId)),
       sessionsApi.get(Number(sessionId)),
@@ -25,6 +29,10 @@ export default function TranscriptPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  useEffect(() => {
+    loadTranscript();
+  }, [loadTranscript]);
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -41,42 +49,60 @@ export default function TranscriptPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto w-full space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" asChild>
+            <Link
+              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+              title="Back to Portfolio"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
           <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            <h1 className="text-2xl font-bold tracking-tight">Interview Transcript</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {candidateName && <span>{candidateName}</span>}
+              {candidateName && " — "}
+              Complete conversational turn history and speech timestamps.
+            </p>
           </div>
         </div>
         {!loading && !error && turns.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-1.5" />
             Download .txt
           </Button>
         )}
       </div>
 
       {loading && (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className={`rounded-lg p-4 space-y-2 border ${
+                i % 2 === 1 ? "bg-muted/40" : "bg-background ml-8"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
           ))}
         </div>
       )}
 
       {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
-          Failed to load transcript. Please refresh.
-        </div>
+        <ErrorState
+          title="Failed to load transcript"
+          description="Could not load conversational transcript turns and timestamps for this session."
+          onRetry={loadTranscript}
+        />
       )}
 
       {!loading && !error && turns.length === 0 && (
@@ -98,13 +124,20 @@ export default function TranscriptPage() {
                     : "bg-background border border-primary/20"
                 }`}
               >
-                <p
-                  className={`text-xs font-semibold mb-1 ${
-                    isAI ? "text-muted-foreground" : "text-primary"
-                  }`}
-                >
-                  {isAI ? "AI Interviewer" : "Candidate"}
-                </p>
+                <div className="flex items-center justify-between mb-1">
+                  <p
+                    className={`text-xs font-semibold ${
+                      isAI ? "text-muted-foreground" : "text-primary"
+                    }`}
+                  >
+                    {isAI ? "AI Interviewer" : "Candidate"}
+                  </p>
+                  {turn.created_at && (
+                    <span className="text-[11px] text-muted-foreground" data-testid="turn-timestamp">
+                      {formatTime(turn.created_at, undefined, true)}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
               </div>
             );

@@ -1,11 +1,83 @@
 # frozen_string_literal: true
 
 require 'faye/websocket'
+require 'monitor'
 
 # Rack middleware for assessor live coverage monitoring at /ws/sessions/:id/coverage.
 # Server-push only: subscribes to Redis pub/sub and forwards coverage updates to the assessor.
 class CoverageWebSocketMiddleware
   COVERAGE_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/coverage\z}
+
+  @lock = Monitor.new
+  @channels = {}
+
+  class << self
+    def channels
+      @channels
+    end
+
+    def subscribe(channel, ws)
+      @lock.synchronize do
+        entry = @channels[channel] ||= { sockets: Set.new, redis: nil, thread: nil }
+        entry[:sockets].add(ws)
+
+        if entry[:thread].nil? || !entry[:thread].alive?
+          redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
+          entry[:redis] = redis
+
+          entry[:thread] = Thread.new do
+            redis.subscribe(channel) do |on|
+              on.message do |_ch, message|
+                sockets = @lock.synchronize { entry[:sockets].dup }
+                sockets.each do |socket|
+                  EM.schedule do
+                    socket.send(message)
+                  rescue StandardError => e
+                    Rails.logger.debug("[CoverageWS] Failed to forward update: #{e.message}")
+                  end
+                end
+              end
+            end
+          rescue StandardError => e
+            Rails.logger.error("[CoverageWS] Redis subscription error for #{channel}: #{e.message}")
+          ensure
+            redis.disconnect! rescue nil
+          end
+        end
+      end
+    end
+
+    def unsubscribe(channel, ws)
+      @lock.synchronize do
+        entry = @channels[channel]
+        return unless entry
+
+        entry[:sockets].delete(ws)
+        if entry[:sockets].empty?
+          redis = entry[:redis]
+          entry[:redis] = nil
+          entry[:thread] = nil
+          @channels.delete(channel)
+
+          cleanup_thread = Thread.new do
+            redis&.unsubscribe(channel) rescue nil
+            redis&.disconnect! rescue nil
+          end
+          cleanup_thread.join if Rails.env.test?
+        end
+      end
+    end
+
+    def reset_channels!
+      @lock.synchronize do
+        @channels.each_value do |entry|
+          entry[:redis]&.disconnect! rescue nil
+          entry[:thread]&.kill rescue nil
+        end
+        @channels.clear
+      end
+    end
+  end
 
   def initialize(app)
     @app = app
@@ -25,19 +97,16 @@ class CoverageWebSocketMiddleware
 
   def handle_coverage_websocket(env, session_id)
     ws = Faye::WebSocket.new(env, nil, ping: 30)
-
-    redis_sub = nil  # track subscription Redis instance for cleanup
+    channel = "coverage:#{session_id}"
+    subscribed = false
 
     ws.on :open do |_event|
-      # Try header-based auth first (assessor dashboard with JWT in header).
-      # If no Authorization header is present, wait for a { type: "auth", token }
-      # message — this matches the pattern used by the audio WS for browser clients
-      # that can't set WebSocket headers.
       session, error = authenticate_assessor(env, session_id)
-      next if error  # wait for auth message
+      next if error
 
       send_current_state(ws, session)
-      redis_sub = subscribe_to_coverage_updates(ws, session_id)
+      CoverageWebSocketMiddleware.subscribe(channel, ws)
+      subscribed = true
     end
 
     ws.on :message do |event|
@@ -46,8 +115,7 @@ class CoverageWebSocketMiddleware
       message = JSON.parse(event.data) rescue next
       next unless message['type'] == 'auth'
 
-      # Already authenticated via header — ignore
-      next if redis_sub
+      next if subscribed
 
       token   = message['token'].to_s
       session, error = authenticate_assessor_by_token(token, session_id)
@@ -59,14 +127,16 @@ class CoverageWebSocketMiddleware
       end
 
       send_current_state(ws, session)
-      redis_sub = subscribe_to_coverage_updates(ws, session_id)
+      CoverageWebSocketMiddleware.subscribe(channel, ws)
+      subscribed = true
     end
 
     ws.on :close do |_event|
       Rails.logger.debug("[CoverageWS] Assessor disconnected from session #{session_id}")
-      # H4 fix: unsubscribe so the blocking Thread exits cleanly instead of
-      # hanging forever waiting for the next message.
-      Thread.new { redis_sub&.unsubscribe rescue nil }
+      if subscribed
+        CoverageWebSocketMiddleware.unsubscribe(channel, ws)
+        subscribed = false
+      end
     end
 
     ws.rack_response
@@ -88,31 +158,6 @@ class CoverageWebSocketMiddleware
     ws.send(payload.to_json)
   rescue => e
     Rails.logger.error("[CoverageWS] Failed to send initial state: #{e.message}")
-  end
-
-  # Returns the Redis instance so the caller can unsubscribe on WS close.
-  def subscribe_to_coverage_updates(ws, session_id)
-    channel = "coverage:#{session_id}"
-    redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
-
-    Thread.new do
-      redis.subscribe(channel) do |on|
-        on.message do |_channel, message|
-          EM.schedule do
-            ws.send(message)
-          rescue => e
-            Rails.logger.debug("[CoverageWS] Failed to forward update: #{e.message}")
-            redis.unsubscribe(channel)
-          end
-        end
-      end
-    rescue => e
-      Rails.logger.error("[CoverageWS] Redis subscription error for #{channel}: #{e.message}")
-    ensure
-      redis.disconnect!
-    end
-
-    redis
   end
 
   def authenticate_assessor(env, session_id)

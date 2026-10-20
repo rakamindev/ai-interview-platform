@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
+import CvEvidenceCard from "./CvEvidenceCard";
 import { Zap } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
@@ -48,21 +49,11 @@ export default function SkillPortfolioCard({
           </div>
         )}
 
-        {/* Evidence */}
-        {skill.evidence.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Evidence from interview
-            </span>
-            <ul className="space-y-1">
-              {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Side-by-side CV Claims vs Spoken Interview Evidence */}
+        <CvEvidenceCard
+          matchingCvClaims={skill.matching_cv_claims || []}
+          interviewEvidence={skill.evidence || []}
+        />
 
         {/* Competency summary */}
         {skill.competency_summary && (

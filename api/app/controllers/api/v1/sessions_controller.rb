@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete update_candidate]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete update_candidate]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -29,10 +29,13 @@ module Api
         )
 
         if session.save
+          cv_text = params.dig(:session, :cv_text).presence || params[:cv_text].presence
+          ingest_candidate_cv(session, cv_text) if cv_text.present?
+
           json_response(
             {
               session:    session_json(session),
-              invite_url: session.invite_url
+              invite_url: resolved_invite_url(session)
             },
             :created
           )
@@ -147,9 +150,32 @@ module Api
 
         json_response(
           session_id:      session.id,
+          candidate_name:  session.candidate_name,
+          consent_given:   session.consent_at.present?,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason
+        )
+      end
+
+      # PATCH /sessions/:token/candidate — no JWT, invite token in URL
+      def update_candidate
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        return json_error("Cannot update candidate for ended session", :unprocessable_entity) if session.ended?
+
+        update_attrs = {}
+        update_attrs[:candidate_name] = params[:candidate_name].to_s.strip if params.key?(:candidate_name)
+        update_attrs[:consent_at] = Time.current if params[:consent] == true || params[:consent] == 'true'
+
+        session.update!(update_attrs)
+        json_response(
+          session_id:     session.id,
+          candidate_name: session.candidate_name,
+          consent_given:  session.consent_at.present?,
+          message:        "Candidate identity and consent updated successfully"
         )
       end
 
@@ -161,6 +187,27 @@ module Api
         json_error("Session not found", :not_found)
       end
 
+      def ingest_candidate_cv(session, cv_text)
+        return if cv_text.blank?
+
+        parsed = Cv::ParserService.call(cv_text)
+        chunks = Cv::ChunkingService.call(parsed[:clean_text])
+        embedding_client = Gemini::EmbeddingClient.new(organization: session.tenant || Organization.find_by(id: session.tenant_id))
+
+        chunks.each_with_index do |chunk, idx|
+          embedding = embedding_client.embed(chunk[:content]) rescue []
+          session.candidate_cv_chunks.create!(
+            chunk_index: idx,
+            section_type: chunk[:section_type] || 'projects',
+            content: chunk[:content],
+            metadata: chunk[:metadata] || {},
+            embedding: embedding.present? ? "[#{embedding.join(',')}]" : nil
+          )
+        end
+      rescue StandardError => e
+        Rails.logger.warn("[SessionsController] CV ingestion failed for session #{session.id}: #{e.message}")
+      end
+
       def session_json(session)
         {
           id:               session.id,
@@ -169,7 +216,7 @@ module Api
           candidate_id:     session.candidate_id,
           candidate_name:   session.candidate_name,
           invite_token:     session.invite_token,
-          invite_url:       session.invite_url,
+          invite_url:       resolved_invite_url(session),
           status:           session.status,
           end_reason:       session.end_reason,
           started_at:       session.started_at,
@@ -177,6 +224,12 @@ module Api
           duration_seconds: session.duration_seconds,
           created_at:       session.created_at
         }
+      end
+
+      def resolved_invite_url(session)
+        origin = request.headers['Origin'].presence ||
+                 request.headers['Referer']&.then { |r| URI.parse(r).origin rescue nil }
+        session.invite_url(origin)
       end
 
       def coverage_map_json(map)

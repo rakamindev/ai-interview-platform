@@ -63,7 +63,7 @@ module Api
           :culture_dimensions,
           :competency_expectations,
           vacancy_skills_attributes: %i[
-            id skill_id skill_label expected_level _destroy
+            id skill_id skill_label expected_level is_custom _destroy
           ]
         )
       end
@@ -98,6 +98,7 @@ module Api
           skill_id:       skill.skill_id,
           skill_label:    skill.skill_label,
           expected_level: skill.expected_level,
+          is_custom:      skill.is_custom,
           l1_anchor:      taxonomy&.l1_anchor,
           l2_anchor:      taxonomy&.l2_anchor,
           l3_anchor:      taxonomy&.l3_anchor,

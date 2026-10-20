@@ -1,4 +1,5 @@
 import api from "./api";
+import type { UserProfile } from "@/stores/authAtom";
 
 export interface LoginPayload {
   email: string;
@@ -7,6 +8,7 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   token: string;
+  user?: UserProfile;
 }
 
 export const authApi = {
@@ -15,4 +17,7 @@ export const authApi = {
 
   signup: (data: { email: string; password: string; role: "admin" | "user" }) =>
     api.post<LoginResponse>("/signup", data),
+
+  getMe: () =>
+    api.get<{ user: UserProfile; tenant: { id: string; name: string } }>("/auth/me"),
 };

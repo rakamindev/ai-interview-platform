@@ -29,6 +29,12 @@ export const sessionsApi = {
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
 
+  updateCandidate: (token: string, data: { candidate_name?: string; consent?: boolean }) =>
+    api.patch<{ session_id: number; candidate_name: string; consent_given: boolean; message: string }>(
+      `/sessions/${token}/candidate`,
+      data
+    ),
+
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
 };

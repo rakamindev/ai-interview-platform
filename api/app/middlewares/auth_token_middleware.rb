@@ -17,13 +17,23 @@ class AuthTokenMiddleware < ApplicationMiddleware
 
   def call(env)
     request = ActionDispatch::Request.new(env)
+    error_response = nil
 
-    result = capture_error do
+    result = begin
       AuthorizeApiRequest.new(request.headers, @required_roles).call
+    rescue ExceptionHandler::Unauthorized => e
+      error_response = [403, e.message]
+      nil
+    rescue ExceptionHandler::MissingToken, ExceptionHandler::InvalidToken => e
+      error_response = [401, e.message]
+      nil
+    rescue StandardError => _e
+      error_response = [401, 'Request not authenticated']
+      nil
     end
 
-    if @error
-      return error(*@error) unless @required_roles.empty?
+    if error_response
+      return error(*error_response) unless @required_roles.empty?
     end
 
     if result
@@ -31,20 +41,5 @@ class AuthTokenMiddleware < ApplicationMiddleware
     end
 
     super
-  end
-
-  private
-
-  def capture_error
-    yield
-  rescue ExceptionHandler::Unauthorized => e
-    @error ||= [403, e.message]
-    nil
-  rescue ExceptionHandler::MissingToken, ExceptionHandler::InvalidToken => e
-    @error ||= [401, e.message]
-    nil
-  rescue StandardError => _e
-    @error ||= [401, 'Request not authenticated']
-    nil
   end
 end

@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
@@ -107,15 +107,24 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-7xl mx-auto w-full">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+      <div className="flex items-center gap-2 mb-4">
+        <Button variant="outline" size="sm" className="h-8 w-8 p-0" asChild>
+          <Link to="/assessments" title="Back to Assessments">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
         <span className="text-sm text-muted-foreground">Back</span>
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">New Assessment</span>
+      </div>
+
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">New Assessment</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure role criteria, target competency rubrics, and interview session length.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -248,7 +257,8 @@ export default function AssessmentNewPage() {
           </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            <span>Save &amp; Create Session</span>
+            <ArrowRight className="h-4 w-4 ml-1.5" />
           </Button>
         </div>
       </form>

@@ -34,6 +34,7 @@ class AuthorizeApiRequest
     OpenStruct.new(
       id:     claims[:user_id],
       role:   claims[:role].to_s,
+      email:  claims[:email].to_s.presence,
       scheme: claims[:scheme].to_s
     )
   end

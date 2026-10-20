@@ -27,6 +27,7 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        configure_fonts(pdf)
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -35,6 +36,26 @@ module Exports
     end
 
     private
+
+    def configure_fonts(pdf)
+      regular_path = Rails.root.join('app/assets/fonts/DejaVuSans.ttf').to_s
+      bold_path = Rails.root.join('app/assets/fonts/DejaVuSans-Bold.ttf').to_s
+
+      unless File.exist?(regular_path)
+        regular_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+        bold_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+      end
+
+      return unless File.exist?(regular_path) && File.exist?(bold_path)
+
+      pdf.font_families.update(
+        'DejaVuSans' => {
+          normal: regular_path,
+          bold:   bold_path
+        }
+      )
+      pdf.font 'DejaVuSans'
+    end
 
     def render_header(pdf)
       pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
@@ -45,7 +66,7 @@ module Exports
       pdf.font_size(10) do
         pdf.text "Session: #{@session.id}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
-        pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
+        pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M %Z')}"
       end
 
       pdf.stroke_horizontal_rule
@@ -81,9 +102,15 @@ module Exports
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+        level_str = effective_level ? LEVEL_LABELS[effective_level] : 'Not Assessed'
+        level_text = "Level: #{level_str}"
+        if override
+          ai_str = skill.ai_level ? LEVEL_LABELS[skill.ai_level] : 'Not Assessed'
+          override_str = LEVEL_LABELS[override.override_level]
+          level_text += " (AI: #{ai_str} → Override: #{override_str})"
+        end
+        confidence_str = CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence || 'N/A'
+        level_text += "  |  Confidence: #{confidence_str}"
         pdf.text level_text
       end
 

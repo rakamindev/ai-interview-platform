@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Check, ArrowRight, ChevronDown } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -17,7 +17,9 @@ interface OverridePanelProps {
 
 export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
-  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+  const [overrideLevel, setOverrideLevel] = useState(
+    existingOverride?.override_level ?? parseLevel(skill.ai_level) ?? 3
+  );
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -49,17 +51,20 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
             <div className="flex items-center gap-1.5 text-sm">
               <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
               <span className="text-muted-foreground text-xs">AI</span>
-              <span className="text-muted-foreground">→</span>
+              <ArrowRight className="h-3 w-3 text-muted-foreground" />
               <LevelBadge level={existingOverride!.override_level} size="sm" />
-              <span className="text-xs text-green-600 font-medium">You Overridden ✓</span>
+              <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                Overridden <Check className="h-3 w-3" />
+              </span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <Pencil className="h-3 w-3 mr-1" /> Edit override
             </Button>
           </>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            Override rating ▼
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5">
+            <span>Override rating</span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
         )}
       </div>

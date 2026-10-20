@@ -59,7 +59,10 @@ module Api
 
         if format == "pdf"
           vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
-          pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
+          cache_key = "pdf_export/portfolio/#{@portfolio.id}-#{@portfolio.generated_at.to_i}-#{vacancy&.id}"
+          pdf_data = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+            Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
+          end
 
           return send_data pdf_data,
                            filename:    "portfolio-#{@portfolio.id}.pdf",
@@ -79,7 +82,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.for_tenant(Current.tenant_id).find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +104,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_tenant(Current.tenant_id).find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +130,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_tenant(Current.tenant_id).find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -148,18 +151,28 @@ module Api
       end
 
       def set_portfolio
-        # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
+        # Scoped to Current.tenant_id to prevent cross-tenant IDOR access
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.for_tenant(Current.tenant_id).find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       def portfolio_json(portfolio)
+        session = portfolio.session
+        cv_chunks = session&.candidate_cv_chunks&.order(:chunk_index)&.map do |c|
+          {
+            id: c.id,
+            chunk_index: c.chunk_index,
+            section_type: c.section_type,
+            content: c.content,
+            metadata: c.metadata || {}
+          }
+        end || []
+
         {
           id:                portfolio.id,
           session_id:        portfolio.session_id,
@@ -168,7 +181,8 @@ module Api
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides:         portfolio.assessor_overrides.map(&method(:override_json))
+          overrides:         portfolio.assessor_overrides.map(&method(:override_json)),
+          cv_evidence:       cv_chunks
         }
       end
 
@@ -181,8 +195,28 @@ module Api
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
           evidence:          skill.evidence_quotes,
-          competency_summary: skill.competency_summary
+          competency_summary: skill.competency_summary,
+          matching_cv_claims: find_matching_cv_claims(skill)
         }
+      end
+
+      def find_matching_cv_claims(skill)
+        session = skill.portfolio&.session
+        return [] unless session
+
+        keywords = skill.skill_label.to_s.downcase.split(/\W+/).reject { |w| w.length < 3 }
+        return [] if keywords.empty?
+
+        session.candidate_cv_chunks.select do |chunk|
+          content_lower = chunk.content.to_s.downcase
+          keywords.any? { |kw| content_lower.include?(kw) }
+        end.map do |chunk|
+          {
+            section_type: chunk.section_type,
+            company: chunk.metadata&.dig('company'),
+            content: chunk.content
+          }
+        end
       end
 
       def override_json(override)
@@ -203,6 +237,7 @@ module Api
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
           skill_comparisons: report.skill_comparisons,
+          discovered_skills: report.discovered_skills,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at

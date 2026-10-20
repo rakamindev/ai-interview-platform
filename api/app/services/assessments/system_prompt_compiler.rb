@@ -26,12 +26,20 @@ module Assessments
 
     def intro_section
       language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
+      language_guidance = if @assessment.language == 'id'
+                            "Conduct this entire interview in #{language_name}. Respond only in #{language_name}. " \
+                            "The candidate will speak in #{language_name} and may use standard English technical terminology " \
+                            "(e.g., React, WebRTC, WebSocket, Server-Sent Events, useState, memoization, edge computing). " \
+                            "Accurately recognize these technical terms."
+                          else
+                            "Conduct this entire interview in #{language_name}. Respond only in #{language_name}."
+                          end
 
       <<~TEXT.strip
         You are an expert skills assessor conducting a live audio interview.
         Your job is to assess the candidate's real capability — not their ability to recite theory.
 
-        LANGUAGE: Conduct this entire interview in #{language_name}. Respond only in #{language_name}. Do not switch languages even if the candidate uses another language.
+        LANGUAGE: #{language_guidance}
       TEXT
     end
 
@@ -216,7 +224,7 @@ module Assessments
         - Do not summarize the candidate's answer back to them at length. Acknowledge briefly, then probe.
         - Keep your turns SHORT. 1-3 sentences max. You are interviewing them, not presenting.
         - Do not explain what you're doing: never say "I'm now going to assess your X skills."
-        - NEVER interrupt or cut off the candidate mid-sentence. If they pause briefly, wait — they may still be forming their thought. Only respond once they have clearly finished speaking.
+        - NEVER interrupt or cut off the candidate mid-sentence. If they pause briefly to think (even for 1-2 seconds), wait patiently — they may still be forming their thought. Only respond once they have clearly finished speaking.
       TEXT
     end
 

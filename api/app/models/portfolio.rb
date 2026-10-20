@@ -12,6 +12,8 @@ class Portfolio < ApplicationRecord
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
+  # Scope portfolios through associated session to prevent cross-tenant IDOR leaks
+  scope :for_tenant,  ->(tenant_id) { joins(:session).where(sessions: { tenant_id: tenant_id }) }
 
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'

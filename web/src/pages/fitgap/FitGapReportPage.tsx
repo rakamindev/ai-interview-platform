@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
@@ -24,9 +25,11 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
+    setError(null);
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
@@ -38,20 +41,28 @@ export default function FitGapReportPage() {
           setGenerating(true);
         } catch {
           setGenerating(false);
+          setError("Failed to initiate fit/gap calculation.");
         }
+      } else {
+        setError("Failed to load fit/gap report. Please try again.");
       }
     }
   }, [portfolio, vacancyId]);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     sessionsApi
       .getPortfolio(Number(sessionId))
       .then(async (res) => {
         const data = res.data as any;
         if (data.portfolio) {
           setPortfolio(data.portfolio);
+        } else {
+          setError("Portfolio data not found for this session.");
         }
       })
+      .catch(() => setError("Failed to load session portfolio."))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -95,43 +106,63 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-md" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-36" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto w-full space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" asChild>
             <Link
               to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
+              title="Back to Portfolio"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Fit/Gap Report</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Comparative analysis between candidate assessed competencies and target vacancy benchmarks.
+            </p>
           </div>
         </div>
 
         {portfolio && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+            <Button variant="outline" onClick={handleRegenerate} disabled={regenerating || generating}>
+              {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1.5" />}
               Regenerate
             </Button>
             {report && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                <Button variant="outline" onClick={() => handleExport("pdf")} disabled={!!exporting}>
+                  {exporting === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
                   PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                <Button variant="outline" onClick={() => handleExport("json")} disabled={!!exporting}>
+                  {exporting === "json" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
                   JSON
                 </Button>
               </>
@@ -139,6 +170,14 @@ export default function FitGapReportPage() {
           </div>
         )}
       </div>
+
+      {error && !generating && (
+        <ErrorState
+          title="Fit/Gap analysis error"
+          description={error}
+          onRetry={portfolio ? fetchReport : undefined}
+        />
+      )}
 
       {/* Generating */}
       {generating && (
@@ -156,7 +195,7 @@ export default function FitGapReportPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Skill Comparison</CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-4">
+            <CardContent>
               <ComparisonTable comparisons={report.skill_comparisons} />
             </CardContent>
           </Card>
@@ -168,7 +207,7 @@ export default function FitGapReportPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-4">
+            <CardContent>
               <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                 {report.culture_narrative || report.overall_narrative}
               </p>
@@ -186,7 +225,7 @@ export default function FitGapReportPage() {
                     Discovered Skills (not in vacancy requirements)
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-2">
+                <CardContent className="space-y-2">
                   {portfolio.skills
                     .filter((s) => s.is_discovered)
                     .map((s) => (

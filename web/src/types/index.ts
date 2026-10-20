@@ -74,6 +74,20 @@ export interface TranscriptTurn {
   created_at: string;
 }
 
+export interface CvEvidenceChunk {
+  id: number;
+  chunk_index: number;
+  section_type: string;
+  content: string;
+  metadata: Record<string, any>;
+}
+
+export interface MatchingCvClaim {
+  section_type: string;
+  company?: string | null;
+  content: string;
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;
@@ -83,6 +97,7 @@ export interface Portfolio {
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
+  cv_evidence?: CvEvidenceChunk[];
 }
 
 export interface PortfolioSkill {
@@ -94,6 +109,7 @@ export interface PortfolioSkill {
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
+  matching_cv_claims?: MatchingCvClaim[];
 }
 
 export interface AssessorOverride {
@@ -119,9 +135,19 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | number | null;
+  category?: string;
+  scope_include?: string;
+  scope_exclude?: string;
+  l1_anchor?: string;
+  l2_anchor?: string;
+  l3_anchor?: string;
+  l4_anchor?: string;
+  l5_anchor?: string;
   skill_label: string;
+  is_custom?: boolean;
   expected_level: number;
+  weight?: number;
   _destroy?: boolean;
 }
 
@@ -136,11 +162,20 @@ export interface SkillComparison {
   is_override?: boolean;
 }
 
+export interface DiscoveredSkill {
+  skill_id?: string | null;
+  skill_label: string;
+  candidate_level?: number | null;
+  confidence?: string | null;
+  competency_summary?: string | null;
+}
+
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
+  discovered_skills?: DiscoveredSkill[];
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
@@ -161,6 +196,8 @@ export interface SkillTaxonomy {
 
 export interface CandidateInfo {
   session_id: number;
+  candidate_name?: string;
+  consent_given?: boolean;
   role_title: string;
   time_limit_min: number;
   session_status: string;
@@ -182,7 +219,9 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error"
+  | "replaced";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -190,6 +229,7 @@ export interface WsControlMessage {
   type:
     | "session_started"
     | "session_ended"
+    | "session_replaced"
     | "transcript"
     | "transcription"
     | "reconnecting"
@@ -204,4 +244,29 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+}
+
+export interface OrganizationAiConfig {
+  custom_ai_configured: boolean;
+  gemini_api_key_configured: boolean;
+  masked_gemini_api_key: string | null;
+  models: {
+    live: string;
+    flash: string;
+    pro: string;
+  };
+  voice: string;
+  temperature: number;
+  allowed_voices: string[];
+}
+
+export interface UpdateAiConfigRequest {
+  gemini_api_key?: string;
+  models?: {
+    live?: string;
+    flash?: string;
+    pro?: string;
+  };
+  voice?: string;
+  temperature?: number;
 }

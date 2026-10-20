@@ -7,8 +7,10 @@ module Portfolios
   class Generator
     def initialize(session:, gemini_client: nil)
       @session = session
+      tenant = @session.tenant || @session.assessment&.tenant || Organization.find_by(id: @session.tenant_id)
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        organization: tenant,
+        model: tenant&.gemini_model(:pro) || ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -148,34 +150,98 @@ module Portfolios
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      data = parse_payload(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      ActiveRecord::Base.transaction do
+        existing_skills = portfolio.portfolio_skills.includes(:assessor_override).to_a
+        processed_skill_ids = []
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        (data['configured_skills'] || []).each do |skill_data|
+          raw_level = skill_data['level']
+          level = raw_level.present? ? raw_level.to_i.clamp(1, 5) : nil
+          summary = skill_data['competency_summary'].presence || (level.nil? ? 'Skill not assessed during interview.' : '')
+
+          skill = existing_skills.find do |s|
+            (s.skill_id.present? && s.skill_id == skill_data['skill_id']) ||
+              s.skill_label.casecmp?(skill_data['skill_label'])
+          end
+
+          attributes = {
+            skill_id:           skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      false,
+            ai_level:           level,
+            ai_confidence:      skill_data['confidence'].presence,
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: summary
+          }
+
+          if skill
+            skill.update!(attributes)
+          else
+            skill = portfolio.portfolio_skills.create!(attributes)
+          end
+          processed_skill_ids << skill.id
+        end
+
+        (data['discovered_skills'] || []).each do |skill_data|
+          raw_level = skill_data['level']
+          level = raw_level.present? ? raw_level.to_i.clamp(1, 5) : nil
+          summary = skill_data['competency_summary'].presence || (level.nil? ? 'Skill not assessed during interview.' : '')
+
+          skill = existing_skills.find do |s|
+            s.is_discovered? && s.skill_label.casecmp?(skill_data['skill_label'])
+          end
+
+          attributes = {
+            skill_id:           nil,
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      true,
+            ai_level:           level,
+            ai_confidence:      skill_data['confidence'].presence,
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: summary
+          }
+
+          if skill
+            skill.update!(attributes)
+          else
+            skill = portfolio.portfolio_skills.create!(attributes)
+          end
+          processed_skill_ids << skill.id
+        end
+
+        # Remove orphaned skills without human overrides
+        existing_skills.each do |old_skill|
+          next if processed_skill_ids.include?(old_skill.id)
+          next if old_skill.assessor_override.present?
+
+          old_skill.destroy!
+        end
+      end
+    end
+
+    def parse_payload(response)
+      return response if response.is_a?(Hash)
+
+      if response.is_a?(String)
+        cleaned = response.strip.sub(/\A```(?:json)?\s*/i, '').sub(/\s*```\z/, '').strip
+        begin
+          parsed = JSON.parse(cleaned)
+          return parsed if parsed.is_a?(Hash)
+        rescue JSON::ParserError
+          if (match = cleaned.match(/(\{.*\})/m))
+            begin
+              parsed = JSON.parse(match[1])
+              return parsed if parsed.is_a?(Hash)
+            rescue JSON::ParserError
+              # fall through to error
+            end
+          end
+        end
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      raise ArgumentError, "Unable to parse valid JSON portfolio response: #{response.inspect.truncate(120)}"
     end
   end
 end

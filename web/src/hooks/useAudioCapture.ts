@@ -8,6 +8,7 @@ interface UseAudioCaptureOptions {
 export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   const [isCapturing, setIsCapturing] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   // Mute gate — mic stays hot, we just skip sending frames.
@@ -19,7 +20,13 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
       streamRef.current = stream;
 
@@ -39,6 +46,18 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       const source = ctx.createMediaStreamSource(stream);
       source.connect(workletNode);
 
+      // Attach AnalyserNode to measure live microphone audio volume
+      if (typeof ctx.createAnalyser === "function") {
+        try {
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 64;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+        } catch {
+          // AnalyserNode unsupported or mocked in test environment
+        }
+      }
+
       setIsCapturing(true);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -55,9 +74,27 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
     mutedRef.current = false;
   }, []);
 
+  const getVolume = useCallback((): number => {
+    if (mutedRef.current || !analyserRef.current) return 0;
+    try {
+      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const avg = sum / dataArray.length;
+      return Math.min(1, Math.max(0, avg / 128));
+    } catch {
+      return 0;
+    }
+  }, []);
+
   const stop = useCallback(() => {
     workletNodeRef.current?.disconnect();
     workletNodeRef.current = null;
+    analyserRef.current?.disconnect();
+    analyserRef.current = null;
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -66,5 +103,5 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
     setIsCapturing(false);
   }, []);
 
-  return { start, stop, mute, unmute, isCapturing };
+  return { start, stop, mute, unmute, isCapturing, getVolume };
 }

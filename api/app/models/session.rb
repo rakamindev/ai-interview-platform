@@ -6,9 +6,11 @@ class Session < ApplicationRecord
   STATUSES   = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
+  belongs_to :tenant, class_name: 'Organization', foreign_key: :tenant_id, optional: true
   belongs_to :assessment
   has_many :transcript_turns, dependent: :destroy
   has_many :coverage_maps, dependent: :destroy
+  has_many :candidate_cv_chunks, dependent: :destroy
   has_one  :portfolio, dependent: :destroy
 
   validates :invite_token, presence: true, uniqueness: true
@@ -25,8 +27,8 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
-  def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+  def invite_url(base_url = nil)
+    base = base_url.presence || ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
     "#{base}/interview/#{invite_token}"
   end
 

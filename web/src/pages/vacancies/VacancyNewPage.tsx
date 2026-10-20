@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import VacancySkillCard from "@/components/vacancies/VacancySkillCard";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
+import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -25,16 +26,45 @@ export default function VacancyNewPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+  const form = useForm<VacancyFormValues>({
+    defaultValues: {
+      role_title: "",
+      culture_dimensions: "",
+      competency_expectations: "",
+      skills: [],
+    },
   });
-
+  const { register, handleSubmit, control, setValue, watch } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   const onSubmit = async (data: VacancyFormValues) => {
     setError(null);
     setSubmitting(true);
     try {
+      // Synchronize any custom competencies to the Skill Library (skill_taxonomies)
+      for (const s of data.skills) {
+        if (s.is_custom && s.skill_label?.trim() && !s.skill_id) {
+          try {
+            const taxRes = await skillTaxonomiesApi.create({
+              skill_label: s.skill_label.trim(),
+              category: s.category || "engineering",
+              scope_include: s.scope_include?.trim() || undefined,
+              scope_exclude: s.scope_exclude?.trim() || undefined,
+              l1_anchor: s.l1_anchor?.trim() || undefined,
+              l2_anchor: s.l2_anchor?.trim() || undefined,
+              l3_anchor: s.l3_anchor?.trim() || undefined,
+              l4_anchor: s.l4_anchor?.trim() || undefined,
+              l5_anchor: s.l5_anchor?.trim() || undefined,
+            });
+            if (taxRes.data?.skill?.skill_id) {
+              s.skill_id = taxRes.data.skill.skill_id;
+            }
+          } catch {
+            // Continue gracefully if already existing
+          }
+        }
+      }
+
       await vacanciesApi.create({
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
@@ -50,57 +80,86 @@ export default function VacancyNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/vacancies" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+    <div className="max-w-7xl mx-auto w-full">
+      <div className="flex items-center gap-2 mb-4">
+        <Button variant="outline" size="sm" className="h-8 w-8 p-0" asChild>
+          <Link to="/vacancies" title="Back to Vacancies">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
         <span className="text-sm text-muted-foreground">Vacancies</span>
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">New Vacancy</span>
       </div>
 
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">New Vacancy</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Define role requirements, culture dimensions, and expected competency levels.
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
-          <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Label htmlFor="role_title">
+            Role title <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="role_title"
+            placeholder="Senior Frontend Engineer"
+            {...register("role_title", { required: true })}
+          />
         </div>
 
         <Separator />
 
         {/* Expected skills */}
         <div className="space-y-3">
-          <Label>Expected skills</Label>
+          <Label>Expected skills & competencies</Label>
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
-              No skills added yet.
+              No skills added yet. Add taxonomy skills or custom competencies.
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {fields.map((field, index) => (
-                <div key={field.id} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Expected level:</span>
-                    <LevelRadio
-                      value={watch(`skills.${index}.expected_level`) ?? 3}
-                      onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
-                    />
-                  </div>
-                </div>
+                <VacancySkillCard
+                  key={field.id}
+                  index={index}
+                  form={form}
+                  onRemove={() => remove(index)}
+                />
               ))}
             </div>
           )}
 
-          <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add skill expectation
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPickerOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add from Skill Taxonomy
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                append({
+                  is_custom: true,
+                  skill_label: "",
+                  expected_level: 3,
+                  weight: 1.0,
+                  category: "engineering",
+                })
+              }
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Custom Competency
+            </Button>
+          </div>
         </div>
 
         <Separator />
@@ -128,7 +187,9 @@ export default function VacancyNewPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>
+            Cancel
+          </Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Vacancy
@@ -139,7 +200,14 @@ export default function VacancyNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        onSelect={(s) =>
+          append({
+            skill_id: s.skill_id,
+            skill_label: s.skill_label,
+            expected_level: 3,
+            is_custom: false,
+          })
+        }
       />
     </div>
   );

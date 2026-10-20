@@ -47,4 +47,7 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Exclude all requests from host authorization in test environment
+  config.host_authorization = { exclude: ->(_request) { true } }
 end

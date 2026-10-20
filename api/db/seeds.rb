@@ -369,6 +369,15 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Admin User ────────────────────────────────────────────────────────────────
+admin_user = User.find_or_initialize_by(email: 'admin@example.com')
+admin_user.password = 'password'
+admin_user.password_confirmation = 'password'
+admin_user.role = 'admin'
+admin_user.save!
+puts "  Created/Updated default admin user: admin@example.com (password: password)"
+puts ""
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

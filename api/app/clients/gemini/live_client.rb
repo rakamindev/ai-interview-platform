@@ -13,18 +13,21 @@ module Gemini
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
 
     # Silence pump: synthetic silent PCM frames sent during browser silence so Gemini's VAD detects end-of-speech.
-    SILENCE_PUMP_DELAY    = 1
+    # 1.8s delay allows natural human pauses between thoughts before prompting model turn transition.
+    SILENCE_PUMP_DELAY    = 1.8
     SILENCE_PUMP_INTERVAL = 0.03
     SILENCE_FRAME_SAMPLES = 640
     SILENCE_FRAME = ("\x00" * (SILENCE_FRAME_SAMPLES * 2)).freeze
 
-    attr_reader :resumption_token, :connected, :connected_at, :inactivity_close
+    attr_reader :resumption_token, :connected, :connected_at, :inactivity_close, :api_key, :model, :voice, :language
 
     def initialize(
       system_prompt:,
+      language: 'id',
+      organization: nil,
       api_key: nil,
       model: nil,
-      voice: 'Puck',
+      voice: nil,
       on_audio: nil,
       on_input_transcription: nil,
       on_output_transcription: nil,
@@ -35,10 +38,14 @@ module Gemini
       on_ready: nil,
       on_resumption_token_update: nil
     )
+      resolved_org = organization || (defined?(Current) ? Current.tenant : nil)
       @system_prompt = system_prompt
-      @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
-      @voice = voice
+      @language = language.presence || 'id'
+      @api_key = api_key || resolved_org&.gemini_api_key || ENV['GEMINI_API_KEY']
+      raise ArgumentError, 'Gemini API key is required' if @api_key.blank?
+
+      @model = model || resolved_org&.gemini_model(:live) || ENV['GEMINI_LIVE_MODEL'].presence || 'gemini-3.1-flash-live-preview'
+      @voice = voice || resolved_org&.gemini_voice || Organization::DEFAULT_GEMINI_VOICE
       @resumption_token = nil
       @connected = false
       @ws = nil
@@ -217,7 +224,7 @@ module Gemini
       return if @silence_pumping || !@connected || !@ws || @model_emitting_audio
 
       @silence_pumping = true
-      Rails.logger.info('[Gemini::LiveClient] Silence pump started — no real audio for 500ms')
+      Rails.logger.info('[Gemini::LiveClient] Silence pump started — no real audio for 1.8s')
 
       silence_msg = {
         realtimeInput: {
@@ -304,6 +311,14 @@ module Gemini
     end
 
     def send_setup(resumption_handle: nil)
+      input_tx_config = if @language.to_s.downcase.start_with?('id')
+                          { languageCodes: ['id-ID', 'en-US'] }
+                        elsif @language.to_s.downcase.start_with?('en')
+                          { languageCodes: ['en-US'] }
+                        else
+                          { languageCodes: [@language].compact }
+                        end
+
       setup = {
         setup: {
           model: "models/#{@model}",
@@ -318,7 +333,7 @@ module Gemini
           systemInstruction: {
             parts: [{ text: @system_prompt }]
           },
-          inputAudioTranscription: {},
+          inputAudioTranscription: input_tx_config,
           outputAudioTranscription: {},
           contextWindowCompression: {
             slidingWindow: {}

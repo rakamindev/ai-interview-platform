@@ -18,6 +18,7 @@ module Sessions
         if manual.include?(reason.to_s) && @session.end_reason == 'error'
           @session.update_column(:end_reason, reason.to_s)
         end
+        AudioWebSocketMiddleware.terminate_session_connections(@session.id, reason: reason) if defined?(AudioWebSocketMiddleware)
         return @session
       end
 
@@ -38,6 +39,7 @@ module Sessions
 
       enqueue_portfolio_generation
       publish_status_update
+      AudioWebSocketMiddleware.terminate_session_connections(@session.id, reason: reason) if defined?(AudioWebSocketMiddleware)
       Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
 
       @session

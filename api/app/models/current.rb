@@ -41,4 +41,13 @@ module Current
   class_accessor :user        # OpenStruct with id, role (from JWT; no DB lookup)
   class_accessor :organization # Organization AR record (from public schema)
   class_accessor :tenant_id   # Convenience alias: Current.organization.id
+
+  def self.tenant
+    RequestStore.store[:organization]
+  end
+
+  def self.tenant=(org)
+    RequestStore.store[:organization] = org
+    RequestStore.store[:tenant_id] = org&.id
+  end
 end

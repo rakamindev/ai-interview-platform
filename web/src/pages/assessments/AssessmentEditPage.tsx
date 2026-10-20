@@ -36,20 +36,34 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletedSkillIds, setDeletedSkillIds] = useState<number[]>([]);
 
   const form = useForm<AssessmentFormValues>({
-    defaultValues: { name: "", time_limit_min: 45, skills: [] },
+    defaultValues: { name: "", time_limit_min: 45, language: "en", skills: [] },
   });
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+
+  const handleRemoveSkill = (index: number) => {
+    const skill = form.getValues().skills[index];
+    if (skill?.id) {
+      setDeletedSkillIds((prev) => [...prev, skill.id!]);
+    }
+    remove(index);
+  };
 
   useEffect(() => {
     assessmentsApi
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({
+          name: a.name,
+          time_limit_min: a.time_limit_min,
+          language: (a.language as "en" | "id") || "en",
+          skills: a.skills,
+        });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -74,10 +88,14 @@ export default function AssessmentEditPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const activeSkills = data.skills.map((s, i) => ({ ...s, display_order: i }));
+      const destroyedSkills = deletedSkillIds.map((skillId) => ({ id: skillId, _destroy: true }));
+
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        language: data.language,
+        assessment_skills_attributes: [...activeSkills, ...destroyedSkills],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -89,24 +107,42 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-24 w-full" />
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton className="h-8 w-8 rounded-md" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="space-y-1.5 mb-6">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+    <div className="max-w-7xl mx-auto w-full">
+      <div className="flex items-center gap-2 mb-4">
+        <Button variant="outline" size="sm" className="h-8 w-8 p-0" asChild>
+          <Link to="/assessments" title="Back to Assessments">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
         <span className="text-sm text-muted-foreground">Back</span>
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">Edit Assessment</span>
+      </div>
+
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Edit Assessment</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Update assessment details, language settings, and required competencies.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -130,6 +166,22 @@ export default function AssessmentEditPage() {
           </Select>
         </div>
 
+        <div className="space-y-1.5">
+          <Label>Interview language</Label>
+          <Select
+            value={form.watch("language")}
+            onValueChange={(v) => setValue("language", v as "en" | "id")}
+          >
+            <SelectTrigger className="w-40" data-testid="select-language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="id">Indonesian</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <Separator />
 
         <div className="space-y-3">
@@ -143,7 +195,7 @@ export default function AssessmentEditPage() {
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => handleRemoveSkill(index)} />
                   ))}
                 </div>
               </SortableContext>

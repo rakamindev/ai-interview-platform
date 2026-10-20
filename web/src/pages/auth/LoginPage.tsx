@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
+import { authAtom, saveAuth } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +23,9 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ email, password });
       const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
+      const user = res.data.user || { email, role: "admin" };
+      saveAuth(token, user);
+      setAuth({ token, user });
       navigate("/assessments");
     } catch {
       setError("Invalid email or password.");
@@ -33,13 +34,30 @@ export default function LoginPage() {
     }
   };
 
+  const handleFillDemo = () => {
+    setEmail("admin@example.com");
+    setPassword("password");
+    setError(null);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
+    <div className="min-h-screen flex items-center justify-center bg-muted/20 px-4 py-8">
+      <div className="w-full max-w-md bg-white border rounded-xl p-8 space-y-6">
+        <div className="space-y-1.5 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Admin Portal</h1>
+          <p className="text-sm text-muted-foreground">
+            Sign in with your administrator credentials to access the assessment workspace.
+          </p>
         </div>
+
+        {error && (
+          <div
+            role="alert"
+            className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md"
+          >
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -50,6 +68,7 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@example.com"
               required
             />
           </div>
@@ -62,18 +81,41 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
               required
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Sign in
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign In"
+            )}
           </Button>
         </form>
 
+        <div className="p-3 bg-muted/40 rounded-lg border text-xs text-muted-foreground space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-foreground">Demo Administrator Account</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs px-2 text-primary hover:text-primary"
+              onClick={handleFillDemo}
+            >
+              Auto-fill
+            </Button>
+          </div>
+          <div className="space-y-0.5 font-mono text-[11px]">
+            <div>Email: admin@example.com</div>
+            <div>Password: password</div>
+          </div>
+        </div>
       </div>
     </div>
   );

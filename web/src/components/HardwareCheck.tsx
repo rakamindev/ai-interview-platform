@@ -9,10 +9,11 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ArrowDown, ArrowUp } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
+    consentAgreed?: boolean;
 }
 
 function StateIcon({ state }: { state: ProctoringState }) {
@@ -34,7 +35,7 @@ function stateLabel(state: ProctoringState) {
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
-const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
+const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart, consentAgreed = true }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
         osAndBrowser: ProctoringState.WAITING,
         internet: ProctoringState.WAITING,
@@ -243,10 +244,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         {key === "internet" && internetResult && (
                             <div className="mt-2 flex gap-3 text-xs">
                                 <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
+                                    <span className="inline-flex items-center gap-0.5"><ArrowDown className="h-3 w-3 inline" /> {internetResult.download} Mbps</span>
                                 </span>
                                 <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
+                                    <span className="inline-flex items-center gap-0.5"><ArrowUp className="h-3 w-3 inline" /> {internetResult.upload} Mbps</span>
                                 </span>
                                 <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
                                     {internetResult.ping} ms
@@ -281,7 +282,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!allPassed || !consentAgreed}
                     onClick={onStart}
                 >
                     Start Interview

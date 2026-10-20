@@ -100,10 +100,19 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              if (msg.reason === "error") {
+                onStateChange("error");
+              } else {
+                onStateChange("complete");
+              }
+              break;
+            case "session_replaced":
+              sessionEndedRef.current = true;
+              reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+              onStateChange("replaced");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) onStateChange("error");
               break;
           }
         } catch {
@@ -127,7 +136,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("error");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
@@ -145,13 +154,15 @@ export function useAudioWebSocket({
   }, []);
 
   const disconnect = useCallback(() => {
+    sessionEndedRef.current = true;
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
+    reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
     wsRef.current?.close();
   }, []);
 
   useEffect(() => {
     return () => {
+      sessionEndedRef.current = true;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       wsRef.current?.close();
     };
