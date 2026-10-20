@@ -1,4 +1,4 @@
-import { LEVEL_LABELS, LEVEL_BADGE_CLASSES, LEVEL_DESCRIPTIONS } from "@/utils/constants";
+import { LEVEL_LABELS, LEVEL_BADGE_SOLID, LEVEL_DESCRIPTIONS } from "@/utils/constants";
 import { cn } from "@/lib/utils";
 
 interface LevelBadgeProps {
@@ -8,18 +8,22 @@ interface LevelBadgeProps {
 }
 
 export default function LevelBadge({ level, size = "md", className }: LevelBadgeProps) {
+  const solidColor = LEVEL_BADGE_SOLID[level] || "bg-slate-500 text-white";
+
   return (
     <div
       className={cn(
-        "inline-flex flex-col items-center justify-center rounded font-semibold",
-        size === "md" ? "px-3 py-2 min-w-14 text-base" : "px-2 py-1 min-w-10 text-sm",
-        LEVEL_BADGE_CLASSES[level],
+        "inline-flex flex-col items-center justify-center font-bold select-none shrink-0",
+        size === "md" ? "min-w-[74px] px-2 h-14 text-base" : "px-2 py-0.5 min-w-8 text-xs",
+        solidColor,
         className
       )}
     >
-      <span>{LEVEL_LABELS[level]}</span>
+      <span className="leading-tight text-lg">{LEVEL_LABELS[level] || `L${level}`}</span>
       {size === "md" && (
-        <span className="text-[10px] font-normal opacity-70">{LEVEL_DESCRIPTIONS[level]}</span>
+        <span className="text-[8px] uppercase tracking-normal font-semibold opacity-90 leading-none mt-1 text-center">
+          {LEVEL_DESCRIPTIONS[level]}
+        </span>
       )}
     </div>
   );

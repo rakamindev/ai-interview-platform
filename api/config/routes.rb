@@ -10,10 +10,15 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
-      post 'speed_test', to: proc { |env|
-        bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+      # Speed test — upload & download
+      match 'speed_test', via: %i[get post], to: proc { |env|
+        if env['REQUEST_METHOD'] == 'POST'
+          bytes = env['CONTENT_LENGTH'].to_i
+          [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+        else
+          payload = '0' * (512 * 1024)
+          [200, { 'Content-Type' => 'application/octet-stream', 'Content-Length' => payload.bytesize.to_s }, [payload]]
+        end
       }
 
       # Assessments

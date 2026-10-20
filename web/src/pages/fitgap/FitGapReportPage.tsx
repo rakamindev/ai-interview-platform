@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -8,7 +8,7 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { Download, Loader2, RefreshCw, Zap, AlertCircle } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
@@ -95,7 +95,7 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -103,35 +103,30 @@ export default function FitGapReportPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
-          </div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Fit/Gap Report</h1>
+          <p className="text-sm text-muted-foreground">
+            Compare candidate competency levels against target vacancy requirements.
+          </p>
         </div>
 
         {portfolio && (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
               Regenerate
             </Button>
             {report && (
               <>
                 <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                   PDF
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                   JSON
                 </Button>
               </>
@@ -140,9 +135,11 @@ export default function FitGapReportPage() {
         )}
       </div>
 
+      <Separator />
+
       {/* Generating */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
+        <div className="border p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
         </div>
@@ -152,28 +149,46 @@ export default function FitGapReportPage() {
       {report && (
         <>
           {/* Skill comparison */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <ComparisonTable comparisons={report.skill_comparisons} />
-            </CardContent>
-          </Card>
+          <div className="space-y-3">
+            <h2 className="text-base font-bold text-foreground">Skill Comparison</h2>
+            <ComparisonTable comparisons={report.skill_comparisons} />
+          </div>
 
           <Separator />
 
           {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {!report.culture_narrative && (
+              <div className="flex items-start gap-2.5 p-3.5 text-xs text-amber-900 bg-amber-50/70 border border-amber-200/80">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-semibold">AI narrative generation was temporarily unavailable.</span> Showing rule-based skill summary below. You can click <strong>Regenerate</strong> above to generate the full narrative once AI is ready.
+                </div>
+              </div>
+            )}
+
+            {report.culture_narrative && (
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
+                  Culture & Competency Fit
+                </span>
+                <div className="p-4 bg-muted/30 border text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                  {report.culture_narrative}
+                </div>
+              </div>
+            )}
+
+            {report.overall_narrative && (
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground block">
+                  Overall Recommendation
+                </span>
+                <div className="border-l-2 border-primary/60 bg-muted/20 pl-4 pr-4 py-3 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                  {report.overall_narrative}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +24,7 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -129,7 +129,7 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
@@ -141,32 +141,29 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
-          </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Live Monitor</h1>
+          <p className="text-sm text-muted-foreground">
+            {assessmentName ? `${assessmentName} · ` : ""}Real-time interview progression and skill coverage tracking.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
           <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
+            "flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border",
+            isConnected ? "text-green-600 bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800" : "text-muted-foreground bg-muted border-border"
           )}>
-            <Radio className="h-3 w-3" />
+            <Radio className="h-3 w-3 animate-pulse" />
             {isConnected ? "Live" : "Reconnecting..."}
           </span>
         </div>
       </div>
+
+      <Separator />
 
       {/* Session ended banner */}
       {sessionEnded && (

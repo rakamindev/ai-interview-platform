@@ -149,13 +149,12 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      touched_skill_ids = []
 
       (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
+        # Upsert: find existing skill by skill_id or initialize new
+        skill = portfolio.portfolio_skills.find_or_initialize_by(skill_id: skill_data['skill_id'])
+        skill.assign_attributes(
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
@@ -163,18 +162,38 @@ module Portfolios
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
+        skill.save!
+
+        if skill.assessor_override.present?
+          skill.assessor_override.update!(ai_level: skill.ai_level)
+        end
+
+        touched_skill_ids << skill.id
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
+        # Upsert discovered skill by label
+        skill = portfolio.portfolio_skills.where(is_discovered: true, skill_label: skill_data['skill_label']).first_or_initialize
+        skill.assign_attributes(
           skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
           is_discovered:      true,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
+        skill.save!
+
+        if skill.assessor_override.present?
+          skill.assessor_override.update!(ai_level: skill.ai_level)
+        end
+
+        touched_skill_ids << skill.id
+      end
+
+      # Remove obsolete skills that were not regenerated, UNLESS they have an assessor override
+      portfolio.portfolio_skills.where.not(id: touched_skill_ids).find_each do |obsolete_skill|
+        obsolete_skill.destroy unless obsolete_skill.assessor_override.present?
       end
     end
   end

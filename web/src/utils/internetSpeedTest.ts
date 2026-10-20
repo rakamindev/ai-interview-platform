@@ -22,28 +22,24 @@ export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     maxPingMs: 300,
 };
 
-const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "http://localhost:3001/api/v1";
+const SPEED_TEST_PING_URL = (import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined) || `${API_BASE}/health`;
+const SPEED_TEST_UPLOAD_URL = (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) || `${API_BASE}/speed_test`;
+const SPEED_TEST_DOWNLOAD_URL = (import.meta.env.VITE_SPEED_TEST_DOWNLOAD_URL as string | undefined) || `${API_BASE}/speed_test`;
 
 async function measurePing(): Promise<number> {
-    if (SPEED_TEST_PING_URL) {
-        try {
-            const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            return 999;
-        }
-    }
     const testUrls = [
+        SPEED_TEST_PING_URL,
         "https://www.google.com/favicon.ico",
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
         "https://unpkg.com/react@18/umd/react.production.min.js",
-    ];
+    ].filter(Boolean) as string[];
+
     for (const url of testUrls) {
         try {
             const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
+            const isLocal = url.startsWith("http://localhost") || url.includes("/api/v1");
+            await fetch(url, { cache: "no-cache", mode: isLocal ? "cors" : "no-cors" });
             return performance.now() - start;
         } catch {
             continue;
@@ -54,10 +50,12 @@ async function measurePing(): Promise<number> {
 
 async function measureDownloadSpeed(): Promise<number> {
     const testFiles = [
+        { url: SPEED_TEST_DOWNLOAD_URL, size: 0.5 }, // 512KB payload from local platform
         { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
         { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },
         { url: "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js", size: 0.09 },
-    ];
+    ].filter((f) => Boolean(f.url));
+
     for (const testFile of testFiles) {
         try {
             const start = performance.now();
@@ -87,9 +85,13 @@ async function measureUploadSpeed(): Promise<number> {
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+    const endpoints = [
+        SPEED_TEST_UPLOAD_URL,
+        "https://httpbin.org/post",
+        "https://www.httpbin.org/post",
+        "https://postman-echo.com/post",
+    ].filter(Boolean) as string[];
+
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();

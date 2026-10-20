@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   DndContext,
   closestCenter,
@@ -14,7 +14,6 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
@@ -50,7 +49,7 @@ export default function AssessmentNewPage() {
     },
   });
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
+  const { register, handleSubmit, control, setValue, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   const sensors = useSensors(
@@ -82,7 +81,7 @@ export default function AssessmentNewPage() {
 
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
+      setError("Please add at least one skill to continue.");
       return;
     }
     setError(null);
@@ -107,82 +106,143 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Assessment</span>
+    <div className="w-full space-y-8">
+      {/* Page Header */}
+      <div className="space-y-1">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
+          New Assessment
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Configure role title, duration, and target skills for candidate interview evaluation.
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Role title */}
-        <div className="space-y-1.5">
-          <Label htmlFor="name">
-            Role title <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="name"
-            placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
-          />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
-          )}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        {/* Basic Configuration - Clean open row layout, no card box */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          {/* Role Title */}
+          <div className="md:col-span-6 space-y-1.5">
+            <Label htmlFor="name" className="text-sm font-semibold text-foreground">
+              Role title <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="name"
+              placeholder="e.g. Senior Frontend Engineer, Fullstack Developer"
+              className="text-sm h-10"
+              {...register("name", { required: "Role title is required" })}
+            />
+            {errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
+          </div>
+
+          {/* Time limit */}
+          <div className="md:col-span-3 space-y-1.5">
+            <Label className="text-sm font-semibold text-foreground">
+              Session time limit <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              defaultValue="45"
+              onValueChange={(v) => setValue("time_limit_min", Number(v))}
+            >
+              <SelectTrigger className="w-full text-sm h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_LIMIT_OPTIONS.map((min) => (
+                  <SelectItem key={min} value={String(min)}>
+                    {min} minutes
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Language */}
+          <div className="md:col-span-3 space-y-1.5">
+            <Label className="text-sm font-semibold text-foreground">
+              Interview language <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              defaultValue="en"
+              onValueChange={(v) => setValue("language", v as "en" | "id")}
+            >
+              <SelectTrigger className="w-full text-sm h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English (Global)</SelectItem>
+                <SelectItem value="id">Indonesian (Bahasa Indonesia)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Time limit */}
-        <div className="space-y-1.5">
-          <Label>
-            Session time limit <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            defaultValue="45"
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_LIMIT_OPTIONS.map((min) => (
-                <SelectItem key={min} value={String(min)}>
-                  {min} min
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Skills Section */}
+        <div className="space-y-6 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-foreground">
+                Skills to Assess
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Define target competencies and minimum expected proficiency levels (L1–L5).
+              </p>
+            </div>
 
-        {/* Language */}
-        <div className="space-y-1.5">
-          <Label>Interview language</Label>
-          <Select
-            defaultValue="en"
-            onValueChange={(v) => setValue("language", v as "en" | "id")}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="id">Indonesian</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Separator />
-
-        {/* Skills section */}
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPickerOpen(true)}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                Add from Taxonomy
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addCustomSkill}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Add Custom Skill
+              </Button>
+            </div>
+          </div>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-              <p className="mb-1">No skills added yet.</p>
-              <p>Add at least one skill to continue.</p>
+            <div className="border border-dashed p-12 text-center space-y-4 bg-muted/5">
+              <div className="mx-auto w-12 h-12 border border-primary/20 bg-primary/10 flex items-center justify-center text-primary">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">No skills added yet</p>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  Select predefined skills from the standardized taxonomy database or configure custom evaluation criteria.
+                </p>
+              </div>
+              <div className="pt-2 flex justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                  Browse Taxonomy
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addCustomSkill}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Custom Skill
+                </Button>
+              </div>
             </div>
           ) : (
             <DndContext
@@ -194,7 +254,7 @@ export default function AssessmentNewPage() {
                 items={fields.map((f) => f.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="space-y-2">
+                <div className="space-y-4">
                   {fields.map((field, index) => (
                     <SkillCard
                       key={field.id}
@@ -209,36 +269,41 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPickerOpen(true)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add from Skill Taxonomy
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addCustomSkill}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add custom skill
-            </Button>
-          </div>
+          {fields.length > 0 && (
+            <div className="flex justify-start gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => setPickerOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add more from Taxonomy
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={addCustomSkill}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add another Custom Skill
+              </Button>
+            </div>
+          )}
         </div>
 
-        <Separator />
-
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive font-medium">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2">
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-3 pt-4">
           <Button
             type="button"
             variant="outline"

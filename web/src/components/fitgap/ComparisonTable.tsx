@@ -1,5 +1,15 @@
-import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
+import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS } from "@/utils/constants";
 import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Check, TrendingUp, AlertTriangle, Minus, Pencil } from "lucide-react";
 import type { SkillComparison } from "@/types";
 
 interface ComparisonTableProps {
@@ -7,19 +17,34 @@ interface ComparisonTableProps {
 }
 
 function ResultBadge({ comparison }: { comparison: SkillComparison }) {
-  const label = FIT_GAP_RESULT_LABELS[comparison.result];
-  const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
+  const label = FIT_GAP_RESULT_LABELS[comparison.result] ?? comparison.result;
 
-  let icon = "";
+  let Icon = Minus;
   let suffix = "";
-  if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
-  else icon = "—";
+  let badgeStyle = "text-muted-foreground bg-muted border-border";
+
+  if (comparison.result === "match") {
+    Icon = Check;
+    badgeStyle = "text-emerald-700 bg-emerald-50/80 border-emerald-200/80";
+  } else if (comparison.result === "exceed") {
+    Icon = TrendingUp;
+    suffix = comparison.delta ? ` +${comparison.delta}` : "";
+    badgeStyle = "text-emerald-700 bg-emerald-50/80 border-emerald-200/80";
+  } else if (comparison.result === "gap") {
+    Icon = AlertTriangle;
+    suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : "";
+    badgeStyle = "text-amber-700 bg-amber-50/80 border-amber-200/80";
+  }
 
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
-      {icon} {label}{suffix}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 border select-none",
+        badgeStyle
+      )}
+    >
+      <Icon className="h-3 w-3 shrink-0" />
+      <span>{label}{suffix}</span>
     </span>
   );
 }
@@ -32,48 +57,116 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
-            </tr>
-          </thead>
-          <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
+      {/* Mobile & Tablet card view */}
+      <Card className="lg:hidden rounded-none">
+        <CardContent className="p-0 divide-y">
+          {comparisons.map((c, i) => (
+            <div key={i} className="p-4 space-y-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <span className="font-semibold text-sm text-foreground leading-snug">
+                  {c.skill_label}
+                </span>
+                <div className="shrink-0">
+                  <ResultBadge comparison={c} />
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground pt-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span>Required:</span>
+                  <span className="font-semibold text-foreground">
+                    {LEVEL_LABELS[c.required_level ?? c.expected_level!]}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span>Candidate:</span>
                   {c.candidate_level != null ? (
-                    <span>
+                    <span className="font-semibold text-foreground inline-flex items-center gap-1">
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.is_override && (
+                        <span title="Human override applied" className="inline-flex items-center">
+                          <Pencil className="h-3 w-3 text-primary" />
+                        </span>
+                      )}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <span>—</span>
                   )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Desktop table view */}
+      <div className="hidden lg:block bg-card overflow-hidden">
+        <Table className="table-fixed">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[42%]">Skill</TableHead>
+              <TableHead className="w-[18%] text-center">Required</TableHead>
+              <TableHead className="w-[18%] text-center">Candidate</TableHead>
+              <TableHead className="w-[22%] text-center">Result</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {comparisons.map((c, i) => (
+              <TableRow key={i}>
+                <TableCell className="font-medium text-foreground py-3">
+                  {c.skill_label}
+                </TableCell>
+                <TableCell className="text-center text-muted-foreground font-semibold py-3">
+                  {LEVEL_LABELS[c.required_level ?? c.expected_level!]}
+                </TableCell>
+                <TableCell className="text-center font-semibold py-3">
+                  {c.candidate_level != null ? (
+                    <span className="inline-flex items-center justify-center gap-1">
+                      <span>{LEVEL_LABELS[c.candidate_level]}</span>
+                      {c.is_override && (
+                        <span title="Human override applied" className="inline-flex items-center">
+                          <Pencil className="h-3 w-3 text-primary" />
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground font-normal">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-center py-3">
                   <ResultBadge comparison={c} />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+      {/* Summary / Legend */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-muted-foreground px-0.5">
+        <div className="flex items-center gap-4 flex-wrap">
+          {matchCount > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>
+            </span>
+          )}
+          {gapCount > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+              <span>Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>
+            </span>
+          )}
+          {exceedCount > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>
+            </span>
+          )}
+        </div>
+        <span className="inline-flex items-center gap-1.5 sm:ml-auto">
+          <Pencil className="h-3 w-3 text-primary" />
+          <span>= human override applied</span>
+        </span>
       </div>
     </div>
   );

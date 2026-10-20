@@ -1,9 +1,18 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -14,11 +23,108 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
-import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { LEVEL_LABELS, LEVEL_BADGE_SOLID } from "@/utils/constants";
+import { cn } from "@/lib/utils";
+import { Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
-function SessionRow({
+function SessionStatus({ session }: { session: Session }) {
+  const isLive = session.status === "active";
+  const isEnded = session.status === "ended";
+  const isPending = session.status === "pending";
+
+  if (isPending) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-amber-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        Awaiting candidate
+      </span>
+    );
+  }
+  if (isLive) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-primary font-medium">
+        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+        Live
+      </span>
+    );
+  }
+  if (isEnded && session.end_reason === "error") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-destructive">
+        <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+        Failed
+      </span>
+    );
+  }
+  if (isEnded && session.end_reason !== "error") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+        Completed
+      </span>
+    );
+  }
+  return null;
+}
+
+function SessionAction({
+  session,
+  assessmentId,
+  onCopy,
+  copiedId,
+}: {
+  session: Session;
+  assessmentId: string;
+  onCopy: (id: number) => void;
+  copiedId: number | null;
+}) {
+  const navigate = useNavigate();
+  const isLive = session.status === "active";
+  const isEnded = session.status === "ended";
+  const isPending = session.status === "pending";
+
+  return (
+    <div className="flex items-center justify-end">
+      {isPending && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2.5 text-xs"
+          onClick={() => onCopy(session.id)}
+        >
+          {copiedId === session.id ? (
+            <><Check className="h-3.5 w-3.5 mr-1 text-green-600" /> Copied</>
+          ) : (
+            <><Copy className="h-3.5 w-3.5 mr-1" /> Copy link</>
+          )}
+        </Button>
+      )}
+      {isLive && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2.5 text-xs"
+          onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
+        >
+          <Eye className="h-3.5 w-3.5 mr-1" /> Monitor
+        </Button>
+      )}
+      {isEnded && session.end_reason !== "error" && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2.5 text-xs"
+          onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+        >
+          Results
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function SessionTableRow({
   session,
   index,
   assessmentId,
@@ -31,10 +137,47 @@ function SessionRow({
   onCopy: (id: number) => void;
   copiedId: number | null;
 }) {
-  const navigate = useNavigate();
-  const isLive = session.status === "active";
-  const isEnded = session.status === "ended";
-  const isPending = session.status === "pending";
+  const displayName = session.candidate_name || `Candidate ${index}`;
+
+  return (
+    <TableRow>
+      <TableCell className="w-14 text-center text-sm font-medium text-muted-foreground">
+        {index}
+      </TableCell>
+      <TableCell className="font-medium text-foreground">
+        {displayName}
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {session.started_at ? new Date(session.started_at).toLocaleDateString() : "—"}
+      </TableCell>
+      <TableCell>
+        <SessionStatus session={session} />
+      </TableCell>
+      <TableCell className="text-right">
+        <SessionAction
+          session={session}
+          assessmentId={assessmentId}
+          onCopy={onCopy}
+          copiedId={copiedId}
+        />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function SessionCardItem({
+  session,
+  index,
+  assessmentId,
+  onCopy,
+  copiedId,
+}: {
+  session: Session;
+  index: number;
+  assessmentId: string;
+  onCopy: (id: number) => void;
+  copiedId: number | null;
+}) {
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
@@ -54,67 +197,13 @@ function SessionRow({
       </div>
 
       <div className="flex items-center gap-3">
-        {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Awaiting candidate
-          </span>
-        )}
-        {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Live
-          </span>
-        )}
-        {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
-        )}
-        {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
-        )}
-
-        <div className="flex items-center gap-1.5">
-          {isPending && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(session.id)}
-            >
-              {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
-              ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
-              )}
-            </Button>
-          )}
-          {isLive && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
-            >
-              <Eye className="h-3 w-3 mr-1" /> Monitor
-            </Button>
-          )}
-          {isEnded && session.end_reason !== "error" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
-            >
-              Results
-            </Button>
-          )}
-        </div>
+        <SessionStatus session={session} />
+        <SessionAction
+          session={session}
+          assessmentId={assessmentId}
+          onCopy={onCopy}
+          copiedId={copiedId}
+        />
       </div>
     </div>
   );
@@ -132,6 +221,10 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+
+  const sortedSessions = useMemo(() => {
+    return [...sessions].sort((a, b) => a.id - b.id);
+  }, [sessions]);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -190,7 +283,7 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -199,19 +292,14 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">{assessment?.name ?? "—"}</h1>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span>{assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills assessed</span>
           </div>
         </div>
 
@@ -225,6 +313,8 @@ export default function AssessmentInvitePage() {
           </Button>
         </div>
       </div>
+
+      <Separator />
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -276,8 +366,6 @@ export default function AssessmentInvitePage() {
         </Card>
       )}
 
-      <Separator />
-
       {/* Sessions list */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -300,43 +388,88 @@ export default function AssessmentInvitePage() {
             </div>
           </div>
         ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
-              {sessions.map((session, i) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  index={sessions.length - i}
-                  assessmentId={id!}
-                  onCopy={(sid) => {
-                    const s = sessions.find((x) => x.id === sid);
-                    if (s) copyLink(s, sid);
-                  }}
-                  copiedId={copiedId}
-                />
-              ))}
-            </CardContent>
-          </Card>
+          <>
+            {/* Mobile & Tablet card view */}
+            <Card className="lg:hidden rounded-none">
+              <CardContent className="p-0 divide-y">
+                {sortedSessions.map((session, i) => (
+                  <SessionCardItem
+                    key={session.id}
+                    session={session}
+                    index={i + 1}
+                    assessmentId={id!}
+                    onCopy={(sid) => {
+                      const s = sortedSessions.find((x) => x.id === sid);
+                      if (s) copyLink(s, sid);
+                    }}
+                    copiedId={copiedId}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Desktop table view */}
+            <div className="hidden lg:block bg-card overflow-hidden">
+              <Table className="table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[6%] text-center">#</TableHead>
+                    <TableHead className="w-[34%]">Name</TableHead>
+                    <TableHead className="w-[20%]">Interview Date</TableHead>
+                    <TableHead className="w-[24%]">Status</TableHead>
+                    <TableHead className="w-[16%] text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedSessions.map((session, i) => (
+                    <SessionTableRow
+                      key={session.id}
+                      session={session}
+                      index={i + 1}
+                      assessmentId={id!}
+                      onCopy={(sid) => {
+                        const s = sortedSessions.find((x) => x.id === sid);
+                        if (s) copyLink(s, sid);
+                      }}
+                      copiedId={copiedId}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
 
       {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
-            <ul className="space-y-1">
-              {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
-                </li>
-              ))}
-            </ul>
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold">
+            Skills assessed
+            <span className="ml-1.5 text-muted-foreground font-normal">
+              ({assessment.skills.length})
+            </span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {assessment.skills.map((s) => (
+              <Card key={s.id ?? s.skill_label} className="rounded-none">
+                <CardContent className="p-3.5 flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-foreground truncate" title={s.skill_label}>
+                    {s.skill_label}
+                  </span>
+                  <Badge
+                    className={cn(
+                      "text-xs font-medium border-0 shrink-0",
+                      LEVEL_BADGE_SOLID[s.expected_level] || "bg-slate-500 text-white"
+                    )}
+                  >
+                    Expected {LEVEL_LABELS[s.expected_level]}
+                  </Badge>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

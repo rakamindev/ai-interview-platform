@@ -48,11 +48,13 @@ module FitGap
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
           result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          is_override      = portfolio_skill[:overridden] || false
         else
           candidate_level = nil
           expected_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
+          is_override     = false
         end
 
         {
@@ -60,8 +62,10 @@ module FitGap
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          required_level:  expected_level,
           result:          result,
           delta:           delta,
+          is_override:     is_override,
           confidence:      portfolio_skill&.dig(:confidence)
         }
       end
@@ -97,11 +101,21 @@ module FitGap
       not_assessed = skill_comparisons.select { |c| c[:result] == 'not_assessed' }
 
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
+      retries = 0
 
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
         { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+      rescue Gemini::HttpClient::RateLimitError, Gemini::HttpClient::TimeoutError => e
+        if (retries += 1) <= 2
+          sleep_duration = retries * 1.5
+          Rails.logger.warn("[N13] Narrative generation transient error (#{e.message}), retrying in #{sleep_duration}s (attempt #{retries})...")
+          sleep(sleep_duration)
+          retry
+        end
+        Rails.logger.error("[N13] Narrative generation permanently failed after retries: #{e.message}")
+        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
       rescue => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }

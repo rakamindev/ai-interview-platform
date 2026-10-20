@@ -32,6 +32,15 @@ export const LEVEL_BADGE_CLASSES: Record<number, string> = {
   5: "bg-yellow-100 text-yellow-700",
 };
 
+// L-badge solid colors with white text
+export const LEVEL_BADGE_SOLID: Record<number, string> = {
+  1: "bg-slate-500 text-white hover:bg-slate-600",
+  2: "bg-blue-600 text-white hover:bg-blue-700",
+  3: "bg-teal-600 text-white hover:bg-teal-700",
+  4: "bg-purple-600 text-white hover:bg-purple-700",
+  5: "bg-amber-600 text-white hover:bg-amber-700",
+};
+
 // Coverage state display
 export const COVERAGE_STATE_LABELS: Record<string, string> = {
   not_yet: "not yet",

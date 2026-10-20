@@ -37,6 +37,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
+          <img src="/logo.png" alt="Rakamin Logo" className="h-12 w-12 mx-auto mb-3 object-contain" />
           <h1 className="text-2xl font-bold">AI Interview</h1>
           <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
         </div>
@@ -74,6 +75,9 @@ export default function LoginPage() {
           </Button>
         </form>
 
+        <p className="text-center text-xs text-muted-foreground">
+          Need an assessor account? Please contact your organization administrator.
+        </p>
       </div>
     </div>
   );
