@@ -79,4 +79,14 @@ RSpec.describe 'Portfolio export', type: :request do
     expect(body['portfolio']['skills'].first['skill_label']).to eq('React / Frontend Core')
     expect(response.headers['Content-Disposition']).to include("portfolio-budi-santoso-#{portfolio.id}.json")
   end
+
+  it 'refuses to export a Fit/Gap report after vacancy requirements change' do
+    vacancy.update!(role_title: 'Updated Frontend role')
+
+    get "/api/v1/portfolios/#{portfolio.id}/export",
+        params: { format: 'json', vacancy_id: vacancy.id }, headers: headers
+
+    expect(response).to have_http_status(:conflict)
+    expect(response.parsed_body.dig('errors', 0, 'message')).to include('stale')
+  end
 end
