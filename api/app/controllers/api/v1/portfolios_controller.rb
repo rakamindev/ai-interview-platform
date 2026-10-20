@@ -78,65 +78,41 @@ module Api
       end
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
+      # Re-runs the narrative (e.g. after it failed). The comparison table is never removed.
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
-        vacancy_id = params[:vacancy_id]
+        portfolio, vacancy = fitgap_context
+        return unless portfolio
 
-        return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
-
-        vacancy = Vacancy.find_by(id: vacancy_id)
-        return json_error("Vacancy not found", :not_found) unless vacancy
-
-        unless portfolio.complete?
-          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
-        end
-
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
+        report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).refresh_comparisons!
+        report.update!(narrative_status: 'pending', narrative_digest: nil, generation_error: nil)
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
-        render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        render json: { report: fit_gap_json(report) }, status: :accepted
       end
 
       # POST /api/v1/portfolios/:id/fitgap
+      # Idempotent: returns the report immediately (comparison computed synchronously); only the
+      # narrative is produced in the background, and only when it is not already up to date.
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio, vacancy = fitgap_context
+        return unless portfolio
 
-        vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
-        return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
+        report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).refresh_comparisons!
+        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id) if report.narrative_pending?
 
-        vacancy = Vacancy.find_by(id: vacancy_id)
-        return json_error("Vacancy not found", :not_found) unless vacancy
-
-        unless portfolio.complete?
-          return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
-        end
-
-        # Return cached report if it exists and portfolio has no new overrides
-        existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
-          return json_response(report: fit_gap_json(existing))
-        end
-
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+        render json: { report: fit_gap_json(report) }, status: report.narrative_pending? ? :accepted : :ok
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        portfolio = find_portfolio(params[:id])
+        return json_error("Portfolio not found", :not_found) unless portfolio
 
-        if report.nil?
-          return json_error("Fit/gap report not found", :not_found)
-        end
+        vacancy = Vacancy.find_by(id: params[:vacancy_id])
+        report  = vacancy && FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+        return json_error("Fit/gap report not found", :not_found) unless report
 
         json_response(report: fit_gap_json(report))
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
       end
 
       private
@@ -150,13 +126,37 @@ module Api
       def set_portfolio
         # Routes use :id for both session-based and direct portfolio lookups
         # If called from session context, look up via session
-        if @session
-          @portfolio = @session.portfolio
-        else
-          @portfolio = Portfolio.find(params[:id])
+        @portfolio = @session ? @session.portfolio : find_portfolio(params[:id])
+        json_error("Portfolio not found", :not_found) if @portfolio.nil? && !@session
+      end
+
+      # Portfolio has no tenant_id of its own: it is only reachable through its Session, which is
+      # tenant-scoped. Always look portfolios up through this so one org can never read another's.
+      def find_portfolio(id)
+        Portfolio.where(session_id: Session.select(:id)).find_by(id: id)
+      end
+
+      def halt(message, status)
+        json_error(message, status)
+        nil
+      end
+
+      # Shared guard for the fit/gap write endpoints. Renders and returns nil when it cannot proceed.
+      def fitgap_context
+        portfolio = find_portfolio(params[:id])
+        return halt("Portfolio not found", :not_found) unless portfolio
+
+        vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
+        return halt("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
+
+        vacancy = Vacancy.find_by(id: vacancy_id)
+        return halt("Vacancy not found", :not_found) unless vacancy
+
+        unless portfolio.complete?
+          return halt("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
+
+        [portfolio, vacancy]
       end
 
       def portfolio_json(portfolio)
@@ -202,9 +202,11 @@ module Api
           id:                report.id,
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
+          skill_comparisons: report.comparisons_for_api,
+          summary:           report.summary_for_api,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          narrative_status:  report.narrative_status,
           generated_at:      report.generated_at
         }
       end

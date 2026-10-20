@@ -129,20 +129,44 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
+  skill_id?: string | null;
   required_level: number;
-  candidate_level?: number;
+  candidate_level?: number | null;
+  ai_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: "high" | "medium" | "low" | null;
+  /** A human assessor changed the AI level. */
   is_override?: boolean;
+  /** AI confidence is low and nobody reviewed it: a "gap" here means "verify", not "weak". */
+  low_evidence?: boolean;
 }
+
+export interface FitGapSummary {
+  total: number;
+  assessed: number;
+  match: number;
+  exceed: number;
+  gap: number;
+  not_assessed: number;
+  low_evidence: number;
+  overridden: number;
+  /** null when the vacancy lists no skills. */
+  coverage_pct: number | null;
+}
+
+/** pending = narrative being (re)written, ready = done, failed = fallback text shown. */
+export type NarrativeStatus = "pending" | "ready" | "failed";
 
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  summary: FitGapSummary;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  narrative_status: NarrativeStatus;
   generated_at: string;
 }
 

@@ -8,7 +8,7 @@ export const portfoliosApi = {
     }),
 
   triggerFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ report: FitGapReport } | { status: string; message: string }>(`/portfolios/${portfolioId}/fitgap`, {
+    api.post<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap`, {
       fitgap: { vacancy_id: vacancyId },
     }),
 
@@ -16,7 +16,7 @@ export const portfoliosApi = {
     api.get<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
 
   regenerateFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ status: string; message: string }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {
+    api.post<{ report: FitGapReport }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {
       vacancy_id: vacancyId,
     }),
 

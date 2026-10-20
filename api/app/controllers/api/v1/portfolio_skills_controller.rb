@@ -13,7 +13,7 @@ module Api
 
         if existing
           if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
-            regenerate_stale_fitgap_reports
+            refresh_fitgap_reports
             json_response(override: override_json(existing))
           else
             json_error(existing.errors.full_messages.first, :unprocessable_entity)
@@ -28,7 +28,7 @@ module Api
           )
 
           if new_override.save
-            regenerate_stale_fitgap_reports
+            refresh_fitgap_reports
             json_response({ override: override_json(new_override) }, :created)
           else
             json_error(new_override.errors.full_messages.first, :unprocessable_entity)
@@ -38,20 +38,25 @@ module Api
 
       private
 
-      def regenerate_stale_fitgap_reports
+      # An override changes the facts, not just the prose: recompute every comparison now (cheap,
+      # deterministic) so the assessor never sees a stale or missing table, and refresh narratives in
+      # the background. Vacancies that are no longer visible to this tenant are skipped.
+      def refresh_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+        FitGapReport.where(portfolio_id: portfolio.id).find_each do |report|
+          vacancy = Vacancy.find_by(id: report.vacancy_id)
+          next unless vacancy
+
+          refreshed = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).refresh_comparisons!
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id) if refreshed.narrative_pending?
         end
       end
 
+      # PortfolioSkill is tenant-scoped through portfolio -> session, never by id alone.
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio skill not found", :not_found)
+        visible = Portfolio.where(session_id: Session.select(:id)).select(:id)
+        @portfolio_skill = PortfolioSkill.where(portfolio_id: visible).find_by(id: params[:id])
+        json_error("Portfolio skill not found", :not_found) unless @portfolio_skill
       end
 
       def override_params

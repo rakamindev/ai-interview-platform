@@ -16,6 +16,26 @@ module Exports
       'not_assessed' => 'Not Assessed'
     }.freeze
 
+    # Prawn's built-in fonts only cover Windows-1252. Candidate quotes, role titles and AI text are
+    # free text (emoji, arrows, non-Latin names), and one unsupported character used to 500 the whole
+    # export. Degrade those characters to "?" instead of failing.
+    def self.pdf_safe(text)
+      text.to_s.gsub("→", '->')
+          .encode(Encoding::Windows_1252, invalid: :replace, undef: :replace, replace: '?')
+          .encode(Encoding::UTF_8)
+    end
+
+    class SafeDocument < Prawn::Document
+      def text(string, options = {}, &block)
+        super(PdfGenerator.pdf_safe(string), options, &block)
+      end
+
+      def table(data, options = {}, &block)
+        safe = data.map { |row| row.map { |cell| cell.is_a?(String) ? PdfGenerator.pdf_safe(cell) : cell } }
+        super(safe, options, &block)
+      end
+    end
+
     def initialize(portfolio:, vacancy: nil)
       @portfolio   = portfolio
       @vacancy     = vacancy
@@ -26,7 +46,7 @@ module Exports
 
     # Returns PDF binary string.
     def call
-      Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+      SafeDocument.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -119,7 +139,7 @@ module Exports
       pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
       pdf.move_down 8
 
-      comparisons = @fit_gap.skill_comparisons
+      comparisons = @fit_gap.comparisons_for_api
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|

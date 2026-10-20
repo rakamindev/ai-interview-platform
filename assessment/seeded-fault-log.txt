@@ -1,0 +1,41 @@
+=== FAULT: drop tenant scope in find_portfolio
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+17 examples, 1 failure
+rspec ./spec/requests/fit_gap_spec.rb:78 # Fit/gap API tenant isolation (UU PDP: another organisation must never see a candidate) hides the portfolio from another tenant on every fit/gap endpoint
+--- after revert:
+17 examples, 0 failures
+=== FAULT: unassessed skill reported as gap
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+19 examples, 6 failures
+rspec ./spec/services/fit_gap/comparator_spec.rb:43 # FitGap::Comparator unassessed skills is not_assessed when the portfolio is empty
+rspec ./spec/services/fit_gap/comparator_spec.rb:47 # FitGap::Comparator unassessed skills is not_assessed when the matching skill has no level
+rspec ./spec/services/fit_gap/comparator_spec.rb:38 # FitGap::Comparator unassessed skills is not_assessed, never a gap, when the candidate has no matching skill
+rspec ./spec/services/fit_gap/comparator_spec.rb:125 # FitGap::Comparator summary reports 0% coverage when nothing was assessed
+rspec ./spec/services/fit_gap/comparator_spec.rb:114 # FitGap::Comparator summary counts every outcome and computes coverage
+rspec ./spec/services/fit_gap/comparator_spec.rb:63 # FitGap::Comparator matching does not match different skills with similar text
+--- after revert:
+19 examples, 0 failures
+=== FAULT: write narrative even when inputs changed (stale discard removed)
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+17 examples, 1 failure
+rspec ./spec/services/fit_gap/engine_spec.rb:165 # FitGap::Engine#generate_narrative! discards a result computed from stale inputs when an override lands mid-call
+--- after revert:
+17 examples, 0 failures
+=== FAULT: UI reads wrong key again (seam regression)
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/fitgap.test.ts > normalizeComparison (API/UI seam) > reads legacy expected_level when required_level is missing
+ FAIL  src/lib/fitgap.test.ts > normalizeComparison (API/UI seam) > prefers required_level
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable > shows the required level (regression: the column read a key the API never sent)
+      Tests  3 failed | 23 passed (26)
+--- after revert:
+      Tests  26 passed (26)
+2be2ffd Revert "seed fault: UI reads wrong key again (seam regression) (must be caught by the tests)"
+60162ed seed fault: UI reads wrong key again (seam regression) (must be caught by the tests)
+d845a34 Revert "seed fault: write narrative even when inputs changed (stale discard removed) (must be caught by the tests)"
+129cf15 seed fault: write narrative even when inputs changed (stale discard removed) (must be caught by the tests)
+f8f812a Revert "seed fault: unassessed skill reported as gap (must be caught by the tests)"
+f1fb44b seed fault: unassessed skill reported as gap (must be caught by the tests)
+66ae6d5 Revert "seed fault: drop tenant scope in find_portfolio (must be caught by the tests)"
+fbfd601 seed fault: drop tenant scope in find_portfolio (must be caught by the tests)
+3c1773a ci: provide ALLOWED_ORIGINS and APP_BASE_URL the app requires at boot
