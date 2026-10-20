@@ -153,15 +153,9 @@ module Portfolios
       }
     end
 
-    # Accepts 3, "3", and "L3" — the model is inconsistent between runs.
-    # Anything else aborts the job instead of silently rating the candidate L1.
-    LEVEL_FORMAT = /\A(?:L)?([1-5])\z/i
-
-    def level_from(value, skill_label)
-      match = value.to_s.strip.match(LEVEL_FORMAT)
-      raise ArgumentError, "Invalid level #{value.inspect} for skill #{skill_label.inspect}" unless match
-
-      match[1].to_i
+    # Seeded fault: lossy conversion silently maps model strings such as L3 to L1.
+    def level_from(value, _skill_label)
+      value.to_i.clamp(1, 5)
     end
 
     def save_skills(portfolio, response)
