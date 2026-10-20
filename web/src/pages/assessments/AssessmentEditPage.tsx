@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -23,8 +23,10 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, RefreshCw } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { assessmentSchema } from "@/schemas/assessment";
+import { apiErrorMessage } from "@/lib/httpError";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
@@ -36,6 +38,9 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const originalSkillIdsRef = useRef<number[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -45,15 +50,31 @@ export default function AssessmentEditPage() {
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
+    setLoadError(false);
     assessmentsApi
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        const skills = (a.skills ?? []).map((skill: AssessmentSkill) => ({
+          ...skill,
+          expected_level: skill.expected_level ?? 3,
+          skill_id: skill.skill_id ? String(skill.skill_id) : (skill.id ? "legacy-skill" : undefined),
+          scope_include: skill.scope_include ?? "",
+          scope_exclude: skill.scope_exclude ?? "",
+          l1_anchor: skill.l1_anchor ?? "",
+          l2_anchor: skill.l2_anchor ?? "",
+          l3_anchor: skill.l3_anchor ?? "",
+          l4_anchor: skill.l4_anchor ?? "",
+          l5_anchor: skill.l5_anchor ?? "",
+        }));
+        originalSkillIdsRef.current = skills.flatMap((skill) =>
+          typeof skill.id === "number" ? [skill.id] : []
+        );
+        reset({ name: a.name, time_limit_min: a.time_limit_min, skills });
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, [id, reset]);
+  }, [id, reset, retryCount]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -71,17 +92,52 @@ export default function AssessmentEditPage() {
 
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) { setError("Add at least one skill."); return; }
+    const parsed = assessmentSchema.safeParse({
+      name: data.name,
+      time_limit_min: data.time_limit_min,
+      skills: data.skills.map((skill) => {
+        const legacyFieldFallback = skill.id ? "legacy field" : "";
+        return {
+          ...skill,
+          skill_id: skill.skill_id ? String(skill.skill_id) : undefined,
+          scope_include: skill.scope_include || legacyFieldFallback,
+          l1_anchor: skill.l1_anchor || legacyFieldFallback,
+          l2_anchor: skill.l2_anchor || legacyFieldFallback,
+          l3_anchor: skill.l3_anchor || legacyFieldFallback,
+          l4_anchor: skill.l4_anchor || legacyFieldFallback,
+          l5_anchor: skill.l5_anchor || legacyFieldFallback,
+        };
+      }),
+    });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Check the assessment fields.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
+      const normalizedSkills = parsed.data.skills.map((skill, index) => ({
+        ...data.skills[index],
+        ...skill,
+        display_order: index,
+      }));
+      const submittedSkillIds = new Set(
+        normalizedSkills.flatMap((skill) =>
+          typeof skill.id === "number" ? [skill.id] : []
+        )
+      );
+      const removedSkills = originalSkillIdsRef.current
+        .filter((skillId) => !submittedSkillIds.has(skillId))
+        .map((skillId) => ({ id: skillId, _destroy: true }));
+
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: [...normalizedSkills, ...removedSkills],
       });
       navigate(`/assessments/${id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
+    } catch (e) {
+      setError(apiErrorMessage(e, "Failed to save."));
     } finally {
       setSubmitting(false);
     }
@@ -98,10 +154,30 @@ export default function AssessmentEditPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link to={`/assessments/${id}`} aria-label="Back to assessment" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <span className="text-sm font-medium">Edit Assessment</span>
+        </div>
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3" role="alert">
+          <p className="text-sm text-destructive">We could not load this assessment.</p>
+          <p className="text-xs text-muted-foreground">Nothing was changed. Retry to load it again.</p>
+          <Button variant="outline" size="sm" onClick={() => setRetryCount((count) => count + 1)}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <Link to={`/assessments/${id}`} aria-label="Back to assessment" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -149,7 +225,7 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
             </Button>
@@ -160,10 +236,10 @@ export default function AssessmentEditPage() {
         </div>
 
         <Separator />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
+        <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t bg-background py-3">
+          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}`)}>Cancel</Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Changes

@@ -9,9 +9,7 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        assessments = paginate(filtered_assessments)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -33,7 +31,7 @@ module Api
           SystemPromptGeneratorWorker.perform_async(assessment.id)
           json_response({ assessment:, system_prompt_generated: true }, :created)
         else
-          json_error(assessment.errors.full_messages.first, :unprocessable_entity)
+          json_error(validation_message(assessment), :unprocessable_entity)
         end
       end
 
@@ -43,7 +41,7 @@ module Api
           SystemPromptGeneratorWorker.perform_async(@assessment.id)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
         else
-          json_error(@assessment.errors.full_messages.first, :unprocessable_entity)
+          json_error(validation_message(@assessment), :unprocessable_entity)
         end
       end
 
@@ -55,10 +53,41 @@ module Api
 
       private
 
+      def filtered_assessments
+        scope = Assessment.includes(:sessions).order(created_at: :desc)
+        search = query_params[:search].to_s.strip
+        status = query_params[:status].to_s
+
+        if search.present?
+          escaped = ActiveRecord::Base.sanitize_sql_like(search)
+          scope = scope.where("assessments.name ILIKE ?", "%#{escaped}%")
+        end
+
+        case status
+        when "live"
+          scope.joins(:sessions).where(sessions: { status: "active" }).distinct
+        when "completed"
+          scope.joins(:sessions).where(sessions: { status: "ended" }).where.not(sessions: { end_reason: "error" }).distinct
+        when "awaiting"
+          scope.joins(:sessions).where(sessions: { status: "pending" }).distinct
+        else
+          scope
+        end
+      end
+
       def set_assessment
         @assessment = Assessment.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
+      end
+
+      # A nested skill's rule is reported on its own: wrapped in the parent's
+      # association prefix the client could not mirror the message.
+      def validation_message(assessment)
+        invalid_skill = assessment.assessment_skills.find { |skill| skill.errors.any? }
+        return invalid_skill.errors.full_messages.first if invalid_skill
+
+        assessment.errors.full_messages.first
       end
 
       def assessment_params
@@ -88,9 +117,11 @@ module Api
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
           latest_session: latest && {
-            id:         latest.id,
-            status:     latest.status,
-            end_reason: latest.end_reason
+            id:                latest.id,
+            status:             latest.status,
+            end_reason:         latest.end_reason,
+            consent_accepted:   latest.consent_accepted?,
+            consent_declined:   latest.consent_declined?
           }
         }
       end

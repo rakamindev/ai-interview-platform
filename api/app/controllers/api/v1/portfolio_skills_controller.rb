@@ -10,46 +10,44 @@ module Api
       # POST /api/v1/portfolio-skills/:id/override
       def override
         existing = @portfolio_skill.assessor_override
+        override = existing || @portfolio_skill.build_assessor_override
 
-        if existing
-          if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
-            regenerate_stale_fitgap_reports
-            json_response(override: override_json(existing))
-          else
-            json_error(existing.errors.full_messages.first, :unprocessable_entity)
-          end
-        else
-          new_override = @portfolio_skill.build_assessor_override(
-            override_params.merge(
-              ai_level:      @portfolio_skill.ai_level,
-              overridden_by: current_user.id,
-              overridden_at: Time.current
-            )
+        if override.update(
+          override_params.merge(
+            ai_level:      @portfolio_skill.ai_level,
+            overridden_by: current_user.id,
+            overridden_at: Time.current
           )
-
-          if new_override.save
-            regenerate_stale_fitgap_reports
-            json_response({ override: override_json(new_override) }, :created)
-          else
-            json_error(new_override.errors.full_messages.first, :unprocessable_entity)
-          end
+        )
+          @portfolio_skill.portfolio.update_column(:generated_at, Time.current)
+          regenerate_stale_fitgap_reports
+          json_response({ override: override_json(override) }, existing ? :ok : :created)
+        else
+          json_error(override.errors.full_messages.first, :unprocessable_entity)
         end
       end
 
       private
 
+
+      # An override invalidates every stored comparison for this portfolio. The
+      # engine upserts on (portfolio_id, vacancy_id), so the queued work overwrites
+      # each report in place and the last trustworthy version stays readable until
+      # its replacement lands.
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
+
+        FitGapReport.where(portfolio_id: portfolio.id).pluck(:vacancy_id).each do |vacancy_id|
           FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
         end
       end
 
+
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = Authorization::PortfolioAccess.find_portfolio_skill!(
+          params[:id],
+          tenant_id: current_tenant_id
+        )
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

@@ -5,9 +5,11 @@ import { authAtom, saveToken } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import PasswordInput from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
+import { showRequestError } from "@/lib/requestToast";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -16,11 +18,9 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
     try {
       const res = await authApi.signup({ email, password, role });
@@ -28,8 +28,8 @@ export default function SignupPage() {
       saveToken(token);
       setAuth({ token });
       navigate("/assessments");
-    } catch {
-      setError("Signup failed. Please try again.");
+    } catch (error) {
+      showRequestError(error, "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ export default function SignupPage() {
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <Input
-              id="email"
+              placeholder="you@example.com"
               type="email"
               autoComplete="email"
               value={email}
@@ -58,9 +58,8 @@ export default function SignupPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
+            <PasswordInput
+              placeholder="Create a password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -86,7 +85,6 @@ export default function SignupPage() {
             </RadioGroup>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

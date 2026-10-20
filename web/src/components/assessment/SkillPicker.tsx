@@ -38,7 +38,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({
-      skill_id: undefined,
+      skill_id: s.skill_id,
       skill_label: s.skill_label,
       is_custom: false,
       expected_level: 3,
@@ -64,6 +64,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search skills..."
+            aria-label="Search skills"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"

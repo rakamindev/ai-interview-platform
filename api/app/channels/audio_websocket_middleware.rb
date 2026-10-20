@@ -111,7 +111,16 @@ class AudioWebSocketMiddleware
       return
     end
 
-    Sessions::StartHandler.new(session).call unless session.active?
+    unless session.active?
+      started = Sessions::StartHandler.new(session).call
+      unless started
+        send_json(browser_ws, type: 'error', code: 'consent_required',
+                              message: 'Consent is required before the interview can start.',
+                              recoverable: false)
+        browser_ws.close
+        return
+      end
+    end
 
     state.turn_counter = session.transcript_turns.maximum(:turn_number).to_i
 
@@ -268,8 +277,13 @@ class AudioWebSocketMiddleware
     }
   end
 
-  # Strips coverage/time metadata that leaks into output transcription via realtimeInput.text echoes.
+  # Removes internal coverage/control echoes from the transcript shown to the
+  # candidate. Realtime text echoes can arrive after natural language, so the
+  # sanitizer must not only strip metadata at the beginning of the turn.
   def sanitize_output_transcription(text)
+    text = text.to_s
+    text = text.gsub(/```(?:json)?\s*(?:\[\s*)?\{.*?\}(?:\s*\])?\s*```/mi, '').strip
+    text = text.gsub(/\[\s*\{\s*["']skill["']\s*:\s*.*?["']probe_count["']\s*:\s*\d+\s*\}\s*\]/mi, '').strip
     text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
     text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
     text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
@@ -737,7 +751,12 @@ class AudioWebSocketMiddleware
       invite_token = request.params['token']
 
       if invite_token.present?
-        Session.unscoped.find_by(invite_token: invite_token)
+        candidate_session = Session.unscoped.find_by(invite_token: invite_token)
+        # The gate is enforced here as well as in the UI: without an accepted
+        # notice there is no audio session, whatever the page claims.
+        return [nil, 'Consent required'] if candidate_session && !candidate_session.consent_accepted?
+
+        candidate_session
       else
         auth_header = env['HTTP_AUTHORIZATION']
         return [nil, 'Missing authorization'] unless auth_header.present?

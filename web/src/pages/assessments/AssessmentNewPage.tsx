@@ -25,6 +25,8 @@ import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { assessmentSchema } from "@/schemas/assessment";
+import { apiErrorMessage } from "@/lib/httpError";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
@@ -85,6 +87,19 @@ export default function AssessmentNewPage() {
       setError("Add at least one skill to continue.");
       return;
     }
+    const parsed = assessmentSchema.safeParse({
+      name: data.name,
+      time_limit_min: data.time_limit_min,
+      language: data.language,
+      skills: data.skills.map((skill) => ({
+        ...skill,
+        skill_id: skill.skill_id ? String(skill.skill_id) : undefined,
+      })),
+    });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Check the assessment fields.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -99,8 +114,8 @@ export default function AssessmentNewPage() {
       };
       const res = await assessmentsApi.create(payload);
       navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
+    } catch (e) {
+      setError(apiErrorMessage(e, "Failed to save assessment."));
     } finally {
       setSubmitting(false);
     }
@@ -109,8 +124,8 @@ export default function AssessmentNewPage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <Link to="/assessments" aria-label="Back to assessments" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <span className="text-sm text-muted-foreground">Back</span>
@@ -127,10 +142,12 @@ export default function AssessmentNewPage() {
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
+            aria-invalid={errors.name ? true : undefined}
+            aria-describedby={errors.name ? "name-error" : undefined}
             {...register("name", { required: "Role title is required" })}
           />
           {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+            <p id="name-error" className="text-xs text-destructive" role="alert">{errors.name.message}</p>
           )}
         </div>
 
@@ -209,7 +226,7 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -234,11 +251,11 @@ export default function AssessmentNewPage() {
         <Separator />
 
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-sm text-destructive" role="alert">{error}</p>
         )}
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2">
+        {/* Actions stay reachable without scrolling past the whole skill list */}
+        <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t bg-background py-3">
           <Button
             type="button"
             variant="outline"

@@ -145,15 +145,20 @@ export function useAudioWebSocket({
   }, []);
 
   const disconnect = useCallback(() => {
-    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    clearTimeout(reconnectTimerRef.current ?? undefined);
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
     wsRef.current?.close();
   }, []);
 
   useEffect(() => {
     return () => {
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      clearTimeout(reconnectTimerRef.current ?? undefined);
+      // Unmount is terminal for this hook; closing the socket otherwise fires
+      // onclose and schedules a reconnect against an unmounted component.
+      reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+      sessionEndedRef.current = true;
       wsRef.current?.close();
+      wsRef.current = null;
     };
   }, []);
 

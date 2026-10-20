@@ -21,16 +21,10 @@ class CoverageAnalyzerWorker
     advance_stale_partials(session, exclude_ids: updated_ids)
 
     publish_coverage_update(session)
-    # Session-end detection removed from worker (H1 fix) — the middleware owns
-    # session lifecycle because it's the only component with access to both the
-    # Gemini client and the browser WebSocket. The worker updating DB state and
-    # the middleware checking it on the next AI turn avoids the duplicate-end race.
-
     Rails.logger.info("[N7] Coverage analyzed for session #{session_id}, turn #{turn_number}")
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N7] Session #{session_id} not found — skipping")
   rescue => e
-    # N7 failure is non-critical — log and let the interview continue
     Rails.logger.error("[N7] Coverage analyzer failed for session #{session_id}: #{e.class} #{e.message}")
   end
 
@@ -96,7 +90,7 @@ class CoverageAnalyzerWorker
 
     scope.each do |map|
       map.update!(state: 'covered', last_signal: 'Auto-advanced: outside context window with sufficient probes')
-      Rails.logger.info("[N7] Auto-advanced #{map.skill_label} to covered (probe_count=#{map.probe_count})")
+      Rails.logger.info("[N7] Auto-advanced coverage map #{map.id} to covered (probe_count=#{map.probe_count})")
     end
   end
 

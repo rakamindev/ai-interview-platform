@@ -4,11 +4,20 @@ module Sessions
   # Activates a pending session and initializes coverage map rows from assessment skills.
   # Called when a candidate connects to the audio WebSocket and begins the interview.
   class StartHandler
+    # Why the last `call` refused to start the session, or nil when it started.
+    attr_reader :refusal_reason
+
     def initialize(session)
       @session = session
     end
 
+    # Returns the session when it starts, or nil when it may not start yet.
     def call
+      unless @session.consent_accepted?
+        @refusal_reason = 'consent_required'
+        return nil
+      end
+
       ActiveRecord::Base.transaction do
         @session.update!(status: 'active', started_at: Time.current)
         initialize_coverage_maps

@@ -10,7 +10,7 @@ module Coverage
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.5-flash'),
         timeout: 45
       )
     end
@@ -113,7 +113,9 @@ module Coverage
 
       { skill_updates: skill_updates, discovered_skills: discovered }
     rescue JSON::ParserError => e
-      Rails.logger.error("[N7/Analyzer] Failed to parse Gemini response: #{e.message}")
+      # The parser message quotes the offending payload, which is model output
+      # derived from the transcript; the class is enough to trace it.
+      Rails.logger.error("[N7/Analyzer] Failed to parse Gemini response (#{e.class})")
       { skill_updates: [], discovered_skills: [] }
     end
 
@@ -165,8 +167,27 @@ module Coverage
     end
 
     def find_map(coverage_maps, id_or_label)
-      coverage_maps.find { |m| m.skill_id == id_or_label } ||
-        coverage_maps.find { |m| m.skill_label.downcase.gsub(/\s+/, '-') == id_or_label&.downcase }
+      return if id_or_label.blank?
+
+      exact_id = coverage_maps.find { |map| map.skill_id == id_or_label }
+      return exact_id if exact_id
+
+      needle = normalize_skill_key(id_or_label)
+      exact_label = coverage_maps.find { |map| normalize_skill_key(map.skill_label) == needle }
+      return exact_label if exact_label
+
+      needle_tokens = needle.split
+      return if needle_tokens.empty?
+
+      coverage_maps
+        .map { |map| [map, (needle_tokens & normalize_skill_key(map.skill_label).split).length] }
+        .select { |_map, overlap| overlap.positive? }
+        .max_by { |_map, overlap| overlap }
+        &.first
+    end
+
+    def normalize_skill_key(value)
+      value.to_s.downcase.gsub(/[^a-z0-9]+/, ' ').strip
     end
   end
 end

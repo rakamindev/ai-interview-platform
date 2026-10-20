@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import LevelRadio from "./LevelRadio";
-import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
+import type { AssessmentFormValues } from "./AssessmentFormDialog";
 
 interface CustomSkillFormProps {
   index: number;
@@ -66,6 +66,8 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
       <div className="space-y-1.5">
         <Label>Expected level</Label>
         <LevelRadio
+          name={`custom-skill-${index}`}
+          label={`Expected level for custom skill ${index + 1}`}
           value={expectedLevel ?? 3}
           onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
         />

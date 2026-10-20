@@ -14,11 +14,11 @@ DB_PASSWORD: ""
 # AI Interview specific
 GEMINI_API_KEY: "your_gemini_api_key"
 GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
-GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
+GEMINI_FLASH_MODEL: "gemini-2.5-flash"
 GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
 
-# App URL (for invite links)
-APP_BASE_URL: "http://localhost:3001"
+# Public candidate web origin used in shareable invite links.
+CANDIDATE_APP_URL: "http://localhost:5173"
 
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds
@@ -27,4 +27,12 @@ TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds
 ALLOWED_ORIGINS: "*"
 
 # Sidekiq / Redis
+# The Sidekiq and publisher instance must run with `maxmemory-policy noeviction`:
+# nothing may evict a queue entry or a published coverage update.
 REDIS_URL: "redis://localhost:6379/1"
+
+# Cache and throttle counters. Falls back to REDIS_URL locally so development
+# keeps a single instance. Point this at its own instance in any deployment that
+# sets a maxmemory policy: `maxmemory-policy allkeys-lru` with an explicit
+# `maxmemory` keeps the cache bounded without being able to evict Sidekiq keys.
+REDIS_CACHE_URL: ""

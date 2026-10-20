@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -128,6 +128,44 @@ module Api
         json_response(ended: true, message: "Session ended")
       end
 
+      # POST /sessions/:token/consent  — no JWT, invite token in URL
+      # Records the candidate's UU PDP decision. Declining is a recorded outcome,
+      # not an HTTP error, and the interview cannot start either way.
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.ended?
+          return json_response(consent: consent_json(session).merge(session_ended: true))
+        end
+
+        accepted = params.dig(:consent, :accepted)
+        unless [true, false].include?(accepted)
+          return json_error("Consent decision must be true or false", :unprocessable_entity)
+        end
+
+        version = params.dig(:consent, :version).presence
+        if version != Session::CONSENT_VERSION
+          return json_error("Consent version is out of date", :unprocessable_entity)
+        end
+
+        if accepted
+          session.update!(
+            consent_accepted_at: Time.current,
+            consent_version:     version,
+            consent_declined_at: nil
+          )
+        else
+          session.update!(
+            consent_declined_at: Time.current,
+            consent_accepted_at: nil,
+            consent_version:     nil
+          )
+        end
+
+        json_response(consent: consent_json(session))
+      end
+
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
@@ -149,11 +187,21 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          consent:         consent_json(session)
         )
       end
 
       private
+
+      def consent_json(session)
+        {
+          required: true,
+          accepted: session.consent_accepted?,
+          declined: session.consent_declined?,
+          version:  Session::CONSENT_VERSION
+        }
+      end
 
       def set_session
         @session = Session.find(params[:id])
@@ -163,19 +211,21 @@ module Api
 
       def session_json(session)
         {
-          id:               session.id,
-          assessment_id:    session.assessment_id,
-          tenant_id:        session.tenant_id,
-          candidate_id:     session.candidate_id,
-          candidate_name:   session.candidate_name,
-          invite_token:     session.invite_token,
-          invite_url:       session.invite_url,
-          status:           session.status,
-          end_reason:       session.end_reason,
-          started_at:       session.started_at,
-          ended_at:         session.ended_at,
-          duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          id:                  session.id,
+          assessment_id:       session.assessment_id,
+          tenant_id:           session.tenant_id,
+          candidate_id:         session.candidate_id,
+          candidate_name:       session.candidate_name,
+          invite_token:         session.invite_token,
+          invite_url:           session.invite_url,
+          status:               session.status,
+          end_reason:           session.end_reason,
+          consent_accepted:     session.consent_accepted?,
+          consent_declined:     session.consent_declined?,
+          started_at:           session.started_at,
+          ended_at:             session.ended_at,
+          duration_seconds:     session.duration_seconds,
+          created_at:            session.created_at
         }
       end
 

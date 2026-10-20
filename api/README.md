@@ -26,8 +26,7 @@ Fill in the required values in `config/application.yml`:
 | `GEMINI_ANALYSIS_MODEL` | e.g. `gemini-2.0-flash-001` |
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
-| `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `CANDIDATE_APP_URL` | Public frontend origin used for shareable candidate invite links, e.g. `http://localhost:5173` |
 
 ---
 

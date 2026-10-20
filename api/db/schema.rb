@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_19_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -58,11 +58,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
+    t.string "override_type", default: "correction", null: false
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
@@ -89,6 +90,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.jsonb "override_context", default: [], null: false
+    t.string "assessment_generation_id"
+    t.string "vacancy_requirements_hash"
+    t.integer "override_revision"
+    t.string "report_status", default: "stale", null: false
+    t.jsonb "additional_skills", default: [], null: false
+    t.string "narrative_status"
+    t.string "narrative_error"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -112,10 +121,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
-    t.text "competency_summary", null: false
+    t.text "competency_summary"
+    t.string "identity_key"
+    t.string "assessment_state", default: "assessed", null: false
+    t.string "assessment_reason"
+    t.jsonb "evidence_refs", default: [], null: false
+    t.jsonb "confidence_basis", default: {}, null: false
+    t.string "evidence_status", default: "legacy_unverified", null: false
+    t.string "assessment_generation_id"
+    t.jsonb "retained_assessment"
+    t.index ["portfolio_id", "identity_key"], name: "index_portfolio_skills_on_portfolio_and_identity", unique: true
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
@@ -126,6 +144,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.string "active_generation_id"
+    t.string "published_generation_id"
+    t.string "assessment_status", default: "complete", null: false
+    t.jsonb "assessment_coverage", default: {}, null: false
+    t.jsonb "assessment_warnings", default: [], null: false
+    t.integer "override_revision", default: 0, null: false
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
   end
@@ -143,6 +167,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "consent_accepted_at"
+    t.string "consent_version"
+    t.datetime "consent_declined_at"
+    t.jsonb "coverage_health", default: {}, null: false
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true

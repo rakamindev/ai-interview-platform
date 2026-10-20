@@ -5,6 +5,7 @@ class Session < ApplicationRecord
 
   STATUSES   = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
+  CONSENT_VERSION = 'v1'
 
   belongs_to :assessment
   has_many :transcript_turns, dependent: :destroy
@@ -17,17 +18,16 @@ class Session < ApplicationRecord
 
   before_validation :generate_invite_token, on: :create
 
-  scope :active,  -> { where(status: 'active') }
-  scope :pending, -> { where(status: 'pending') }
-  scope :ended,   -> { where(status: 'ended') }
-
-  def active?  = status == 'active'
-  def ended?   = status == 'ended'
   def pending? = status == 'pending'
+  def active? = status == 'active'
+  def ended? = status == 'ended'
+  def failed? = status == 'failed'
+  def consent_accepted? = consent_accepted_at.present? && consent_version == CONSENT_VERSION
+  def consent_declined? = consent_declined_at.present?
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    base_url = ENV.fetch('CANDIDATE_APP_URL', 'http://localhost:5173').sub(%r{/\z}, '')
+    "#{base_url}/interview/#{invite_token}"
   end
 
   private

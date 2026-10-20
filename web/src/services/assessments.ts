@@ -9,9 +9,13 @@ export interface AssessmentPayload {
 }
 
 export const assessmentsApi = {
-  list: (page = 1) =>
+  list: (params: { page?: number; search?: string; status?: "all" | "live" | "completed" | "awaiting" } = {}) =>
     api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
+      params: {
+        page: params.page ?? 1,
+        ...(params.search ? { search: params.search } : {}),
+        ...(params.status && params.status !== "all" ? { status: params.status } : {}),
+      },
     }),
 
   get: (id: number) =>

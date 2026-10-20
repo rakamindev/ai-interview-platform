@@ -82,7 +82,7 @@ module Exports
         pdf.text "#{skill.skill_label}", style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} -> Override: #{LEVEL_LABELS[override.override_level]})" if override
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
         pdf.text level_text
       end
@@ -120,17 +120,7 @@ module Exports
       pdf.move_down 8
 
       comparisons = @fit_gap.skill_comparisons
-
-      table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
-      comparisons.each do |c|
-        table_data << [
-          c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
-          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
-        ]
-      end
+      table_data = fit_gap_table_data(comparisons)
 
       pdf.table(table_data, header: true, width: pdf.bounds.width) do |t|
         t.row(0).font_style = :bold
@@ -152,6 +142,24 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
       end
+    end
+
+    # Required levels come from the canonical comparison contract, where the
+    # vacancy requirement is serialised as `required_level`.
+    def fit_gap_table_data(comparisons)
+      rows = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
+
+      comparisons.each do |c|
+        rows << [
+          c['skill_label'],
+          c['required_level'] ? "L#{c['required_level']}" : '—',
+          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
+          RESULT_LABELS[c['result']] || c['result'],
+          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
+        ]
+      end
+
+      rows
     end
 
     def render_footer(pdf)

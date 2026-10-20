@@ -44,6 +44,18 @@ Rails.application.configure do
   config.active_support.disallowed_deprecation = :log
   config.active_support.disallowed_deprecation_warnings = []
 
-  # Use a cache store that supports distributed caching.
-  config.cache_store = :redis_cache_store, { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
+  # Cache and throttle counters get their own instance when REDIS_CACHE_URL is set:
+  # sharing the Sidekiq database means an eviction or a runaway cache can destroy
+  # queue entries, and an unbounded cache can grow without limit.
+  # Required instance policies: the Sidekiq/publisher instance runs
+  # `maxmemory-policy noeviction`; this instance runs `maxmemory-policy allkeys-lru`
+  # with an explicit `maxmemory`.
+  cache_url = ENV["REDIS_CACHE_URL"].to_s.strip
+  cache_url = ENV.fetch("REDIS_URL", "redis://localhost:6379/0") if cache_url.empty?
+  config.cache_store = :redis_cache_store, {
+    url:             cache_url,
+    connect_timeout: 1,
+    read_timeout:    1,
+    write_timeout:   1
+  }
 end

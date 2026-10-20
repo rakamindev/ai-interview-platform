@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import { vacancySchema } from "@/schemas/resources";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
@@ -32,6 +33,19 @@ export default function VacancyNewPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   const onSubmit = async (data: VacancyFormValues) => {
+    const parsed = vacancySchema.safeParse({
+      role_title: data.role_title,
+      culture_dimensions: data.culture_dimensions,
+      competency_expectations: data.competency_expectations,
+      skills: data.skills.map((skill) => ({
+        skill_label: skill.skill_label ?? "",
+        expected_level: skill.expected_level ?? 3,
+      })),
+    });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Check the vacancy fields.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -82,13 +96,15 @@ export default function VacancyNewPage() {
                 <div key={field.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                    <button type="button" aria-label="Remove skill" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Expected level:</span>
                     <LevelRadio
+                      name={`vacancy-skill-${field.id}`}
+                      label={`Expected level for ${watch(`skills.${index}.skill_label`) || `skill ${index + 1}`}`}
                       value={watch(`skills.${index}.expected_level`) ?? 3}
                       onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
                     />
@@ -125,9 +141,13 @@ export default function VacancyNewPage() {
           />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

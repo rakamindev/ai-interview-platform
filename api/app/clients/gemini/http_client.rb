@@ -75,7 +75,9 @@ module Gemini
     def parse_response(response)
       unless response.success?
         raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
+        # The body can echo the prompt, which carries candidate content: its size is
+        # enough to tell a configuration error from a transient one.
+        Rails.logger.error("[Gemini::HttpClient] API error #{response.status} (#{response.body.to_s.bytesize} bytes)")
         raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
       end
 

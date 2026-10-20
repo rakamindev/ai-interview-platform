@@ -1,16 +1,21 @@
 import { Outlet } from "react-router-dom";
+import { LayoutDashboard } from "lucide-react";
 
 export default function CandidateLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Minimal header — no nav */}
-      <header className="border-b bg-white">
-        <div className="max-w-2xl mx-auto px-4 h-12 flex items-center">
-          <span className="font-semibold text-sm text-muted-foreground">AI Interview</span>
+    <div className="min-h-screen bg-muted/20 text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-5xl items-center px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
+              <LayoutDashboard className="h-5 w-5" />
+            </span>
+            <span className="text-sm font-semibold tracking-tight">AI Interview</span>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex min-h-[calc(100dvh-4rem)] flex-col">
         <Outlet />
       </main>
     </div>

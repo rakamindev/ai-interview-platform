@@ -11,12 +11,14 @@ export interface Assessment {
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
+    consent_accepted?: boolean;
+    consent_declined?: boolean;
   };
 }
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -41,6 +43,8 @@ export interface Session {
   invite_url: string;
   status: "pending" | "active" | "ended";
   end_reason?: string;
+  consent_accepted?: boolean;
+  consent_declined?: boolean;
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
@@ -49,7 +53,7 @@ export interface Session {
 
 export interface CoverageSkill {
   id: number;
-  skill_id: number;
+  skill_id: string;
   skill_label: string;
   is_discovered: boolean;
   state: "not_yet" | "initiated" | "partial" | "covered";
@@ -87,11 +91,11 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: number;
+  ai_confidence: "high" | "medium" | "low";
   evidence: string[];
   competency_summary: string;
 }
@@ -114,12 +118,13 @@ export interface Vacancy {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
+  skill_count?: number;
   skills: VacancySkill[];
 }
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -129,11 +134,20 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
+  skill_id?: string;
   required_level: number;
-  candidate_level?: number;
+  candidate_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  confidence?: "high" | "medium" | "low" | null;
+  is_override: boolean;
+}
+
+export interface FitGapOverrideContext {
+  skill_label: string;
+  skill_id?: string | null;
+  ai_level: number;
+  override_level: number;
 }
 
 export interface FitGapReport {
@@ -141,6 +155,7 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
+  override_context: FitGapOverrideContext[];
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
@@ -159,11 +174,20 @@ export interface SkillTaxonomy {
   l5_anchor: string;
 }
 
+export interface ConsentState {
+  required: boolean;
+  accepted: boolean;
+  declined: boolean;
+  version: string;
+  session_ended?: boolean;
+}
+
 export interface CandidateInfo {
   session_id: number;
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  consent: ConsentState;
 }
 
 export interface PaginationMeta {
@@ -176,6 +200,7 @@ export interface PaginationMeta {
 // WebSocket message types
 export type InterviewState =
   | "idle"
+  | "consent"
   | "hardware_check"
   | "connecting"
   | "active"

@@ -54,11 +54,14 @@ spec:
       terminationGracePeriodSeconds: 60
 
       containers:
-        - name: ai-interview-sidekiq
+        # Two process groups so a three-minute portfolio job cannot occupy a
+        # coverage thread: coverage turns are latency-critical, portfolio and
+        # fit/gap generation are long-running.
+        - name: ai-interview-sidekiq-fast
           image: asia-southeast2-docker.pkg.dev/rakamin-poc/rakamin-images/ai-interview-api:latest
           imagePullPolicy: Always
           command: ["bundle"]
-          args: ["exec", "sidekiq", "-e", "staging"]
+          args: ["exec", "sidekiq", "-e", "staging", "-c", "7", "-q", "coverage,6", "-q", "default,1"]
 
           envFrom:
             - configMapRef:
@@ -119,3 +122,67 @@ spec:
             limits:
               cpu: "1000m"
               memory: "1536Mi"
+
+        - name: ai-interview-sidekiq-portfolio
+          image: asia-southeast2-docker.pkg.dev/rakamin-poc/rakamin-images/ai-interview-api:latest
+          imagePullPolicy: Always
+          command: ["bundle"]
+          args: ["exec", "sidekiq", "-e", "staging", "-c", "3", "-q", "portfolio,3"]
+
+          envFrom:
+            - configMapRef:
+                name: ai-interview-config
+
+          env:
+            - name: POD_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: RUBYOPT
+              value: "--yjit-disable"
+            - name: LD_PRELOAD
+              value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+            - name: MALLOC_CONF
+              value: "background_thread:true,metadata_thp:auto,dirty_decay_ms:5000,muzzy_decay_ms:5000,narenas:2"
+            - name: OTEL_SERVICE_NAME
+              value: ai-interview-sidekiq-portfolio-staging
+
+          readinessProbe:
+            exec:
+              command:
+                - grep
+                - -q
+                - "READY: 1"
+                - /ai-interview/tmp/sidekiq_status
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 5
+            timeoutSeconds: 10
+
+          livenessProbe:
+            exec:
+              command:
+                - grep
+                - -q
+                - "READY: 1"
+                - /ai-interview/tmp/sidekiq_status
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 10
+
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "768Mi"
+            limits:
+              cpu: "1500m"
+              memory: "2048Mi"

@@ -4,16 +4,12 @@ import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/auth/LoginPage";
 import AssessmentListPage from "@/pages/assessments/AssessmentListPage";
-import AssessmentNewPage from "@/pages/assessments/AssessmentNewPage";
-import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
 import AssessmentInvitePage from "@/pages/assessments/AssessmentInvitePage";
 import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
 import PortfolioPage from "@/pages/portfolio/PortfolioPage";
 import FitGapReportPage from "@/pages/fitgap/FitGapReportPage";
 import TranscriptPage from "@/pages/transcript/TranscriptPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
-import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
-import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
 
 export default function App() {
@@ -27,8 +23,9 @@ export default function App() {
       <Route element={<AssessorLayout />}>
         <Route path="/" element={<Navigate to="/assessments" replace />} />
         <Route path="/assessments" element={<AssessmentListPage />} />
-        <Route path="/assessments/new" element={<AssessmentNewPage />} />
-        <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />
+        <Route path="/assessments/new" element={<Navigate to="/assessments" replace />} />
+        <Route path="/assessments/:id" element={<AssessmentInvitePage />} />
+        <Route path="/assessments/:id/edit" element={<Navigate to="/assessments" replace />} />
         <Route path="/assessments/:id/invite" element={<AssessmentInvitePage />} />
         <Route
           path="/assessments/:id/sessions/:sessionId/monitor"
@@ -47,8 +44,8 @@ export default function App() {
           element={<FitGapReportPage />}
         />
         <Route path="/vacancies" element={<VacancyListPage />} />
-        <Route path="/vacancies/new" element={<VacancyNewPage />} />
-        <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        <Route path="/vacancies/new" element={<Navigate to="/vacancies" replace />} />
+        <Route path="/vacancies/:id/edit" element={<Navigate to="/vacancies" replace />} />
       </Route>
       </Route>
 

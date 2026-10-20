@@ -7,8 +7,9 @@ class User < ApplicationRecord
 
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },
-                    format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :role, inclusion: { in: ROLES }
+                    format: { with: URI::MailTo::EMAIL_REGEXP },
+                    length: { maximum: 255 }
+  validates :password, length: { minimum: 8 }, if: -> { password.present? }
 
   before_save :downcase_email
 
