@@ -78,11 +78,12 @@ class CoverageWebSocketMiddleware
     discovered = session.coverage_maps.discovered.order(:id)
 
     payload = {
-      type:       'coverage_update',
-      status:     session.status,
-      end_reason: session.end_reason,
-      skills:     maps.map { |m| coverage_json(m) },
-      discovered: discovered.map { |m| coverage_json(m) }
+      type:          'coverage_update',
+      status:        session.status,
+      end_reason:    session.end_reason,
+      failure_class: session.failure_class,
+      skills:        maps.map { |m| coverage_json(m) },
+      discovered:    discovered.map { |m| coverage_json(m) }
     }
 
     ws.send(payload.to_json)

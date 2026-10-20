@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, ConsentBlock } from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
@@ -28,6 +28,9 @@ export const sessionsApi = {
 
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+
+  recordConsent: (token: string) =>
+    api.post<{ consent: ConsentBlock }>(`/sessions/${token}/consent`),
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),

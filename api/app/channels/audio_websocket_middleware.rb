@@ -47,10 +47,25 @@ class AudioWebSocketMiddleware
   end
 
   def handle_browser_open(env, session_id, browser_ws, state)
-    session, error = authenticate_and_load(env, session_id)
+    session, error, actor = authenticate_and_load(env, session_id)
 
     if error
       browser_ws.send({ type: 'error', code: 'auth_failed', message: error, recoverable: false }.to_json)
+      browser_ws.close
+      return
+    end
+
+    # Enforce consent before any audio can move. A consent screen that only
+    # exists in the browser is decoration — anyone can call this socket
+    # directly with the invite token from the URL. Staff connections are
+    # exempt because a candidate's answers cannot reach us through them: no
+    # candidate audio flows until the candidate themselves is connected.
+    if actor == :candidate && !consent_recorded?(session)
+      browser_ws.send(
+        { type: 'error', code: 'consent_required',
+          message: 'Consent has not been recorded for this session.',
+          recoverable: false }.to_json
+      )
       browser_ws.close
       return
     end
@@ -60,6 +75,12 @@ class AudioWebSocketMiddleware
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
     browser_ws.close
+  end
+
+  # Written as its own predicate so it reads as the single decision point, and
+  # so a spec can assert on the same condition the socket actually uses.
+  def consent_recorded?(session)
+    session.consent.present? && session.consent.current?
   end
 
   def handle_browser_frame(event, browser_ws, state, session_id)
@@ -384,7 +405,11 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
-      Sessions::EndHandler.new(state.session).call(reason: 'error')
+      # Classed 'transient' rather than left as a bare error: every retry was
+      # spent, so the interview provider was unavailable. Nothing is wrong
+      # with this candidate, and the assessor needs to be able to tell that
+      # inviting them again is worth it once the provider recovers.
+      Sessions::EndHandler.new(state.session).call(reason: 'error', failure_class: 'transient')
       send_json(browser_ws, type: 'session_ended', reason: 'error',
                             message: 'The session encountered a problem. Please contact the interviewer.')
       browser_ws.close
@@ -507,7 +532,11 @@ class AudioWebSocketMiddleware
           next if state.session.reload.ended?
 
           Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
+          # Classed 'user' rather than left as a bare error: the browser
+          # disconnected and never came back within BROWSER_GRACE_PERIOD, so
+          # this is the candidate's connection, not our stack. An assessor who
+          # sees that knows the same candidate is worth inviting again.
+          Sessions::EndHandler.new(state.session).call(reason: 'error', failure_class: 'user')
           EM.schedule { state.gemini_client&.close }
         end
       rescue StandardError => e
@@ -730,34 +759,41 @@ class AudioWebSocketMiddleware
     CLOSING_PHRASES.any? { |phrase| downcased.include?(phrase) }
   end
 
+  # Returns [session, error, actor]. `actor` is :candidate when the socket was
+  # opened with an invite token, :staff when it was opened with an assessor
+  # JWT — the two are authenticated differently and are not treated alike
+  # everywhere downstream (see consent_recorded?).
   def authenticate_and_load(env, session_id)
     request = Rack::Request.new(env)
+
+    actor = :staff
 
     session = begin
       invite_token = request.params['token']
 
       if invite_token.present?
+        actor = :candidate
         Session.unscoped.find_by(invite_token: invite_token)
       else
         auth_header = env['HTTP_AUTHORIZATION']
-        return [nil, 'Missing authorization'] unless auth_header.present?
+        return [nil, 'Missing authorization', :staff] unless auth_header.present?
 
         token = auth_header.split(' ').last
         payload = JsonWebToken.decode(token)
         tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
-        return [nil, 'Invalid tenant'] unless tenant_id
+        return [nil, 'Invalid tenant', :staff] unless tenant_id
 
         Session.unscoped.where(tenant_id: tenant_id).find_by(id: session_id)
       end
     rescue StandardError => e
-      return [nil, "Authentication failed: #{e.message}"]
+      return [nil, "Authentication failed: #{e.message}", actor]
     end
 
-    return [nil, 'Session not found'] unless session
-    return [nil, 'Session has ended'] if session.ended?
-    return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+    return [nil, 'Session not found', actor] unless session
+    return [nil, 'Session has ended', actor] if session.ended?
+    return [nil, 'Session ID mismatch', actor] if session.id.to_s != session_id
 
-    [session, nil]
+    [session, nil, actor]
   end
 
   def send_json(ws, **payload)

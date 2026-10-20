@@ -48,7 +48,10 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        # The join this used to carry proved nothing on its own: joining the
+        # portfolio without a tenant condition reaches any organization's
+        # rows. Tenancy lives on the session, so the scope walks to it.
+        @portfolio_skill = PortfolioSkill.for_tenant(current_tenant_id)
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

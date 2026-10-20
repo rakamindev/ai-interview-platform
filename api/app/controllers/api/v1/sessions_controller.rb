@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info record_consent audio_complete]
+      skip_before_action :require_tenant!, only: %i[candidate_info record_consent audio_complete]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -149,8 +149,42 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          consent:         consent_payload(session)
         )
+      end
+
+      # POST /sessions/:token/consent  — no JWT, invite token in URL
+      #
+      # Records that the candidate agreed to the wording returned by
+      # candidate_info. Idempotent: a repeated call leaves consented_at alone,
+      # so double-clicking the button cannot rewrite the proof.
+      def record_consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        return json_error("This session has already ended", :unprocessable_entity) if session.ended?
+
+        consent = session.consent || session.build_consent
+
+        # Both fields are decided here, never read from the request. A
+        # consent recorded with a client-supplied version or clock would
+        # prove nothing: the version has to match the text that was actually
+        # shown, and the timestamp has to be ours.
+        consent.version = ConsentText::VERSION
+        consent.consented_at = Time.current if consent.version_changed? || consent.consented_at.nil?
+
+        if consent.save
+          json_response(consent: consent_payload(session.reload))
+        else
+          json_error(consent.errors.full_messages.to_sentence, :unprocessable_entity)
+        end
+      rescue ActiveRecord::RecordNotUnique
+        # Two requests arrived together and the unique index kept one. Read
+        # that record back instead of failing — the outcome the candidate
+        # asked for already exists, and it is the same version we just wrote.
+        reloaded = session.reload
+        reloaded.consent ? json_response(consent: consent_payload(reloaded)) : json_error("Consent could not be recorded", :conflict)
       end
 
       private
@@ -159,6 +193,24 @@ module Api
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found)
+      end
+
+      # Everything the browser needs to both render the consent screen and
+      # know whether it can skip it. The text comes from the server so that
+      # what is shown and what is recorded are provably the same words.
+      def consent_payload(session)
+        consent = session.consent
+
+        {
+          version:     ConsentText::VERSION,
+          required:    true,
+          summary:     ConsentText.summary,
+          details:     ConsentText.details.map { |label, text| { label: label, text: text } },
+          # A record written against older wording counts as not granted: the
+          # candidate agreed to different words, so they are asked again.
+          granted:     consent.present? && consent.current?,
+          accepted_at: consent&.consented_at&.iso8601
+        }
       end
 
       def session_json(session)
@@ -172,6 +224,7 @@ module Api
           invite_url:       session.invite_url,
           status:           session.status,
           end_reason:       session.end_reason,
+          failure_class:    session.failure_class,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,

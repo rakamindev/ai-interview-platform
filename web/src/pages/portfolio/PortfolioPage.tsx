@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -18,6 +18,10 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Why there is nothing to show. Held separately from `portfolio` rather than
+  // folded into it, so a blip during polling cannot blank a portfolio the
+  // assessor is already reading — the render prefers real content.
+  const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
@@ -25,19 +29,36 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
-    const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-      setGenerating(true);
-    } else if (data.portfolio) {
-      setPortfolio(data.portfolio);
-      setGenerating(false);
-      // Build overrides map
-      const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
-        overrideMap[o.portfolio_skill_id] = o;
-      });
-      setOverrides(overrideMap);
+    try {
+      const res = await sessionsApi.getPortfolio(Number(sessionId));
+      const data = res.data as any;
+
+      if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
+        setGenerating(true);
+        setError(null);
+      } else if (data.portfolio) {
+        setPortfolio(data.portfolio);
+        setGenerating(false);
+        setError(null);
+        // Build overrides map
+        const overrideMap: Record<number, AssessorOverride> = {};
+        data.portfolio.overrides.forEach((o: AssessorOverride) => {
+          overrideMap[o.portfolio_skill_id] = o;
+        });
+        setOverrides(overrideMap);
+      } else {
+        // The request succeeded but the body matches no known generation
+        // status. This used to fall through with no branch taken, rendering
+        // the header over an empty page and leaving the assessor to assume
+        // the results had been lost.
+        setError("The server did not return a portfolio for this session.");
+      }
+    } catch {
+      // Caught here rather than in the caller: fetchPortfolio shares one
+      // Promise.all with the vacancy and session requests, and a rejection
+      // there was swallowed by an empty catch — so a failed portfolio fetch
+      // produced a header over nothing, with no message and no way to retry.
+      setError("The portfolio could not be loaded.");
     }
   }, [sessionId]);
 
@@ -94,12 +115,40 @@ export default function PortfolioPage() {
     }
   };
 
+  const retry = () => {
+    setError(null);
+    setLoading(true);
+    fetchPortfolio().finally(() => setLoading(false));
+  };
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  // Nothing to show, and we know why — so say so instead of rendering a header
+  // over an empty page, which reads as "the results are gone". Guarded on
+  // `!portfolio` so a transient failure while polling never replaces content
+  // the assessor is already reading.
+  if (error && !portfolio && !generating) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="flex items-start gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium">Couldn't load this portfolio.</p>
+            <p className="mt-0.5">{error}</p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={retry}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Try again
+        </Button>
       </div>
     );
   }
@@ -187,19 +236,34 @@ export default function PortfolioPage() {
       {!generating && portfolio?.generation_status === "complete" && (
         <>
           {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
-              ))}
-          </div>
+          {/* A finished portfolio with nothing in it is a legitimate outcome, not
+              an error: the interview ended before any configured skill was
+              covered. Rendering the heading over an empty list said nothing at
+              all, which reads to an assessor as "the results are gone" — and
+              the brief names unassessed skills as an edge case by name. */}
+          {portfolio.skills.length === 0 ? (
+            <div className="border rounded-lg p-8 text-center space-y-1.5">
+              <p className="font-medium">No skills were assessed in this interview.</p>
+              <p className="text-sm text-muted-foreground">
+                The interview ended before any of this assessment's skills was
+                covered, so there is nothing to score yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold">Configured Skills</h2>
+              {portfolio.skills
+                .filter((s) => !s.is_discovered)
+                .map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))}
+            </div>
+          )}
 
           {/* Discovered skills */}
           {portfolio.skills.some((s) => s.is_discovered) && (

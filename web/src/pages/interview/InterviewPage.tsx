@@ -21,6 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import ConsentScreen from "@/components/interview/ConsentScreen";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -39,17 +40,30 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
+  // Consent starts as "not granted" so the first paint shows the consent
+  // screen rather than a Start button that the server would reject anyway.
+  const [consentGranted, setConsentGranted] = useState(false);
+  const [consentDeclined, setConsentDeclined] = useState(false);
+  const [candidateInfoFailed, setCandidateInfoFailed] = useState(false);
+  // Bumped by the retry button on the load-failure screen.
+  const [candidateInfoAttempt, setCandidateInfoAttempt] = useState(0);
+
   // Fetch candidate info
   useEffect(() => {
     if (!token) return;
+    setCandidateInfoFailed(false);
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        setConsentGranted(res.data.consent.granted);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
-  }, [token]);
+      // A missing invite is not a completed interview. Treating every failure
+      // as "complete" told candidates their session had succeeded when it had
+      // never loaded, so this gets its own state.
+      .catch(() => setCandidateInfoFailed(true));
+  }, [token, candidateInfoAttempt]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -140,9 +154,17 @@ export default function InterviewPage() {
     onReconnected: handleReconnected,
   });
 
-  const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
+  const { start: startCapture, stop: stopCapture, mute, unmute, setExpectingSpeech, micLost } = useAudioCapture({
     onFrame: send,
   });
+
+  // Silence only means something while it is the candidate's turn. The
+  // transport gate cannot answer that — it opens as soon as the socket is
+  // active, before the interviewer has said a word — so the speaker is what
+  // the detector follows.
+  useEffect(() => {
+    setExpectingSpeech(speaker === "candidate");
+  }, [speaker, setExpectingSpeech]);
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
@@ -189,23 +211,82 @@ export default function InterviewPage() {
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
+    // Candidate refused consent. Nothing started, so this must not resemble
+    // the completed screen — that one says the interview was recorded.
+    if (consentDeclined) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="text-4xl" role="img" aria-label="Thank you">🙏</div>
+          <h2 className="text-xl font-semibold">Thank you for your time</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            You chose not to continue, so this interview has not started.
+            <br />
+            Nothing you said was recorded, and no assessment was made.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            You can close this page. If you change your mind, reload it.
+          </p>
+        </div>
+      );
+    }
+
+    if (candidateInfoFailed) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="text-4xl" role="img" aria-label="Unable to load">⚠️</div>
+          <h2 className="text-xl font-semibold">We couldn't load this interview</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            The link may have expired or been replaced.
+            <br />
+            Nothing has been recorded. Please contact the recruiter who invited you,
+            or try again below.
+          </p>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setCandidateInfoAttempt((n) => n + 1)}
+          >
+            Try again
+          </Button>
+        </div>
+      );
+    }
+
+    if (!candidateInfo) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-8 space-y-6" aria-busy="true">
+          <div className="text-center space-y-2">
+            <div className="mx-auto h-6 w-48 animate-pulse rounded bg-muted" />
+            <div className="mx-auto h-4 w-24 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-72 animate-pulse rounded-lg bg-muted" />
+          <span className="sr-only">Loading your interview…</span>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
-          {candidateInfo && (
-            <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
-            </p>
-          )}
+          <h1 className="text-xl font-semibold">{candidateInfo.role_title}</h1>
+          <p className="text-sm text-muted-foreground">
+            {candidateInfo.time_limit_min} minutes
+          </p>
         </div>
 
-        {!hardwareCheckDone ? (
+        {!consentGranted ? (
+          <ConsentScreen
+            token={token ?? ""}
+            consent={candidateInfo.consent}
+            onGranted={() => setConsentGranted(true)}
+            onDeclined={() => setConsentDeclined(true)}
+          />
+        ) : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
               <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
+              <p>• The session will last up to {candidateInfo.time_limit_min} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
@@ -279,6 +360,26 @@ export default function InterviewPage() {
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
           <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+        </div>
+      )}
+
+      {/* The microphone stopped delivering samples. Deliberately a warning and
+          not a session end: losing the mic is the candidate's side of the
+          problem, they can fix it, and ending the interview over it would
+          throw away every answer they have already given. The completed screen
+          returns earlier, so reaching here means the interview is live. */}
+      {micLost && (
+        <div className="flex items-start gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
+          <span className="animate-pulse mt-1">●</span>
+          <div>
+            <strong className="font-medium">We can't hear your microphone.</strong>
+            <p className="mt-0.5">
+              Your interview is still running. Check that your microphone is not
+              muted or turned off, and that the right device is selected — then
+              speak once to test it. This message clears on its own once sound
+              comes through.
+            </p>
+          </div>
         </div>
       )}
 

@@ -2,7 +2,11 @@
 
 # faye-websocket requires EventMachine to be running for its callbacks to fire.
 # Puma does not start EM automatically, so we start it in a background thread.
-unless EventMachine.reactor_running?
+#
+# The test suite must never boot the reactor: a live reactor keeps the RSpec
+# process alive and prevents a clean exit. WebSocket behaviour is covered with
+# explicit doubles instead.
+unless Rails.env.test? || EventMachine.reactor_running?
   ready = Queue.new
 
   Thread.new do

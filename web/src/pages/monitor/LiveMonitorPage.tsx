@@ -18,13 +18,14 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
+import { describeFailureClass } from "@/lib/failureClass";
 import { sessionsApi } from "@/services/sessions";
 import {
   COVERAGE_STATE_LABELS,
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -62,8 +63,13 @@ export default function LiveMonitorPage() {
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
+  const { coverageMap, sessionEnded, sessionEndReason, sessionFailureClass, isConnected } =
     useCoverageWebSocket(Number(sessionId));
+
+  // null when the session ended normally, or when the recorded class is one
+  // this build does not recognise — in which case no explanation is shown
+  // rather than an invented one.
+  const sessionFailure = describeFailureClass(sessionFailureClass);
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {
@@ -170,20 +176,44 @@ export default function LiveMonitorPage() {
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+        <div
+          className={cn(
+            "flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3",
+            sessionFailure && "border-destructive/40 bg-destructive/5"
+          )}
+        >
+          {/* A failed session must not wear the same green tick as a clean
+              ending — the icon alone was telling the assessor "all good". */}
+          {sessionFailure ? (
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          ) : (
+            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+          )}
           <div>
             <span className="font-medium">Session ended</span>
-            {sessionEndReason && (
-              <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
-              </span>
+            {sessionFailure ? (
+              <span className="text-destructive ml-1.5">— {sessionFailure.label}</span>
+            ) : (
+              sessionEndReason && (
+                <span className="text-muted-foreground ml-1.5">
+                  — {sessionEndReason.replace(/_/g, " ")}
+                </span>
+              )
+            )}
+            {/* The action is the part that was missing. An assessor shown a
+                bare "failed" cannot tell whether to invite the candidate
+                again, wait for the provider, or page engineering — so each
+                class states its own next step instead of leaving the guess. */}
+            {sessionFailure && (
+              <p className="text-xs text-muted-foreground mt-1 max-w-prose">
+                {sessionFailure.action}
+              </p>
             )}
           </div>
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto"
+            className="ml-auto shrink-0"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
             View portfolio →

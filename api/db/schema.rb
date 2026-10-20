@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_20_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -66,6 +66,15 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
+  end
+
+  create_table "consents", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.string "version", null: false
+    t.datetime "consented_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_id"], name: "idx_consents_session_id_unique", unique: true
   end
 
   create_table "coverage_maps", force: :cascade do |t|
@@ -143,6 +152,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.string "failure_class"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
@@ -207,6 +217,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
+  add_foreign_key "consents", "sessions"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"

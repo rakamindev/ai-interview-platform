@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
+import { describeFailureClass } from "@/lib/failureClass";
 import { Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
 
@@ -18,8 +19,18 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
       </span>
     );
 
-  if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
+  if (session.status === "ended" && session.end_reason === "error") {
+    // A bare "failed" told the assessor nothing they could act on. The class
+    // says whether inviting this candidate again is worth it, or whether the
+    // fault was ours. `title` carries the full next step, since this row is
+    // too narrow to hold it; the monitor page shows the same text inline.
+    const failure = describeFailureClass(session.failure_class);
+    return (
+      <span className="text-xs text-destructive" title={failure?.action}>
+        Last: {failure?.label ?? "failed"}
+      </span>
+    );
+  }
 
   if (session.status === "ended")
     return <span className="text-xs text-muted-foreground">Last: completed</span>;

@@ -11,6 +11,7 @@ export interface Assessment {
   latest_session?: {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
+    failure_class?: string | null;
   };
 }
 
@@ -41,6 +42,7 @@ export interface Session {
   invite_url: string;
   status: "pending" | "active" | "ended";
   end_reason?: string;
+  failure_class?: string | null;
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
@@ -159,11 +161,26 @@ export interface SkillTaxonomy {
   l5_anchor: string;
 }
 
+export interface ConsentDetail {
+  label: string;
+  text: string;
+}
+
+export interface ConsentBlock {
+  version: string;
+  required: boolean;
+  summary: string[];
+  details: ConsentDetail[];
+  granted: boolean;
+  accepted_at: string | null;
+}
+
 export interface CandidateInfo {
   session_id: number;
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  consent: ConsentBlock;
 }
 
 export interface PaginationMeta {

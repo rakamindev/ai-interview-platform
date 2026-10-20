@@ -9,6 +9,7 @@ interface UseCoverageWebSocketResult {
   coverageMap: CoverageMap | null;
   sessionEnded: boolean;
   sessionEndReason: string | null;
+  sessionFailureClass: string | null;
   isConnected: boolean;
 }
 
@@ -16,6 +17,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const [coverageMap, setCoverageMap] = useState<CoverageMap | null>(null);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
+  const [sessionFailureClass, setSessionFailureClass] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -41,10 +43,15 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
         const msg = JSON.parse(event.data);
         if (msg.type === "coverage_update") {
           setCoverageMap({ skills: msg.skills ?? [], discovered: msg.discovered ?? [] });
+          // The initial state message carries the same failure fields as the
+          // live status one, so reloading the page after a failure still
+          // explains WHY the session ended instead of showing a bare "failed".
+          setSessionFailureClass(msg.failure_class ?? null);
         } else if (msg.type === "session_status") {
           if (msg.status === "ended") {
             setSessionEnded(true);
             setSessionEndReason(msg.end_reason ?? null);
+            setSessionFailureClass(msg.failure_class ?? null);
             // Stop reconnecting once session ends
             activeRef.current = false;
           }
@@ -81,5 +88,5 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     };
   }, [connect]);
 
-  return { coverageMap, sessionEnded, sessionEndReason, isConnected };
+  return { coverageMap, sessionEnded, sessionEndReason, sessionFailureClass, isConnected };
 }

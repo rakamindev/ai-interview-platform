@@ -82,7 +82,11 @@ module Exports
         pdf.text "#{skill.skill_label}", style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+        # ASCII arrow, deliberately not '→'. Prawn's built-in fonts encode
+        # Windows-1252 only, and U+2192 is not in that set, so this single
+        # character raised a 500 on every export of any session an assessor had
+        # ever corrected -- the one action this product most needs to work.
+        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} -> Override: #{LEVEL_LABELS[override.override_level]})" if override
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
         pdf.text level_text
       end

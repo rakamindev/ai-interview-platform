@@ -11,6 +11,13 @@ class PortfolioSkill < ApplicationRecord
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }
   validates :competency_summary, presence: true
 
+  # Tenancy sits two levels up, on the session, so a bare find reaches any
+  # organization's rows. The join alone does nothing — it has to carry the
+  # tenant condition, which is what the previous lookup omitted.
+  scope :for_tenant, lambda { |tenant_id|
+    joins(portfolio: :session).where(sessions: { tenant_id: tenant_id })
+  }
+
   # evidence is stored as JSONB array of quote strings
   def evidence_quotes
     Array(evidence)
