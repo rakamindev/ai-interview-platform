@@ -2,6 +2,8 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
 import { getStoredToken } from "@/stores/authAtom";
 import type { CoverageMap } from "@/types";
+import { parseCoverageUpdate } from "@/utils/coveragePayload";
+import { parseSessionStatus } from "@/utils/sessionStatusPayload";
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
 
@@ -38,19 +40,25 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
 
     ws.onmessage = (event) => {
       try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === "coverage_update") {
-          setCoverageMap({ skills: msg.skills ?? [], discovered: msg.discovered ?? [] });
-        } else if (msg.type === "session_status") {
-          if (msg.status === "ended") {
-            setSessionEnded(true);
-            setSessionEndReason(msg.end_reason ?? null);
-            // Stop reconnecting once session ends
-            activeRef.current = false;
-          }
+        const msg: unknown = JSON.parse(event.data);
+
+        const coverageUpdate = parseCoverageUpdate(msg);
+        if (coverageUpdate) {
+          setCoverageMap(coverageUpdate);
+          return;
+        }
+
+        const sessionStatus = parseSessionStatus(msg);
+        if (!sessionStatus) return;
+
+        if (sessionStatus.status === "ended") {
+          setSessionEnded(true);
+          setSessionEndReason(sessionStatus.end_reason);
+          // Stop reconnecting once session ends
+          activeRef.current = false;
         }
       } catch {
-        // ignore malformed frames
+        // Ignore malformed JSON frames.
       }
     };
 
