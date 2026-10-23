@@ -49,12 +49,12 @@ export interface Session {
 
 export interface CoverageSkill {
   id: number;
-  skill_id: number;
+  skill_id: string | null;
   skill_label: string;
   is_discovered: boolean;
   state: "not_yet" | "initiated" | "partial" | "covered";
   probe_count: number;
-  last_signal?: string;
+  last_signal?: string | null;
   updated_at?: string;
 }
 

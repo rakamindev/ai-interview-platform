@@ -46,6 +46,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
+    const [retryCount, setRetryCount] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
@@ -104,18 +105,25 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     // Step 1: OS & browser
     useEffect(() => {
-        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        setProgress((p) => ({
+            ...p,
+            osAndBrowser: ProctoringState.LOADING,
+        }));
+
+        const timeout = window.setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
+
             setProgress((p) => ({
                 ...p,
                 osAndBrowser: ProctoringState.PASSED,
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
-    }, []);
+
+        return () => window.clearTimeout(timeout);
+    }, [retryCount]);
 
     // Step 2: Internet
     useEffect(() => {
@@ -186,6 +194,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,
         });
+        setRetryCount((count) => count + 1);
     };
 
     const thresholds = DEFAULT_THRESHOLDS;
