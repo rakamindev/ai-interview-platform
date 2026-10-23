@@ -45,5 +45,5 @@ Rails.application.configure do
   config.active_support.disallowed_deprecation_warnings = []
 
   # Use a cache store that supports distributed caching.
-  config.cache_store = :redis_cache_store, { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
+  config.cache_store = :redis_cache_store, { url: ENV.fetch("REDIS_URI") } # required: fail at boot instead of guessing a URL
 end

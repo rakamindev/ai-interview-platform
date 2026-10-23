@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
-import { Zap } from "lucide-react";
+import { Zap, Quote, AlertTriangle } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -18,20 +18,28 @@ export default function SkillPortfolioCard({
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const isUnassessed = effectiveLevel === null;
 
   return (
-    <Card>
-      <CardContent className="p-4 space-y-4">
+    <Card className="border border-border/80 bg-card shadow-sm hover:border-primary/40 hover:shadow-md transition-all rounded-2xl">
+      <CardContent className="p-5 space-y-4">
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3.5">
             <LevelBadge level={effectiveLevel} />
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-foreground text-sm sm:text-base tracking-tight">
+                  {skill.skill_label}
+                </span>
                 {skill.is_discovered && (
-                  <span className="flex items-center gap-0.5 text-xs text-amber-600">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
                     <Zap className="h-3 w-3" /> Discovered
+                  </span>
+                )}
+                {override && (
+                  <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-300">
+                    Overridden by Assessor
                   </span>
                 )}
               </div>
@@ -41,36 +49,46 @@ export default function SkillPortfolioCard({
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
         </div>
 
-        {/* Low confidence note */}
-        {skill.ai_confidence?.toLowerCase() === "low" && (
-          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+        {/* Low confidence / Unassessed note */}
+        {isUnassessed ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/60 rounded-xl px-3.5 py-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <span>Keahlian ini belum dievaluasi secara mendalam selama wawancara berlangsung.</span>
           </div>
-        )}
+        ) : skill.ai_confidence?.toLowerCase() === "low" ? (
+          <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3.5 py-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <span>Hanya dieksplorasi singkat. Tingkat keyakinan rendah, disarankan konfirmasi tambahan jika keahlian ini krusial.</span>
+          </div>
+        ) : null}
 
         {/* Evidence */}
-        {skill.evidence.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Evidence from interview
-            </span>
-            <ul className="space-y-1">
+        {skill.evidence && skill.evidence.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <Quote className="h-3.5 w-3.5 text-primary" />
+              <span>Kutipan Bukti Percakapan Kandidat</span>
+            </div>
+            <div className="space-y-2">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
-                </li>
+                <div
+                  key={i}
+                  className="text-xs text-foreground bg-muted/40 border border-border/70 rounded-xl px-3.5 py-2.5 italic border-l-2 border-l-primary/80"
+                >
+                  "{quote}"
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
 
         {/* Competency summary */}
         {skill.competency_summary && (
-          <div className="space-y-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Competency summary
+          <div className="space-y-1.5 pt-1">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Ringkasan Analisis Kompetensi AI
             </span>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-xs text-foreground/90 leading-relaxed bg-muted/30 p-3 rounded-xl border border-border/60">
               {skill.competency_summary}
             </p>
           </div>

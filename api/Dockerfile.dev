@@ -1,0 +1,21 @@
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  libpq-dev \
+  tzdata \
+  libjemalloc2 \
+  postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4
+
+COPY . .
+
+ENV RAILS_ENV=test
+
+CMD ["bundle", "exec", "rspec"]

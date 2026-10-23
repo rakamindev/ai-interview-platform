@@ -24,7 +24,7 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Radio, Zap, ShieldAlert } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -42,8 +42,8 @@ function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
   return (
-    <span className="flex items-center gap-1 text-sm tabular-nums text-muted-foreground">
-      <Clock className="h-3.5 w-3.5" />
+    <span className="flex items-center gap-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-xl bg-muted/60 text-foreground border border-border/60 shadow-sm">
+      <Clock className="h-3.5 w-3.5 text-primary" />
       {mm}:{ss}
     </span>
   );
@@ -54,6 +54,7 @@ export default function LiveMonitorPage() {
   const navigate = useNavigate();
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [assessmentName, setAssessmentName] = useState<string>("");
+  const [candidateName, setCandidateName] = useState<string>("");
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
@@ -65,7 +66,7 @@ export default function LiveMonitorPage() {
   const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
     useCoverageWebSocket(Number(sessionId));
 
-  // On session_ended from WS — stop polling, update local state
+  // On session_ended from WS
   useEffect(() => {
     if (sessionEnded) {
       setSessionActive(false);
@@ -83,6 +84,7 @@ export default function LiveMonitorPage() {
         const s = sRes.data.session as any;
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
+        setCandidateName(s.candidate_name ?? "");
         if (s.status !== "active") setSessionActive(false);
 
         const turns = tRes.data.turns;
@@ -106,7 +108,7 @@ export default function LiveMonitorPage() {
         lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
       }
     } catch {
-      // transient poll failure — silently skip, retry on next interval
+      // transient poll failure
     }
   }, [sessionId]);
 
@@ -129,10 +131,10 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-32 w-full" />
+      <div className="max-w-3xl mx-auto space-y-4 py-6">
+        <Skeleton className="h-10 w-64 rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
+        <Skeleton className="h-32 w-full rounded-2xl" />
       </div>
     );
   }
@@ -141,83 +143,127 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 py-4">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-card border border-border/80 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3">
+          <Link
+            to={`/assessments/${id}/invite`}
+            className="p-2.5 rounded-xl bg-muted/60 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Pemantauan Sesi Langsung</h1>
+              <span className={cn(
+                "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+                isConnected
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+              )}>
+                <Radio className="h-3 w-3 animate-pulse" />
+                {isConnected ? "Live Stream" : "Menghubungkan..."}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {candidateName ? `Kandidat: ${candidateName}` : assessmentName || "Live Interview Monitor"}
+            </p>
           </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-end sm:self-auto">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
-            <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
-          </span>
+          {sessionActive && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={ending}
+                  className="rounded-xl text-xs font-semibold shadow-sm"
+                >
+                  {ending ? "Mengakhiri..." : "Akhiri Sesi"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-2xl bg-card border-border">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-foreground">Akhiri sesi wawancara sekarang?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-muted-foreground text-xs">
+                    Wawancara suara kandidat akan dihentikan dan sistem segera memulai proses evaluasi portofolio AI.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-xl">Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleEndSession}
+                    className="rounded-xl bg-destructive text-destructive-foreground font-semibold"
+                  >
+                    Ya, Akhiri Sesi
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-          <div>
-            <span className="font-medium">Session ended</span>
-            {sessionEndReason && (
-              <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
-              </span>
-            )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+            <div>
+              <span className="font-bold text-sm text-foreground">Sesi Wawancara Selesai</span>
+              {sessionEndReason && (
+                <span className="text-xs text-muted-foreground ml-1.5">
+                  ({sessionEndReason.replace(/_/g, " ")})
+                </span>
+              )}
+            </div>
           </div>
           <Button
             size="sm"
-            variant="outline"
-            className="ml-auto"
+            className="rounded-xl bg-primary text-primary-foreground font-semibold text-xs ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            Buka Portofolio Hasil Evaluasi
           </Button>
         </div>
       )}
 
-      {/* Coverage map */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Coverage Status</CardTitle>
+      {/* Coverage status card */}
+      <Card className="rounded-2xl border border-border/80 bg-card shadow-sm">
+        <CardHeader className="pb-3 border-b border-border/60">
+          <CardTitle className="text-sm font-bold text-foreground flex items-center justify-between">
+            <span>Cakupan Kompetensi Real-Time</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {configuredSkills.length} keahlian terdaftar
+            </span>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-4 space-y-4">
           {configuredSkills.length === 0 && discoveredSkills.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Waiting for interview to begin...</p>
+            <p className="text-xs text-muted-foreground py-2 text-center">Menunggu sesi wawancara dimulai...</p>
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{skill.skill_label}</span>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground">{skill.skill_label}</span>
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     {skill.probe_count > 0 && (
-                      <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                      <span className="font-mono">{skill.probe_count} probe</span>
                     )}
-                    <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
+                    <span className="font-medium capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                   </div>
                 </div>
                 <Progress
                   value={COVERAGE_STATE_WIDTH[skill.state]}
                   indicatorClassName={COVERAGE_STATE_COLOR[skill.state]}
-                  className="h-2"
+                  className="h-2 rounded-full bg-muted"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-[11px] text-muted-foreground italic truncate">
                     "{skill.last_signal}"
                   </p>
                 )}
@@ -229,31 +275,31 @@ export default function LiveMonitorPage() {
           {discoveredSkills.length > 0 && (
             <>
               {configuredSkills.length > 0 && <Separator />}
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Discovered
+              <div className="space-y-3 pt-1">
+                <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5" />
+                  Keahlian Tambahan yang Terdeteksi
                 </p>
                 {discoveredSkills.map((skill) => (
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-foreground flex items-center gap-1">
                         {skill.skill_label}
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         {skill.probe_count > 0 && (
-                          <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                          <span className="font-mono">{skill.probe_count} probe</span>
                         )}
-                        <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
+                        <span className="font-medium capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                       </div>
                     </div>
                     <Progress
                       value={COVERAGE_STATE_WIDTH[skill.state]}
-                      indicatorClassName="bg-amber-400"
-                      className="h-2"
+                      indicatorClassName="bg-amber-500"
+                      className="h-2 rounded-full bg-muted"
                     />
                     {skill.last_signal && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-[11px] text-muted-foreground italic truncate">
                         "{skill.last_signal}"
                       </p>
                     )}
@@ -265,16 +311,16 @@ export default function LiveMonitorPage() {
         </CardContent>
       </Card>
 
-      {/* Live transcript */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Live Transcript</CardTitle>
+      {/* Live transcript feed */}
+      <Card className="rounded-2xl border border-border/80 bg-card shadow-sm">
+        <CardHeader className="pb-3 border-b border-border/60">
+          <CardTitle className="text-sm font-bold text-foreground">Transkrip Langsung</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {transcript.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No transcript yet.</p>
+            <p className="text-xs text-muted-foreground py-4 text-center">Belum ada percakapan terekam.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
               {transcript.map((turn) => (
                 <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
               ))}
@@ -284,42 +330,11 @@ export default function LiveMonitorPage() {
       </Card>
 
       {endError && (
-        <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
-          Failed to end session. Please try again.
+        <div className="border border-destructive/30 bg-destructive/10 rounded-2xl p-3 text-xs text-destructive flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4" />
+          <span>Gagal mengakhiri sesi. Silakan coba lagi.</span>
         </div>
       )}
-
-      {/* End Session */}
-      <div className="flex justify-end">
-        {sessionActive ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={ending}>
-                {ending ? "Ending..." : "End Session"}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>End the session now?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  The interview will stop and portfolio generation will begin.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleEndSession}>End Session</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
-          >
-            View portfolio →
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

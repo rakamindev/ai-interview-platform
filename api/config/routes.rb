@@ -10,11 +10,9 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
-      post 'speed_test', to: proc { |env|
-        bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
-      }
+      # Candidate pre-check throughput probe (download + upload)
+      get  'speed_test', to: 'speed_tests#show'
+      post 'speed_test', to: 'speed_tests#create'
 
       # Assessments
       resources :assessments do

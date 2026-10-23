@@ -22,6 +22,10 @@ module Api
       def create
         assessment = Assessment.find(params[:assessment_id])
 
+        unless assessment.assessment_skills.exists?
+          return json_error("Assessment must have at least one configured skill before creating a session.", :unprocessable_entity)
+        end
+
         session = assessment.sessions.new(
           candidate_id:   params.dig(:session, :candidate_id),
           candidate_name: params.dig(:session, :candidate_name).presence,

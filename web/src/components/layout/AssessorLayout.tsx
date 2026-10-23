@@ -1,11 +1,12 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { RakaminLogo } from "@/components/ui/RakaminLogo";
+import { ClipboardList, Briefcase, LogOut, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation } from "react-router-dom";
 
 const navItems = [
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
@@ -25,51 +26,76 @@ export default function AssessorLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Top header */}
-      <header className="border-b bg-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
+      {/* Top Standard SaaS Navigation Bar */}
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-card/90 backdrop-blur-md shadow-sm transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          {/* Left: Brand Monogram & Standard Nav Links */}
+          <div className="flex items-center gap-8">
+            <Link to="/assessments" className="transition-opacity hover:opacity-90 flex-shrink-0">
+              <RakaminLogo size="md" subtitle="Talent Intelligence" />
             </Link>
-            <nav className="flex items-center gap-1">
-              {navItems.map(({ href, label, icon: Icon }) => (
-                <Link
-                  key={href}
-                  to={href}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
-                    location.pathname.startsWith(href)
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
-              ))}
+
+            <nav className="hidden md:flex items-center gap-1.5">
+              {navItems.map(({ href, label, icon: Icon }) => {
+                const isActive = location.pathname.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    to={href}
+                    className={cn(
+                      "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150",
+                      isActive
+                        ? "bg-primary/10 text-primary font-bold shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                    {label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
+
+          {/* Right: Tenant Pill, Theme Toggle & Logout Button */}
           <div className="flex items-center gap-3">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
-                Tenant: {tenant.name}
-              </span>
+              <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-border/80 bg-muted/40 text-xs font-medium text-foreground shadow-sm">
+                <Building2 className="h-3.5 w-3.5 text-primary" />
+                <span className="truncate max-w-[150px] font-semibold">{tenant.name}</span>
+              </div>
             )}
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+
+            <div className="hidden sm:block h-5 w-[1px] bg-border/80 mx-0.5" />
+
+            <ThemeToggle variant="button" />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="h-9 px-3 rounded-xl text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Page content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>&copy; {new Date().getFullYear()} Rakamin Talent Intelligence Platform. Monozukuri Engineering.</span>
+          <span className="text-[11px] opacity-75">Compliant with UU PDP No. 27/2022</span>
+        </div>
+      </footer>
     </div>
   );
 }

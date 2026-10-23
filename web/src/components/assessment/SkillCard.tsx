@@ -82,7 +82,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
               className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
               {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {anchorsOpen ? "Hide L1–L5 anchors" : "Show L1–L5 anchors"}
+              {anchorsOpen ? "Hide L1-L5 anchors" : "Show L1-L5 anchors"}
             </button>
 
             {anchorsOpen && (

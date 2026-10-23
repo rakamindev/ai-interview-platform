@@ -17,3 +17,6 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Tooling
+.superpowers/

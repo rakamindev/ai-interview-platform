@@ -6,9 +6,11 @@ class PortfolioSkill < ApplicationRecord
   belongs_to :portfolio
   has_one :assessor_override, dependent: :destroy
 
+  scope :in_current_tenant, -> { where(portfolio_id: Portfolio.in_current_tenant.select(:id)) }
+
   validates :skill_label, presence: true
-  validates :ai_level, numericality: { only_integer: true, in: 1..5 }
-  validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }
+  validates :ai_level, numericality: { only_integer: true, in: 1..5 }, allow_nil: true
+  validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }, allow_nil: true
   validates :competency_summary, presence: true
 
   # evidence is stored as JSONB array of quote strings

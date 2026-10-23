@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from "@/utils/internetSpeedTest";
+import { testInternetSpeed, DEFAULT_THRESHOLDS, formatNumber, type InternetSpeedResult } from "@/utils/internetSpeedTest";
 import {
     ProctoringState,
     type HardwareCheckingProgress,
@@ -9,7 +9,7 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ShieldCheck, Activity } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
@@ -17,19 +17,28 @@ interface HardwareCheckProps {
 
 function StateIcon({ state }: { state: ProctoringState }) {
     if (state === ProctoringState.LOADING)
-        return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+        return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
     if (state === ProctoringState.PASSED)
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-500" />;
     if (state === ProctoringState.ERROR)
         return <XCircle className="h-4 w-4 text-destructive" />;
-    return <Circle className="h-4 w-4 text-muted-foreground/40" />;
+    return <Circle className="h-4 w-4 text-muted-foreground/30" />;
 }
 
 function stateLabel(state: ProctoringState) {
-    if (state === ProctoringState.LOADING) return "Checking...";
-    if (state === ProctoringState.PASSED) return "Passed";
-    if (state === ProctoringState.ERROR) return "Failed";
-    return "Waiting";
+    if (state === ProctoringState.LOADING) return "Memeriksa...";
+    if (state === ProctoringState.PASSED) return "Lolos";
+    if (state === ProctoringState.ERROR) return "Gagal";
+    return "Menunggu";
+}
+
+// A null value was not measured (the probe timed out), so it shows as a dash.
+function SpeedFigure({ label, unit, value, ok }: { label: string; unit: string; value: number | null; ok: boolean }) {
+    return (
+        <span className={ok ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-destructive font-medium"}>
+            {label}{value === null ? "—" : formatNumber(value)} {unit}
+        </span>
+    );
 }
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
@@ -99,192 +108,185 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 requestAnimationFrame(update);
             };
             update();
-        } catch { /* silent */ }
+        } catch { }
     };
 
-    // Step 1: OS & browser
-    useEffect(() => {
-        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
-            getBrowserInfo();
-            getOSInfo();
-            getCurrentTime();
-            setProgress((p) => ({
-                ...p,
-                osAndBrowser: ProctoringState.PASSED,
-                internet: ProctoringState.LOADING,
+    const thresholds = DEFAULT_THRESHOLDS;
+
+    const runChecks = async () => {
+        // 1. OS & Browser
+        setProgress((prev) => ({ ...prev, osAndBrowser: ProctoringState.LOADING }));
+        const os = getOSInfo();
+        const browser = getBrowserInfo();
+        const osPassed = Boolean(os && os !== "Unknown" && browser && browser.browser !== "Unknown");
+        setProgress((prev) => ({
+            ...prev,
+            osAndBrowser: osPassed ? ProctoringState.PASSED : ProctoringState.ERROR,
+        }));
+
+        // 2. Internet Speed (clear the previous result so stale reasons don't sit next to the spinner)
+        setInternetResult(null);
+        setProgress((prev) => ({ ...prev, internet: ProctoringState.LOADING }));
+        const speed = await testInternetSpeed(thresholds);
+        setInternetResult(speed);
+        setProgress((prev) => ({
+            ...prev,
+            internet: speed.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
+        }));
+
+        // 3. Camera
+        if (REQUIRE_CAMERA) {
+            setProgress((prev) => ({ ...prev, camera: ProctoringState.LOADING }));
+            const camPassed = await checkCamera();
+            if (camPassed) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    setVideoStream(stream);
+                } catch { }
+            }
+            setProgress((prev) => ({
+                ...prev,
+                camera: camPassed ? ProctoringState.PASSED : ProctoringState.ERROR,
             }));
-        }, 800);
+        } else {
+            setProgress((prev) => ({ ...prev, camera: ProctoringState.PASSED }));
+        }
+
+        // 4. Microphone
+        setProgress((prev) => ({ ...prev, microphone: ProctoringState.LOADING }));
+        try {
+            const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            startAudioLevelMonitoring(micStream);
+            setProgress((prev) => ({ ...prev, microphone: ProctoringState.PASSED }));
+        } catch {
+            setProgress((prev) => ({ ...prev, microphone: ProctoringState.ERROR }));
+        }
+
+        // 5. Audio Output
+        setProgress((prev) => ({ ...prev, audio: ProctoringState.LOADING }));
+        const audioPassed = await checkAudioPlayback();
+        setProgress((prev) => ({
+            ...prev,
+            audio: audioPassed ? ProctoringState.PASSED : ProctoringState.ERROR,
+        }));
+    };
+
+    useEffect(() => {
+        runChecks();
     }, []);
 
-    // Step 2: Internet
-    useEffect(() => {
-        if (progress.internet !== ProctoringState.LOADING) return;
-        testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
-            setInternetResult(result);
-            setProgress((p) => ({
-                ...p,
-                internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
-            }));
-        });
-    }, [progress.internet]);
-
-    // Step 3: Camera + microphone (or microphone-only when camera disabled)
-    useEffect(() => {
-        const cameraLoading = progress.camera === ProctoringState.LOADING;
-        const micLoading = !REQUIRE_CAMERA && progress.microphone === ProctoringState.LOADING;
-        if (!cameraLoading && !micLoading) return;
-
-        const getStream = REQUIRE_CAMERA
-            ? checkCamera()
-            : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
-
-        getStream.then((stream) => {
-            if (stream) {
-                if (REQUIRE_CAMERA) setVideoStream(stream);
-                startAudioLevelMonitoring(stream);
-                setProgress((p) => ({
-                    ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.PASSED } : {}),
-                    microphone: ProctoringState.PASSED,
-                    audio: ProctoringState.LOADING,
-                }));
-            } else {
-                setProgress((p) => ({
-                    ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.ERROR } : {}),
-                    microphone: ProctoringState.ERROR,
-                }));
-            }
-        });
-    }, [progress.camera, progress.microphone]);
-
-    // Step 4: Audio output
-    useEffect(() => {
-        if (progress.audio !== ProctoringState.LOADING) return;
-        checkAudioPlayback().then((ok) => {
-            setProgress((p) => ({
-                ...p,
-                audio: ok ? ProctoringState.PASSED : ProctoringState.ERROR,
-            }));
-        });
-    }, [progress.audio]);
-
     const retryAll = () => {
-        videoStream?.getTracks().forEach((t) => t.stop());
-        setVideoStream(null);
-        setInternetResult(null);
         setProgress({
-            osAndBrowser: ProctoringState.LOADING,
+            osAndBrowser: ProctoringState.WAITING,
             internet: ProctoringState.WAITING,
             camera: ProctoringState.WAITING,
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,
         });
+        runChecks();
     };
 
-    const thresholds = DEFAULT_THRESHOLDS;
-
-    const rows: { key: keyof HardwareCheckingProgress; label: string }[] = [
-        { key: "osAndBrowser", label: "OS & browser" },
-        { key: "internet", label: "Internet" },
-        ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: "Camera" }] : []),
-        { key: "microphone", label: "Microphone" },
-        { key: "audio", label: "Audio output" },
+    const rows: { key: keyof HardwareCheckingProgress; label: string; desc: string }[] = [
+        { key: "osAndBrowser", label: "Sistem Operasi & Browser", desc: "Verifikasi kompatibilitas web platform" },
+        { key: "internet", label: "Koneksi Jaringan Internet", desc: "Unduh, unggah & latensi ke server wawancara" },
+        ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: "Kamera Video", desc: "Uji akses video stream" }] : []),
+        { key: "microphone", label: "Mikrofon / Input Suara", desc: "Uji tangkapan gelombang suara mikrofon" },
+        { key: "audio", label: "Speaker / Output Audio", desc: "Uji pemutaran suara asisten AI" },
     ];
 
     const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
 
     return (
-        <div className="rounded-lg border bg-card overflow-hidden">
-            {/* Camera preview */}
-            {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
-                {videoStream ? (
-                    <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-                ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                        <svg className="w-10 h-10 opacity-30" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                        </svg>
-                        <p className="text-xs">Camera not active</p>
-                    </div>
-                )}
-                {progress.camera === ProctoringState.PASSED && videoStream && (
-                    <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        LIVE
-                    </span>
-                )}
-            </div>}
-
+        <div className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-sm">
             {/* Checklist */}
-            <div className="divide-y">
-                {rows.map(({ key, label }) => (
-                    <div key={key} className="px-4 py-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{label}</span>
-                            <div className="flex items-center gap-2">
-                                <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
-                                    progress[key] === ProctoringState.ERROR ? "text-destructive" :
-                                        "text-muted-foreground"
-                                    }`}>
-                                    {stateLabel(progress[key])}
-                                </span>
-                            </div>
-                        </div>
+            <div className="divide-y divide-border/60">
+                {rows.map(({ key, label, desc }) => (
+                    <div key={key} className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <span className="text-sm font-semibold text-foreground">{label}</span>
+                            <p className="text-[11px] text-muted-foreground">{desc}</p>
 
-                        {/* Internet speed details */}
-                        {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Mic level bar */}
-                        {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
-                            <div className="mt-2 flex items-center gap-2">
-                                <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
-                                    <div
-                                        className="h-full bg-green-500 transition-all duration-150"
-                                        style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
+                            {/* Internet speed details */}
+                            {key === "internet" && internetResult && !internetResult.error && (
+                                <div className="mt-1.5 flex gap-3 text-xs">
+                                    <SpeedFigure
+                                        label="↓ "
+                                        unit="Mbps"
+                                        value={internetResult.download}
+                                        ok={internetResult.download !== null && internetResult.download >= thresholds.minDownloadMbps}
+                                    />
+                                    <SpeedFigure
+                                        label="↑ "
+                                        unit="Mbps"
+                                        value={internetResult.upload}
+                                        ok={internetResult.upload !== null && internetResult.upload >= thresholds.minUploadMbps}
+                                    />
+                                    <SpeedFigure
+                                        label=""
+                                        unit="ms"
+                                        value={internetResult.ping}
+                                        ok={internetResult.ping !== null && internetResult.ping <= thresholds.maxPingMs}
                                     />
                                 </div>
-                                <span className="text-xs text-muted-foreground w-8 text-right">{audioLevel}</span>
-                            </div>
-                        )}
+                            )}
+
+                            {/* Why the internet check failed, so the candidate knows what to fix */}
+                            {key === "internet" && internetResult && !internetResult.passed && (
+                                <ul className="mt-1 text-[11px] text-destructive space-y-0.5">
+                                    {(internetResult.error ? [internetResult.error] : internetResult.failures).map((reason) => (
+                                        <li key={reason}>{reason}</li>
+                                    ))}
+                                </ul>
+                            )}
+
+                            {/* Mic level bar */}
+                            {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
+                                <div className="mt-2 flex items-center gap-2 max-w-xs">
+                                    <Activity className="h-3.5 w-3.5 text-primary" />
+                                    <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden border border-border/50">
+                                        <div
+                                            className="h-full bg-primary transition-all duration-150"
+                                            style={{ width: `${Math.min(audioLevel * 3, 100)}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-[10px] font-mono text-muted-foreground w-6 text-right">{audioLevel}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                            <StateIcon state={progress[key]} />
+                            <span className={`text-xs font-semibold w-20 text-right ${progress[key] === ProctoringState.PASSED ? "text-emerald-600 dark:text-emerald-400" :
+                                progress[key] === ProctoringState.ERROR ? "text-destructive" :
+                                    "text-muted-foreground"
+                                }`}>
+                                {stateLabel(progress[key])}
+                            </span>
+                        </div>
                     </div>
                 ))}
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
-                {hasError && (
-                    <Button variant="outline" size="sm" onClick={retryAll}>
+            <div className="px-5 py-4 border-t border-border/80 flex items-center justify-between gap-3 bg-muted/30">
+                {hasError ? (
+                    <Button variant="outline" size="sm" onClick={retryAll} className="rounded-xl border-border">
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Retry
+                        Uji Ulang
                     </Button>
+                ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                        <span>Sistem siap merekam audio sesi secara aman</span>
+                    </div>
                 )}
                 <Button
                     size="sm"
-                    className="ml-auto"
+                    className="ml-auto rounded-xl bg-primary text-primary-foreground font-semibold px-5 shadow-sm"
                     disabled={!allPassed}
                     onClick={onStart}
                 >
-                    Start Interview
+                    Mulai Wawancara
                 </Button>
             </div>
         </div>

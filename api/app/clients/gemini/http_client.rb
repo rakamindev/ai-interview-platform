@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -18,8 +18,8 @@ module Gemini
     class TimeoutError < ApiError; end
 
     def initialize(model: nil, api_key: nil, timeout: 60)
-      @model = model
-      @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
+      @model = (model || ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.6-flash')).to_s.tr('"\'', '').strip
+      @api_key = (api_key || ENV.fetch('GEMINI_API_KEY')).to_s.tr('"\'', '').strip
       @timeout = timeout
       @connection = build_connection
     end
@@ -42,7 +42,9 @@ module Gemini
     end
 
     def request_headers
-      { 'Content-Type' => 'application/json', 'x-goog-api-key' => @api_key }
+      headers = { 'Content-Type' => 'application/json', 'x-goog-api-key' => @api_key }
+      headers['Authorization'] = "Bearer #{@api_key}" if @api_key.to_s.start_with?('AQ.', 'ya29.')
+      headers
     end
 
     def request_body(prompt, temperature)

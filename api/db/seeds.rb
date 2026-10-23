@@ -77,7 +77,21 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
-# ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
+# ── Admin Users ─────────────────────────────────────────────────────────────
+# Credentials come from ENV so no real address or shared password lives in the repo.
+# Without SEED_ADMIN_PASSWORD a random one is generated and printed once for local use.
+admin_email = ENV.fetch('SEED_ADMIN_EMAIL', 'admin@example.com')
+admin = User.find_or_initialize_by(email: admin_email)
+if admin.new_record? || ENV['SEED_ADMIN_PASSWORD'].present?
+  password = ENV['SEED_ADMIN_PASSWORD'].presence || SecureRandom.base58(16)
+  admin.password = password
+  admin.role = 'admin'
+  admin.save!
+  puts "  User ready: #{admin.email} (role: admin)"
+  puts "  Generated password (set SEED_ADMIN_PASSWORD to choose one): #{password}" if ENV['SEED_ADMIN_PASSWORD'].blank?
+else
+  puts "  User exists: #{admin.email} (password unchanged)"
+end
 
 B7_SKILLS = [
   # ── Engineering ──────────────────────────────────────────────────────────────

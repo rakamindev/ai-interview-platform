@@ -12,31 +12,34 @@ module Sessions
     end
 
     def call(reason: 'manual_assessor')
-      # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
-      if @session.ended?
-        manual = %w[manual_candidate manual_assessor]
-        if manual.include?(reason.to_s) && @session.end_reason == 'error'
-          @session.update_column(:end_reason, reason.to_s)
-        end
-        return @session
-      end
-
-      reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
+      should_enqueue = false
 
       ActiveRecord::Base.transaction do
+        @session.lock!
+
+        if @session.ended?
+          manual = %w[manual_candidate manual_assessor]
+          if manual.include?(reason.to_s) && @session.end_reason == 'error'
+            @session.update_column(:end_reason, reason.to_s)
+          end
+          return @session
+        end
+
+        valid_reason = VALID_REASONS.include?(reason.to_s) ? reason.to_s : 'manual_assessor'
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
 
         @session.update!(
           status:           'ended',
-          end_reason:       reason.to_s,
+          end_reason:       valid_reason,
           ended_at:         Time.current,
           duration_seconds: duration
         )
 
         create_portfolio
+        should_enqueue = true
       end
 
-      enqueue_portfolio_generation
+      enqueue_portfolio_generation if should_enqueue
       publish_status_update
       Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
 
@@ -46,7 +49,7 @@ module Sessions
     private
 
     def publish_status_update
-      redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
+      redis = ::Redis.new(url: ENV.fetch('REDIS_URI', 'redis://localhost:6379/0'))
       redis.publish("coverage:#{@session.id}", { type: 'session_status', status: @session.status, end_reason: @session.end_reason }.to_json)
     rescue => e
       Rails.logger.error("[EndHandler] Failed to publish status update: #{e.message}")

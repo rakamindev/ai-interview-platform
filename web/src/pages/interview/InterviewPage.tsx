@@ -1,18 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import VoiceBars from "@/components/interview/VoiceBars";
+import AudioWaveformVisualizer from "@/components/interview/AudioWaveformVisualizer";
+import AIThoughtIndicator, { AIInteractionStatus } from "@/components/interview/AIThoughtIndicator";
+import EndSessionModal from "@/components/interview/EndSessionModal";
 import InterviewTimer from "@/components/interview/InterviewTimer";
 import ConnectionStatus from "@/components/interview/ConnectionStatus";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
@@ -21,7 +12,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle2, Mic, MicOff, Shield, Radio, Sparkles, AlertCircle } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -31,9 +22,12 @@ export default function InterviewPage() {
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
-  const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [hardwareCheckDone, setHardwareCheckDone] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
+  const [endModalOpen, setEndModalOpen] = useState(false);
+  const [isEndingSession, setIsEndingSession] = useState(false);
+  
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
@@ -58,10 +52,8 @@ export default function InterviewPage() {
     setInterviewState(state);
 
     if (state === "draining_audio") {
-      // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
       muteRef.current?.();
       audioCompleteCalledRef.current = false;
-      // Safety timeout: call audio_complete after 10s even if drain never fires
       audioCompleteSafetyTimerRef.current = setTimeout(() => {
         callAudioComplete();
       }, 10_000);
@@ -91,7 +83,7 @@ export default function InterviewPage() {
   }, []);
 
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
-    setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
+    setTranscript((prev) => [...prev.slice(-9), turn]);
   }, []);
 
   const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
@@ -106,8 +98,6 @@ export default function InterviewPage() {
       clearTimeout(audioCompleteSafetyTimerRef.current);
       audioCompleteSafetyTimerRef.current = null;
     }
-    // Retry until success — endpoint now always returns ended:true or an error.
-    // ended:false is no longer a valid response; any success means the session ended.
     const attempt = async (delay: number) => {
       try {
         await sessionsApi.audioComplete(token);
@@ -164,61 +154,84 @@ export default function InterviewPage() {
     setInterviewState("connecting");
     connect();
     await startCapture();
-    // Start muted — only unmute when backend sends speaker_changed: candidate.
-    // This prevents mic audio from being sent during AI speech, since separate
-    // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
   }, [sessionId, connect, startCapture]);
 
   const endInterview = useCallback(async () => {
-    setInterviewState("ending");
-    if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
-    stopCapture();
-    stopPlayback();
-    sendJson({ type: "end_session" });
-    disconnect();
-    setInterviewState("complete");
+    setIsEndingSession(true);
+    try {
+      setInterviewState("ending");
+      if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
+      stopCapture();
+      stopPlayback();
+      sendJson({ type: "end_session" });
+      disconnect();
+      setInterviewState("complete");
+    } finally {
+      setIsEndingSession(false);
+      setEndModalOpen(false);
+    }
   }, [stopCapture, stopPlayback, sendJson, disconnect]);
+
+  const aiSpeaking = speaker === "ai";
+  const candidateSpeaking = speaker === "candidate" && !micMuted;
+
+  const aiInteractionStatus: AIInteractionStatus = useMemo(() => {
+    if (interviewState === "reconnecting" || interviewState === "draining_audio") return "thinking";
+    if (aiSpeaking) return "speaking";
+    if (candidateSpeaking) return "listening";
+    return "idle";
+  }, [interviewState, aiSpeaking, candidateSpeaking]);
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
       ? connectionLostLong ? "lost" : "reconnecting"
       : connectionState === "connected"
       ? "connected"
-      : "reconnecting";
+      : "lost";
 
-  // ── State A: Pre-start ──────────────────────────────────────────────────
+  // ── State A: Idle (Pre-flight Hardware Check) ──────────────────────────
   if (interviewState === "idle") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+            <Sparkles className="w-3.5 h-3.5" />
+            Asesmen Kompetensi Berbasis AI
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            {candidateInfo?.role_title ?? "Sesi Wawancara AI"}
+          </h1>
           {candidateInfo && (
-            <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
+            <p className="text-muted-foreground text-xs sm:text-sm max-w-md mx-auto">
+              Estimasi durasi wawancara maksimum: <strong className="text-foreground">{candidateInfo.time_limit_min} Menit</strong>
             </p>
           )}
         </div>
 
         {!hardwareCheckDone ? (
-          <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
+          <div className="space-y-6 bg-card border border-border/80 rounded-3xl p-6 shadow-sm">
+            <div className="bg-muted/40 rounded-2xl p-4 text-xs space-y-2 text-foreground/90 border border-border/60">
+              <p className="font-semibold text-foreground">Panduan Sebelum Memulai:</p>
+              <p>• Pastikan Anda berada di ruangan yang tenang dan menggunakan headset/mikrofon berkualitas baik.</p>
+              <p>• Asisten AI akan mengajukan pertanyaan teknis dan mendalam sesuai standar kompetensi posisi.</p>
+              <p>• Data wawancara dan transkrip Anda dilindungi penuh di bawah UU Perlindungan Data Pribadi (UU PDP No. 27/2022).</p>
             </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
-              <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
+          <div className="space-y-4 bg-card border border-border/80 rounded-3xl p-8 shadow-sm text-center">
+            <div className="flex items-center justify-center gap-2 text-sm text-emerald-600 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 font-semibold">
+              <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+              <span>Semua pemeriksaan mikrofon & audio berhasil. Anda siap memulai!</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
-              <Mic className="h-4 w-4 mr-2" />
-              Start Interview
+            <Button
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-2xl shadow-md text-base transition-all active:scale-[0.99]"
+              size="lg"
+              onClick={startInterview}
+            >
+              <Mic className="h-5 w-5 mr-2" />
+              Mulai Sesi Wawancara Sekarang
             </Button>
           </div>
         )}
@@ -229,98 +242,97 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
+      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-6">
+        <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-xl">
+          <CheckCircle2 className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Wawancara Selesai</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+            Terima kasih telah meluangkan waktu. Seluruh tanggapan Anda telah direkam dan disimpan secara aman. Tim rekrutmen & sistem asesmen akan segera meninjau portofolio hasil evaluasi Anda.
+          </p>
+        </div>
+        <div className="pt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Shield className="w-4 h-4 text-primary" />
+          <span>Tersimpan dengan enkripsi & mematuhi standar UU PDP</span>
+        </div>
       </div>
     );
   }
 
-  // ── States B/C/D/E: Active interview ────────────────────────────────────
-  const aiSpeaking = speaker === "ai";
-  const candidateSpeaking = speaker === "candidate";
-
+  // ── States B/C/D/E: Active interview HUD ─────────────────────────────────
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
-      {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
-        <span className="text-sm font-medium">AI Interview</span>
+    <div className="max-w-3xl mx-auto px-4 flex flex-col h-[calc(100vh-5rem)] justify-between py-4">
+      {/* Top HUD Bar */}
+      <div className="flex items-center justify-between py-3 px-5 bg-card/90 backdrop-blur-xl border border-border/80 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <Radio className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-foreground">{candidateInfo?.role_title ?? "AI Interview"}</h2>
+            <p className="text-[11px] text-muted-foreground">Live Voice Stream</p>
+          </div>
+        </div>
+
         {candidateInfo && (
-          <InterviewTimer
-            totalSeconds={candidateInfo.time_limit_min * 60}
-            running={interviewState === "active"}
-            onExpired={endInterview}
-          />
+          <div className="px-3.5 py-1.5 rounded-full bg-muted/60 border border-border/60 shadow-inner">
+            <InterviewTimer
+              totalSeconds={candidateInfo.time_limit_min * 60}
+              running={interviewState === "active"}
+              onExpired={endInterview}
+            />
+          </div>
         )}
       </div>
 
-      {/* Reconnecting banner */}
+      {/* Warnings & Banners */}
       {interviewState === "reconnecting" && (
-        connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
-          </div>
-        )
-      )}
-
-      {/* Reconnected prompt */}
-      {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+        <div className={`flex items-center gap-2.5 text-xs rounded-xl px-4 py-3 mt-2 border ${
+          connectionLostLong 
+            ? "bg-destructive/10 border-destructive/30 text-destructive"
+            : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-300"
+        }`}>
+          <span className="animate-pulse">●</span>
+          <span>
+            {connectionLostLong
+              ? "Koneksi membutuhkan waktu pemulihan lebih lama. Mohon tunggu sejenak..."
+              : "Menghubungkan kembali koneksi audio..."}
+          </span>
         </div>
       )}
 
-      {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-        {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
-        ) : interviewState === "draining_audio" ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
-            <p className="text-xs text-muted-foreground">Wrapping up...</p>
+      {reconnectedPrompt && (
+        <div className="flex items-center justify-between text-xs bg-primary/10 border border-primary/30 text-primary rounded-xl px-4 py-2.5 mt-2">
+          <span>Koneksi kembali stabil. Silakan lanjutkan jawaban Anda.</span>
+          <button className="text-primary hover:opacity-75" onClick={() => setReconnectedPrompt(false)}>✕</button>
+        </div>
+      )}
+
+      {/* Main Interactive Stage */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 py-6">
+        <AIThoughtIndicator status={aiInteractionStatus} />
+
+        <div className="w-full max-w-lg">
+          <AudioWaveformVisualizer
+            isActive={interviewState === "active"}
+            isAiSpeaking={aiSpeaking}
+            audioLevel={aiSpeaking || candidateSpeaking ? 0.8 : 0.2}
+          />
+        </div>
+
+        {/* Live Transcript Bubble Area */}
+        {transcript.length > 0 && (
+          <div className="w-full max-w-xl space-y-3 overflow-y-auto max-h-[35vh] px-2">
+            {transcript.map((turn, i) => (
+              <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
+            ))}
           </div>
-        ) : (
-          <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
-
-            {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
-            )}
-
-            {/* Transcript */}
-            {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
-                {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
-                ))}
-              </div>
-            )}
-          </>
         )}
       </div>
 
-      {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      {/* Bottom Controls Bar */}
+      <div className="py-3 px-5 bg-card/90 backdrop-blur-xl border border-border/80 rounded-2xl shadow-sm flex items-center justify-between gap-4">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">
@@ -328,40 +340,36 @@ export default function InterviewPage() {
             variant={micMuted ? "destructive" : "outline"}
             size="sm"
             onClick={toggleMic}
+            className={`rounded-xl text-xs font-semibold transition-all ${
+              micMuted 
+                ? "bg-destructive text-destructive-foreground shadow-md" 
+                : "border-border bg-muted/40 text-foreground hover:bg-muted"
+            }`}
           >
             {micMuted ? (
-              <><MicOff className="h-3.5 w-3.5 mr-1.5" /> Muted</>
+              <><MicOff className="h-3.5 w-3.5 mr-1.5" /> Mic Nonaktif</>
             ) : (
-              <><Mic className="h-3.5 w-3.5 mr-1.5" /> Mic On</>
+              <><Mic className="h-3.5 w-3.5 mr-1.5 text-primary" /> Mic Aktif</>
             )}
           </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>End interview?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to end the interview early?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={endInterview}>End interview</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        {import.meta.env.DEV && (
-          <Button variant="outline" size="sm" className="text-xs opacity-50"
-            onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEndModalOpen(true)}
+            className="border-border bg-muted/40 text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 rounded-xl text-xs font-semibold"
+          >
+            Akhiri Wawancara
           </Button>
-        )}
         </div>
       </div>
 
+      <EndSessionModal
+        open={endModalOpen}
+        onOpenChange={setEndModalOpen}
+        onConfirm={endInterview}
+        isSubmitting={isEndingSession}
+      />
     </div>
   );
 }

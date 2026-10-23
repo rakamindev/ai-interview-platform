@@ -175,15 +175,34 @@ export default function AssessmentInvitePage() {
     }
   };
 
+  const formatInviteUrl = (session?: Session | null) => {
+    if (!session) return "";
+    if (session.invite_token) {
+      return `${window.location.origin}/interview/${session.invite_token}`;
+    }
+    if (session.invite_url) {
+      try {
+        const url = new URL(session.invite_url);
+        if (url.port === "3001") {
+          return `${window.location.origin}${url.pathname}`;
+        }
+      } catch {
+        // Fallback
+      }
+      return session.invite_url;
+    }
+    return "";
+  };
+
   const copyLink = (session: Session, id: number) => {
-    navigator.clipboard.writeText(session.invite_url);
+    navigator.clipboard.writeText(formatInviteUrl(session));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const copyNewSessionLink = () => {
-    if (!newSession?.invite_url) return;
-    navigator.clipboard.writeText(newSession.invite_url);
+    if (!newSession) return;
+    navigator.clipboard.writeText(formatInviteUrl(newSession));
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
@@ -207,7 +226,7 @@ export default function AssessmentInvitePage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
+            <h1 className="text-lg font-semibold">{assessment?.name ?? "-"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
@@ -242,7 +261,7 @@ export default function AssessmentInvitePage() {
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-xs text-muted-foreground">Optional (helps you identify this session later).</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
@@ -253,23 +272,23 @@ export default function AssessmentInvitePage() {
 
       {/* Newly created session invite link */}
       {newSession && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="pt-4 space-y-2">
-            <p className="text-sm font-medium">
+        <Card className="border-primary/40 bg-primary/5 rounded-2xl shadow-md">
+          <CardContent className="pt-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground">
               {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
+                ? <>Link wawancara untuk <span className="text-primary font-bold">{newSession.candidate_name}</span> siap dibagikan:</>
+                : <>Link undangan wawancara kandidat baru siap dibagikan:</>}
             </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
-              <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
-                {newSession.invite_url}
+            <div className="flex items-center gap-2 border border-border/80 rounded-xl px-3.5 py-2.5 bg-background shadow-inner">
+              <span className="flex-1 text-xs font-mono truncate text-muted-foreground select-all">
+                {formatInviteUrl(newSession)}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
+            <Button variant="default" size="sm" onClick={copyNewSessionLink} className="w-full rounded-xl bg-primary text-primary-foreground font-semibold shadow-sm">
               {newSessionCopied ? (
-                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+                <><Check className="h-4 w-4 mr-1.5 text-emerald-400" /> Tautan Tersalin ke Clipboard!</>
               ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
+                <><Copy className="h-4 w-4 mr-1.5" /> Salin Tautan Wawancara</>
               )}
             </Button>
           </CardContent>

@@ -93,7 +93,7 @@ class CoverageWebSocketMiddleware
   # Returns the Redis instance so the caller can unsubscribe on WS close.
   def subscribe_to_coverage_updates(ws, session_id)
     channel = "coverage:#{session_id}"
-    redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
+    redis = Redis.new(url: ENV.fetch('REDIS_URI', 'redis://localhost:6379/0'))
 
     Thread.new do
       redis.subscribe(channel) do |on|

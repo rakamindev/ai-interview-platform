@@ -40,17 +40,16 @@ module FitGap
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
       portfolio_skills = effective_portfolio_skills  # includes overrides
 
-      comparisons = vacancy_skills.map do |label, vacancy_skill|
+      vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
+        candidate_level = portfolio_skill&.dig(:effective_level)
+        expected_level  = vacancy_skill.expected_level
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        if candidate_level.present?
+          delta  = candidate_level - expected_level
+          result = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
           candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
         end
@@ -62,23 +61,23 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
-
-      comparisons
     end
 
     # Returns portfolio skills with overrides applied.
     def effective_portfolio_skills
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
         override = skill.assessor_override
+        effective = override ? override.override_level : skill.ai_level
         {
           id:              skill.id,
           skill_id:        skill.skill_id,
           skill_label:     skill.skill_label,
           ai_level:        skill.ai_level,
-          effective_level: override ? override.override_level : skill.ai_level,
+          effective_level: effective,
           confidence:      skill.ai_confidence,
           overridden:      override.present?
         }
@@ -100,12 +99,25 @@ module FitGap
 
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
-        data = response.is_a?(Hash) ? response : JSON.parse(response)
+        data = parse_json_response(response)
         { culture: data['culture_narrative'], overall: data['overall_narrative'] }
       rescue => e
         Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
       end
+    end
+
+    def parse_json_response(response)
+      return response if response.is_a?(Hash)
+
+      clean_text = response.to_s.strip
+      if clean_text =~ /```(?:json)?\s*([\s\S]*?)\s*```/m
+        clean_text = $1.strip
+      elsif clean_text =~ /\{[\s\S]*\}/m
+        clean_text = clean_text[/\{[\s\S]*\}/m]
+      end
+
+      JSON.parse(clean_text)
     end
 
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed)
@@ -142,8 +154,13 @@ module FitGap
       gaps    = comparisons.count { |c| c[:result] == 'gap' }
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      summary = "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      return summary if not_assessed.zero?
+
+      # Unassessed skills carry no level, so they are reported separately rather than counted as gaps.
+      "#{summary} #{not_assessed} required skill(s) were not assessed in the interview and need follow-up before a decision."
     end
   end
 end

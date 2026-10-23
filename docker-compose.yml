@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    image: ai-interview-api:dev
+    container_name: ai-interview-api
+    command: bundle exec rails s -b 0.0.0.0 -p 3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/ai-interview
+    env_file:
+      - ./api/.env
+    environment:
+      - RAILS_ENV=development
+      # Use host.docker.internal for container-to-host bridge routing if localhost is used
+      - DATABASE_URL=${DATABASE_URL:?set DATABASE_URL in .env (see .env.example)}
+      - REDIS_URI=${REDIS_URI:?set REDIS_URI in .env (see .env.example)}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  worker:
+    image: ai-interview-api:dev
+    container_name: ai-interview-worker
+    command: bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+    volumes:
+      - ./api:/ai-interview
+    env_file:
+      - ./api/.env
+    environment:
+      - RAILS_ENV=development
+      - DATABASE_URL=${DATABASE_URL:?set DATABASE_URL in .env (see .env.example)}
+      - REDIS_URI=${REDIS_URI:?set REDIS_URI in .env (see .env.example)}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - api

@@ -20,6 +20,14 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      # A duplicate enqueue or a Sidekiq redelivery must not rebuild a finished portfolio:
+      # destroying its skills would cascade to the assessors' overrides. Regeneration is
+      # only allowed from 'failed', and the controller resets that to 'pending' first.
+      if portfolio.complete?
+        Rails.logger.info("[N10] Portfolio for session #{@session.id} already complete, skipping")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
@@ -31,7 +39,9 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # Reload first: after a rolled-back skill write the in-memory association still holds
+      # those records, and saving the stale portfolio would autosave them back.
+      portfolio&.reload&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -148,34 +158,67 @@ module Portfolios
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      data = parse_json_response(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Idempotent regeneration: the row lock serializes concurrent jobs for the
+      # same portfolio, and requires_new gives a real rollback point so a failed
+      # insert restores the previous skills instead of leaving a partial set.
+      Portfolio.transaction(requires_new: true) do
+        portfolio.lock!
+        portfolio.portfolio_skills.destroy_all
+        create_skills(portfolio, data)
+      end
+    end
 
+    def create_skills(portfolio, data)
       (data['configured_skills'] || []).each do |skill_data|
+        level = parse_skill_level(skill_data['level'])
+
         portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level,
+          ai_confidence:      skill_data['confidence']&.to_s&.downcase.presence,
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        level = parse_skill_level(skill_data['level'])
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level,
+          ai_confidence:      skill_data['confidence']&.to_s&.downcase.presence,
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
         )
       end
+    end
+
+    def parse_json_response(response)
+      return response if response.is_a?(Hash)
+
+      clean_text = response.to_s.strip
+      # Extract content inside markdown code fence if present
+      if clean_text =~ /```(?:json)?\s*([\s\S]*?)\s*```/m
+        clean_text = $1.strip
+      elsif clean_text =~ /\{[\s\S]*\}/m
+        clean_text = clean_text[/\{[\s\S]*\}/m]
+      end
+
+      JSON.parse(clean_text)
+    end
+
+    def parse_skill_level(level_value)
+      return nil if level_value.nil? || level_value == 0 || level_value == "0" || level_value.to_s.strip.empty?
+
+      level_int = level_value.to_i
+      level_int.between?(1, 5) ? level_int : nil
     end
   end
 end
