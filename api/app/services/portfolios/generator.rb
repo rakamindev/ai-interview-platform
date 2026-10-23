@@ -25,14 +25,20 @@ module Portfolios
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      # All or nothing: a failure part-way keeps the previous skills.
+      ActiveRecord::Base.transaction(requires_new: true) do
+        save_skills(portfolio, response)
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      # update_columns: no autosave of the rolled-back skills. Only the error
+      # class is kept; messages can quote model output or transcript text.
+      portfolio&.portfolio_skills&.reset
+      portfolio&.update_columns(generation_status: 'failed', generation_error: e.class.name)
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
@@ -153,29 +159,36 @@ module Portfolios
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      { 'configured_skills' => false, 'discovered_skills' => true }.each do |key, discovered|
+        Array(data[key]).each do |skill_data|
+          level = parse_level(skill_data['level'])
+          # No usable level is not a rating. Storing L1 here would invent the
+          # lowest possible judgement; the fit/gap report shows "not assessed".
+          next unless level
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+          portfolio.portfolio_skills.create!(
+            skill_id:           discovered ? nil : skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      discovered,
+            ai_level:           level,
+            ai_confidence:      parse_confidence(skill_data['confidence']),
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
       end
+    end
+
+    # Accepts 3, "3" or "L3"; anything else (nil, "seven", 9) is no rating.
+    def parse_level(raw)
+      level = raw.to_s.strip[/\AL?(\d)\z/i, 1]&.to_i
+      level if level&.between?(1, 5)
+    end
+
+    # An unknown confidence is treated as low: not enough evidence to rely on.
+    def parse_confidence(raw)
+      confidence = raw.to_s.strip.downcase
+      PortfolioSkill::CONFIDENCE_LEVELS.include?(confidence) ? confidence : 'low'
     end
   end
 end

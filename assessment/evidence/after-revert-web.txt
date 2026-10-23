@@ -1,0 +1,49 @@
+$ git log --oneline -1
+a5ab693 Revert "test: seed faults to prove the suites catch regressions"
+$ npx vitest run
+
+ RUN  v3.2.4 C:/Users/10114480/development/ai-interview-platform/web
+
+ ✓ src/lib/fitGap.test.ts > summarize > counts open questions separately from verdicts 4ms
+ ✓ src/lib/fitGap.test.ts > summarize > never counts a needs-review skill as below expected 1ms
+ ✓ src/lib/fitGap.test.ts > summarySentence > names open questions as not evidence of weakness 0ms
+ ✓ src/lib/fitGap.test.ts > summarySentence > is short when nothing is open 0ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 0 1ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 1 0ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 2 0ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 3 0ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 4 1ms
+ ✓ src/lib/fitGap.test.ts > resultExplanation > shows the provisional AI level and its direction for a skill that needs review 1ms
+ ✓ src/lib/fitGap.test.ts > resultExplanation > says an uncovered skill is not a weakness 0ms
+ ✓ src/lib/fitGap.test.ts > resultExplanation > adds nothing to a confirmed verdict 0ms
+ ✓ src/lib/fitGap.test.ts > levelSource > prefers the assessor over the AI 0ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > shows a current report straight away without polling 32ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > polls GET only (never re-queues) until the report is ready 11ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > stops after the time limit instead of spinning forever, and can check again 8ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > reports an error after repeated network failures 5ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > does not ask for a report while the portfolio is not ready 6ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > keeps the previous report on screen while regenerating 5ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > ignores a slow response from a run that was replaced 6ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > stops polling when the page is left 5ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > shows a briefly-explored skill as needing review, never as a gap 309ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > says an uncovered skill is not a weakness 23ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > marks a level an assessor confirmed 13ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > shows the AI confidence behind an unconfirmed verdict 11ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > wraps a very long skill name instead of overflowing 23ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > leads with what needs a decision and counts open questions apart from gaps 265ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > shows both the overall summary and the culture narrative 33ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > does not show the review prompt when every skill is rated with evidence 15ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > clamps a very long narrative behind Show more 103ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > keeps the previous result visible while updating and disables export 33ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > explains a first-time computation instead of an empty page 10ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > offers to check again when it takes too long 45ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > offers a retry when the server cannot be reached 46ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > guides to the vacancy when it has no requirements 13ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > points to the portfolio when it is not ready 8ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > orders verdict rows as the API sends them (decision first) 24ms
+
+ Test Files  4 passed (4)
+      Tests  37 passed (37)
+   Start at  14:59:50
+   Duration  3.97s (transform 439ms, setup 1.86s, collect 1.57s, tests 1.07s, environment 4.44s, prepare 2.59s)
+

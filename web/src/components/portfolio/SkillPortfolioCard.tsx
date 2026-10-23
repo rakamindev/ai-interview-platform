@@ -3,6 +3,7 @@ import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
 import { Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -10,17 +11,23 @@ interface SkillPortfolioCardProps {
   skill: PortfolioSkill;
   override?: AssessorOverride;
   onOverrideSaved: (override: AssessorOverride) => void;
+  /** Set when the assessor arrived from a fit/gap "needs review" link for this skill. */
+  highlighted?: boolean;
 }
 
 export default function SkillPortfolioCard({
   skill,
   override,
   onOverrideSaved,
+  highlighted = false,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
 
   return (
-    <Card>
+    <Card
+      id={`skill-${skill.id}`}
+      className={cn("scroll-mt-20 transition-shadow", highlighted && "ring-2 ring-amber-400 ring-offset-2")}
+    >
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">

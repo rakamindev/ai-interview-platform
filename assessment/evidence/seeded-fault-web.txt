@@ -1,0 +1,141 @@
+$ git log --oneline -1
+327bf7c test: seed faults to prove the suites catch regressions
+$ npx vitest run
+
+ RUN  v3.2.4 C:/Users/10114480/development/ai-interview-platform/web
+
+ × src/lib/fitGap.test.ts > summarize > counts open questions separately from verdicts 22ms
+   → expected { total: 4, meets: 1, below: 2, …(4) } to deeply equal { total: 4, meets: 1, below: 1, …(4) }
+ × src/lib/fitGap.test.ts > summarize > never counts a needs-review skill as below expected 2ms
+   → expected 1 to be +0 // Object.is equality
+ × src/lib/fitGap.test.ts > summarySentence > names open questions as not evidence of weakness 3ms
+   → expected '2 of 3 required skills rated with eno…' to be '1 of 3 required skills rated with eno…' // Object.is equality
+ ✓ src/lib/fitGap.test.ts > summarySentence > is short when nothing is open 1ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 0 1ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 1 0ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 2 0ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 3 0ms
+ ✓ src/lib/fitGap.test.ts > resultMeta > labels 4 1ms
+ ✓ src/lib/fitGap.test.ts > resultExplanation > shows the provisional AI level and its direction for a skill that needs review 0ms
+ ✓ src/lib/fitGap.test.ts > resultExplanation > says an uncovered skill is not a weakness 0ms
+ ✓ src/lib/fitGap.test.ts > resultExplanation > adds nothing to a confirmed verdict 0ms
+ ✓ src/lib/fitGap.test.ts > levelSource > prefers the assessor over the AI 1ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > shows a current report straight away without polling 37ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > polls GET only (never re-queues) until the report is ready 12ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > stops after the time limit instead of spinning forever, and can check again 10ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > reports an error after repeated network failures 5ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > does not ask for a report while the portfolio is not ready 4ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > keeps the previous report on screen while regenerating 3ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > ignores a slow response from a run that was replaced 4ms
+ ✓ src/hooks/useFitGapReport.test.ts > useFitGapReport > stops polling when the page is left 4ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > shows a briefly-explored skill as needing review, never as a gap 162ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > says an uncovered skill is not a weakness 14ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > marks a level an assessor confirmed 10ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > shows the AI confidence behind an unconfirmed verdict 6ms
+ ✓ src/components/fitgap/SkillVerdictRow.test.tsx > SkillVerdictRow > wraps a very long skill name instead of overflowing 19ms
+ × src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > leads with what needs a decision and counts open questions apart from gaps 241ms
+   → expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  0
+Received:
+  1
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > shows both the overall summary and the culture narrative 27ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > does not show the review prompt when every skill is rated with evidence 14ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > clamps a very long narrative behind Show more 109ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > keeps the previous result visible while updating and disables export 32ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > explains a first-time computation instead of an empty page 12ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > offers to check again when it takes too long 65ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > offers a retry when the server cannot be reached 44ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > guides to the vacancy when it has no requirements 19ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > points to the portfolio when it is not ready 9ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > orders verdict rows as the API sends them (decision first) 22ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/fitGap.test.ts > summarize > counts open questions separately from verdicts
+AssertionError: expected { total: 4, meets: 1, below: 2, …(4) } to deeply equal { total: 4, meets: 1, below: 1, …(4) }
+
+- Expected
++ Received
+
+  {
+-   "below": 1,
++   "below": 2,
+    "meets": 1,
+    "notCovered": 1,
+    "open": 2,
+-   "rated": 2,
++   "rated": 3,
+    "review": 1,
+    "total": 4,
+  }
+
+ ❯ src/lib/fitGap.test.ts:14:15
+     12|     ]);
+     13| 
+     14|     expect(s).toEqual({ total: 4, meets: 1, below: 1, review: 1, notCo…
+       |               ^
+     15|   });
+     16| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/lib/fitGap.test.ts > summarize > never counts a needs-review skill as below expected
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/lib/fitGap.test.ts:18:75
+     16| 
+     17|   it("never counts a needs-review skill as below expected", () => {
+     18|     expect(summarize([needsReview({ provisional_result: "gap" })]).bel…
+       |                                                                           ^
+     19|   });
+     20| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/lib/fitGap.test.ts > summarySentence > names open questions as not evidence of weakness
+AssertionError: expected '2 of 3 required skills rated with eno…' to be '1 of 3 required skills rated with eno…' // Object.is equality
+
+Expected: "1 of 3 required skills rated with enough evidence. 2 are open questions, not evidence of weakness."
+Received: "2 of 3 required skills rated with enough evidence. 2 are open questions, not evidence of weakness."
+
+ ❯ src/lib/fitGap.test.ts:24:85
+     22| describe("summarySentence", () => {
+     23|   it("names open questions as not evidence of weakness", () => {
+     24|     expect(summarySentence(summarize([comparison(), needsReview(), not…
+       |                                                                                     ^
+     25|       "1 of 3 required skills rated with enough evidence. 2 are open q…
+     26|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/pages/fitgap/FitGapReportPage.test.tsx > FitGapReportPage > leads with what needs a decision and counts open questions apart from gaps
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  0
+Received:
+  1
+ ❯ src/pages/fitgap/FitGapReportPage.test.tsx:47:76
+     45|     expect(await screen.findByText(/Backend Engineer/)).toBeInTheDocum…
+     46|     const summary = screen.getByRole("region", { name: "Summary" });
+     47|     expect(within(summary).getByText("Below expected").nextElementSibl…
+       |                                                                            ^
+     48|     expect(within(summary).getByText("Needs your review").nextElementS…
+     49|     expect(screen.getByText(/1 skill needs your review before this rep…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 2 passed (4)
+      Tests  4 failed | 33 passed (37)
+   Start at  14:59:27
+   Duration  3.96s (transform 482ms, setup 2.29s, collect 1.72s, tests 923ms, environment 4.31s, prepare 598ms)
+

@@ -125,15 +125,26 @@ export interface VacancySkill {
   _destroy?: boolean;
 }
 
-export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
+// Mirrors FitGap::Comparator on the API.
+// insufficient_evidence: the AI rated the skill from a brief exchange and no
+// assessor has confirmed it yet. not_assessed: the interview never covered it.
+export type SkillComparisonResult = "gap" | "insufficient_evidence" | "not_assessed" | "match" | "exceed";
+export type SkillVerdict = "gap" | "match" | "exceed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id: string | null;
+  expected_level: number;
+  /** The level the verdict stands on; null while unconfirmed or not assessed. */
+  candidate_level: number | null;
+  ai_level: number | null;
+  confidence: "high" | "medium" | "low" | null;
+  overridden: boolean;
+  portfolio_skill_id: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  /** Where an unconfirmed AI rating points; only set for insufficient_evidence. */
+  provisional_result: SkillVerdict | null;
+  delta: number | null;
 }
 
 export interface FitGapReport {
@@ -141,8 +152,9 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  comparator_version: number;
   generated_at: string;
 }
 

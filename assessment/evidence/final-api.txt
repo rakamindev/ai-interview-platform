@@ -1,0 +1,92 @@
+$ bundle exec rspec --format documentation
+/usr/bin/env: ‘ruby\r’: No such file or directory
+
+Randomized with seed 49731
+
+FitGap::Engine
+  updates a report stored under older rules in place
+  stores evidence-aware comparisons stamped with the current rules version
+  when the model call fails
+    mentions no open questions when every skill is rated with evidence
+    still completes the report with a deterministic summary that names open questions
+    falls back the same way when the model returns something that is not the expected JSON
+  the narrative prompt
+    lists open questions separately and forbids treating them as weaknesses
+  a vacancy with no requirements
+    completes with no rows and does not call the model
+
+Portfolios::Generator
+  completes and replaces the previous skills on success
+  ratings the model did not give properly
+    drops a skill with a missing or out-of-range level instead of storing L1
+    normalises confidence, treating an unknown value as low (not enough evidence)
+    accepts a level written as "L4"
+  when writing the new skills fails part-way
+    keeps the previous skills, marks the portfolio failed, and stores no model or candidate text
+
+FitGapReport
+  rejects a missing comparison list
+  accepts an empty comparison list (a vacancy with no requirements)
+  #current_rules?
+    is true only for reports computed by the current comparator
+
+FitGap::Comparator
+  orders rows by what needs a decision first
+  skills rated with enough evidence
+    is a gap when the level is below the expectation
+    exceeds when the level is above the expectation
+    is a match when the level meets the expectation
+  vacancy edge cases
+    returns no rows when the vacancy has no requirements
+    keeps one row per skill, using the stricter expectation when a requirement is duplicated
+  skills the interview never reached
+    are not assessed, with no level and no delta
+  assessor overrides
+    take precedence over the AI level
+  matching a requirement to a rated skill
+    prefers the configured skill over a discovered one with the same label
+    matches skill ids regardless of case
+    matches labels regardless of case and spacing
+  skills the AI rated from a brief exchange (confidence low)
+    does not present a provisional rating as a strength either
+    becomes a verdict once an assessor confirms a level
+    never presents a provisional rating as a gap
+    links the row to the portfolio skill an assessor needs to confirm
+
+Fit/gap reports
+  confirming a provisional rating
+    turns "needs review" into a verdict once an assessor confirms a level
+  GET /api/v1/portfolios/:id/export (json)
+    leaves out a report stored under older rules
+  another company's candidate
+    cannot be read, exported, or queued for computation
+    cannot have a rating overridden
+  POST /api/v1/portfolios/:id/fitgap
+    queues one job and answers 202 when no report exists
+    returns a report stored under the current rules without queuing anything
+    recomputes a report stored under older rules instead of returning its verdicts
+  GET /api/v1/portfolios/:id/fitgap/:vacancy_id
+    requires a token
+    does not serve a report stored under older rules
+
+Exports::PdfGenerator
+PDF's built-in fonts have very limited support for internationalized text.
+If you need full UTF-8 support, consider using an external font instead.
+
+To disable this warning, add the following line to your code:
+Prawn::Fonts::AFM.hide_m17n_warning = true
+  renders once an assessor has confirmed a level
+  renders a report with a skill that needs review
+  renders AI narrative text outside the built-in font character set
+
+FitGapGeneratorWorker
+  produces one report however many times it runs
+  lets other failures reach Sidekiq so the job is retried
+  treats losing a race with a duplicate job as success, updating the row the other job created
+  does nothing when the portfolio no longer exists
+
+Finished in 2.72 seconds (files took 7.42 seconds to load)
+46 examples, 0 failures
+
+Randomized with seed 49731
+

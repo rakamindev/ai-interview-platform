@@ -1,0 +1,204 @@
+$ git log --oneline -1
+327bf7c test: seed faults to prove the suites catch regressions
+$ bundle exec rspec
+
+Randomized with seed 45396
+F.....F...FFF.F.F.......FF.....
+
+Failures:
+
+  1) Fit/gap reports POST /api/v1/portfolios/:id/fitgap recomputes a report stored under older rules instead of returning its verdicts
+     Failure/Error:
+       expect(comparison(response.parsed_body, 'System Design')).to include(
+         'result' => 'insufficient_evidence', 'provisional_result' => 'gap', 'ai_level' => 2, 'delta' => nil
+       )
+
+       expected {"ai_level" => 2, "candidate_level" => 2, "confidence" => "low", "delta" => -2, "expected_level" => 4, "overrid...d" => 98, "provisional_result" => nil, "result" => "gap", "skill_id" => nil, "skill_label" => "System Design"} to include {"result" => "insufficient_evidence", "provisional_result" => "gap", "delta" => nil}
+       Diff:
+       @@ -1,4 +1,11 @@
+        "ai_level" => 2,
+       -"delta" => nil,
+       -"provisional_result" => "gap",
+       -"result" => "insufficient_evidence",
+       +"candidate_level" => 2,
+       +"confidence" => "low",
+       +"delta" => -2,
+       +"expected_level" => 4,
+       +"overridden" => false,
+       +"portfolio_skill_id" => 98,
+       +"provisional_result" => nil,
+       +"result" => "gap",
+       +"skill_id" => nil,
+       +"skill_label" => "System Design",
+     # ./spec/requests/api/v1/fit_gap_spec.rb:64:in `block (3 levels) in <main>'
+
+  2) Fit/gap reports confirming a provisional rating turns "needs review" into a verdict once an assessor confirms a level
+     Failure/Error: expect(comparison(response.parsed_body, 'System Design')).to include('result' => 'insufficient_evidence')
+
+       expected {"ai_level" => 2, "candidate_level" => 2, "confidence" => "low", "delta" => -2, "expected_level" => 4, "overrid..." => 104, "provisional_result" => nil, "result" => "gap", "skill_id" => nil, "skill_label" => "System Design"} to include {"result" => "insufficient_evidence"}
+       Diff:
+       @@ -1 +1,11 @@
+       -"result" => "insufficient_evidence",
+       +"ai_level" => 2,
+       +"candidate_level" => 2,
+       +"confidence" => "low",
+       +"delta" => -2,
+       +"expected_level" => 4,
+       +"overridden" => false,
+       +"portfolio_skill_id" => 104,
+       +"provisional_result" => nil,
+       +"result" => "gap",
+       +"skill_id" => nil,
+       +"skill_label" => "System Design",
+     # ./spec/requests/api/v1/fit_gap_spec.rb:105:in `block (3 levels) in <main>'
+
+  3) FitGap::Engine updates a report stored under older rules in place
+     Failure/Error: expect(report.skill_comparisons.pluck('result')).not_to include('gap')
+       expected ["gap", "not_assessed", "match"] not to include "gap"
+     # ./spec/services/fit_gap/engine_spec.rb:63:in `block (2 levels) in <main>'
+
+  4) FitGap::Engine stores evidence-aware comparisons stamped with the current rules version
+     Failure/Error:
+       expect(report.skill_comparisons.map { |c| [c['skill_label'], c['result']] }).to eq([
+         ['System Design', 'insufficient_evidence'],
+         ['Kubernetes', 'not_assessed'],
+         ['SQL', 'match']
+       ])
+
+       expected: [["System Design", "insufficient_evidence"], ["Kubernetes", "not_assessed"], ["SQL", "match"]]
+            got: [["System Design", "gap"], ["Kubernetes", "not_assessed"], ["SQL", "match"]]
+
+       (compared using ==)
+     # ./spec/services/fit_gap/engine_spec.rb:48:in `block (2 levels) in <main>'
+
+  5) FitGap::Engine the narrative prompt lists open questions separately and forbids treating them as weaknesses
+     Failure/Error: expect(prompt).to include('Needs review (1): System Design')
+
+       expected "You are writing a fit/gap analysis narrative for a candidate evaluation.\n\nROLE: Backend Engineer\n...n\nOUTPUT (JSON only):\n{\n  \"culture_narrative\": \"...\",\n  \"overall_narrative\": \"...\"\n}\n" to include "Needs review (1): System Design"
+       Diff:
+       @@ -1 +1,29 @@
+       -Needs review (1): System Design
+       +You are writing a fit/gap analysis narrative for a candidate evaluation.
+       +
+       +ROLE: Backend Engineer
+       +
+       +
+       +
+       +SKILL COMPARISON RESULTS (final; do not re-rate any skill):
+       +- Matches (1): SQL (L3)
+       +- Gaps (1): System Design: candidate L2 vs expected L4
+       +- Exceeds (0): 
+       +- Needs review (0): 
+       +- Not assessed (1): Kubernetes
+       +
+       +RULES:
+       +- "Needs review" means the interview touched the skill too briefly to rate it reliably.
+       +  "Not assessed" means the interview did not cover it. Both are open questions for the
+       +  hiring team, not evidence of weakness. Never describe them as gaps or shortcomings.
+       +- Only skills listed under Gaps may be described as falling short.
+       +- Do not infer personal attributes (age, gender, background) and do not name the candidate.
+       +
+       +Write two short narrative paragraphs:
+       +1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
+       +2. overall_narrative: 2-3 sentence overall summary that names any open questions.
+       +
+       +OUTPUT (JSON only):
+       +{
+       +  "culture_narrative": "...",
+       +  "overall_narrative": "..."
+       +}
+     # ./spec/services/fit_gap/engine_spec.rb:71:in `block (3 levels) in <main>'
+
+  6) FitGap::Engine when the model call fails still completes the report with a deterministic summary that names open questions
+     Failure/Error:
+       expect(report.overall_narrative).to eq(
+         '1 of 3 required skills meet or exceed the expected level and 0 fall below it. ' \
+         '2 are still open (1 needs assessor review, 1 not assessed in the interview) ' \
+         'and should not be read as weaknesses.'
+       )
+
+       expected: "1 of 3 required skills meet or exceed the expected level and 0 fall below it. 2 are still open (1 needs assessor review, 1 not assessed in the interview) and should not be read as weaknesses."
+            got: "1 of 3 required skills meet or exceed the expected level and 1 fall below it. 1 are still open (0 needs assessor review, 1 not assessed in the interview) and should not be read as weaknesses."
+
+       (compared using ==)
+     # ./spec/services/fit_gap/engine_spec.rb:86:in `block (3 levels) in <main>'
+
+  7) FitGap::Comparator orders rows by what needs a decision first
+     Failure/Error:
+       expect(compare.map { |c| c[:result] })
+         .to eq(%w[gap insufficient_evidence not_assessed match exceed])
+
+       expected: ["gap", "insufficient_evidence", "not_assessed", "match", "exceed"]
+            got: ["gap", "not_assessed", "match", "match", "exceed"]
+
+       (compared using ==)
+     # ./spec/services/fit_gap/comparator_spec.rb:150:in `block (2 levels) in <main>'
+
+  8) FitGap::Comparator skills the AI rated from a brief exchange (confidence low) never presents a provisional rating as a gap
+     Failure/Error:
+       expect(row_for('System Design')).to include(
+         result: 'insufficient_evidence',
+         provisional_result: 'gap',
+         ai_level: 2,
+         candidate_level: nil,
+         delta: nil
+       )
+
+       expected {:ai_level => 2, :candidate_level => 2, :confidence => "low", :delta => -2, :expected_level => 4, :overridden => ...ll_id => 129, :provisional_result => nil, :result => "gap", :skill_id => nil, :skill_label => "System Design"} to include {:result => "insufficient_evidence", :provisional_result => "gap", :candidate_level => nil, :delta => nil}
+       Diff:
+       @@ -1,5 +1,11 @@
+        :ai_level => 2,
+       -:candidate_level => nil,
+       -:delta => nil,
+       -:provisional_result => "gap",
+       -:result => "insufficient_evidence",
+       +:candidate_level => 2,
+       +:confidence => "low",
+       +:delta => -2,
+       +:expected_level => 4,
+       +:overridden => false,
+       +:portfolio_skill_id => 129,
+       +:provisional_result => nil,
+       +:result => "gap",
+       +:skill_id => nil,
+       +:skill_label => "System Design",
+     # ./spec/services/fit_gap/comparator_spec.rb:51:in `block (3 levels) in <main>'
+
+  9) FitGap::Comparator skills the AI rated from a brief exchange (confidence low) does not present a provisional rating as a strength either
+     Failure/Error: expect(row_for('System Design')).to include(result: 'insufficient_evidence', provisional_result: 'exceed')
+
+       expected {:ai_level => 5, :candidate_level => 5, :confidence => "low", :delta => 1, :expected_level => 4, :overridden => f...id => 130, :provisional_result => nil, :result => "exceed", :skill_id => nil, :skill_label => "System Design"} to include {:result => "insufficient_evidence", :provisional_result => "exceed"}
+       Diff:
+       @@ -1,2 +1,11 @@
+       -:provisional_result => "exceed",
+       -:result => "insufficient_evidence",
+       +:ai_level => 5,
+       +:candidate_level => 5,
+       +:confidence => "low",
+       +:delta => 1,
+       +:expected_level => 4,
+       +:overridden => false,
+       +:portfolio_skill_id => 130,
+       +:provisional_result => nil,
+       +:result => "exceed",
+       +:skill_id => nil,
+       +:skill_label => "System Design",
+     # ./spec/services/fit_gap/comparator_spec.rb:62:in `block (3 levels) in <main>'
+
+Finished in 2.69 seconds (files took 8.54 seconds to load)
+31 examples, 9 failures
+
+Failed examples:
+
+rspec ./spec/requests/api/v1/fit_gap_spec.rb:52 # Fit/gap reports POST /api/v1/portfolios/:id/fitgap recomputes a report stored under older rules instead of returning its verdicts
+rspec ./spec/requests/api/v1/fit_gap_spec.rb:101 # Fit/gap reports confirming a provisional rating turns "needs review" into a verdict once an assessor confirms a level
+rspec ./spec/services/fit_gap/engine_spec.rb:55 # FitGap::Engine updates a report stored under older rules in place
+rspec ./spec/services/fit_gap/engine_spec.rb:43 # FitGap::Engine stores evidence-aware comparisons stamped with the current rules version
+rspec ./spec/services/fit_gap/engine_spec.rb:67 # FitGap::Engine the narrative prompt lists open questions separately and forbids treating them as weaknesses
+rspec ./spec/services/fit_gap/engine_spec.rb:79 # FitGap::Engine when the model call fails still completes the report with a deterministic summary that names open questions
+rspec ./spec/services/fit_gap/comparator_spec.rb:139 # FitGap::Comparator orders rows by what needs a decision first
+rspec ./spec/services/fit_gap/comparator_spec.rb:48 # FitGap::Comparator skills the AI rated from a brief exchange (confidence low) never presents a provisional rating as a gap
+rspec ./spec/services/fit_gap/comparator_spec.rb:60 # FitGap::Comparator skills the AI rated from a brief exchange (confidence low) does not present a provisional rating as a strength either
+
+Randomized with seed 45396
+

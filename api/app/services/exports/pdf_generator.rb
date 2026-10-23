@@ -10,10 +10,11 @@ module Exports
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
     RESULT_LABELS = {
-      'match'        => 'Match',
-      'gap'          => 'Gap',
-      'exceed'       => 'Exceeds',
-      'not_assessed' => 'Not Assessed'
+      'match'                 => 'Match',
+      'gap'                   => 'Gap',
+      'exceed'                => 'Exceeds',
+      'insufficient_evidence' => 'Needs review',
+      'not_assessed'          => 'Not Assessed'
     }.freeze
 
     def initialize(portfolio:, vacancy: nil)
@@ -21,7 +22,9 @@ module Exports
       @vacancy     = vacancy
       @session     = portfolio.session
       @assessment  = @session.assessment
-      @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
+      report       = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
+      # A report stored under older rules may show unconfirmed ratings as gaps.
+      @fit_gap     = report if report&.current_rules?
     end
 
     # Returns PDF binary string.
@@ -82,7 +85,7 @@ module Exports
         pdf.text "#{skill.skill_label}", style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]}, assessor override: #{LEVEL_LABELS[override.override_level]})" if override
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
         pdf.text level_text
       end
@@ -90,14 +93,14 @@ module Exports
       pdf.move_down 4
 
       if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
+        pdf.font_size(10) { pdf.text printable(skill.competency_summary) }
       end
 
       if skill.evidence.any?
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each { |quote| pdf.text "  • #{printable(quote)}" }
         end
       end
 
@@ -105,7 +108,7 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
+          pdf.text "  #{printable(override.assessor_notes)}"
         end
       end
 
@@ -126,7 +129,7 @@ module Exports
         table_data << [
           c['skill_label'],
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
+          candidate_cell(c),
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
         ]
@@ -139,18 +142,27 @@ module Exports
         t.cells.size = 10
       end
 
+      if comparisons.any? { |c| %w[insufficient_evidence not_assessed].include?(c['result']) }
+        pdf.move_down 6
+        pdf.font_size(9) do
+          pdf.text 'Needs review: the interview touched this skill too briefly to rate it reliably; ' \
+                   'the AI level shown is unconfirmed. Not Assessed: the interview did not cover this skill. ' \
+                   'Neither is evidence of weakness.', color: '6B7280'
+        end
+      end
+
       if @fit_gap.culture_narrative.present?
         pdf.move_down 12
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
+        pdf.font_size(10) { pdf.text printable(@fit_gap.culture_narrative) }
       end
 
       if @fit_gap.overall_narrative.present?
         pdf.move_down 8
         pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
         pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
+        pdf.font_size(10) { pdf.text printable(@fit_gap.overall_narrative) }
       end
     end
 
@@ -161,6 +173,22 @@ module Exports
                         align:  :center,
                         size:   9,
                         color:  '999999'
+    end
+
+    def candidate_cell(comparison)
+      if comparison['candidate_level']
+        return "L#{comparison['candidate_level']}#{' (assessor)' if comparison['overridden']}"
+      end
+      return "L#{comparison['ai_level']} (unconfirmed)" if comparison['result'] == 'insufficient_evidence'
+
+      '—'
+    end
+
+    # Prawn's built-in fonts only cover Windows-1252. Free text (AI narrative,
+    # quotes, assessor notes) can contain anything, so replace what cannot be
+    # drawn instead of failing the whole export.
+    def printable(text)
+      text.to_s.encode('Windows-1252', invalid: :replace, undef: :replace, replace: '?').encode('UTF-8')
     end
 
     def format_duration(seconds)

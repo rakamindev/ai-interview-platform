@@ -1,0 +1,12 @@
+$ git log --oneline -1
+a5ab693 Revert "test: seed faults to prove the suites catch regressions"
+$ bundle exec rspec
+
+Randomized with seed 55551
+....................
+
+Finished in 2.33 seconds (files took 7.89 seconds to load)
+31 examples, 0 failures
+
+Randomized with seed 55551
+

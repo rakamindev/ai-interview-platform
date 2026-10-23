@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evidence-Aware Fit/Gap Verdicts</title>
+<style>
+  :root {
+    --ink: #17202a; --muted: #5b6672; --line: #dfe3e8; --soft: #f5f7f9;
+    --amber: #b45309; --amber-bg: #fffbeb; --rose: #be123c; --green: #047857; --accent: #0f766e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; color: var(--ink); font: 10.5pt/1.55 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 40px 32px 64px; }
+  h1 { font-size: 22pt; line-height: 1.2; margin: 6px 0 8px; }
+  h2 { font-size: 14pt; margin: 34px 0 10px; padding-top: 12px; border-top: 2px solid var(--ink); break-after: avoid; }
+  h2 .n { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 11pt; margin: 18px 0 6px; break-after: avoid; }
+  p { margin: 6px 0 8px; }
+  .eyebrow { font-size: 9pt; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  .lede { font-size: 12pt; color: #2b3640; }
+  .meta { display: grid; grid-template-columns: 170px 1fr; gap: 3px 12px; font-size: 9.5pt; margin: 16px 0; padding: 12px 14px; background: var(--soft); border-radius: 8px; }
+  .meta b { color: var(--muted); font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .stat .v { font-size: 18pt; font-weight: 700; line-height: 1.1; }
+  .stat .l { font-size: 8.5pt; color: var(--muted); }
+  .callout { border-left: 4px solid var(--accent); background: #f0fdfa; padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  .callout.warn { border-color: var(--amber); background: var(--amber-bg); }
+  table { width: 100%; border-collapse: collapse; font-size: 9.2pt; margin: 8px 0 12px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { background: var(--soft); font-weight: 600; }
+  tr { break-inside: avoid; }
+  .sev { font-weight: 700; white-space: nowrap; }
+  .P0 { color: var(--rose); } .P1 { color: var(--amber); } .P2 { color: #4d7c0f; } .P3 { color: var(--muted); }
+  .tag { display: inline-block; font-size: 8pt; font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  .fixed { background: #ecfdf5; color: var(--green); } .esc { background: #fef2f2; color: var(--rose); } .open { background: var(--soft); color: var(--muted); }
+  .chosen { background: #f0fdfa; }
+  figure { margin: 14px 0; break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 8px; display: block; }
+  figcaption { font-size: 9pt; color: var(--muted); margin-top: 5px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .phones { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 12px; align-items: start; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 8px; font-size: 8.5pt; overflow-x: auto; white-space: pre-wrap; break-inside: avoid; }
+  code { font-family: Consolas, "SFMono-Regular", monospace; font-size: 9pt; }
+  ul, ol { padding-left: 20px; margin: 6px 0; } li { margin: 2px 0; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 9pt; margin: 10px 0; }
+  .flow span { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--soft); }
+  .flow i { color: var(--muted); font-style: normal; }
+  @media (max-width: 640px) { .stats, .pair, .phones { grid-template-columns: 1fr 1fr; } .meta { grid-template-columns: 1fr; } }
+  @page { size: A4; margin: 14mm 12mm; }
+  @media print { main { padding: 0; max-width: none; } h2 { break-before: auto; } .pagebreak { break-before: page; } }
+</style>
+</head>
+<body>
+<main>
+
+<div class="eyebrow">Fullstack Engineer (Frontend Depth) · Case Study Report</div>
+<h1>A fit/gap report that never calls a candidate weak without evidence</h1>
+<p class="lede">One feature, end to end: the platform's fit/gap verdicts now separate <em>what the interview showed</em> from <em>what it never explored</em>, and give the assessor a one-click path to resolve the difference.</p>
+
+<div class="meta">
+  <b>Candidate</b><span>Muzammilul Muttaqin</span>
+  <b>Position</b><span>Fullstack Engineer (Frontend Depth)</span>
+  <b>Repository / branch</b><span>rakamindev/ai-interview-platform · <code>feat/trustworthy-fit-gap-report</code></span>
+  <b>Pull request</b><span><a href="https://github.com/rakamindev/ai-interview-platform/pull/183">github.com/rakamindev/ai-interview-platform/pull/183</a></span>
+  <b>Video walkthrough</b><span><a href="https://drive.google.com/file/d/1G2zGoIMzyRQqFasWNjgqwtDRbqu2JMaG/view?usp=sharing">drive.google.com/file/d/1G2zGoIMzyRQqFasWNjgqwtDRbqu2JMaG</a></span>
+  <b>Claimed depth</b><span>Frontend-heavy full stack. Frontend: the report screen redesigned around the decision, a single-owner data hook (bounded polling, stale-response guard), every interaction state, responsive to 320 px, accessible verdicts, 37 Vitest tests. Backend, complete but deliberately narrow: the verdict rules, one reversible migration, authorization and failure paths that the screen depends on (46 RSpec).</span>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="v">1</div><div class="l">feature, deliberately; everything else is ranked and escalated</div></div>
+  <div class="stat"><div class="v">83</div><div class="l">automated tests from zero (46 RSpec, 37 Vitest)</div></div>
+  <div class="stat"><div class="v">13</div><div class="l">failures caught by the seeded faults (9 API, 4 web)</div></div>
+  <div class="stat"><div class="v">1</div><div class="l">reversible migration, safe for existing rows</div></div>
+</div>
+
+<div class="callout">
+  <b>The problem in one sentence.</b> When the AI interviewer only brushed past a skill, the platform still printed a hard verdict on it, so a hiring manager read <b>"System Design: Gap −2"</b> about a candidate who was asked one question on the topic, while the screen hid the required level and any human correction.
+</div>
+
+<h2><span class="n">1</span>Execution journey, step by step</h2>
+<table>
+  <tr><th style="width:110px">Step</th><th>What I did</th><th style="width:170px">Output</th></tr>
+  <tr><td>1 · Setup</td><td>Ran the Rails API, Sidekiq, PostgreSQL 16 and Redis 7 in containers, and the Vite web app locally. Branched off <code>main</code>.</td><td>Working stack, reproducible demo seed</td></tr>
+  <tr><td>2 · Context</td><td>Walked the assessor flow (assessment → interview → portfolio → override → fit/gap → export), inspected DB rows and every payload behind the fit/gap screen, and framed the product around assessors, recruiters, hiring managers and the candidates it judges (§2).</td><td>Data-seam map from <code>portfolio_skills</code> to the React screen</td></tr>
+  <tr><td>3 · Gap</td><td>Logged 19 findings across both services, ranked P0–P3 with a one-line impact each, and separated what this PR fixes from what I would escalate (§3).</td><td>Severity table, constraint signal</td></tr>
+  <tr><td>4 · Decide</td><td>Chose <b>one</b> feature with the highest harm-to-cost ratio, compared four ways to ship it, and wrote acceptance criteria before code (§4, §5).</td><td>Option matrix, criteria table</td></tr>
+  <tr><td>5 · Build</td><td>Test harnesses first, then comparator → rules version + migration → engine/narrative → controller/PDF → types → data hook → screen. Small commits, each with its tests.</td><td>15 code commits</td></tr>
+  <tr><td>6 · Prove</td><td>Seeded faults on a scratch branch, watched both suites fail, reverted, merged with <code>--no-ff</code>. Captured the real "before" by running <code>main</code> against the same data, then every state of the "after" against the running API (§7, §8).</td><td>Evidence files, screenshots</td></tr>
+</table>
+
+<h2><span class="n">2</span>Product context</h2>
+<h3>What the product is for</h3>
+<p>An AI voice interviewer runs a structured skills interview, tracks coverage live, and produces a skill portfolio: an L1–L5 level per skill with evidence quotes and an AI confidence. Assessors can override any level. The <b>fit/gap report</b> compares that portfolio with a vacancy's expected levels and is what a hiring manager actually reads, so it is where the platform's value is concentrated and where a wrong output does the most harm.</p>
+<p>The outcome it exists for: a <b>faster and fairer</b> hiring decision with less interviewer time. It stays useful only while hiring teams trust its verdicts; it reaches more people only if those verdicts survive scrutiny from the candidates and regulators they affect.</p>
+
+<h3>Industry: hiring in Indonesia</h3>
+<ul>
+  <li>Very high applicant volume per opening; first-round interviews are the bottleneck, so automation is attractive and its errors scale with it.</li>
+  <li>Psychometric and coding tests are commoditised. Structured, <em>evidence-backed</em> judgement at scale is not; that is the leverage, and it is only leverage if the evidence is honest.</li>
+  <li>Interviews mix Bahasa Indonesia and English; a short or nervous answer is common and is not the same as a lack of skill.</li>
+</ul>
+
+<h3>Users and the people affected</h3>
+<table>
+  <tr><th style="width:120px">Who</th><th>Their day</th><th>What they need from this screen</th></tr>
+  <tr><td>Assessor</td><td>Reviews many finished sessions between other work; corrects AI ratings when the transcript shows more or less than the AI saw.</td><td>To see at a glance which ratings need their judgement, and have a correction reflected everywhere.</td></tr>
+  <tr><td>Recruiter</td><td>Moves candidates through the pipeline, compares them against vacancies, forwards results.</td><td>A report that is current and safe to export.</td></tr>
+  <tr><td>Hiring manager</td><td>Short on time; reads a summary and decides who advances.</td><td>Real strengths and real gaps, clearly separated from open questions.</td></tr>
+  <tr><td><b>Candidate</b> (never chose it)</td><td>Cannot opt out and never sees the report, yet it decides whether they advance.</td><td>Not to be marked down for what the interview failed to ask.</td></tr>
+</table>
+
+<h3>UU PDP (Law No. 27 of 2022) implications</h3>
+<table>
+  <tr><th style="width:190px">Principle</th><th>What it means here</th><th style="width:80px">Status</th></tr>
+  <tr><td>Accuracy of personal data processing</td><td>A low-confidence AI rating is not an accurate statement about a person. It is now shown as unconfirmed and never counted as a gap.</td><td><span class="tag fixed">This PR</span></td></tr>
+  <tr><td>Right to object to decisions made solely by automated processing (Art. 10)</td><td>Verdicts on thin evidence now <em>require</em> a human confirmation before they count; the screen states the report supports, not makes, the decision.</td><td><span class="tag fixed">This PR</span></td></tr>
+  <tr><td>Data minimisation in logs and errors</td><td>Fit/gap and portfolio failures now store and log the error class only, never model output or transcript text.</td><td><span class="tag fixed">This PR</span></td></tr>
+  <tr><td>Confidentiality / access limitation</td><td>Every endpoint this feature uses (fit/gap, export, override) now only reaches the current company's candidates. The structural fix for the rest of the schema is escalated.</td><td><span class="tag fixed">This PR</span></td></tr>
+  <tr><td>Transparency, consent, retention</td><td>No candidate notice of AI assessment, no objection channel, no retention period for transcripts.</td><td><span class="tag esc">Escalated</span></td></tr>
+</table>
+
+<h2><span class="n">3</span>Problem and gap analysis</h2>
+<p><b>Ideal condition.</b> A hiring manager opening the report knows within seconds what the candidate is strong at, where they truly fall short, and which questions are still open, and every verdict can be traced to evidence or to a named human decision.</p>
+<p><b>Gap.</b> The comparison treated every AI level as fact. The generator's own rubric says a skill probed once is <code>confidence: low</code>, but the comparator ignored confidence entirely, so "we barely asked" became "they can't". The screen then hid the expected level (contract mismatch) and any override, and the exports repeated the same verdicts.</p>
+<p style="font-size:9pt;color:var(--muted)">D = defective implementation, M = missing specification. Only rows on the feature's path were fixed; the rest are ranked so a lead can schedule them.</p>
+<table>
+  <tr><th style="width:34px">Sev</th><th style="width:26px">Type</th><th style="width:38px">Svc</th><th>Finding and one-line impact</th><th style="width:72px">Status</th></tr>
+  <tr><td class="sev P0">P0</td><td>D</td><td>api</td><td><b>Cross-tenant access.</b> <code>Portfolio.find</code> / <code>PortfolioSkill.find</code> are not scoped to the tenant. <i>Impact: any assessor can read, export or override another company's candidate (reproduced: 201 on a cross-tenant override).</i></td><td><span class="tag fixed">Fixed on feature endpoints</span><br><span class="tag esc">Structural: escalated</span></td></tr>
+  <tr><td class="sev P0">P0</td><td>D</td><td>seam</td><td><b>Runaway jobs, endless spinner.</b> While generating, every poll's 404 triggered a new POST and a new job (one every 5 s), with no end if the job failed. <i>Impact: assessor blocked; queue and AI cost grow while the tab is open.</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P1">P1</td><td>M</td><td>api</td><td><b>Thin evidence presented as a verdict.</b> Low-confidence AI ratings are compared like any other and become "Gap". <i>Impact: candidates marked down for what the interview did not explore.</i></td><td><span class="tag fixed">Fixed (core)</span></td></tr>
+  <tr><td class="sev P1">P1</td><td>D</td><td>seam</td><td><b>API/UI contract mismatch.</b> UI reads <code>required_level</code>/<code>is_override</code>; API sends <code>expected_level</code> and no override flag. <i>Impact: "Required" always blank, corrections invisible (Fig. 1).</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P1">P1</td><td>D</td><td>api</td><td><b>PDF export fails after any override.</b> A "→" outside Prawn's built-in font charset raises on every portfolio with an assessor override. <i>Impact: the confirmed report cannot be shared.</i> Found while verifying this feature.</td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P1">P1</td><td>D</td><td>api</td><td><b>Skill matching misses.</b> Generator prompt example ids are lowercase, taxonomy ids uppercase, label fallback is exact. <i>Impact: assessed skills reported as not assessed.</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P1">P1</td><td>D</td><td>api</td><td><b>Stored verdicts never expire.</b> Reports computed under the old rules would keep being served; editing a vacancy never invalidates a report. <i>Impact: hiring team reads outdated verdicts.</i></td><td><span class="tag fixed">Rules: fixed</span><br><span class="tag open">Vacancy edit: open</span></td></tr>
+  <tr><td class="sev P1">P1</td><td>M</td><td>both</td><td><b>No candidate notice of AI processing, no way to contest.</b> <i>Impact: UU PDP exposure on every interview.</i></td><td><span class="tag esc">Escalated</span></td></tr>
+  <tr><td class="sev P1">P1</td><td>D</td><td>api</td><td><b>Login binds the token to the first organisation</b> when no tenant header is sent. <i>Impact: users can get a token for the wrong tenant.</i></td><td><span class="tag esc">Escalated</span></td></tr>
+  <tr><td class="sev P2">P2</td><td>D</td><td>api</td><td><b>Missing level stored as L1.</b> <code>nil.to_i.clamp(1,5)</code> turns "no level returned" into the lowest rating. <i>Impact: invented negative rating.</i> "L4" also became L1, 9 became L5.</td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P2">P2</td><td>D</td><td>api</td><td><b>Non-atomic portfolio regeneration</b> (<code>destroy_all</code> then <code>create!</code>, no transaction). <i>Impact: a portfolio silently missing skills.</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P2">P2</td><td>D</td><td>api</td><td><b>Raw error text persisted</b> (<code>generation_error = e.message</code>), which can quote transcript content. <i>Impact: candidate speech in API responses and logs.</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P2">P2</td><td>D</td><td>web</td><td><b>Overall recommendation hidden</b> whenever a culture paragraph exists (<code>culture || overall</code>). <i>Impact: the summary the manager needs is missing.</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P2">P2</td><td>D</td><td>api</td><td><b>Empty vacancy crashes the job</b> (presence validation rejects <code>[]</code>); duplicate requirements silently overwritten. <i>Impact: endless spinner or a misleading row.</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P2">P2</td><td>D</td><td>api</td><td><b><code>audio_complete</code> ends any session as <code>all_covered</code></b> given only the invite token. <i>Impact: a cut-short interview is recorded as complete.</i></td><td><span class="tag esc">Escalated</span></td></tr>
+  <tr><td class="sev P3">P3</td><td>M</td><td>both</td><td><b>No tests, no web test runner, no CI.</b> <i>Impact: every change ships unverified.</i></td><td><span class="tag fixed">Tests</span> <span class="tag open">CI open</span></td></tr>
+  <tr><td class="sev P3">P3</td><td>D</td><td>web</td><td><b>App header overflows below 400 px</b> (Fig. 4). <i>Impact: cramped navigation on small phones.</i></td><td><span class="tag open">Open</span></td></tr>
+  <tr><td class="sev P3">P3</td><td>D</td><td>web</td><td><b>Discovered skills labelled "confirmed"</b> for any non-low confidence. <i>Impact: overstates certainty.</i></td><td><span class="tag fixed">Fixed</span></td></tr>
+  <tr><td class="sev P3">P3</td><td>D</td><td>api</td><td><b>Duplicate index</b> on <code>coverage_maps(session_id)</code>. <i>Impact: wasted writes.</i></td><td><span class="tag open">Open</span></td></tr>
+</table>
+
+<div class="callout warn">
+  <b>Constraint signal: what I would raise with a Tech Lead on day one</b>
+  <ol>
+    <li><b>Tenancy is enforced by convention, not construction (P0-1).</b> Only models with <code>tenant_id</code> are scoped, through <code>default_scope</code>; child rows (portfolios, skills, reports) depend on every controller joining through a scoped parent. This PR closes it for every endpoint the feature uses (<code>Portfolio.in_current_tenant</code>, proven by request specs). The structural fix (denormalised <code>tenant_id</code> or PostgreSQL row-level security) touches the database shared with rakamin-api and needs an owner.</li>
+    <li><b>Authentication trusts JWT claims without a user lookup</b> and login picks the first tenant. It is shared with rakamin-api, so changing it alone could break the main product.</li>
+    <li><b>Legal basis for AI interviewing (UU PDP).</b> Notice, consent wording, the objection channel and retention periods are product and legal decisions. This feature builds the technical half (human confirmation before thin evidence counts).</li>
+    <li><b>Ambiguity resolved by assumption:</b> "insufficient evidence" means AI confidence <code>low</code>, which the generator defines as ≤1 probe or state <code>initiated</code>. It is one constant (<code>FitGap::Comparator::UNCONFIRMED_CONFIDENCE</code>) if the business wants <code>medium</code> included.</li>
+  </ol>
+</div>
+
+<h2><span class="n">4</span>Strategy: why this one feature, and how</h2>
+<p><b>Choosing the feature.</b> The brief rewards the change that makes the product better for the people it touches. I ranked candidates by <em>harm prevented per unit of risk</em>: tenant isolation is the most severe defect but is a security fix with little product surface (I still closed it on every endpoint this feature uses, because the brief makes authorized endpoints a baseline); a full report lifecycle is engineering-heavy but changes nothing about what is said about a candidate. The verdict rule is the one place where a few lines of logic decide whether a real person is described as weak, so it is the feature.</p>
+
+<table>
+  <tr><th style="width:120px"></th><th>A · Relabel in the UI</th><th class="chosen">B · Evidence-aware comparator + rules version (chosen)</th><th>C · Ask the LLM to judge sufficiency</th><th>D · Block report until reviewed</th></tr>
+  <tr><td>Approach</td><td>Keep the API; the screen shows low-confidence gaps as "needs review".</td><td class="chosen">Pure rule-based comparator in the API adds <code>insufficient_evidence</code> with a <code>provisional_result</code>; reports stamped with a rules version; screen, PDF, JSON and narrative all read the same verdicts.</td><td>Prompt the model to decide whether evidence is enough per skill.</td><td>Refuse to generate the report while any low-confidence skill is unconfirmed.</td></tr>
+  <tr><td>Product impact</td><td>Screen looks right, but PDF, JSON export and the AI narrative still say "gap".</td><td class="chosen">One truth everywhere; assessor gets a direct path to resolve each open question.</td><td>Opaque; two runs may disagree about the same candidate.</td><td>Fair, but delays every hire on thin skills that may not matter.</td></tr>
+  <tr><td>Cost</td><td>~0.5 day</td><td class="chosen">~2 days incl. tests</td><td>~1 day + evaluation work</td><td>~1.5 days</td></tr>
+  <tr><td>Maintainability</td><td>Rules duplicated in two services, drift guaranteed.</td><td class="chosen">One class, one constant, one version number; bump to change rules safely.</td><td>Behaviour changes with model versions.</td><td>Simple, but a workflow lock-in.</td></tr>
+  <tr><td>Failure modes</td><td>Exports contradict the screen.</td><td class="chosen">Model down → deterministic summary; legacy rows → recomputed, never shown; empty vacancy → valid empty report.</td><td>Model outage removes the safeguard itself.</td><td>Report unavailable when a portfolio is partially rated.</td></tr>
+  <tr><td>Reversibility</td><td>Trivial</td><td class="chosen">Nullable column; rollback proven against a live row.</td><td>Easy</td><td>Easy</td></tr>
+</table>
+<p><b>Why B fits this codebase and deadline.</b> The comparison was already rule-based in <code>FitGap::Engine</code>; B extracts it into a pure class and adds one result, so the change is small, deterministic and testable without the model. The stored-report design, Sidekiq worker and PDF export all keep working. The rules version turns "remember to invalidate old reports" into a property of the data. <code>skill_comparisons</code> is JSONB, so the new result needs no change to the unused <code>fit_result</code> PostgreSQL enum.</p>
+
+<div class="flow"><span>AI rates skill (level + confidence)</span><i>→</i><span>confidence low &amp; no override?</span><i>yes →</i><span><b>Needs review</b> (provisional direction kept)</span><i>→</i><span>assessor confirms level on portfolio</span><i>→</i><span>report recomputed: <b>verdict, "Assessor-confirmed"</b></span></div>
+
+<h2><span class="n">5</span>Self-derived acceptance criteria</h2>
+<p>Written before the implementation; each row names the test that fails if the behaviour regresses.</p>
+<table>
+  <tr><th>Input / condition</th><th>Correct behaviour</th><th style="width:170px">Proven by</th></tr>
+  <tr><td>Level =, &gt;, &lt; expected (confidence high/medium)</td><td><code>match</code> / <code>exceed</code> / <code>gap</code> with signed delta</td><td>comparator_spec</td></tr>
+  <tr><td>AI confidence low, no override</td><td><code>insufficient_evidence</code>; no candidate level, no delta; <code>provisional_result</code> keeps the direction; never counted as below or above</td><td>comparator_spec (2), fitGap.test, SkillVerdictRow.test</td></tr>
+  <tr><td>Assessor confirms a level</td><td>Override decides, even on a low-confidence skill; marked "Assessor-confirmed" on screen, "(assessor)" in PDF</td><td>comparator_spec, fit_gap request spec (full loop)</td></tr>
+  <tr><td>Required skill never discussed</td><td><code>not_assessed</code>, explained as "not evidence of weakness"</td><td>comparator_spec, SkillVerdictRow.test</td></tr>
+  <tr><td>Skill id case differs; label spacing/case differs</td><td>Still matched</td><td>comparator_spec (2)</td></tr>
+  <tr><td>Configured and discovered skill share a name</td><td>Configured one used</td><td>comparator_spec</td></tr>
+  <tr><td>Duplicate requirement</td><td>One row, stricter expectation</td><td>comparator_spec</td></tr>
+  <tr><td>Vacancy with no requirements</td><td>Valid empty report, no model call; UI links to "Add requirements"</td><td>engine_spec, model spec, page test</td></tr>
+  <tr><td>Model timeout, error, prose instead of JSON</td><td>Report completes with a deterministic summary that names open questions</td><td>engine_spec (3)</td></tr>
+  <tr><td>Narrative prompt</td><td>Lists needs-review and not-assessed separately and forbids calling them weaknesses or naming the candidate</td><td>engine_spec</td></tr>
+  <tr><td>Report stored under older rules (incl. all pre-existing rows)</td><td>Never served or exported; POST recomputes it in place</td><td>request spec (3), engine_spec</td></tr>
+  <tr><td>Non-1252 text in AI narrative, quotes or notes; any override</td><td>PDF still renders</td><td>pdf_generator_spec (3)</td></tr>
+  <tr><td>Polling: slow, failing, stuck, left, replaced</td><td>GET-only polling every 3 s; "taking longer" after 90 s; error after 3 network failures; stops on unmount; late responses ignored</td><td>useFitGapReport.test (8)</td></tr>
+  <tr><td>Regenerate / update after override</td><td>Previous result stays visible and dimmed; export disabled until current</td><td>hook + page tests</td></tr>
+  <tr><td>Long skill names / long narrative</td><td>Names wrap; narrative clamps with "Show more"</td><td>SkillVerdictRow.test, page test, Fig. 4</td></tr>
+  <tr><td>Model returns no level, "seven", 9, 0; or "L4"</td><td>Invalid level: skill dropped, shown as not assessed (never stored as L1). "L4" accepted as 4</td><td>generator_spec</td></tr>
+  <tr><td>Unknown confidence ("HIGH", "sure", nil)</td><td>Normalised; unknown counts as low (needs review)</td><td>generator_spec</td></tr>
+  <tr><td>Write fails part-way through portfolio skills</td><td>Previous skills kept; status failed; only the error class stored</td><td>generator_spec</td></tr>
+  <tr><td>Duplicate jobs for the same report</td><td>Loser of the unique-index race updates the winner's row; any number of runs leaves one report; other errors retried by Sidekiq</td><td>fit_gap_generator_worker_spec (4)</td></tr>
+  <tr><td>Another company's portfolio, report, export or skill</td><td>404; nothing queued, written or overridden</td><td>request spec (2)</td></tr>
+  <tr><td>No token</td><td>401</td><td>request spec</td></tr>
+</table>
+
+<h2 class="pagebreak"><span class="n">6</span>What shipped</h2>
+<h3>Backend (api/)</h3>
+<ul>
+  <li><b><code>FitGap::Comparator</code></b>: pure, deterministic verdict rules; rows ordered by what needs a decision (gap → needs review → not covered → meets → exceeds).</li>
+  <li><b>Migration</b> <code>AddComparatorVersionToFitGapReports</code>: nullable integer, no default (metadata-only change in PostgreSQL, no table rewrite). Existing rows stay <code>NULL</code> = legacy, so they are recomputed instead of trusted. Rollback/migrate proven against a database holding a report (<code>assessment/evidence/migration-reversible.txt</code>).</li>
+  <li><b>Engine</b>: stamps the version; narrative prompt treats open questions as open; deterministic fallback; no model call for an empty vacancy; error class only in logs.</li>
+  <li><b>Authorization</b>: fit/gap, export and override lookups go through the session's tenant (<code>Portfolio.in_current_tenant</code>); other tenants get 404.</li>
+  <li><b>Generator and worker</b>: a missing or invalid AI level is no rating (never L1); atomic skill writes; duplicate jobs handled explicitly; error class only in storage and logs.</li>
+  <li><b>Controller / exports</b>: legacy reports are not served by GET or JSON/PDF export; POST recomputes them. PDF labels "Needs review", marks unconfirmed and assessor levels, explains open results, and no longer fails on overrides or unusual characters.</li>
+</ul>
+<h3>Frontend (web/)</h3>
+<ul>
+  <li><b>Types</b> mirror the API contract (fixing the blank "Required" column and invisible overrides).</li>
+  <li><b><code>useFitGapReport</code></b>: single owner of request → poll → done, replacing the loop that queued a job every 5 s.</li>
+  <li><b>Screen</b>: summary tiles that count open questions apart from gaps; a review prompt; rows with an L1–L5 scale against the expected step (dashed when unconfirmed), source of the level, plain-language explanation and a "Review evidence and confirm a level" link that scrolls to and highlights the skill on the portfolio. Both narratives, "Also observed", and a closing statement that the report supports, not makes, a decision.</li>
+  <li><b>States</b>: loading, first computation, updating, taking longer, error, empty vacancy, portfolio not ready, export failure; responsive to 320 px; colour is never the only signal (icon + word on every verdict, accessible names on the level scale).</li>
+</ul>
+
+<h2><span class="n">7</span>Verification</h2>
+<div class="stats">
+  <div class="stat"><div class="v">46</div><div class="l">RSpec: comparator, engine, generator, worker, model, request, PDF</div></div>
+  <div class="stat"><div class="v">37</div><div class="l">Vitest: lib, hook, component, page</div></div>
+  <div class="stat"><div class="v">✓</div><div class="l">TypeScript typecheck and production build</div></div>
+  <div class="stat"><div class="v">✓</div><div class="l">End to end on the running API, Sidekiq and PostgreSQL</div></div>
+</div>
+
+<h3>Seeded fault test</h3>
+<p>On <code>scratch/seeded-fault</code> (when the API suite had 31 examples) I committed one fault per service (<code>327bf7c</code>), ran both suites, reverted (<code>a5ab693</code>), re-ran, and merged with <code>--no-ff</code> (<code>604eb56</code>) so fault and revert stay visible in the PR history with a net diff of zero. Full output: <code>assessment/evidence/</code>.</p>
+<div class="pair">
+<pre><b>API fault</b>: low-confidence ratings become verdicts again
+- if override.nil? &amp;&amp; unconfirmed?(skill)
++ if false # SEEDED FAULT
+
+31 examples, 9 failures
+FitGap::Comparator ... never presents a
+  provisional rating as a gap
+Fit/gap reports ... turns "needs review" into
+  a verdict once an assessor confirms a level
+...
+After revert: 31 examples, 0 failures</pre>
+<pre><b>Web fault</b>: needs-review counted as below expected
+- const below = count("gap");
++ const below = count("gap", "insufficient_evidence");
+
+× summarize > never counts a needs-review
+  skill as below expected
+  AssertionError: expected 1 to be +0
+× FitGapReportPage > leads with what needs a
+  decision ...
+Tests  4 failed | 33 passed (37)
+After revert: Tests  37 passed (37)</pre>
+</div>
+
+<h3>AI verification moments</h3>
+<p>I used an AI coding assistant throughout, as leverage I verified rather than trusted. Where it was wrong or risky:</p>
+<table>
+  <tr><th style="width:30%">What the AI produced</th><th>Why it was wrong</th><th style="width:30%">How it was caught</th></tr>
+  <tr><td>A "fault injection" to prove the stale-response test was real, using a <code>sed</code> range command to delete the guard after <code>getFitGap</code>.</td><td>The command deleted a <em>different</em> guard (in the <code>catch</code> block). The test kept passing, which looked like proof the test was useless; it was the experiment that was broken.</td><td>Traced with logging inside the hook, then redid it with an exact, single-match string replacement: the test failed with <code>expected 'Stale.' to be 'Fresh.'</code>. Lesson: verify the fault is the one you meant before trusting what the test says.</td></tr>
+  <tr><td>Model validation <code>exclusion: { in: [nil] }</code> to allow an empty comparison list.</td><td>Rails 7 checks array values element-wise, and <code>[].all?</code> is true, so the empty array was still rejected. An empty vacancy would still have crashed the job.</td><td>The engine spec for an empty vacancy failed on first run; replaced with an explicit <code>nil</code> check and a model spec for both cases.</td></tr>
+  <tr><td>The PDF section changes, reviewed as "label additions".</td><td>Static review missed that the existing generator already crashed on any override; the feature's main path (confirm a level, then export) was broken.</td><td>Found only by exporting from the running app; wrote three failing specs first, then fixed. Lesson: drive the real flow, not only the unit under change.</td></tr>
+  <tr><td>Screenshot automation that intercepted every URL containing <code>/fitgap</code> to force loading and error states.</td><td>It also intercepted the page's own URL, so the "generating" capture was of a broken page.</td><td>Noticed when the error-state capture crashed; restricted interception to the API host and recaptured both states.</td></tr>
+</table>
+
+<h2 class="pagebreak"><span class="n">8</span>Screenshots</h2>
+<p style="font-size:9pt;color:var(--muted)">All data is fictional (<code>api/db/seeds/demo_fit_gap.rb</code>). "Before" is the unmodified <code>main</code> branch (API, worker and web) against the same data. Loading and error states were forced by intercepting API responses in the browser; the UI code is unchanged.</p>
+<div class="pair">
+  <figure><img src="screenshots/01-before-desktop.png" alt="Before"><figcaption><b>Fig. 1 · Before.</b> System Design, explored with one sentence (confidence low), is a "Gap −2"; "Required" is blank; the summary counts 2 gaps.</figcaption></figure>
+  <figure><img src="screenshots/02-after-desktop.png" alt="After"><figcaption><b>Fig. 2 · After.</b> Same data. System Design "Needs review" with the reason and a path to confirm; open questions counted apart; levels against the expected step.</figcaption></figure>
+</div>
+<div class="pair">
+  <figure><img src="screenshots/08-portfolio-highlight.png" alt="Portfolio highlight"><figcaption><b>Fig. 3a · Confirm.</b> The review link lands on the skill's evidence on the portfolio, highlighted, next to "Override rating".</figcaption></figure>
+  <figure><img src="screenshots/09-after-confirm.png" alt="After confirmation"><figcaption><b>Fig. 3b · Recomputed.</b> After the assessor confirms L4, the verdict becomes "Meets · Assessor-confirmed" and the review prompt disappears.</figcaption></figure>
+</div>
+<div class="phones">
+  <figure><img src="screenshots/04-mobile-320.png" alt="320px"><figcaption><b>Fig. 4 · 320 px.</b> Tiles reflow to 2×2, long names wrap. (The cramped app header is pre-existing, P3.)</figcaption></figure>
+  <figure><img src="screenshots/03-mobile-390.png" alt="390px"><figcaption><b>Fig. 5 · 390 px.</b></figcaption></figure>
+  <div>
+    <figure><img src="screenshots/06-generating.png" alt="Generating"><figcaption><b>Fig. 6 · First computation.</b> Specific message plus skeleton.</figcaption></figure>
+    <figure><img src="screenshots/07-error.png" alt="Error"><figcaption><b>Fig. 7 · Network error.</b> Named as such, with retry.</figcaption></figure>
+    <figure><img src="screenshots/05-empty-vacancy.png" alt="Empty vacancy"><figcaption><b>Fig. 8 · Vacancy without requirements.</b> No model call; guided next step.</figcaption></figure>
+  </div>
+</div>
+
+<h2><span class="n">9</span>Assumptions, deferred work, how to run</h2>
+<h3>Assumptions</h3>
+<ul>
+  <li>AI confidence <code>low</code> is the threshold for "needs review" (the generator's own rubric).</li>
+  <li>Thin evidence should be neutral in both directions: an unconfirmed "exceeds" is not a strength either.</li>
+  <li>Confirming the AI's own level is done with the existing override (same level); no new endpoint is needed.</li>
+  <li>90 s is a reasonable wait before telling the assessor a report is "taking longer" (30 s model timeout with retries plus queue latency).</li>
+</ul>
+<h3>Deferred on purpose (one feature, done properly)</h3>
+<ul>
+  <li>Structural tenancy for the rest of the schema, login tenant binding, candidate notice/consent/retention: escalated (§3).</li>
+  <li>Invalidating reports when a vacancy is edited, and a server-side guard against duplicate jobs: the natural next step is an inputs digest on the report, using the same versioning idea as this PR.</li>
+  <li>CI (both suites run locally in under a minute; a GitHub Actions workflow is the next small PR).</li>
+</ul>
+<h3>How to run</h3>
+<pre># API (Ruby 3.3.2, PostgreSQL, Redis)
+cd api &amp;&amp; bundle install
+bundle exec rails db:create db:migrate db:seed
+bundle exec rails runner db/seeds/demo_fit_gap.rb   # assessor@example.test / demo-password-123
+bundle exec rspec                                   # 46 examples
+
+# Web
+cd web &amp;&amp; npm install &amp;&amp; npm test &amp;&amp; npm run typecheck   # 37 tests
+npm run dev</pre>
+
+</main>
+</body>
+</html>

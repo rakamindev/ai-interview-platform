@@ -1,0 +1,13 @@
+$ rails db:rollback && rails db:migrate   # with an existing report row: it survives, and comes back as NULL (legacy) so it is recomputed, never trusted
+rows before: 1
+== 20261023000000 AddComparatorVersionToFitGapReports: reverting ==============
+-- remove_column(:fit_gap_reports, :comparator_version, :integer)
+   -> 0.0053s
+== 20261023000000 AddComparatorVersionToFitGapReports: reverted (0.0106s) =====
+
+== 20261023000000 AddComparatorVersionToFitGapReports: migrating ==============
+-- add_column(:fit_gap_reports, :comparator_version, :integer)
+   -> 0.0031s
+== 20261023000000 AddComparatorVersionToFitGapReports: migrated (0.0032s) =====
+
+rows after: 1, versions: [nil]

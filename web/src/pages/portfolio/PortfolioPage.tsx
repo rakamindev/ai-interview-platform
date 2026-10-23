@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,9 @@ import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Set when arriving from a fit/gap "needs review" link: #skill-<portfolio skill id>
+  const highlightedSkillId = Number(location.hash.match(/^#skill-(\d+)$/)?.[1]) || null;
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,11 @@ export default function PortfolioPage() {
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
+
+  useEffect(() => {
+    if (!portfolio || !highlightedSkillId) return;
+    document.getElementById(`skill-${highlightedSkillId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [portfolio, highlightedSkillId]);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -197,6 +205,7 @@ export default function PortfolioPage() {
                   skill={skill}
                   override={overrides[skill.id]}
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  highlighted={skill.id === highlightedSkillId}
                 />
               ))}
           </div>
@@ -223,6 +232,7 @@ export default function PortfolioPage() {
                       skill={skill}
                       override={overrides[skill.id]}
                       onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      highlighted={skill.id === highlightedSkillId}
                     />
                   ))}
               </div>
