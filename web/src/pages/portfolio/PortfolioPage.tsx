@@ -11,6 +11,7 @@ import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import { MOCK_AI_ENABLED, mockPortfolio } from "@/mocks/aiFixtures";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -27,6 +28,15 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
+    if (MOCK_AI_ENABLED) {
+      setPortfolio(mockPortfolio);
+      setGenerating(false);
+      setGenerationTimedOut(false);
+      const overrideMap: Record<number, AssessorOverride> = {};
+      mockPortfolio.overrides.forEach((o) => { overrideMap[o.portfolio_skill_id] = o; });
+      setOverrides(overrideMap);
+      return;
+    }
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
@@ -47,6 +57,12 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
+    if (MOCK_AI_ENABLED) {
+      setCandidateName("Budi Santoso");
+      setVacancies([{ id: 1, role_title: "Senior Frontend Engineer", culture_dimensions: "", competency_expectations: "", skills: [] }]);
+      fetchPortfolio().finally(() => setLoading(false));
+      return;
+    }
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
@@ -119,22 +135,21 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-7">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-start gap-3">
+          <Link to={`/assessments/${id}/invite`} className="mt-1 rounded-md p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Decision workspace</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Portfolio results</h1>
+            {candidateName && <p className="mt-1 text-sm text-slate-500">{candidateName} · Evidence-backed assessment</p>}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"

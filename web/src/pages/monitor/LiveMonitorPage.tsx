@@ -27,6 +27,7 @@ import {
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
+import { MOCK_AI_ENABLED } from "@/mocks/aiFixtures";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -75,6 +76,17 @@ export default function LiveMonitorPage() {
 
   // Initial load
   useEffect(() => {
+    if (MOCK_AI_ENABLED) {
+      setStartedAt(new Date(Date.now() - 8 * 60 * 1000).toISOString());
+      setAssessmentName("Senior Frontend Engineer");
+      setTranscript([
+        { id: 1, turn_number: 1, speaker: "ai", text: "Tell me about a frontend system you designed.", created_at: new Date().toISOString() },
+        { id: 2, turn_number: 2, speaker: "candidate", text: "I designed a typed component system with clear state boundaries and reusable patterns.", created_at: new Date().toISOString() },
+        { id: 3, turn_number: 3, speaker: "ai", text: "How did you validate reliability and accessibility?", created_at: new Date().toISOString() },
+      ]);
+      setLoading(false);
+      return;
+    }
     Promise.all([
       sessionsApi.get(Number(sessionId)),
       sessionsApi.getTranscript(Number(sessionId)),

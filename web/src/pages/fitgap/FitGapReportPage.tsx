@@ -10,6 +10,7 @@ import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+import { MOCK_AI_ENABLED, mockFitGapReport, mockPortfolio } from "@/mocks/aiFixtures";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -27,6 +28,11 @@ export default function FitGapReportPage() {
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
+    if (MOCK_AI_ENABLED) {
+      setReport(mockFitGapReport);
+      setGenerating(false);
+      return;
+    }
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
@@ -44,6 +50,11 @@ export default function FitGapReportPage() {
   }, [portfolio, vacancyId]);
 
   useEffect(() => {
+    if (MOCK_AI_ENABLED) {
+      setPortfolio({ ...mockPortfolio, id: mockPortfolio.id, session_id: Number(sessionId) });
+      setLoading(false);
+      return;
+    }
     sessionsApi
       .getPortfolio(Number(sessionId))
       .then(async (res) => {
