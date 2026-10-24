@@ -103,7 +103,9 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              // Unrecoverable errors end the connection, not the interview —
+              // the session stays open server-side and can be resumed.
+              if (!msg.recoverable) onStateChange("connection_lost");
               break;
           }
         } catch {
@@ -127,7 +129,10 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        // Reconnects exhausted: the interview is paused, not complete.
+        // Showing "Interview Complete" here told candidates that a dropped
+        // connection (e.g. a dead API) had been recorded — it never was.
+        onStateChange("connection_lost");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);

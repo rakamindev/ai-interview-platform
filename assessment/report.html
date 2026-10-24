@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Making the candidate path trustworthy: Revamp Report</title>
+<style>
+  :root {
+    --ink: #0f172a; --muted: #5b6577; --line: #e2e8f0; --soft: #f8fafc;
+    --accent: #4338ca; --p0: #b91c1c; --p1: #c2410c; --p2: #a16207; --p3: #475569;
+    --ok: #15803d; --part: #a16207; --def: #64748b;
+  }
+  @page { size: A4; margin: 16mm 15mm 17mm 15mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font: 10.5pt/1.55 "Segoe UI", -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--ink); margin: 0; }
+  h1 { font-size: 23pt; line-height: 1.15; margin: 0 0 4pt; letter-spacing: -0.01em; }
+  h2 { font-size: 14.5pt; margin: 0 0 10pt; padding-bottom: 4pt; border-bottom: 2px solid var(--ink); }
+  h3 { font-size: 11.5pt; margin: 13pt 0 5pt; }
+  h4 { font-size: 10.5pt; margin: 10pt 0 4pt; }
+  p { margin: 0 0 8pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin-bottom: 3pt; }
+  section { break-before: page; }
+  section.first { break-before: auto; }
+  code, .mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: 9pt; background: var(--soft); padding: 0.5pt 2.5pt; border-radius: 2pt; }
+  pre { font-family: Consolas, "Cascadia Mono", monospace; font-size: 8.5pt; line-height: 1.45; background: var(--soft); border: 1px solid var(--line); border-radius: 4pt; padding: 7pt 9pt; margin: 6pt 0 10pt; white-space: pre-wrap; break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 6pt 0 12pt; }
+  th { text-align: left; background: var(--soft); border-bottom: 1.5px solid var(--ink); padding: 4pt 6pt; vertical-align: bottom; }
+  td { border-bottom: 1px solid var(--line); padding: 4pt 6pt; vertical-align: top; }
+  tr { break-inside: avoid; }
+  .cover { border-bottom: 3px solid var(--ink); padding-bottom: 12pt; margin-bottom: 14pt; }
+  .kicker { font-size: 9pt; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0 0 6pt; }
+  .subtitle { font-size: 12.5pt; color: var(--muted); margin: 2pt 0 12pt; }
+  table.meta { font-size: 9.5pt; margin: 0; }
+  table.meta td { border: none; padding: 1.5pt 6pt 1.5pt 0; }
+  table.meta td.k { color: var(--muted); width: 34mm; }
+  .b { display: inline-block; font-size: 7.8pt; font-weight: 700; padding: 0.6pt 4pt; border-radius: 3pt; color: #fff; white-space: nowrap; }
+  .b0 { background: var(--p0); } .b1 { background: var(--p1); } .b2 { background: var(--p2); } .b3 { background: var(--p3); }
+  .st { font-size: 8pt; font-weight: 600; white-space: nowrap; }
+  .st.ok { color: var(--ok); } .st.part { color: var(--part); } .st.def { color: var(--def); }
+  .callout { background: var(--soft); border-left: 3px solid var(--accent); padding: 7pt 10pt; margin: 8pt 0 12pt; break-inside: avoid; }
+  .callout p:last-child { margin-bottom: 0; }
+  .placeholder { background: #fef3c7; padding: 1pt 4pt; border-radius: 3pt; font-weight: 700; }
+  figure { margin: 10pt 0 13pt; break-inside: avoid; }
+  figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4pt; }
+  figcaption { font-size: 8.3pt; color: var(--muted); margin-top: 4pt; line-height: 1.4; }
+  .fig-row { display: flex; gap: 8pt; align-items: flex-start; }
+  .fig-row figure { flex: 1; margin: 0; }
+  .fig-row figure img { width: 100%; }
+  .tight li { margin-bottom: 1.5pt; }
+  .small { font-size: 8.6pt; color: var(--muted); }
+  .footer-note { margin-top: 16pt; padding-top: 8pt; border-top: 1px solid var(--line); font-size: 8.3pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <p class="kicker">Fullstack Product Engineer · Case Study</p>
+  <h1>Making the candidate path trustworthy</h1>
+  <p class="subtitle">AI Interview Platform · revamp report and execution narrative</p>
+  <table class="meta">
+    <tr><td class="k">Author</td><td>M. Fauzan Ahnaf Athallah</td></tr>
+    <tr><td class="k">Date</td><td>24 October 2026</td></tr>
+    <tr><td class="k">Repository</td><td>github.com/rakamindev/ai-interview-platform</td></tr>
+    <tr><td class="k">Branch</td><td><code>feat/platform-revamp</code> · code HEAD <code>55c8a08</code> · 34 commits · 92 files changed (+8,927 / −180); report/screenshot commits are docs-only</td></tr>
+    <tr><td class="k">Pull request</td><td><a href="https://github.com/rakamindev/ai-interview-platform/pull/182">github.com/rakamindev/ai-interview-platform/pull/182</a></td></tr>
+    <tr><td class="k">Video walkthrough</td><td><a href="https://github.com/FauzanAhnaf999/ai-interview-platform/releases/download/case-study-walkthrough/walkthrough.mp4">walkthrough.mp4</a> — captioned screen recording of the live app (GitHub release asset, public)</td></tr>
+    <tr><td class="k">Claimed depth</td><td>Frontend-heavy, with real backend depth, argued with evidence in §9</td></tr>
+  </table>
+</header>
+
+<section class="first">
+  <h2>1 · Summary</h2>
+  <p>The platform runs AI voice interviews and produces per-skill portfolios and fit/gap reports that hiring teams use to decide who moves forward. The scoring pipeline is backend work; the places where humans meet the results, the invitation link, the pre-flight checks, the interview screen, the assessor's fit/gap table, are where trust is created or destroyed. That is where this revamp works. The scope is frozen around <em>the candidate path you can trust</em>: from link to result, plus the tenant boundary that protects the data behind it.</p>
+  <p><strong>What shipped:</strong></p>
+  <ol class="tight">
+    <li><strong>A pre-flight that measures the real path.</strong> In production, the old check measured third-party CDNs that the production CSP blocks, so every candidate failed the hard gate and no interview could start (the P0). The check now measures the API origin the interview actually uses, fails closed (no fabricated values), tells <em>unreachable</em> apart from <em>slow</em>, and uses one documented threshold constant (2 Mbps down / 1 Mbps up / ≤ 300 ms ping).</li>
+    <li><strong>An interview page that tells the truth.</strong> Invalid link, no-longer-available, unreachable (with retry), ready, ended (three honest copies), and connection-lost (reconnect, mic muted) are six distinct states sharing one layout. The old page showed a fabricated “Interview Complete, has been recorded” for invalid tokens, fetch failures, and even exhausted WebSocket reconnects.</li>
+    <li><strong>Tenant isolation where it was missing.</strong> Export, fit/gap, regeneration, and override routes resolved portfolios by URL id with no ownership check, a cross-tenant read/write hole on sequentially enumerable ids. All five routes now fail closed with 404 and are covered by request specs.</li>
+    <li><strong>A result contract the UI can trust.</strong> The engine emits <code>expected_level</code> and <code>is_override</code> for every comparison (additive, old reports keep rendering); the UI renders the Required column, marks overridden levels, formats levels consistently (L1–L5), and surfaces errors instead of blank pages.</li>
+    <li><strong>Canonical skill identity.</strong> Nothing a language model invents is stored as truth anymore: skill ids are resolved against the taxonomy (case-insensitive id → label → null), the picker stores taxonomy ids, and a reversible migration backfills existing rows.</li>
+    <li><strong>A harness where none existed.</strong> RSpec + FactoryBot, Vitest + Testing Library, a RuboCop baseline, and a CI workflow, because none of the five changes above is provable without it.</li>
+  </ol>
+  <div class="callout">
+    <p><strong>At a glance:</strong> 34 code commits at code HEAD <code>55c8a08</code> · 92 files changed (+8,927 / -180) · 50 API examples · 29 web tests · 112 files lint-clean · 22 findings (1 P0 · 5 P1 · 7 P2 · 9 P3 → 12 fixed, 3 partial, 7 deferred with reasons) · one seeded-fault branch left visible on purpose (§7). The report and screenshots are docs-only commits.</p>
+  </div>
+  <p class="small">How to read this report: §2 product context and UU PDP; §3 findings; §4 strategy and trade-offs; §5 acceptance criteria and edge cases; §6 the step-by-step execution narrative; §7 verification and evidence; §8 screenshots; §9 claimed depth; §10 limitations and follow-ups; §11 links; Appendix A the full acceptance-criteria list. The video walkthrough link (§11) is added before portal submission.</p>
+</section>
+
+<section>
+  <h2>2 · Product context &amp; who this is for</h2>
+  <h3>The product</h3>
+  <p>An assessor creates an assessment (skills drawn from a taxonomy, language, duration), invites candidates with a link, and the candidate completes a voice interview with an AI interviewer (audio streamed to Gemini Live). The backend then produces a <em>portfolio</em>, per-skill coverage with transcript evidence, and a <em>fit/gap report</em> against a vacancy. Recruiters read those results to decide who moves forward.</p>
+  <h3>Two users, asymmetric power</h3>
+  <p>Recruiters choose the product, work fast, and read results. Candidates never chose the product: they receive a link, often on a phone, sometimes with one shot at the process. A mislabeled failure or a false “recorded” claim costs the recruiter minutes, it can cost the candidate the opportunity. That asymmetry is why this revamp prioritizes the candidate's path and the correctness of the result contract over new features.</p>
+  <h3>Industry context</h3>
+  <p>Indonesia's hiring market is high-volume and cost-sensitive. Unemployment is low (4.85%, Aug 2025) yet volume hiring never stops, led by outsourcing/staffing, BPO, and government selection. AI interviewing is no longer novel: local vendors already market Indonesian-language interviews as table stakes, and CV/ATS ranking is commoditized. What remains hard, and what this product's portfolio/fit-gap design is built around, is <em>consistent per-skill rubrics, evidence traceable to the transcript, and an audit trail</em>. Candidate trust is the scarce resource: only about a quarter of candidates believe AI will judge them fairly, roughly two-thirds want disclosure when AI is used in hiring, and most would rather have a human in the loop. Every fabricated success screen or misleading failure erodes exactly the trust this product runs on. WhatsApp is the default candidate channel, and the price anchor is tens of thousands of rupiah per candidate, so drop-off and cost per interview both matter.</p>
+  <h3>UU PDP implications</h3>
+  <p>The platform processes personal data by definition: names, audio, transcripts, scores. Since 17 October 2024 the PDP Law (UU 27/2022) is fully in force, and its implementing regulation (PP 33/2026) takes effect 16 January 2027, adding mandatory DPIAs for AI-driven scoring, a right to object to automated decisions, written retention policies, and stricter cross-border transfer rules. Two facts shaped this work directly:</p>
+  <ul class="tight">
+    <li><strong>Audio streamed to Gemini is a cross-border transfer.</strong> The free tier explicitly allows training and human review of submitted data, real candidate data requires the paid tier plus binding contractual safeguards. This is documented as a constraint signal (§3), not silently ignored.</li>
+    <li><strong>Erasure is not implementable today.</strong> There is no delete path, and a foreign key blocks portfolio destruction, a compliance gap that needs an architecture decision (soft vs hard delete, employer↔platform orchestration), not a quick patch.</li>
+  </ul>
+  <p>Within this revamp's scope, the PDP angle is respected through minimization: no PII in logs or commits, synthetic demo data, reversible migrations, and no new silent data retention.</p>
+</section>
+
+<section>
+  <h2>3 · Findings, severity-ranked</h2>
+  <p>Method: a full read of both codebases, then the workflow walked end-to-end with synthetic data, database records → API payloads → UI rendering, with every finding pinned to <code>file:line</code> and a reproduction. 22 findings survived; three suspected issues were investigated and dismissed (for example, a Redis 5.x method that is actually aliased, not missing). Severity rubric: <span class="b b0">P0</span> the core flow cannot run at all · <span class="b b1">P1</span> wrong decisions or data leakage on common paths · <span class="b b2">P2</span> serious degradation, silent failure, or misleading information · <span class="b b3">P3</span> hygiene, drift, latent risk.</p>
+  <table>
+    <thead><tr><th style="width:11mm">ID</th><th style="width:10mm">Sev</th><th style="width:20mm">Category</th><th>Finding</th><th style="width:16mm">Status</th></tr></thead>
+    <tbody>
+      <tr><td>F-01</td><td><span class="b b0">P0</span></td><td>defect</td><td>Production pre-flight measured third-party CDNs that the production CSP blocks, and a hard gate then stopped <em>every</em> candidate from starting an interview.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-02</td><td><span class="b b1">P1</span></td><td>defect</td><td>Thresholds (8/4 Mbps) far above voice needs blocked working connections, while a total upload failure returned a fabricated 4.0 Mbps that passed the gate.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-03</td><td><span class="b b1">P1</span></td><td>defect</td><td>Portfolio export / fit-gap / regeneration / override routes trusted the URL id, cross-tenant read and write on sequential ids (IDOR).</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-04</td><td><span class="b b1">P1</span></td><td>defect</td><td>The fit/gap “Required” column read a field that was never emitted; the assessor-override marker was never emitted either.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-05</td><td><span class="b b1">P1</span></td><td>defect</td><td>Any fetch failure on the candidate page (invalid token, outage) rendered “Interview Complete, has been recorded”.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-20</td><td><span class="b b1">P1</span></td><td>defect</td><td>Exhausted WebSocket reconnects also ended on a fabricated completion while the session stayed active with no recording.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-06</td><td><span class="b b2">P2</span></td><td>defect</td><td>Silent-failure cluster: blank pages with no error state or retry, and <code>as any</code> casts hiding contract drift.</td><td class="st part">Partial</td></tr>
+      <tr><td>F-07</td><td><span class="b b2">P2</span></td><td>defect</td><td>“Create Link” could fail with no feedback at all (try/finally without catch), the dialog just closed.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-08</td><td><span class="b b2">P2</span></td><td>missing spec</td><td>Taxonomy skill ids were dropped on selection and portfolio ids were authored by the LLM, cross-layer matching silently degraded to text labels.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-09</td><td><span class="b b2">P2</span></td><td>defect</td><td>The sample <code>APP_BASE_URL</code> pointed at the API, every fresh setup produced invitation links that 404.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-10</td><td><span class="b b2">P2</span></td><td>defect</td><td>Interview language cannot be changed after an assessment is created (create page sends it; edit page does not).</td><td class="st def">Deferred</td></tr>
+      <tr><td>F-11</td><td><span class="b b2">P2</span></td><td>missing spec</td><td>No erasure path exists; a foreign key blocks portfolio deletion, the PDP erasure right is technically unfulfillable today.</td><td class="st def">Deferred</td></tr>
+      <tr><td>F-21</td><td><span class="b b2">P2</span></td><td>defect</td><td>Default Gemini model names were retired upstream, fit/gap narratives silently fell back to templates under a 200 OK.</td><td class="st def">Deferred</td></tr>
+      <tr><td>F-12</td><td><span class="b b3">P3</span></td><td>defect</td><td>Copy: pluralization “1 skills”; an internal codename (“B7”) leaked into the UI.</td><td class="st part">Partial</td></tr>
+      <tr><td>F-13</td><td><span class="b b3">P3</span></td><td>defect</td><td>Dead code and dead enum values: unmounted middleware, unused helpers, an unrouted page, a status that is never written.</td><td class="st def">Deferred</td></tr>
+      <tr><td>F-14</td><td><span class="b b3">P3</span></td><td>defect</td><td>Duplicate index on <code>coverage_maps.session_id</code> (already covered by a composite unique index).</td><td class="st def">Deferred</td></tr>
+      <tr><td>F-15</td><td><span class="b b3">P3</span></td><td>defect</td><td>Setup docs drift: wrong API port (3000 vs 3001), a wrong env var name, a wrong folder name, onboarding bugs that are not bugs.</td><td class="st part">Partial</td></tr>
+      <tr><td>F-16</td><td><span class="b b3">P3</span></td><td>defect</td><td>Speaker contract drift (<code>ai</code> relabeled to <code>assessor</code> in one layer) hidden by a tolerant UI, a trap for future consumers.</td><td class="st def">Deferred</td></tr>
+      <tr><td>F-17</td><td><span class="b b3">P3</span></td><td>defect</td><td>TypeScript types disagreed with real payloads (<code>skill_id</code> number vs string, <code>ai_level</code> string vs integer); level text rendered raw “3” in one place, “L3” in another.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-18</td><td><span class="b b3">P3</span></td><td>defect</td><td><code>web/package-lock.json</code> existed but was never committed, dependency drift across machines and CI.</td><td class="st ok">Fixed</td></tr>
+      <tr><td>F-19</td><td><span class="b b3">P3</span></td><td>defect</td><td>Tenant resolution fallback: hardcoded <code>'test-corp'</code> plus <code>LIMIT 1</code> without <code>ORDER BY</code>, the root of the “wrong tenant” class.</td><td class="st def">Deferred</td></tr>
+      <tr><td>F-22</td><td><span class="b b3">P3</span></td><td>defect</td><td>Assessor pages overflowed horizontally at mobile widths (measured scrollWidth up to 527 at a 390 px viewport).</td><td class="st ok">Fixed</td></tr>
+    </tbody>
+  </table>
+  <h3>Constraint signals, things a repo-scoped change cannot decide</h3>
+  <ol class="tight">
+    <li><strong>Pre-flight is a product decision, not just a bug.</strong> Hard gate vs advisory, thresholds calibrated to voice needs, and a help channel for candidates who fail, these touch product value (signal validity), not just UI.</li>
+    <li><strong>Multi-tenant boundaries are not uniform.</strong> Some core models sit outside the tenant scope, and the scope itself falls back to “all” when context is missing. Children should be scoped through their parent, and sibling endpoints audited.</li>
+    <li><strong>Erasure and retention have no owner.</strong> No delete path exists today, while PP 33/2026 makes retention policies and subject requests (≤ 72 h) mandatory from January 2027. This needs an architecture decision before production.</li>
+    <li><strong>Skill identity must have one source of truth.</strong> A generative step must never define identifiers; the taxonomy id is the canonical key end-to-end.</li>
+    <li><strong>Gemini transfers require the paid tier plus DPA/TIA</strong> before real candidate data flows (the free tier allows training and human review of submitted data).</li>
+    <li><strong>Setup documentation is the repo's first contract.</strong> It currently ships wrong values (F-15); fix it before the next engineer follows it.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>4 · Strategy &amp; trade-offs</h2>
+  <p>The gap in one sentence: the platform computes results well enough, but the seams where humans meet those results were unowned, failures mislabeled, successes fabricated, a presentation contract that drifted, and an identity key that dissolved into free text.</p>
+  <h3>Scope options</h3>
+  <table>
+    <thead><tr><th style="width:26mm"></th><th>A: “Candidate can start”</th><th>B: “Results can be trusted”</th><th>C: Combined (chosen)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Content</strong></td><td>Wire the speed test to the API, calibrate thresholds, fix candidate error states.</td><td>Tenant scoping, fit/gap contract, skill identity.</td><td>A + B, plus adjacent small findings on the same path (F-07, F-09).</td></tr>
+      <tr><td><strong>User impact</strong></td><td>Unblocks the flow that was impossible in production.</td><td>Stops wrong results and personal-data leakage.</td><td>The complete story: link → interview → result.</td></tr>
+      <tr><td><strong>Cost</strong></td><td>Small–medium; web-heavy, one backend endpoint.</td><td>Medium; backend-heavy, one small migration, more specs.</td><td>Medium–large; the right depth for the rubric.</td></tr>
+      <tr><td><strong>Maintainability</strong></td><td>High, the third-party dependency disappears.</td><td>High, scoping and contract patterns become examples.</td><td>High, every fix leaves tests behind.</td></tr>
+      <tr><td><strong>Failure modes</strong></td><td>API down → pre-flight fails explicitly, not silently.</td><td>Wrong scope → 404 (fail closed); rogue model output → rejected.</td><td>Both fail-closed and tested.</td></tr>
+      <tr><td><strong>Codebase fit</strong></td><td>Uses the existing but unwired <code>speed_test</code> endpoint.</td><td>Completes the thin-controller + service + concern pattern.</td><td>Touches <code>api/</code> and <code>web/</code> proportionally.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Why C:</strong> the rubric rewards a real change in experience plus engineering quality. A alone touches the backend too thinly; B alone misses the P0; C also yields the natural failure paths the brief asks for, pre-flight failure, invalid link, API error, rogue model output, cross-tenant access.</p>
+  <h3>Shape of the pull request</h3>
+  <p><strong>One comprehensive PR chosen</strong> over an umbrella PR with sub-PRs. With no reviewer team to benefit from stacked branches, sub-PRs would only add coordination and rebase cost, and risk reading as unfinished work. The “giant PR” risk is managed instead by commit discipline: atomic commits ordered harness → backend → frontend → failure paths, with theme-clean diffs and every commit green. Seeded-fault evidence lives on a separate scratch branch, deliberately without a PR.</p>
+  <h3>Decision trade-offs</h3>
+  <table>
+    <thead><tr><th style="width:30mm">Decision</th><th>Chosen</th><th>Rejected alternative, and why</th></tr></thead>
+    <tbody>
+      <tr><td>Speed-test target</td><td>Measure the API origin the interview actually uses.</td><td>Third-party CDNs, blocked by the production CSP, and measuring a CDN says nothing about the interview path.</td></tr>
+      <tr><td>Thresholds</td><td>2 Mbps / 1 Mbps / ≤ 300 ms as one documented constant.</td><td>Keep 8/4 Mbps, 20–80× above what voice needs; it blocked working connections.</td></tr>
+      <tr><td>Failure semantics</td><td>Fail closed: unreachable ≠ slow, no fabricated values.</td><td>Keep fallback defaults, a probe that never ran must never pass a gate.</td></tr>
+      <tr><td>Override flag</td><td>Additive <code>is_override</code> on every comparison.</td><td>Schema change / required flag, old reports must keep rendering (verified by spec).</td></tr>
+      <tr><td>Skill ids</td><td>Resolve-or-null against the taxonomy (case-insensitive id → label → null).</td><td>Trust the model's ids, unverifiable; drop ids entirely, matching degrades to labels.</td></tr>
+      <tr><td>Notice screens</td><td>One shared notice component for all six interview states.</td><td>Six duplicated blocks (flagged in independent review; refactored before push).</td></tr>
+      <tr><td>Model output handling</td><td>Validate the whole payload before writing anything.</td><td>Write-then-fail, a half-written portfolio is worse than a failed generation.</td></tr>
+    </tbody>
+  </table>
+  <h3>Rejected and deferred findings (with reasons)</h3>
+  <table>
+    <thead><tr><th style="width:26mm">Findings</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>F-06 full scope</td><td>The touched pages (portfolio, fit/gap) were fixed with their workstreams; the rest (edit, invite, monitor) spread too wide without adding depth, follow-up.</td></tr>
+      <tr><td>F-10</td><td>A real gap, but standalone; it does not strengthen the candidate-path story, next iteration.</td></tr>
+      <tr><td>F-11</td><td>Touches data-architecture decisions (soft vs hard delete, employer orchestration), escalated as a constraint signal + roadmap, not patched without a spec.</td></tr>
+      <tr><td>F-13, F-14, F-16, F-19</td><td>Hygiene and latent risk: cheap but behavior-neutral for the chosen path, listed as follow-ups in §10.</td></tr>
+      <tr><td>F-21</td><td>Config/infra outside the repo scope (deployment config + defaults); documented with a verified local workaround, §7, moment 1.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>5 · Acceptance criteria &amp; edge cases</h2>
+  <p>35 acceptance criteria were derived <em>before</em> coding, each mapped 1:1 to a test or a recorded walk, including the brief's edge cases (skills never assessed, empty ratings, model failures, odd data types, long text). The table summarizes the areas; the full list, with per-criterion evidence, is reproduced in Appendix A and was re-verified before submission.</p>
+  <table>
+    <thead><tr><th style="width:34mm">Area</th><th style="width:12mm">Count</th><th>Representative criteria</th></tr></thead>
+    <tbody>
+      <tr><td>Global (no regression)</td><td>3</td><td>Existing assessor flow still works; build, specs and lint green; no new <code>as any</code> in touched files.</td></tr>
+      <tr><td>Pre-flight &amp; speed test</td><td>8</td><td>Origin-only probes; byte-sized download endpoint; one threshold constant; unreachable ≠ slow; no fabricated pass; retry; sample link opens the candidate page.</td></tr>
+      <tr><td>Interview &amp; invite</td><td>6</td><td>Invalid link ≠ finished; network error + retry; honest “ended” copies; invite dialog keeps the error visible; connection lost → reconnect, never a fake completion.</td></tr>
+      <tr><td>Tenant scoping</td><td>3</td><td>All five portfolio/fit-gap/override routes → 404 for another tenant; same-tenant behavior unchanged; the original IDOR reproduction now 404.</td></tr>
+      <tr><td>Fit/gap contract</td><td>6</td><td><code>expected_level</code> + <code>is_override</code> on every entry; Required column renders; override marker shown; not-assessed preserved; L1–L5 everywhere; old reports render.</td></tr>
+      <tr><td>Skill identity</td><td>8</td><td>Picker stores taxonomy ids; coverage map carries them; generator resolves id → label → null; prompt echoes coverage ids; case-insensitive matching; reversible backfill; malformed output fails cleanly; evidence capped at three quotes.</td></tr>
+      <tr><td>Repo hygiene</td><td>1</td><td><code>package-lock.json</code> tracked and consistent with <code>package.json</code>.</td></tr>
+    </tbody>
+  </table>
+  <h3>Edge cases, behavior after the revamp</h3>
+  <table>
+    <thead><tr><th style="width:44mm">Edge case</th><th>Verified behavior</th></tr></thead>
+    <tbody>
+      <tr><td>Skill never assessed</td><td><code>not_assessed</code> with null delta; UI shows “— Not assessed” with a neutral badge.</td></tr>
+      <tr><td>Empty rating / level</td><td>Database enforces NOT NULL and clamps 1–5; a null candidate level renders “—”; overrides are validated at the boundary.</td></tr>
+      <tr><td>Model call fails / times out / partial</td><td>Fit/gap: fallback narrative + server log (spec-covered). Portfolio: status <code>failed</code> + error surfaced in the UI with retry; timeouts fail cleanly with no half-written skills (spec-covered); malformed payloads fail <em>before</em> any write.</td></tr>
+      <tr><td>Duplicate / stale jobs</td><td>Re-generation replaces skills instead of duplicating; fit/gap re-generation reuses the report row; a job for a deleted session is skipped without crashing.</td></tr>
+      <tr><td>Odd data types</td><td>Contract aligned end-to-end (string ids, numeric levels); invented ids are resolved or dropped, never stored.</td></tr>
+      <tr><td>Long text</td><td>Evidence capped at three quotes; wrapping verified on desktop and mobile with real-length content.</td></tr>
+      <tr><td>Invalid / expired token</td><td>Explicit invalid-link screen with guidance, not a completion screen.</td></tr>
+      <tr><td>Session already ended</td><td>Honest copies differentiated by end reason and whether the interview actually started.</td></tr>
+      <tr><td>Connection lost mid-interview</td><td>Connection-lost screen + Reconnect (mic muted); reload resumes; never “has been recorded”.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>6 · Execution narrative, step by step</h2>
+  <p><strong>Step 1: Discovery and baseline.</strong> Cloned and ran both services, walked the real workflow with synthetic data, and recorded the baseline honestly: no test suite, no test runner, no CI, exactly the starting point the brief describes. First-run friction (setup docs pointing at the wrong port and folder) went straight into the findings list.</p>
+  <p><strong>Step 2: Context.</strong> Traced the product from database schema → API payloads → UI rendering. Researched the PDP obligations that actually apply (UU 27/2022, PP 33/2026, the Gemini data terms) and the industry landscape (market structure, candidate sentiment, pricing anchors) so the scope would reflect the product's real constraints, not just code smells.</p>
+  <p><strong>Step 3: Findings.</strong> 22 findings with a consistent severity rubric, every one pinned to file:line with a reproduction. Three suspected issues were investigated and dismissed with reasons, recorded so they are not re-litigated. Six constraint signals were escalated for decisions above the code (§3).</p>
+  <p><strong>Step 4: Strategy and acceptance criteria.</strong> Scope frozen to option C; 35 acceptance criteria written before any implementation, each mapped to its future evidence; trade-off matrix and commit plan fixed up front.</p>
+  <p><strong>Step 5: Implementation.</strong> The harness came first (otherwise nothing after it is provable), then the five workstreams, highest severity first, each commit green, Conventional Commits, no AI attribution anywhere.</p>
+  <table>
+    <thead><tr><th style="width:36mm">Stage</th><th>What happened</th><th style="width:42mm">Commits</th></tr></thead>
+    <tbody>
+      <tr><td>Harness</td><td>RSpec + FactoryBot, Vitest + Testing Library, RuboCop baseline, CI workflow (API + web jobs).</td><td class="mono">up to f359145</td></tr>
+      <tr><td>Tenant scoping</td><td><code>Portfolio.for_tenant</code> + fail-closed 404 across five routes; 11 request specs two-tenant.</td><td class="mono">f030d69</td></tr>
+      <tr><td>Pre-flight</td><td>Speed-test endpoints + spec; client rewrite (origin-only, fail closed); thresholds; UI copy + retry.</td><td class="mono">e588dbf → 8ce590d</td></tr>
+      <tr><td>Interview states</td><td><code>candidate_info</code> + <code>end_reason</code> payload; six-state page; invite dialog error; reconnect fix.</td><td class="mono">a639eb3 → b0d3919</td></tr>
+      <tr><td>Fit/gap contract</td><td>Engine <code>is_override</code> + spec; web contract and types; error surfacing.</td><td class="mono">3f9ed7c → 46ebb7d</td></tr>
+      <tr><td>Skill identity</td><td>Canonicalization + specs; reversible backfill migration; picker/card; copy cleanup.</td><td class="mono">9908d49, 3eb08cd, 11c93dc, 0d47ca3</td></tr>
+      <tr><td>Mobile fix (F-22)</td><td>Assessor headers wrap; verified at 390 px on all affected pages.</td><td class="mono">811467a</td></tr>
+      <tr><td>Review fixes</td><td>Unreachable marker; shared notice component; case-insensitive id match; payload validation; lint.</td><td class="mono">91f2954, 2f9a6fd, a127f8c, 4934c21, 89cef7d</td></tr>
+      <tr><td>Seeded fault (scratch branch)</td><td>Break → five specs fail → revert → green. Left visible on purpose.</td><td class="mono">f41c7f4 → 862535d</td></tr>
+      <tr><td>Failure-path specs</td><td>Model timeout → portfolio fails cleanly; narrative failure → rule-based fallback; duplicate jobs → idempotent regeneration and report reuse; stale job for a deleted session → skipped.</td><td class="mono">d6abc0c → f304d07</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Step 6: Failure-path verification.</strong> Seeded fault on a scratch branch; runtime fault injection (the API was cut during a live interview to prove the reconnect behavior); migration rollback/redo; a PII audit over all commits and artifacts; CSP verification; a desktop + mobile UI audit that produced finding F-22, fixed immediately; and a mechanical self-review (no new debug output, casts, or disabled rules).</p>
+  <p><strong>Step 7: Independent review and fixes.</strong> Before pushing, the full diff was reviewed on two axes, standards (repo conventions, baseline smells) and spec (does the code match the findings, strategy and acceptance criteria). Three real gaps were fixed with new tests; one reviewer finding was rejected as a false positive with written reasoning. Details in §7.</p>
+  <p><strong>Step 7b, Failure-path specs.</strong> The brief's "designed failure paths" baseline was audited against the suite: partial writes and malformed output were already covered, but model timeouts, narrative-call failures, duplicate jobs, and stale jobs were not. Four specs were added to pin each behavior to a test.</p>
+  <p><strong>Step 8: Submission.</strong> This report, the curated screenshots in <code>assessment/screenshots/</code>, and a ~3 minute captioned video walkthrough of the problem → demo → enhancement arc (linked above).</p>
+</section>
+
+<section>
+  <h2>7 · Verification &amp; evidence</h2>
+  <h3>Gates at code HEAD (<code>55c8a08</code>)</h3>
+  <table>
+    <thead><tr><th style="width:52mm">Gate</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>API specs (RSpec + FactoryBot)</td><td>50 examples, 0 failures (including <code>CI=true</code>).</td></tr>
+      <tr><td>API lint (RuboCop)</td><td>112 files inspected, 0 offenses.</td></tr>
+      <tr><td>Web tests (Vitest + Testing Library)</td><td>29 tests across 8 files, all green.</td></tr>
+      <tr><td>Web build (TypeScript + Vite)</td><td>Green.</td></tr>
+      <tr><td>CI workflow</td><td>Green on <a href="https://github.com/FauzanAhnaf999/ai-interview-platform/actions/runs/40105451888">run #5</a>: API job (Postgres, schema load, Zeitwerk check, RuboCop, RSpec) + web job (install, build, Vitest) both passed.</td></tr>
+    </tbody>
+  </table>
+  <h3>Seeded fault, proof the tests guard the fix</h3>
+  <p>On the scratch branch <code>scratch/seeded-fault-idor</code>, the tenant scope is deliberately broken (the scoped query replaced by an unscoped one), the suite is watched failing, and the change is then reverted, with both commits left visible in the history, as the brief asks. The point is not that tests exist, but that they were <em>watched failing</em> for the exact regression they claim to guard.</p>
+  <pre># scratch/seeded-fault-idor
+862535d  Revert "temp: seed fault to prove the cross-tenant specs fail"
+f41c7f4  temp: seed fault to prove the cross-tenant specs fail
+811467a  fix(web): let headers wrap on narrow screens
+
+# At f41c7f4, Portfolio.for_tenant replaced by an unscoped query:
+42 examples, 5 failures
+  GET  /portfolios/:id/export              expected 404, got 200
+  GET  /portfolios/:id/fitgap/:vacancy_id  expected 404, got 200
+  POST /portfolios/:id/fitgap              expected 404, got 202
+  POST /portfolios/:id/regenerate_fitgap   expected 404, got 202
+  POST /portfolio_skills/:id/override      expected 404, got 201
+
+# At 862535d, after git revert:
+42 examples, 0 failures</pre>
+  <p class="small">(Counts shown as recorded at that commit; the suite grew to 50 examples with the review-fix and failure-path specs afterwards.)</p>
+  <h3>Runtime fault injection, the reconnect path</h3>
+  <p>During a live interview, the API was cut to simulate an outage. Before the fix, the candidate saw “Interview Complete, has been recorded” within seconds while the session stayed <code>active</code> with no recording. After the fix, the page shows the connection-lost screen with a Reconnect button and the microphone muted; reloading resumes the interview correctly. A real-world reproduction of the same failure class also occurred on the local dev machine (a native-extension crash kills the audio socket, §10), which is how the runtime fault was first confirmed.</p>
+  <h3>AI verification moments</h3>
+  <p><strong>Moment 1: a report that looked right while the model never ran.</strong> Walking the fit/gap flow returned a fully populated report with HTTP 200, but the narrative was a template fallback. The worker log held the truth: <code>API error 404: "This model models/gemini-2.0-flash-001 is no longer available..."</code>. Verification went three layers deep: the verbatim provider error, a live model listing for the same key (no 2.0-generation and no live models at all), and per-model <code>generateContent</code> probes. Outcome: a verified local override to a current model; the retired defaults are flagged as a constraint signal with a documented workaround (F-21). Lesson recorded: “the report renders” is not evidence that the model ran.</p>
+  <p><strong>Moment 2: the model was authoring identity.</strong> Portfolio rows stored skill ids like <code>sk-eng-001</code>, invented by the LLM, never validated, while the taxonomy uses <code>SK-ENG-001</code>; cross-layer matching had silently degraded to text labels. Verification: trace a stored id back to the taxonomy, then to the prompt that produced it. Outcome: canonicalization (case-insensitive id → label → null), a prompt that instructs echoing coverage-map ids, and a reversible backfill for existing rows. Lesson: a generative step must never define identifiers; resolve to a source of truth or store null.</p>
+  <p><strong>Moment 3: review output is input, not verdict.</strong> An independent two-axis review of the full diff found three real gaps, the unreachable-vs-slow signal was missing (AC-1.4), the fit/gap engine matched ids case-sensitively (AC-5.5), and malformed model output could half-write a portfolio (AC-5.7), all fixed with new tests. It also flagged one duplicate-state concern that turned out to be a false positive: the flag in question distinguishes “session ended when the link was opened” from “ended during this visit”, which the candidate payload cannot express. Rejected with written reasoning instead of applied blindly. Lesson: dispositions matter as much as findings.</p>
+  <p><strong>Moment 4: the AI-assisted harness was green locally but red in CI.</strong> The first CI run failed before a single example ran: with <code>CI=true</code>, <code>config.eager_load</code> turns on, and Zeitwerk expected <code>AudioWebsocketMiddleware</code> while the class is <code>AudioWebSocketMiddleware</code>. The local suite passed only because <code>CI</code> was unset. Verification: reproduced with <code>CI=true bundle exec rspec</code>, read the failing job, registered the <code>WebSocket</code> inflection, added <code>rails zeitwerk:check</code> to CI, and watched run #5 turn green. Lesson: “green on my machine” is not a gate; run the same mode the gate runs.</p>
+  <h3>Migration safety</h3>
+  <pre>== BackfillAssessmentSkillIds: reverting (down) ==
+== BackfillAssessmentSkillIds: reverted ==
+== BackfillAssessmentSkillIds: migrating (up) ==
+== BackfillAssessmentSkillIds: migrated ==
+assessment_skills (non-custom):  #1 SK-ENG-001  ·  #3 SK-ENG-009
+custom skills (must stay NULL):  1 row, skill_ids=[nil]</pre>
+  <p>The migration was exercised with migrate → rollback → migrate and a full redo; custom skills stay NULL in every phase; the <code>down</code> path documents its own predicate limits honestly. On the test database the schema is loaded fresh in CI, so the local sync step needed after new migrations is documented for contributors.</p>
+  <h3>PII audit (UU PDP)</h3>
+  <ul class="tight">
+    <li>Git history (every commit, full patch): no real API keys (only the placeholder in the sample file), no JWTs, no real identities.</li>
+    <li>Sensitive files (<code>.env</code>, <code>application.yml</code>, logs, tmp) are untracked, verified with <code>git check-ignore</code>.</li>
+    <li>All demo data is synthetic; screenshots and evidence contain no real candidate data.</li>
+    <li>Commit messages: English, no candidate data, no AI attribution.</li>
+  </ul>
+  <p class="small">This audit verifies that <em>no PII leaked in the artifacts this work created</em>, it is not a compliance claim; the compliance gaps are listed as constraint signals (§3) and in §10.</p>
+  <h3>CSP verification (the P0's root cause)</h3>
+  <p>Production CSP allows <code>connect-src 'self'</code> plus the API origin. The speed test now uses the same origin as every other REST call, so it is covered by design; the third-party endpoints that violated the policy were removed rather than added to the allow-list. Verified against the deployment config before pushing.</p>
+</section>
+
+<section>
+  <h2>8 · Screenshots</h2>
+  <p>All screenshots come from a local run with synthetic demo data. They are embedded here and stored in <code>assessment/screenshots/</code>.</p>
+  <h3>Candidate flow</h3>
+  <figure>
+    <img src="screenshots/01-preflight-passed.png" alt="Pre-flight checks passed">
+    <figcaption>Pre-flight passes with real measurements from the API origin (download, upload, ping) against the documented threshold. Start Interview stays disabled until every check passes.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/02-interview-active.png" alt="Interview in progress">
+    <figcaption>Live interview in progress: audio stream active, transcript building, timer running, the flow that the P0 had made impossible in production.</figcaption>
+  </figure>
+  <h3>Error states</h3>
+  <figure>
+    <img src="screenshots/03-error-unreachable-server.png" alt="Unreachable server state">
+    <figcaption>Server unreachable is distinct from slow: the failed probe says so explicitly, with Retry, instead of the old fabricated pass or a generic failure.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/04-error-connection-lost.png" alt="Connection lost state">
+    <figcaption>Connection lost mid-interview: reconnect screen, microphone muted, no “has been recorded” claim while the session is still open.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/05-error-invalid-link.png" alt="Invalid link state">
+    <figcaption>Invalid link is an explicit, actionable state, not the old “Interview Complete” screen.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/06-error-invite-create.png" alt="Invite creation error">
+    <figcaption>Invite creation failure keeps the dialog open with the error visible; previously the dialog closed silently and the link never appeared.</figcaption>
+  </figure>
+  <h3>Assessor flow &amp; edge cases</h3>
+  <figure>
+    <img src="screenshots/07-fitgap-override.png" alt="Fit/gap with assessor override">
+    <figcaption>Fit/gap with a manual assessor override: required levels now render (L3/L4), the overridden candidate level carries the ✏ marker, and the Exceeds badge is computed from real numbers.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/08-fitgap-report.png" alt="Fit/gap report">
+    <figcaption>Full fit/gap report, required vs candidate level per skill, not-assessed rows preserved as “—”, and long generated text wrapping safely.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/09-skill-picker.png" alt="Skill picker with taxonomy ids">
+    <figcaption>Skill picker now stores taxonomy ids (SK-ENG-xxx) with the selected skills, the identity that survives the whole pipeline.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/10-skill-card-id.png" alt="Skill card showing canonical id">
+    <figcaption>Skill card shows the canonical taxonomy id after the backfill; custom skills deliberately stay NULL.</figcaption>
+  </figure>
+  <h3>Responsive (390 px)</h3>
+  <div class="fig-row">
+    <figure>
+      <img src="screenshots/11-responsive-portfolio-before.png" alt="Portfolio on mobile, before">
+      <figcaption>Before: header rows could not wrap; measured scrollWidth up to 527 px at a 390 px viewport.</figcaption>
+    </figure>
+    <figure>
+      <img src="screenshots/12-responsive-portfolio-after.png" alt="Portfolio on mobile, after">
+      <figcaption>After: headers wrap; scrollWidth 375–390 px on every assessor page.</figcaption>
+    </figure>
+    <figure>
+      <img src="screenshots/13-responsive-interview-mobile.png" alt="Candidate interview on mobile">
+      <figcaption>Candidate interview at 390 px, clean layout, no horizontal scroll.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>9 · Claimed engineering depth</h2>
+  <p><strong>Claim: frontend-heavy, with real backend depth.</strong> The working surface was dominated by the candidate experience and the presentation contract, but every frontend guarantee is backed by a backend decision that is tested, not decorative. I can defend each of the following live, with the specific code paths and tests.</p>
+  <h3>Frontend-heavy, what that means concretely</h3>
+  <ul class="tight">
+    <li>A six-state interview page (loading / invalid / unavailable / unreachable / ready / ended / connection-lost) with one shared notice layout instead of six duplicated screens.</li>
+    <li>A pre-flight client rewritten around the real API origin: fail-closed semantics, an explicit <em>unreachable</em> signal that is distinct from slow, measured values shown next to the threshold, and per-check retry.</li>
+    <li>Result presentation the UI can trust: required column, override marker, consistent L1–L5 formatting, error surfacing instead of blank pages, and types aligned with the real payloads (the <code>as any</code> casts removed).</li>
+    <li>Failure UX on the assessor side: the invite dialog keeps its error visible instead of closing silently.</li>
+    <li>Responsive fix verified by measurement (scrollWidth at 390 px), plus 29 unit/component tests covering the states and the speed-test logic.</li>
+  </ul>
+  <h3>Backend depth, what backs it</h3>
+  <ul class="tight">
+    <li>Tenant scoping with fail-closed 404 on five routes, guarded by 11 two-tenant request specs, the seeded fault proves those specs fail when the fix is removed.</li>
+    <li>An additive engine contract change (<code>expected_level</code>, <code>is_override</code> on every comparison) that keeps old reports rendering, verified by spec, not assumption.</li>
+    <li>A canonicalization service resolving model-authored ids against the taxonomy, with four specs covering the id / label / null paths.</li>
+    <li>A reversible backfill migration whose rollback limits are documented in the file itself.</li>
+    <li>Payload validation that rejects malformed model output before any write, no half-written portfolios.</li>
+    <li>Failure paths covered by specs, not prose: a timing-out model call fails the portfolio cleanly, a failing narrative call persists the rule-based fallback, duplicate jobs regenerate idempotently, and stale jobs for deleted records are skipped.</li>
+    <li>The harness that makes all of the above provable: RSpec + FactoryBot, Vitest, RuboCop, and a CI workflow, added where the repository had none.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>10 · Limitations &amp; follow-ups</h2>
+  <h3>Deferred findings</h3>
+  <table>
+    <thead><tr><th style="width:20mm">Finding</th><th>Follow-up needed</th></tr></thead>
+    <tbody>
+      <tr><td>F-10</td><td>Add language editing to the assessment edit page (backend already accepts it).</td></tr>
+      <tr><td>F-11</td><td>Decide and implement the erasure architecture (soft vs hard delete; employer orchestration), prerequisite for PDP subject requests.</td></tr>
+      <tr><td>F-13</td><td>Remove dead code and dead enum values; decide the fate of the unrouted signup page.</td></tr>
+      <tr><td>F-14</td><td>Drop the duplicate index.</td></tr>
+      <tr><td>F-16</td><td>Align the speaker contract on one vocabulary end-to-end.</td></tr>
+      <tr><td>F-19</td><td>Make tenant resolution deterministic (explicit header/selection, no hardcoded fallback).</td></tr>
+      <tr><td>F-21</td><td>Update default model names and deployment config in the repository (config/infra change; local workaround verified).</td></tr>
+      <tr><td>F-06, F-12, F-15 (remainder)</td><td>Error states for the remaining pages; “1 skills” pluralization; the rest of the setup-doc drift (<code>web/README.md</code>).</td></tr>
+    </tbody>
+  </table>
+  <h3>Local environment limits (honestly stated)</h3>
+  <ul class="tight">
+    <li>The Gemini Live interview cannot run end-to-end on this Windows dev machine: a native extension without OpenSSL support crashes the server on the first WebSocket to the live model (production Linux is unaffected). The failure path was still exercised, the crash itself reproduces the connection-lost scenario that F-20 fixed, and the fix is unit-tested at the WebSocket-hook level; a full happy-path live interview remains unverified locally.</li>
+    <li>The candidate WebSocket flow was verified through fault injection and state tests rather than a complete recorded conversation.</li>
+  </ul>
+  <h3>Compliance scope (UU PDP)</h3>
+  <p>Not implemented, by scope decision: consent capture at the invitation link, the subject-request workflow (access/erasure, ≤ 72 h), ROPA, DPIA, a written retention policy, and a human-review UI for automated decisions. These are escalated as constraint signals with a roadmap (§3) rather than half-built. What this work does verify: no PII in logs, commits, or artifacts; reversible data changes; synthetic demo data.</p>
+  <h3>New-endpoint and concurrency notes</h3>
+  <ul class="tight">
+    <li>The speed-test download endpoint (new) should get rate limiting before production traffic.</li>
+    <li>Portfolio regeneration is idempotent (destroy-and-rebuild, last-write-wins) but has no distributed lock, acceptable for the current single-worker queue; noted for scale.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Appendix A · Acceptance criteria, full list</h2>
+  <p>These 35 criteria were derived before implementation and re-checked before submission. §5 summarizes the areas; this appendix reproduces the full list so a reviewer can audit coverage without opening the working notes.</p>
+  <table>
+    <thead><tr><th style="width:15mm">ID</th><th>Criterion</th><th style="width:47mm">Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>AC-0.1</td><td>The existing assessor flow (login, list, create/edit assessment, invite, monitor, portfolio, fit/gap, transcript) still works after every change.</td><td>Manual walk + screenshots.</td></tr>
+      <tr><td>AC-0.2</td><td><code>npm run build</code>, RSpec, RuboCop, Vitest, and the CI workflow are green.</td><td>Local gates + green CI run.</td></tr>
+      <tr><td>AC-0.3</td><td>No new <code>as any</code>, dead code, or debug logging in touched files.</td><td>Mechanical self-review.</td></tr>
+      <tr><td>AC-1.1</td><td>Ping, download, and upload probes all target the API origin, with no env override or third-party CDN.</td><td>Unit test deriving the URL.</td></tr>
+      <tr><td>AC-1.2</td><td><code>POST /api/v1/speed_test</code> returns <code>received_bytes</code>; <code>GET /api/v1/speed_test/download?bytes=N</code> returns N bytes, default 1 MB, capped at 2 MB.</td><td>Request specs.</td></tr>
+      <tr><td>AC-1.3</td><td>One documented threshold constant: download ≥ 2 Mbps, upload ≥ 1 Mbps, ping ≤ 300 ms; any failure means <code>passed=false</code>.</td><td>Unit tests with mocked measurements.</td></tr>
+      <tr><td>AC-1.4</td><td>When all probes fail, the result is <em>unreachable</em>, distinct from <em>slow</em>, and the UI says so.</td><td>Unit test + UI walk.</td></tr>
+      <tr><td>AC-1.5</td><td>A total upload failure never produces a fabricated default that passes the gate.</td><td>Regression unit test (F-02b).</td></tr>
+      <tr><td>AC-1.6</td><td>The UI shows measured values, a specific message, and per-check retry; Start Interview stays disabled until every check passes.</td><td>Walk + screenshots.</td></tr>
+      <tr><td>AC-1.7</td><td><code>application.yml.sample</code> and <code>api/README.md</code> point <code>APP_BASE_URL</code> at the web app, so new invite links open the candidate page.</td><td>Walk of a fresh invite link.</td></tr>
+      <tr><td>AC-1.8</td><td>The web <code>.env.example</code> uses port 3001 and no longer contains <code>VITE_SPEED_TEST_*</code>.</td><td>Diff review.</td></tr>
+      <tr><td>AC-2.1</td><td>An invalid or expired token shows the invalid-link screen, not the completion screen.</td><td>RTL test + UI walk.</td></tr>
+      <tr><td>AC-2.2</td><td>A network or 5xx error shows an error with retry; a successful retry returns to the normal flow.</td><td>RTL test.</td></tr>
+      <tr><td>AC-2.3</td><td>An <code>ended</code> session shows an honest end screen with no false “recorded” claim.</td><td>RTL test.</td></tr>
+      <tr><td>AC-2.4</td><td>A failed invite creation keeps the dialog open with the error visible; success displays the link.</td><td>Walk + screenshot.</td></tr>
+      <tr><td>AC-2.5</td><td>Interview WebSocket/audio behavior is unchanged outside the page-state work.</td><td>Manual walk.</td></tr>
+      <tr><td>AC-2.6</td><td>Exhausted reconnect or a non-recoverable socket error shows the connection-lost screen with Reconnect, not completion; reconnect resumes the interview.</td><td>RTL tests + seeded fault walk.</td></tr>
+      <tr><td>AC-3.1</td><td>Export, GET/POST fit-gap, regenerate, and override routes return 404 for a JWT from another tenant.</td><td>Two-tenant request specs.</td></tr>
+      <tr><td>AC-3.2</td><td>The same tenant still gets 200/201 with the same payload.</td><td>Request specs.</td></tr>
+      <tr><td>AC-3.3</td><td>The old IDOR reproduction (tenant A token, tenant B portfolio) now returns 404.</td><td>Replay of the documented reproduction.</td></tr>
+      <tr><td>AC-4.1</td><td>Every <code>skill_comparisons</code> item has numeric <code>expected_level</code> and boolean <code>is_override</code>; <code>required_level</code> is gone.</td><td>Engine spec with mocked narration.</td></tr>
+      <tr><td>AC-4.2</td><td>The Required column renders <code>expected_level</code>; <code>not_assessed</code> rows remain “—”.</td><td>RTL test + walk.</td></tr>
+      <tr><td>AC-4.3</td><td>An assessor override sets <code>is_override=true</code> and the UI shows the override marker.</td><td>Engine spec + walk.</td></tr>
+      <tr><td>AC-4.4</td><td>A never-assessed skill is <code>not_assessed</code> with a null delta and renders “— Not assessed”.</td><td>Engine spec + walk.</td></tr>
+      <tr><td>AC-4.5</td><td>Levels consistently render as L1–L5, including discovered-skill lists on the fit/gap page.</td><td>RTL test + walk.</td></tr>
+      <tr><td>AC-4.6</td><td>Old reports without <code>is_override</code> still render, treating the missing flag as false.</td><td>RTL regression test.</td></tr>
+      <tr><td>AC-5.1</td><td>Selecting a taxonomy skill stores its <code>skill_id</code>; custom skills stay NULL.</td><td>Walk + API payload assertion.</td></tr>
+      <tr><td>AC-5.2</td><td>New coverage-map rows carry the same canonical <code>skill_id</code>.</td><td>Walk/request inspection.</td></tr>
+      <tr><td>AC-5.3</td><td>Model-authored ids are resolved against the taxonomy (case-insensitive id → label → null); invented ids are never stored; labels remain.</td><td>Service specs with mocked Gemini.</td></tr>
+      <tr><td>AC-5.4</td><td>The prompt asks the model to echo coverage-map ids, but the server never trusts unvalidated ids.</td><td>Prompt/spec review + AI verification moment.</td></tr>
+      <tr><td>AC-5.5</td><td>Fit/gap id matching is case-insensitive (<code>SK-ENG-001</code> matches <code>sk-eng-001</code>).</td><td>Engine spec.</td></tr>
+      <tr><td>AC-5.6</td><td>The backfill fills NULL ids for taxonomy-labelled rows; <code>db:migrate:redo</code> is clean; unrelated data is untouched.</td><td>Migration run + <code>redo</code> evidence.</td></tr>
+      <tr><td>AC-5.7</td><td>Malformed or partial model output marks the portfolio <code>failed</code> with a <code>generation_error</code>, and no half-written portfolio is persisted.</td><td>Two service specs.</td></tr>
+      <tr><td>AC-5.8</td><td>Long text remains bounded to three evidence quotes and does not overflow desktop or mobile cards.</td><td>Walk at desktop + 390 px.</td></tr>
+      <tr><td>AC-6.1</td><td><code>web/package-lock.json</code> is tracked and consistent with <code>package.json</code>, including test devDependencies.</td><td>Diff review.</td></tr>
+    </tbody>
+  </table>
+  <h3>Brief edge cases → acceptance criteria</h3>
+  <table>
+    <thead><tr><th style="width:45mm">Brief edge case</th><th>Mapped criteria</th></tr></thead>
+    <tbody>
+      <tr><td>Skill never assessed</td><td>AC-4.4 (fit/gap <code>not_assessed</code>) and AC-5.3 (unknown skill in model output).</td></tr>
+      <tr><td>Empty ratings or levels</td><td>AC-5.7 (malformed output), AC-4.4 (null candidate level), and the level-clamp regression spec.</td></tr>
+      <tr><td>Model failure, timeout, or partial output</td><td>AC-5.7 (portfolio failed with error) and the fit/gap narrative fallback spec.</td></tr>
+      <tr><td>Odd data types</td><td>AC-5.3/5.5 (invented and case-mismatched ids) and AC-4.1 (number/boolean contract).</td></tr>
+      <tr><td>Long text</td><td>AC-5.8 (three-quote cap and wrapping).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>11 · Links &amp; artifacts</h2>
+  <table>
+    <thead><tr><th style="width:44mm">Artifact</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Pull request</td><td><a href="https://github.com/rakamindev/ai-interview-platform/pull/182">github.com/rakamindev/ai-interview-platform/pull/182</a></td></tr>
+      <tr><td>CI run (green)</td><td><a href="https://github.com/FauzanAhnaf999/ai-interview-platform/actions/runs/40105451888">run #5</a>, API + web jobs passed; <code>zeitwerk:check</code> is part of the API job.</td></tr>
+      <tr><td>Video walkthrough (~3 min, captioned)</td><td><a href="https://github.com/FauzanAhnaf999/ai-interview-platform/releases/download/case-study-walkthrough/walkthrough.mp4">github.com/FauzanAhnaf999/…/releases/download/case-study-walkthrough/walkthrough.mp4</a></td></tr>
+      <tr><td>Main work</td><td><code>feat/platform-revamp</code>, code HEAD <code>55c8a08</code> (34 code commits); report and screenshots are docs-only commits.</td></tr>
+      <tr><td>Seeded-fault evidence</td><td><code>scratch/seeded-fault-idor</code>, break (<code>f41c7f4</code>) → revert (<code>862535d</code>), history left visible on purpose.</td></tr>
+      <tr><td>Report source</td><td><code>assessment/report.html</code> (print source for this PDF).</td></tr>
+      <tr><td>Screenshots</td><td><code>assessment/screenshots/</code>, the curated set embedded in §8.</td></tr>
+    </tbody>
+  </table>
+  <p class="footer-note">Prepared 16 October 2026, finalized 24 October 2026 · M. Fauzan Ahnaf Athallah · All screenshots and evidence captured from a local run with synthetic demo data; no real candidate data is included anywhere in this repository.</p>
+</section>
+</body>
+</html>

@@ -241,17 +241,30 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
-                            </div>
+                            <>
+                                {internetResult.unreachable ? (
+                                    <p className="mt-2 text-xs text-destructive">
+                                        Couldn't reach the test server. Check your connection and try again.
+                                    </p>
+                                ) : (
+                                    <>
+                                        <div className="mt-2 flex gap-3 text-xs">
+                                            <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                                                ↓ {internetResult.download} Mbps
+                                            </span>
+                                            <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                                ↑ {internetResult.upload} Mbps
+                                            </span>
+                                            <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                                {internetResult.ping} ms
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Minimum for a voice interview: {thresholds.minDownloadMbps} Mbps down · {thresholds.minUploadMbps} Mbps up · under {thresholds.maxPingMs} ms
+                                        </p>
+                                    </>
+                                )}
+                            </>
                         )}
 
                         {/* Mic level bar */}

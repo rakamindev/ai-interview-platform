@@ -76,7 +76,7 @@ export default function AssessmentNewPage() {
     });
   };
 
-  const addB7Skill = (skill: Partial<AssessmentSkill>) => {
+  const addTaxonomySkill = (skill: Partial<AssessmentSkill>) => {
     append({ ...skill, display_order: fields.length });
   };
 
@@ -256,7 +256,7 @@ export default function AssessmentNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={addB7Skill}
+        onSelect={addTaxonomySkill}
       />
     </div>
   );

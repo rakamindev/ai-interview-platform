@@ -103,7 +103,7 @@ module Portfolios
         {
           "configured_skills": [
             {
-              "skill_id": "sk-eng-001",
+              "skill_id": "SK-ENG-001",
               "skill_label": "React / Frontend Development",
               "level": 3,
               "confidence": "high",
@@ -149,13 +149,25 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      configured = Array(data['configured_skills'])
+      discovered = Array(data['discovered_skills'])
+
+      # Validate the whole payload before writing anything: a malformed entry
+      # must fail generation cleanly instead of leaving half-written skills.
+      (configured + discovered).each do |skill_data|
+        raise ArgumentError, 'model output is missing skill_label' if skill_data['skill_label'].blank?
+
+        if skill_data['level'].nil?
+          raise ArgumentError, "model output is missing level for #{skill_data['skill_label']}"
+        end
+      end
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
+      configured.each do |skill_data|
         portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
+          skill_id:           canonical_skill_id(skill_data['skill_id'], skill_data['skill_label']),
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
@@ -165,9 +177,9 @@ module Portfolios
         )
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
+      discovered.each do |skill_data|
         portfolio.portfolio_skills.create!(
-          skill_id:           nil,
+          skill_id:           canonical_skill_id(nil, skill_data['skill_label']),
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
@@ -176,6 +188,19 @@ module Portfolios
           competency_summary: skill_data['competency_summary']
         )
       end
+    end
+
+    # The model is asked for taxonomy ids but may echo them in the wrong case
+    # or invent slugs (coverage maps without ids are sent as label slugs).
+    # Only ids that resolve to the taxonomy are stored; otherwise fall back
+    # to a label lookup, then nil.
+    def canonical_skill_id(raw_id, label)
+      if raw_id.present?
+        by_id = SkillTaxonomy.find_by('LOWER(skill_id) = ?', raw_id.to_s.strip.downcase)
+        return by_id.skill_id if by_id
+      end
+
+      SkillTaxonomy.find_by('LOWER(skill_label) = ?', label.to_s.strip.downcase)&.skill_id
     end
   end
 end

@@ -151,7 +151,7 @@ export default function AssessmentEditPage() {
           )}
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add from Skill Taxonomy
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill

@@ -54,7 +54,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">{skillLabel}</span>
             <span className="text-xs text-muted-foreground shrink-0">
-              {isCustom ? "Custom" : skill?.skill_id ? `SK-${String(skill.skill_id).padStart(3, "0")}` : ""}
+              {isCustom ? "Custom" : skill?.skill_id ?? ""}
             </span>
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
           <CustomSkillForm index={index} form={form} />
         ) : (
           <div className="space-y-3">
-            {/* B7 skill: show anchors toggle */}
+            {/* Taxonomy skill: show anchors toggle */}
             <button
               type="button"
               onClick={() => setAnchorsOpen((o) => !o)}

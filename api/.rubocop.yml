@@ -1,0 +1,43 @@
+inherit_from: .rubocop_todo.yml
+
+# frozen_string_literal: true
+
+plugins:
+  - rubocop-rails
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: disable
+  SuggestExtensions: false
+  Exclude:
+    - 'bin/**/*'
+    - 'db/schema.rb'
+    - 'tmp/**/*'
+    - 'vendor/**/*'
+
+# Line endings are normalised by git (core.autocrlf), so the working copy
+# differs per platform. Enforcing them in lint makes the check platform-dependent.
+Layout/EndOfLine:
+  Enabled: false
+
+# Spec groups are long by design; the block-length cop only adds noise there.
+# The two legacy files are also listed in .rubocop_todo.yml — Exclude lists do
+# not merge across configs, so they must be repeated here.
+Metrics/BlockLength:
+  Exclude:
+    - 'app/channels/audio_websocket_middleware.rb'
+    - 'config/routes.rb'
+    - 'spec/**/*'
+
+# Several cheap assertions in one example are fine; RSpec reports all failures.
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Max: 12
+
+# Cross-tenant request specs build two full object graphs; the default of 5
+# memoized helpers is too low for request-level fixtures.
+RSpec/MultipleMemoizedHelpers:
+  Max: 15
