@@ -43,9 +43,9 @@ export default function AssessmentListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
+        <Button className="w-full sm:w-auto" onClick={() => navigate("/assessments/new")}>
           <Plus className="h-4 w-4 mr-1.5" /> New Assessment
         </Button>
       </div>

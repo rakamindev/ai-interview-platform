@@ -28,13 +28,13 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 py-2 min-h-14 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+            <Link to="/assessments" className="flex shrink-0 items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
-            <nav className="flex items-center gap-1">
+            <nav className="flex flex-wrap items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
@@ -52,9 +52,9 @@ export default function AssessorLayout() {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="max-w-full truncate text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
                 Tenant: {tenant.name}
               </span>
             )}
