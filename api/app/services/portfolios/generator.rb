@@ -153,16 +153,41 @@ module Portfolios
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      coverage_by_id = @session.coverage_maps.index_by { |m| m.skill_id.presence || m.skill_label.downcase }
+      ai_skills_by_id = (data['configured_skills'] || []).index_by { |s| s['skill_id'].presence || s['skill_label']&.downcase }
+
+      # Iterate over configured assessment skills to guarantee complete, truthful representation
+      @session.assessment.assessment_skills.order(:display_order).each do |configured_skill|
+        key = configured_skill.skill_id.presence || configured_skill.skill_label.downcase
+        coverage = coverage_by_id[key]
+        ai_data = ai_skills_by_id[key]
+
+        was_probed = coverage.present? && coverage.state != 'not_yet' && coverage.probe_count > 0
+
+        if was_probed && ai_data && ai_data['level'].present?
+          portfolio.portfolio_skills.create!(
+            skill_id:           configured_skill.skill_id,
+            skill_label:        configured_skill.skill_label,
+            is_discovered:      false,
+            status:             'assessed',
+            ai_level:           ai_data['level'].to_i.clamp(1, 5),
+            ai_confidence:      ai_data['confidence'].presence_in(PortfolioSkill::CONFIDENCE_LEVELS) || 'low',
+            evidence:           Array(ai_data['evidence']).first(3),
+            competency_summary: ai_data['competency_summary'].presence || 'Assessed during live interview.'
+          )
+        else
+          # Truthful unassessed representation — does not falsely brand candidate as L1
+          portfolio.portfolio_skills.create!(
+            skill_id:           configured_skill.skill_id,
+            skill_label:        configured_skill.skill_label,
+            is_discovered:      false,
+            status:             'unassessed',
+            ai_level:           nil,
+            ai_confidence:      'low',
+            evidence:           [],
+            competency_summary: 'Skill was not assessed during this interview session.'
+          )
+        end
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
@@ -170,10 +195,11 @@ module Portfolios
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
+          status:             'assessed',
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_confidence:      skill_data['confidence'].presence_in(PortfolioSkill::CONFIDENCE_LEVELS) || 'low',
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: skill_data['competency_summary'].presence || 'Discovered off-agenda skill.'
         )
       end
     end

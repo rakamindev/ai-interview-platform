@@ -87,13 +87,14 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: number | string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: string | number | null;       // "L1".."L5" or 1..5 or null (unassessed)
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
+  status?: "assessed" | "unassessed";
 }
 
 export interface AssessorOverride {
