@@ -155,12 +155,12 @@ export default function AssessorLayout() {
           <Button
             variant="ghost"
             size="icon"
-            className="mr-3 h-10 w-10 md:hidden"
+            className="mr-3 h-11 w-11 md:hidden"
             aria-label="Open navigation"
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen(true)}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
           </Button>
           <div className="hidden text-sm text-slate-500 md:block">Assessment workspace</div>
           <div className="ml-auto flex items-center gap-2">
