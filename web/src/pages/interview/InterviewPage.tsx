@@ -48,7 +48,9 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => {
+        setInterviewState("error");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -222,6 +224,21 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State E: Candidate/session lookup failed ───────────────────────────
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Interview unavailable</h2>
+        <p className="text-sm text-muted-foreground">
+          This interview link is invalid, expired, or no longer available.
+          <br />
+          Contact the hiring team for a new invite.
+        </p>
       </div>
     );
   }
