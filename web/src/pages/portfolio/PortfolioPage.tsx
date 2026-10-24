@@ -52,7 +52,7 @@ export default function PortfolioPage() {
   }, [fetchPortfolio, sessionId]);
 
   // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  usePolling(fetchPortfolio, 5000, generating || !portfolio);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -96,7 +96,7 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-2xl mx-auto space-y-4 py-8 glass-panel p-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -105,7 +105,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 py-8 glass-panel p-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export default function PortfolioPage() {
           {!generating && portfolio && (
             <>
               <Button
-                variant="outline"
+                variant="gradient-teal"
                 size="sm"
                 onClick={() => handleExport("pdf")}
                 disabled={!!exporting}
@@ -184,10 +184,10 @@ export default function PortfolioPage() {
       )}
 
       {/* Ready state */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {(!generating && portfolio?.generation_status && ["complete", "completed"].includes(portfolio.generation_status)) && (
         <>
           {/* Configured skills */}
-          <div className="space-y-3">
+          <div className="space-y-3 glass-panel p-4">
             <h2 className="text-sm font-semibold">Configured Skills</h2>
             {portfolio.skills
               .filter((s) => !s.is_discovered)
@@ -205,7 +205,7 @@ export default function PortfolioPage() {
           {portfolio.skills.some((s) => s.is_discovered) && (
             <>
               <Separator />
-              <div className="space-y-3">
+              <div className="space-y-3 glass-panel p-4">
                 <div>
                   <h2 className="text-sm font-semibold flex items-center gap-1.5">
                     <Zap className="h-4 w-4 text-amber-500" />
@@ -249,7 +249,10 @@ export default function PortfolioPage() {
               Run Fit/Gap Analysis →
             </Button>
           </div>
-        </>
+        {portfolio.skills.length === 0 && (
+        <p className="text-sm text-muted-foreground">Tidak ada skill yang tersedia untuk portfolio ini.</p>
+      )}
+      </>
       )}
     </div>
   );

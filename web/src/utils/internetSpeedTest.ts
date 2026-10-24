@@ -17,29 +17,22 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minDownloadMbps: 2.0,
+    minUploadMbps: 1.0, // Calibrated for 256 kbps PCM 16kHz audio stream (4x safety headroom)
     maxPingMs: 300,
 };
 
-const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1";
+const SPEED_TEST_PING_URL = (import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined) ?? `${API_BASE}/health`;
+const SPEED_TEST_UPLOAD_URL = (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) ?? `${API_BASE}/speed_test`;
 
 async function measurePing(): Promise<number> {
-    if (SPEED_TEST_PING_URL) {
-        try {
-            const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
-            return performance.now() - start;
-        } catch {
-            return 999;
-        }
-    }
     const testUrls = [
+        SPEED_TEST_PING_URL,
         "https://www.google.com/favicon.ico",
         "https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js",
         "https://unpkg.com/react@18/umd/react.production.min.js",
-    ];
+    ].filter(Boolean) as string[];
     for (const url of testUrls) {
         try {
             const start = performance.now();
@@ -87,9 +80,12 @@ async function measureUploadSpeed(): Promise<number> {
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
-    const endpoints = SPEED_TEST_UPLOAD_URL
-        ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+    const endpoints = [
+        SPEED_TEST_UPLOAD_URL,
+        "https://httpbin.org/post",
+        "https://www.httpbin.org/post",
+        "https://postman-echo.com/post",
+    ].filter(Boolean) as string[];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();

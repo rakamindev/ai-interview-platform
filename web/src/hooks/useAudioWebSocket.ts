@@ -35,6 +35,7 @@ export function useAudioWebSocket({
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     sessionEndedRef.current = false;
+    reconnectAttemptsRef.current = 0;
     setConnectionState("connecting");
     const url = token
       ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
@@ -103,7 +104,11 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+                onStateChange("error");
+              }
               break;
           }
         } catch {
@@ -127,7 +132,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("error");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);

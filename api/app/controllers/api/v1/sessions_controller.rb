@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session coverage transcript destroy]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -126,6 +126,20 @@ module Api
         # (timing gap between WS detection and HTTP call) that stalled auto-end.
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
+      end
+
+      # DELETE /api/v1/sessions/:id
+      def destroy
+        unless @session.ended?
+          return json_error("Hanya sesi yang sudah selesai yang bisa dihapus", :unprocessable_entity)
+        end
+
+        candidate_name = @session.candidate_name || "Kandidat ##{@session.id}"
+        @session.destroy!
+
+        json_response({ message: "Data wawancara #{candidate_name} berhasil dihapus" })
+      rescue ActiveRecord::RecordNotDestroyed => e
+        json_error("Gagal menghapus data: #{e.message}", :unprocessable_entity)
       end
 
       # GET /sessions/:token/candidate  — no JWT, invite token in URL

@@ -9,7 +9,7 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, ShieldCheck } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
@@ -43,6 +43,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         microphone: ProctoringState.WAITING,
     });
     const [allPassed, setAllPassed] = useState(false);
+    const [hasConsent, setHasConsent] = useState(false);
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
@@ -270,6 +271,33 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 ))}
             </div>
 
+            {/* UU PDP Informed Consent Gating */}
+            <div className="p-4 bg-muted/20 border-t space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                    <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <div className="text-xs space-y-1">
+                        <p className="font-semibold text-foreground">
+                            Persetujuan Pemrosesan Data Pribadi (UU PDP No. 27/2022)
+                        </p>
+                        <p className="text-muted-foreground leading-relaxed">
+                            Sesi ini menggunakan model kecerdasan buatan (Gemini Live) untuk menganalisis rekaman suara dan transkrip secara real-time. Data Anda hanya diproses untuk keperluan evaluasi kompetensi kerja ini dan dilindungi kerahasiaannya.
+                        </p>
+                    </div>
+                </div>
+                <label className="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        id="uupdp-consent-checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        checked={hasConsent}
+                        onChange={(e) => setHasConsent(e.target.checked)}
+                    />
+                    <span className="text-xs text-foreground font-medium">
+                        Saya memberikan persetujuan eksplisit pemrosesan rekaman suara dan transkrip oleh AI untuk penilaian kompetensi ini.
+                    </span>
+                </label>
+            </div>
+
             {/* Footer */}
             <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
                 {hasError && (
@@ -278,11 +306,17 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         Retry
                     </Button>
                 )}
+                {!hasConsent && allPassed && (
+                    <span className="text-xs text-amber-600 font-medium">
+                        Harap centang persetujuan UU PDP
+                    </span>
+                )}
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!allPassed || !hasConsent}
                     onClick={onStart}
+                    id="start-interview-btn"
                 >
                     Start Interview
                 </Button>

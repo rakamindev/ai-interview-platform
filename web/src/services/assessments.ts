@@ -39,4 +39,7 @@ export const assessmentsApi = {
       `/assessments/${assessmentId}/sessions`,
       { session: { candidate_name: candidateName, candidate_id: candidateId } }
     ),
+
+  deleteSession: (sessionId: number) =>
+    api.delete<{ message: string }>(`/sessions/${sessionId}`),
 };

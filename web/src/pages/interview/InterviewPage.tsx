@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, AlertTriangle, RefreshCw } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -38,6 +38,7 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Fetch candidate info
   useEffect(() => {
@@ -48,7 +49,12 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        setInterviewState("error");
+        setErrorMessage(
+          err.response?.data?.error || "Gagal memuat sesi wawancara. Silakan periksa kembali tautan undangan Anda."
+        );
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -237,6 +243,56 @@ export default function InterviewPage() {
           <br />
           The hiring team will review your results and follow up with you.
         </p>
+      </div>
+    );
+  }
+
+  // ── State Error: Connection Failure / Session Abort ─────────────────────
+  if (interviewState === "error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-2">
+          <AlertTriangle className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-gray-900">Koneksi Wawancara Terputus</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+            {errorMessage ??
+              "Terjadi gangguan konektivitas atau sesi terhenti dari server. Data dan transkrip Anda sebelumnya tetap aman."}
+          </p>
+        </div>
+
+        <div className="bg-muted/40 border rounded-lg p-4 max-w-md mx-auto text-left text-xs text-muted-foreground space-y-1.5">
+          <p className="font-semibold text-foreground">Langkah Pemulihan:</p>
+          <p>1. Periksa stabilitas koneksi internet atau Wi-Fi Anda.</p>
+          <p>2. Klik tombol di bawah untuk menyambungkan ulang sesi.</p>
+          <p>3. Jika kendala berlanjut, hubungi tim rekruter untuk bantuan teknis.</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Button
+            size="lg"
+            className="w-full sm:w-auto"
+            onClick={() => {
+              setErrorMessage(null);
+              startInterview();
+            }}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Coba Hubungkan Ulang
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto"
+            onClick={() => {
+              setInterviewState("idle");
+              setHardwareCheckDone(false);
+            }}
+          >
+            Cek Ulang Jaringan & Hardware
+          </Button>
+        </div>
       </div>
     );
   }
