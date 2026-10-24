@@ -175,15 +175,25 @@ export default function AssessmentInvitePage() {
     }
   };
 
+  const resolveCandidateInviteUrl = (url?: string, token?: string) => {
+    if (!url && !token) return "";
+    if (!url) return `${window.location.origin}/interview/${token}`;
+    if (url.includes(":3001")) return url.replace(":3001", ":5173");
+    if (!url.startsWith("http")) return `${window.location.origin}${url.startsWith("/") ? "" : "/"}${url}`;
+    return url;
+  };
+
   const copyLink = (session: Session, id: number) => {
-    navigator.clipboard.writeText(session.invite_url);
+    const finalUrl = resolveCandidateInviteUrl(session.invite_url, session.invite_token);
+    navigator.clipboard.writeText(finalUrl);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const copyNewSessionLink = () => {
-    if (!newSession?.invite_url) return;
-    navigator.clipboard.writeText(newSession.invite_url);
+    if (!newSession) return;
+    const finalUrl = resolveCandidateInviteUrl(newSession.invite_url, newSession.invite_token);
+    navigator.clipboard.writeText(finalUrl);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
   };

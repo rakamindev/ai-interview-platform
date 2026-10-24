@@ -154,28 +154,42 @@ module Portfolios
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        attrs = sanitize_skill_attributes(skill_data, is_discovered: false)
+        portfolio.portfolio_skills.create!(attrs)
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        attrs = sanitize_skill_attributes(skill_data, is_discovered: true)
+        portfolio.portfolio_skills.create!(attrs)
       end
+    end
+
+    def sanitize_skill_attributes(skill_data, is_discovered:)
+      raw_level = skill_data['level']
+      evidence  = Array(skill_data['evidence']).reject { |e| e.nil? || e.to_s.strip.empty? }.first(3)
+      summary   = skill_data['competency_summary'].presence
+
+      confidence = skill_data['confidence'].presence || (evidence.empty? ? 'low' : 'medium')
+      confidence = confidence.to_s.downcase
+      confidence = 'low' unless %w[high medium low].include?(confidence)
+
+      level = if raw_level.present? && raw_level.to_i.positive?
+                raw_level.to_i.clamp(1, 5)
+              else
+                confidence = 'low'
+                summary ||= "Insufficient behavioral signal was observed during the session to assess proficiency."
+                1
+              end
+
+      {
+        skill_id:           is_discovered ? nil : skill_data['skill_id'],
+        skill_label:        skill_data['skill_label'] || 'Unnamed Skill',
+        is_discovered:      is_discovered,
+        ai_level:           level,
+        ai_confidence:      confidence,
+        evidence:           evidence,
+        competency_summary: summary
+      }
     end
   end
 end
