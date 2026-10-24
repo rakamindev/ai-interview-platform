@@ -5,7 +5,16 @@ import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Briefcase,
+  ChevronDown,
   ClipboardList,
   LogOut,
   Menu,
@@ -62,14 +71,35 @@ export default function AssessorLayout() {
     </nav>
   );
 
-  const account = (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleLogout}
-      title="Logout"
-      className="h-9 w-9 shrink-0 text-slate-500 hover:bg-slate-100 hover:text-slate-950"
-    >
+  const account = tenant.name ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="h-11 gap-2 rounded-lg px-2 hover:bg-slate-50"
+          aria-label={`Open ${tenant.name} account menu`}
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            {tenant.name.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="hidden max-w-32 truncate text-sm font-medium text-slate-700 sm:block">{tenant.name}</span>
+          <ChevronDown className="h-4 w-4 text-slate-400" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="font-normal">
+          <p className="text-xs text-muted-foreground">Workspace</p>
+          <p className="truncate text-sm font-medium">{tenant.name}</p>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : (
+    <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="h-9 w-9 shrink-0 text-slate-500 hover:bg-slate-100 hover:text-slate-950">
       <LogOut className="h-4 w-4" />
       <span className="sr-only">Logout</span>
     </Button>
@@ -134,14 +164,6 @@ export default function AssessorLayout() {
           </Button>
           <div className="hidden text-sm text-slate-500 md:block">Assessment workspace</div>
           <div className="ml-auto flex items-center gap-2">
-            {tenant.name && (
-              <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {tenant.name.slice(0, 1).toUpperCase()}
-                </span>
-                <span className="hidden text-sm font-medium text-slate-700 sm:block">{tenant.name}</span>
-              </div>
-            )}
             {account}
           </div>
         </header>
