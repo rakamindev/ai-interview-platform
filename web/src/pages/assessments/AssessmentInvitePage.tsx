@@ -126,6 +126,7 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -145,7 +146,7 @@ export default function AssessmentInvitePage() {
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -194,6 +195,22 @@ export default function AssessmentInvitePage() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="border border-destructive/40 rounded-lg p-6 text-center">
+          <h1 className="text-lg font-semibold">Assessment unavailable</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This assessment could not be loaded. It may not exist or you may no longer have access.
+          </p>
+          <Button className="mt-4" variant="outline" onClick={() => navigate("/assessments")}>
+            Back to assessments
+          </Button>
+        </div>
       </div>
     );
   }
