@@ -12,6 +12,7 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
+import { toast } from "sonner";
 
 interface VacancyFormValues {
   role_title: string;
@@ -48,6 +49,7 @@ export default function VacancyEditPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
+      toast.success("Vacancy updated", { description: "Your changes have been saved." });
       navigate("/vacancies");
     } finally {
       setSubmitting(false);

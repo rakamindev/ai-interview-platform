@@ -28,6 +28,7 @@ import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
+import { toast } from "sonner";
 
 export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,6 +80,7 @@ export default function AssessmentEditPage() {
         time_limit_min: data.time_limit_min,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
+      toast.success("Assessment updated", { description: "Your changes have been saved." });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");

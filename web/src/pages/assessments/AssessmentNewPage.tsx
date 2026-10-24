@@ -27,6 +27,7 @@ import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
+import { toast } from "sonner";
 
 export interface AssessmentFormValues {
   name: string;
@@ -104,6 +105,7 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
+      toast.success("Assessment created", { description: "Your assessment is ready for candidate invites." });
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");

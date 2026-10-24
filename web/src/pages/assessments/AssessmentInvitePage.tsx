@@ -17,6 +17,7 @@ import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Activity, AlertTriangle, CheckCircle2, Radio } from "lucide-react";
 import type { Assessment, Session } from "@/types";
+import { toast } from "sonner";
 
 function SessionRow({
   session,
@@ -171,6 +172,7 @@ export default function AssessmentInvitePage() {
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+      toast.success("Candidate invite created", { description: "Copy the link and send it to your candidate." });
     } finally {
       setCreatingSession(false);
     }
