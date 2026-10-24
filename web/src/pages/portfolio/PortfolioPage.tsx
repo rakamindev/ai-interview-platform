@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -14,6 +14,8 @@ import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
+  const currentSessionId = useRef(sessionId);
+  currentSessionId.current = sessionId;
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -23,33 +25,62 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [vacancyError, setVacancyError] = useState<string | null>(null);
+
+  const loadVacancies = useCallback(async () => {
+    try {
+      const res = await vacanciesApi.list();
+      setVacancies(res.data.vacancies);
+      setVacancyError(null);
+    } catch {
+      setVacancyError("Vacancies could not be loaded. Try again to choose a role.");
+    }
+  }, []);
 
   const fetchPortfolio = useCallback(async () => {
-    const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-      setGenerating(true);
-    } else if (data.portfolio) {
-      setPortfolio(data.portfolio);
+    try {
+      const res = await sessionsApi.getPortfolio(Number(sessionId));
+      if (currentSessionId.current !== sessionId) return;
+      const data = res.data;
+      if ("status" in data && data.status === "generating") {
+        setGenerating(true);
+      } else if ("portfolio" in data && data.portfolio) {
+        setPortfolio(data.portfolio);
+        setGenerating(data.portfolio.generation_status === "generating" || data.portfolio.generation_status === "pending" || !!data.portfolio.generation_in_progress);
+        const overrideMap: Record<number, AssessorOverride> = {};
+        data.portfolio.overrides.forEach((o) => {
+          overrideMap[o.portfolio_skill_id] = o;
+        });
+        setOverrides(overrideMap);
+      } else {
+        throw new Error("Portfolio missing");
+      }
+      setLoadError(null);
+    } catch {
+      if (currentSessionId.current !== sessionId) return;
       setGenerating(false);
-      // Build overrides map
-      const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
-        overrideMap[o.portfolio_skill_id] = o;
-      });
-      setOverrides(overrideMap);
+      setLoadError("The portfolio could not be loaded. Check your connection and try again.");
     }
   }, [sessionId]);
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [fetchPortfolio, sessionId]);
+    let active = true;
+    setPortfolio(null);
+    setOverrides({});
+    setSelectedVacancy("");
+    setGenerating(false);
+    setLoading(true);
+    fetchPortfolio().finally(() => { if (active) setLoading(false); });
+    loadVacancies();
+    sessionsApi.get(Number(sessionId))
+      .then((res) => { if (active) setCandidateName(res.data.session.candidate_name ?? null); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [fetchPortfolio, loadVacancies, sessionId]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -63,9 +94,25 @@ export default function PortfolioPage() {
     navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`);
   };
 
+  const handleRetry = async () => {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      await sessionsApi.regeneratePortfolio(Number(sessionId));
+      setGenerating(true);
+      setLoadError(null);
+    } catch {
+      setRetryError("Could not queue portfolio generation. Try again.");
+      await fetchPortfolio();
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -89,6 +136,8 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch {
+      setExportError("The export could not be downloaded. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -153,12 +202,20 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {loadError && (
+        <div role="alert" className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
+          {loadError}
+          <Button variant="outline" size="sm" className="ml-2" onClick={fetchPortfolio}>Try again</Button>
+        </div>
+      )}
+      {exportError && <div role="alert" className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">{exportError}</div>}
+
       {/* Generating state */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
-            <p className="font-medium">Generating portfolio...</p>
+            <p className="font-medium">{portfolio?.generation_status === "complete" ? "Refreshing portfolio..." : "Generating portfolio..."}</p>
             <p className="text-sm text-muted-foreground mt-1">
               The AI is analyzing the interview transcript. This takes about 2 minutes.
             </p>
@@ -167,24 +224,27 @@ export default function PortfolioPage() {
       )}
 
       {/* Failed state */}
-      {!generating && portfolio?.generation_status === "failed" && (
+      {!generating && portfolio && (portfolio.generation_status === "failed" || portfolio.generation_error) && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          <p className="text-sm text-destructive">
+            {portfolio.generation_status === "failed"
+              ? "Portfolio generation failed."
+              : "Portfolio refresh failed. The previous result is still available."}
+          </p>
+          {retryError && <p role="alert" className="text-sm text-destructive">{retryError}</p>}
           <Button
             variant="outline"
             size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
+            onClick={handleRetry}
+            disabled={retrying}
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+            {retrying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />} Retry
           </Button>
         </div>
       )}
 
       {/* Ready state */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {portfolio?.generation_status === "complete" && (
         <>
           {/* Configured skills */}
           <div className="space-y-3">
@@ -192,12 +252,13 @@ export default function PortfolioPage() {
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
+                <div id={`skill-${skill.id}`} key={skill.id}>
+                  <SkillPortfolioCard
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                </div>
               ))}
           </div>
 
@@ -218,12 +279,13 @@ export default function PortfolioPage() {
                 {portfolio.skills
                   .filter((s) => s.is_discovered)
                   .map((skill) => (
-                    <SkillPortfolioCard
-                      key={skill.id}
-                      skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                    />
+                    <div id={`skill-${skill.id}`} key={skill.id}>
+                      <SkillPortfolioCard
+                        skill={skill}
+                        override={overrides[skill.id]}
+                        onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      />
+                    </div>
                   ))}
               </div>
             </>
@@ -232,6 +294,12 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
+          {vacancyError && (
+            <div role="alert" className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
+              {vacancyError}
+              <Button variant="outline" size="sm" className="ml-2" onClick={loadVacancies}>Retry vacancies</Button>
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
               <SelectTrigger className="w-56">

@@ -34,7 +34,13 @@ class CoverageWebSocketMiddleware
       # message — this matches the pattern used by the audio WS for browser clients
       # that can't set WebSocket headers.
       session, error = authenticate_assessor(env, session_id)
-      next if error  # wait for auth message
+      if error
+        if env['HTTP_AUTHORIZATION'].present?
+          ws.send({ type: 'error', code: 'auth_failed', message: error }.to_json)
+          ws.close
+        end
+        next # browser clients without headers authenticate with the first message
+      end
 
       send_current_state(ws, session)
       redis_sub = subscribe_to_coverage_updates(ws, session_id)
@@ -87,7 +93,7 @@ class CoverageWebSocketMiddleware
 
     ws.send(payload.to_json)
   rescue => e
-    Rails.logger.error("[CoverageWS] Failed to send initial state: #{e.message}")
+    Rails.logger.error("[CoverageWS] Failed to send initial state: #{e.class}")
   end
 
   # Returns the Redis instance so the caller can unsubscribe on WS close.
@@ -101,13 +107,13 @@ class CoverageWebSocketMiddleware
           EM.schedule do
             ws.send(message)
           rescue => e
-            Rails.logger.debug("[CoverageWS] Failed to forward update: #{e.message}")
+            Rails.logger.debug("[CoverageWS] Failed to forward update: #{e.class}")
             redis.unsubscribe(channel)
           end
         end
       end
     rescue => e
-      Rails.logger.error("[CoverageWS] Redis subscription error for #{channel}: #{e.message}")
+      Rails.logger.error("[CoverageWS] Redis subscription error for #{channel}: #{e.class}")
     ensure
       redis.disconnect!
     end
@@ -123,17 +129,16 @@ class CoverageWebSocketMiddleware
   end
 
   def authenticate_assessor_by_token(token, session_id)
-    payload = JsonWebToken.decode(token)
-
-    org = Organization.find_by(scheme: payload[:scheme])
+    auth = AuthorizeApiRequest.new({ 'Authorization' => "Bearer #{token}" }, [:assessor]).call
+    org = Organization.find_by(scheme: auth[:user].scheme)
     return [nil, 'Invalid tenant'] unless org
 
     session = Session.unscoped.where(tenant_id: org.id).find_by(id: session_id)
     return [nil, 'Session not found'] unless session
 
     [session, nil]
-  rescue => e
-    [nil, "Authentication failed: #{e.message}"]
+  rescue StandardError
+    [nil, 'Authentication failed']
   end
 
   def coverage_json(map)

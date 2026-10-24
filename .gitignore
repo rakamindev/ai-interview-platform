@@ -1,19 +1,44 @@
-# Dependencies
+# Dependencies and package-manager state
 **/node_modules/
+**/.bundle/
+**/vendor/bundle/
 
-# Env / secrets
-**/.env
-**/.env.local
+# Local environment and credentials. Commit only documented examples.
+**/.env*
+!**/.env.example
+!**/.env.*.example
 api/config/application.yml
+api/config/master.key
+**/vertex_ai_credentials.json
 
-# Logs and temp
+# Runtime data
 **/log/*.log
-**/tmp/
-api/storage/
+/tmp/
+*.pid
+*.pid.lock
 
-# Build output
+# Build and test output
 web/dist/
 web/.vite/
+**/coverage/
+**/.nyc_output/
 
-# OS
+# Local tools and editors
+/.code-review-graph/
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+
+# Candidate working files and the supplied brief transcription.
+/assessment/
+/brief-fullstack.md
+/compose.case-study.yml
+/api/Dockerfile.dev
+/.env.case-study.example
+
+# OS metadata
 .DS_Store
+Thumbs.db
+Desktop.ini

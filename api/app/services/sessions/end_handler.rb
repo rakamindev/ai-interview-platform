@@ -49,7 +49,7 @@ module Sessions
       redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
       redis.publish("coverage:#{@session.id}", { type: 'session_status', status: @session.status, end_reason: @session.end_reason }.to_json)
     rescue => e
-      Rails.logger.error("[EndHandler] Failed to publish status update: #{e.message}")
+      Rails.logger.error("[EndHandler] Failed to publish status update: #{e.class}")
     ensure
       redis&.close
     end
@@ -66,10 +66,13 @@ module Sessions
 
     def enqueue_portfolio_generation
       portfolio = @session.reload.portfolio
-      return unless portfolio
+      return if portfolio.nil? || portfolio.complete?
 
-      PortfolioGeneratorWorker.perform_async(@session.id)
+      Portfolios::GenerationManager.new(portfolio).queue
+
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+    rescue Portfolios::GenerationManager::EnqueueError => e
+      Rails.logger.error("[N9/EndHandler] Portfolio enqueue failed for session #{@session.id}: #{e.class}")
     end
   end
 end

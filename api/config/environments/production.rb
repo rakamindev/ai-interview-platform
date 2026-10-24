@@ -27,8 +27,8 @@ Rails.application.configure do
   logger.formatter = config.log_formatter
   config.logger    = ActiveSupport::TaggedLogging.new(logger)
 
-  # Log level (default: info in production)
-  config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info").to_sym
+  # Request paths contain invite tokens. Suppress Rails request logs by default.
+  config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "warn").to_sym
 
   # Use a real queuing backend for Active Job.
   config.active_job.queue_adapter = :sidekiq

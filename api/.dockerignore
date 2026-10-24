@@ -1,0 +1,9 @@
+.bundle/
+.env*
+config/application.yml
+config/master.key
+coverage/
+log/
+storage/
+tmp/
+vendor/bundle/

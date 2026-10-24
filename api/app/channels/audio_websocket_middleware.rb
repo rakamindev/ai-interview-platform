@@ -58,7 +58,7 @@ class AudioWebSocketMiddleware
     state.session = session
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
-    Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+    Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}")
     browser_ws.close
   end
 
@@ -144,7 +144,7 @@ class AudioWebSocketMiddleware
       on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
       on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
       on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
-      on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
+      on_error: ->(_message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id}") },
       on_resumption_token_update: build_on_resumption_token_update(state, session),
       on_ready: build_on_ready(browser_ws, state, session)
     )
@@ -165,7 +165,7 @@ class AudioWebSocketMiddleware
       begin
         browser_ws.send(pcm_bytes.bytes)
       rescue StandardError => e
-        Rails.logger.error("[AudioWS] Failed to send audio to browser: #{e.class}: #{e.message}")
+        Rails.logger.error("[AudioWS] Failed to send audio to browser: #{e.class}")
       end
     }
   end
@@ -188,7 +188,7 @@ class AudioWebSocketMiddleware
           refresh_coverage_cache(session, state)
         end
       rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (input transcription): #{e.class}: #{e.message}")
+        Rails.logger.error("[AudioWS] Thread crashed (input transcription): #{e.class}")
       end
 
       send_json(browser_ws, type: 'transcription', speaker: 'candidate',
@@ -236,7 +236,7 @@ class AudioWebSocketMiddleware
           save_transcript_turn(session, turn_number, 'ai', text)
         end
       rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (output transcription): #{e.class}: #{e.message}")
+        Rails.logger.error("[AudioWS] Thread crashed (output transcription): #{e.class}")
       end
 
       send_json(browser_ws, type: 'transcription', speaker: 'ai',
@@ -258,7 +258,7 @@ class AudioWebSocketMiddleware
             next if state.ending_scheduled
             Rails.logger.warn("[AudioWS] on_model_turn_complete delayed — finalizing via closing-phrase fallback (session=#{session.id})")
             state.ending_scheduled = true
-            send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+            signal_audio_completion(browser_ws, session)
             poll_for_session_end(browser_ws, state, session, attempts: 0)
           end
         end
@@ -316,7 +316,7 @@ class AudioWebSocketMiddleware
           session.update_column(:gemini_resumption_token, token)
         end
       rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (resumption token): #{e.class}: #{e.message}")
+        Rails.logger.error("[AudioWS] Thread crashed (resumption token): #{e.class}")
       end
     }
   end
@@ -511,7 +511,7 @@ class AudioWebSocketMiddleware
           EM.schedule { state.gemini_client&.close }
         end
       rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")
+        Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}")
       end
     end
   end
@@ -562,7 +562,7 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] Wrap-up turn complete — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+    signal_audio_completion(browser_ws, session)
     poll_for_session_end(browser_ws, state, session, attempts: 0)
   end
 
@@ -589,7 +589,7 @@ class AudioWebSocketMiddleware
     state.coverage_end_timer&.cancel
     state.ending_scheduled = true
     Rails.logger.info("[AudioWS] AI closed naturally — finalizing session #{session.id}")
-    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+    signal_audio_completion(browser_ws, session)
     poll_for_session_end(browser_ws, state, session, attempts: 0)
   end
 
@@ -612,7 +612,7 @@ class AudioWebSocketMiddleware
           end
         end
       rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (poll session end): #{e.class}: #{e.message}")
+        Rails.logger.error("[AudioWS] Thread crashed (poll session end): #{e.class}")
       end
     end
   end
@@ -643,7 +643,7 @@ class AudioWebSocketMiddleware
     Rails.logger.warn("[AudioWS] Coverage cache refresh slow: #{elapsed}ms (session=#{session.id})") if elapsed > 50
     Rails.logger.debug("[AudioWS] Coverage cache refreshed in #{elapsed}ms")
   rescue StandardError => e
-    Rails.logger.error("[AudioWS] Coverage cache refresh failed: #{e.message}")
+    Rails.logger.error("[AudioWS] Coverage cache refresh failed: #{e.class}")
   end
 
   def save_transcript_turn(session, turn_number, speaker, text)
@@ -655,7 +655,7 @@ class AudioWebSocketMiddleware
   rescue ActiveRecord::RecordNotUnique
     # Duplicate turn — skip silently (idempotent)
   rescue StandardError => e
-    Rails.logger.error("[AudioWS] Failed to save transcript turn: #{e.message}")
+    Rails.logger.error("[AudioWS] Failed to save transcript turn: #{e.class}")
   end
 
   def check_time_ceiling(session, state, browser_ws)
@@ -693,7 +693,7 @@ class AudioWebSocketMiddleware
           close_session_after_end(browser_ws, state, reason: 'time_ceiling')
         end
       rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (time ceiling): #{e.class}: #{e.message}")
+        Rails.logger.error("[AudioWS] Thread crashed (time ceiling): #{e.class}")
       end
     end
   end
@@ -742,15 +742,14 @@ class AudioWebSocketMiddleware
         auth_header = env['HTTP_AUTHORIZATION']
         return [nil, 'Missing authorization'] unless auth_header.present?
 
-        token = auth_header.split(' ').last
-        payload = JsonWebToken.decode(token)
-        tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
+        auth = AuthorizeApiRequest.new({ 'Authorization' => auth_header }, [:assessor]).call
+        tenant_id = Organization.find_by(scheme: auth[:user].scheme)&.id
         return [nil, 'Invalid tenant'] unless tenant_id
 
         Session.unscoped.where(tenant_id: tenant_id).find_by(id: session_id)
       end
-    rescue StandardError => e
-      return [nil, "Authentication failed: #{e.message}"]
+    rescue StandardError
+      return [nil, 'Authentication failed']
     end
 
     return [nil, 'Session not found'] unless session
@@ -760,12 +759,17 @@ class AudioWebSocketMiddleware
     [session, nil]
   end
 
+  def signal_audio_completion(browser_ws, session)
+    session.update_column(:audio_completion_ready_at, Time.current)
+    send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+  end
+
   def send_json(ws, **payload)
     ws.send(payload.to_json)
   rescue StandardError => e
     # speaker_changed / session_ended failures are critical for frontend state — log at WARN.
     level = %w[speaker_changed session_started session_ended].include?(payload[:type]) ? :warn : :debug
-    Rails.logger.public_send(level, "[AudioWS] Failed to send JSON (type=#{payload[:type]}): #{e.message}")
+    Rails.logger.public_send(level, "[AudioWS] Failed to send JSON (type=#{payload[:type]}): #{e.class}")
   end
 
   # Per-connection state shared across callbacks.

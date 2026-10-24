@@ -21,6 +21,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [regenerationFailed, setRegenerationFailed] = useState(false);
 
   const hasOverride = !!existingOverride;
 
@@ -33,6 +34,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         assessor_notes: notes,
       });
       onSaved(res.data.override);
+      setRegenerationFailed(res.data.regeneration_failed_vacancy_ids.length > 0);
       setOpen(false);
     } catch {
       setSaveError(true);
@@ -43,6 +45,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
   if (!open) {
     return (
+      <div className="space-y-2">
       <div className="flex items-center gap-2">
         {hasOverride ? (
           <>
@@ -62,6 +65,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
             Override rating ▼
           </Button>
         )}
+      </div>
+      {regenerationFailed && <p role="alert" className="text-xs text-amber-800">Override saved. Fit/gap refresh failed; open the report and select Regenerate.</p>}
       </div>
     );
   }

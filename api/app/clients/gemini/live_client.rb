@@ -139,13 +139,13 @@ module Gemini
 
     def handle_ws_close(event)
       @connected = false
-      Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{event.code} reason=#{event.reason} superseded=#{@superseded}")
+      Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{event.code} superseded=#{@superseded}")
       # Skip on_close for superseded clients to avoid duplicate reconnect from the replaced instance.
       @on_close&.call(code: event.code, reason: event.reason) unless @superseded
     end
 
     def handle_ws_error(event)
-      Rails.logger.error("[Gemini::LiveClient] WebSocket error: #{event.message}")
+      Rails.logger.error('[Gemini::LiveClient] WebSocket error')
       @on_error&.call(event.message) unless @superseded
     end
 
@@ -285,11 +285,11 @@ module Gemini
         parts << 'audio' if has_audio
         if has_input_tx
           input_tx_text = sc.dig('inputTranscription', 'parts', 0, 'text') || sc.dig('inputTranscription', 'text')
-          parts << "inputTx=#{input_tx_text.truncate(50)}" if input_tx_text.present?
+          parts << 'inputTx=present' if input_tx_text.present?
         end
         if has_output_tx
           output_tx_text = sc.dig('outputTranscription', 'parts', 0, 'text') || sc.dig('outputTranscription', 'text')
-          parts << "outputTx=#{output_tx_text.truncate(50)}" if output_tx_text.present?
+          parts << 'outputTx=present' if output_tx_text.present?
         end
         parts << 'turnComplete' if turn_complete
         parts << 'generationComplete' if gen_complete
@@ -352,7 +352,7 @@ module Gemini
       handle_setup_complete(data)
       handle_go_away_event(data)
     rescue JSON::ParserError => e
-      Rails.logger.error("[Gemini::LiveClient] Failed to parse message: #{e.message}")
+      Rails.logger.error("[Gemini::LiveClient] Failed to parse message: #{e.class}")
     end
 
     def handle_audio_response(data)
@@ -446,7 +446,7 @@ module Gemini
       resumption = data['sessionResumption'] || data['sessionResumptionUpdate']
       return unless resumption
 
-      Rails.logger.debug("[Gemini::LiveClient] Resumption data: #{resumption.to_json}")
+      Rails.logger.debug('[Gemini::LiveClient] Resumption data received')
       handle = resumption['newHandle'] || resumption['handle'] || resumption['token']
       return unless handle.present?
 

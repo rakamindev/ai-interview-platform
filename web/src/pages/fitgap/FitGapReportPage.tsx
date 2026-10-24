@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
-import type { FitGapReport, Portfolio } from "@/types";
+import type { FitGapReport, FitGapState, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -20,54 +20,72 @@ export default function FitGapReportPage() {
 
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
+  const [generation, setGeneration] = useState<FitGapState["generation"]>(null);
+  const [stale, setStale] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const initialTrigger = useRef(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+
+  const applyState = useCallback((state: FitGapState) => {
+    setReport(state.report);
+    setGeneration(state.generation);
+    setStale(state.stale);
+    setError(null);
+  }, []);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
-    } catch (e: any) {
-      if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
-        }
+      applyState(res.data);
+      if (!res.data.report && !res.data.generation && !initialTrigger.current) {
+        initialTrigger.current = true;
+        const queued = await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+        applyState(queued.data);
       }
+    } catch {
+      setError("The report could not be loaded. Check your connection and try again.");
+      setGeneration(null);
+      initialTrigger.current = false;
     }
-  }, [portfolio, vacancyId]);
+  }, [portfolio, vacancyId, applyState]);
+
+  const loadPortfolio = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await sessionsApi.getPortfolio(Number(sessionId));
+      const data = res.data as { portfolio?: Portfolio };
+      if (!data.portfolio) throw new Error("Portfolio missing");
+      setPortfolio(data.portfolio);
+    } catch {
+      setError("The portfolio could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
 
   useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+    loadPortfolio();
+  }, [loadPortfolio]);
 
   useEffect(() => {
     if (portfolio) fetchReport();
   }, [portfolio, fetchReport]);
 
+  const generating = generation?.status === "queued" || generation?.status === "running";
   usePolling(fetchReport, 5000, generating && !!portfolio);
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
     setRegenerating(true);
     try {
-      await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
-      setGenerating(true);
+      const response = await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
+      applyState(response.data);
+    } catch {
+      setError("Regeneration could not be started. Please try again.");
     } finally {
       setRegenerating(false);
     }
@@ -88,6 +106,8 @@ export default function FitGapReportPage() {
       a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setError("The export could not be downloaded. Please try again.");
     } finally {
       setExporting(null);
     }
@@ -105,7 +125,7 @@ export default function FitGapReportPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link
@@ -119,12 +139,12 @@ export default function FitGapReportPage() {
         </div>
 
         {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating || portfolio.generation_status !== "complete"}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
               Regenerate
             </Button>
-            {report && (
+            {report && !stale && (
               <>
                 <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
                   {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
@@ -140,24 +160,54 @@ export default function FitGapReportPage() {
         )}
       </div>
 
+      {error && (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {error} <Button variant="outline" size="sm" className="ml-2"
+            onClick={portfolio ? fetchReport : loadPortfolio}>Try again</Button>
+        </div>
+      )}
+
+      {stale && report && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          This is the last completed report. The portfolio or vacancy changed after it was generated. Regenerate before using its comparison or export.
+        </div>
+      )}
+
+      {generation?.status === "failed" && (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Generation failed ({generation.error_code || "unknown error"}). The last completed report is still available. Use Regenerate to retry.
+        </div>
+      )}
+
       {/* Generating */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+        <div role="status" className="border rounded-lg p-6 text-center space-y-3">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Generating fit/gap report... {report && "The previous report remains visible below."}</p>
+        </div>
+      )}
+
+      {!report && !generating && !error && generation?.status !== "failed" && (
+        <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+          No report is available yet. Select Regenerate to start one.
         </div>
       )}
 
       {/* Report ready */}
       {report && (
         <>
+          <p className="text-xs text-muted-foreground">
+            Report generated: {report.generated_at ? new Date(report.generated_at).toLocaleString() : "time unavailable"}
+            {stale ? " · Previous snapshot" : ""}
+          </p>
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Skill Comparison</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <ComparisonTable comparisons={report.skill_comparisons} />
+              <ComparisonTable comparisons={report.skill_comparisons}
+                portfolioPath={`/assessments/${id}/sessions/${sessionId}/portfolio`} />
             </CardContent>
           </Card>
 
@@ -166,11 +216,12 @@ export default function FitGapReportPage() {
           {/* Culture & competency */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+              <CardTitle className="text-sm">Summary and Evidence Limits</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
+              <p className="text-xs text-muted-foreground mb-2">AI-assisted summary. Verify it against the skill evidence; it is not a hiring decision.</p>
               <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
+                {report.overall_narrative || "No summary is available. Review the individual skill comparisons."}
               </p>
             </CardContent>
           </Card>

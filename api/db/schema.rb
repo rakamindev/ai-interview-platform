@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_24_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -82,6 +82,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["session_id"], name: "index_coverage_maps_on_session_id"
   end
 
+  create_table "fit_gap_generation_requests", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.bigint "vacancy_id", null: false
+    t.string "status", limit: 20, default: "queued", null: false
+    t.string "request_token", limit: 64, null: false
+    t.string "source_digest", limit: 64, null: false
+    t.string "error_code", limit: 100
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["portfolio_id", "vacancy_id"], name: "idx_fit_gap_generation_pair", unique: true
+    t.index ["portfolio_id"], name: "index_fit_gap_generation_requests_on_portfolio_id"
+    t.index ["vacancy_id"], name: "index_fit_gap_generation_requests_on_vacancy_id"
+  end
+
   create_table "fit_gap_reports", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.bigint "vacancy_id", null: false
@@ -89,6 +103,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "source_digest", limit: 64
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -126,6 +141,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.string "generation_attempt_token", limit: 64
+    t.datetime "generation_attempted_at"
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
   end
@@ -143,6 +160,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "audio_completion_ready_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
@@ -182,7 +200,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "role", limit: 20, default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "tenant_id"
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
+    t.index ["tenant_id"], name: "index_users_on_tenant_id"
   end
 
   create_table "vacancies", force: :cascade do |t|
@@ -208,11 +228,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
+  add_foreign_key "fit_gap_generation_requests", "portfolios"
+  add_foreign_key "fit_gap_generation_requests", "vacancies"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
+  add_foreign_key "users", "organizations", column: "tenant_id"
   add_foreign_key "vacancy_skills", "vacancies"
 end

@@ -13,7 +13,7 @@ class SystemPromptGeneratorWorker
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N2] Assessment #{assessment_id} not found — skipping")
   rescue StandardError => e
-    Rails.logger.error("[N2] SystemPromptGeneratorWorker failed for assessment=#{assessment_id}: #{e.class}: #{e.message}")
+    Rails.logger.error("[N2] SystemPromptGeneratorWorker failed for assessment=#{assessment_id}: #{e.class}")
     raise
   end
 end

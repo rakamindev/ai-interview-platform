@@ -5,12 +5,12 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
-    def initialize(session:, gemini_client: nil)
+    class StaleGeneration < StandardError; end
+
+    def initialize(session:, gemini_client: nil, request_token: nil)
       @session = session
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
-      )
+      @gemini_client = gemini_client
+      @request_token = request_token
     end
 
     # Returns the Portfolio record with skills populated.
@@ -19,24 +19,74 @@ module Portfolios
         candidate_id:      @session.candidate_id,
         generation_status: 'pending'
       )
+      had_complete_portfolio = portfolio.complete?
 
-      portfolio.update!(generation_status: 'generating')
+      if @request_token
+        return portfolio unless portfolio.generation_attempt_token == @request_token
+      else
+        portfolio.update!(generation_status: 'generating') unless had_complete_portfolio
+      end
 
       prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      client = @gemini_client || Gemini::HttpClient.new(
+        model: ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'), timeout: 180
+      )
+      response = client.generate_content(prompt, temperature: 0.2)
+      rows = Portfolios::ResponseValidator.new(
+        response: response,
+        configured_skills: @session.assessment.assessment_skills,
+        candidate_turns: @session.transcript_turns.where(speaker: 'candidate').pluck(:text)
+      ).call
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      Portfolio.transaction do
+        portfolio.lock!
+        raise StaleGeneration if @request_token && portfolio.generation_attempt_token != @request_token
+
+        existing_skills = portfolio.portfolio_skills.includes(:assessor_override).to_a
+        matched_ids = []
+
+        rows.each do |attributes|
+          existing = existing_skills.find { |skill| skill_identity(skill) == skill_identity(attributes) }
+          if existing
+            existing.update!(attributes)
+            matched_ids << existing.id
+          else
+            portfolio.portfolio_skills.create!(attributes)
+          end
+        end
+
+        existing_skills.reject { |skill| matched_ids.include?(skill.id) }.each do |skill|
+          raise ArgumentError, 'Regeneration omitted an overridden skill' if skill.assessor_override
+
+          skill.destroy!
+        end
+        portfolio.update!(generation_status: 'complete', generation_error: nil,
+                          generation_attempt_token: nil, generated_at: Time.current)
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
+    rescue StaleGeneration
+      portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      portfolio&.with_lock do
+        if @request_token.nil? || portfolio.generation_attempt_token == @request_token
+          portfolio.update!(generation_status: had_complete_portfolio ? 'complete' : 'failed',
+                            generation_attempt_token: nil, generation_error: e.class.name)
+        end
+      end
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
     private
+
+    def skill_identity(skill)
+      id = skill.is_a?(Hash) ? skill[:skill_id] : skill.skill_id
+      label = skill.is_a?(Hash) ? skill[:skill_label] : skill.skill_label
+      discovered = skill.is_a?(Hash) ? skill[:is_discovered] : skill.is_discovered
+      [discovered, id.present? ? id.to_s.strip.upcase : label.to_s.squish.downcase]
+    end
 
     def build_prompt
       assessment       = @session.assessment
@@ -147,35 +197,5 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
-
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
-    end
   end
 end

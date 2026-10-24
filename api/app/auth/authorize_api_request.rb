@@ -4,8 +4,7 @@ require 'ostruct'
 
 # Extracted and simplified from rakamin-api.
 # Bearer token only (no basic auth — AI interview has no whitelist-key consumers).
-# Returns { user_id:, role:, scheme: } from the decoded JWT.
-# Does NOT hit the database for user lookup — trusts the JWT claims.
+# Bind signed claims to the current local account and its assigned tenant.
 class AuthorizeApiRequest
   # Roles that map to "assessor" permission in the AI interview context.
   # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
@@ -31,10 +30,17 @@ class AuthorizeApiRequest
   attr_reader :headers
 
   def build_user_struct(claims)
+    user = User.find_by(id: claims[:user_id])
+    organization = user&.organization
+    unless user && organization && user.role == claims[:role].to_s &&
+           organization.scheme == claims[:scheme].to_s
+      raise ExceptionHandler::InvalidToken, 'Token account or tenant is no longer valid'
+    end
+
     OpenStruct.new(
-      id:     claims[:user_id],
-      role:   claims[:role].to_s,
-      scheme: claims[:scheme].to_s
+      id: user.id,
+      role: user.role,
+      scheme: organization.scheme
     )
   end
 

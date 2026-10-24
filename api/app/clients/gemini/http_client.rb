@@ -29,10 +29,10 @@ module Gemini
     def generate_content(prompt, temperature: 0.2)
       response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
       parse_response(response)
-    rescue Faraday::TimeoutError => e
-      raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
-    rescue Faraday::Error => e
-      raise ApiError.new("Gemini API error: #{e.message}")
+    rescue Faraday::TimeoutError
+      raise TimeoutError.new("Gemini API timeout after #{@timeout}s")
+    rescue Faraday::Error
+      raise ApiError.new('Gemini API request failed')
     end
 
     private
@@ -63,7 +63,7 @@ module Gemini
           retry_block: ->(env, _opts, retries, exc) {
             retry_after = env&.response_headers&.[]('retry-after')&.to_i
             sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
+            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.class}")
           }
         }
         f.options.timeout = @timeout
@@ -75,11 +75,15 @@ module Gemini
     def parse_response(response)
       unless response.success?
         raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
+        Rails.logger.error("[Gemini::HttpClient] API error status=#{response.status}")
         raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
       end
 
-      data = JSON.parse(response.body)
+      begin
+        data = JSON.parse(response.body)
+      rescue JSON::ParserError
+        raise ApiError.new('Invalid Gemini response JSON')
+      end
       text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
 
       raise ApiError.new("No content in Gemini response") unless text

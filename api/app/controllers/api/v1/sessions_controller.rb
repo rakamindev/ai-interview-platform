@@ -121,9 +121,13 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
+        # The audio gateway persists readiness before sending preparing_to_end.
+        # The invite token alone must not let a caller finish an active interview.
+        unless session.active? && session.audio_completion_ready_at &&
+               session.audio_completion_ready_at >= 2.minutes.ago
+          return json_error('Audio completion is not ready', :conflict)
+        end
+
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
       end

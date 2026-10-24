@@ -9,6 +9,7 @@ module Exports
   class PdfGenerator
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
+    FONT_DIR = Rails.root.join('app/assets/fonts')
     RESULT_LABELS = {
       'match'        => 'Match',
       'gap'          => 'Gap',
@@ -27,6 +28,11 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        pdf.font_families.update('DejaVu' => {
+          normal: FONT_DIR.join('DejaVuSans.ttf').to_s,
+          bold: FONT_DIR.join('DejaVuSans-Bold.ttf').to_s
+        })
+        pdf.font 'DejaVu'
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -121,22 +127,29 @@ module Exports
 
       comparisons = @fit_gap.skill_comparisons
 
-      table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
+      table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Evidence']]
       comparisons.each do |c|
+        result = RESULT_LABELS[c['result']] || c['result']
+        result += " (#{c['delta'] > 0 ? '+' : ''}#{c['delta']})" if c['delta']
+        evidence_count = c['evidence_count'].to_i
+        proof = "#{evidence_count} verified quote#{evidence_count == 1 ? '' : 's'}"
+        proof += "\n#{c['reason']}" if c['reason'].present?
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
+          (c['required_level'] || c['expected_level']) ? "L#{c['required_level'] || c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
-          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
+          result,
+          proof
         ]
       end
 
-      pdf.table(table_data, header: true, width: pdf.bounds.width) do |t|
+      pdf.table(table_data, header: true, column_widths: [170, 65, 75, 80, 105]) do |t|
         t.row(0).font_style = :bold
         t.row(0).background_color = 'E5E7EB'
         t.cells.padding = [6, 8]
-        t.cells.size = 10
+        t.cells.size = 9
+        t.row(0).size = 8
+        t.row(0).padding = [6, 4]
       end
 
       if @fit_gap.culture_narrative.present?

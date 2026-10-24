@@ -31,7 +31,7 @@ class CoverageAnalyzerWorker
     Rails.logger.warn("[N7] Session #{session_id} not found — skipping")
   rescue => e
     # N7 failure is non-critical — log and let the interview continue
-    Rails.logger.error("[N7] Coverage analyzer failed for session #{session_id}: #{e.class} #{e.message}")
+    Rails.logger.error("[N7] Coverage analyzer failed for session #{session_id}: #{e.class}")
   end
 
   private
@@ -78,7 +78,7 @@ class CoverageAnalyzerWorker
     # a new (leaked) connection on every publish.
     Sidekiq.redis { |conn| conn.publish("coverage:#{session.id}", payload) }
   rescue => e
-    Rails.logger.error("[N7] Failed to publish coverage update: #{e.message}")
+    Rails.logger.error("[N7] Failed to publish coverage update: #{e.class}")
   end
 
   # Auto-advance skills that are partial but have fallen outside the analyzer's
@@ -96,7 +96,7 @@ class CoverageAnalyzerWorker
 
     scope.each do |map|
       map.update!(state: 'covered', last_signal: 'Auto-advanced: outside context window with sufficient probes')
-      Rails.logger.info("[N7] Auto-advanced #{map.skill_label} to covered (probe_count=#{map.probe_count})")
+      Rails.logger.info("[N7] Auto-advanced coverage map #{map.id} to covered (probe_count=#{map.probe_count})")
     end
   end
 

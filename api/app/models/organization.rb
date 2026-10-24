@@ -8,18 +8,16 @@
 class Organization < ApplicationRecord
   self.table_name = 'organizations'
 
-  # Mirrors rakamin-api Organisation.identify exactly.
-  # Accepts identifier, name, scheme, or host.
+  # Accepts identifier, name, scheme, or host. Unknown identifiers fail closed.
   def self.identify(identifier)
-    return default_organization if identifier.blank?
+    return if identifier.blank?
 
     sql_string = <<~SQL.squish
       (? IN (identifier, name, scheme, host)) OR
       (alias_hosts && ARRAY[?]::varchar[])
     SQL
 
-    where(sql_string, identifier, Array(identifier)).first ||
-      default_organization
+    where(sql_string, identifier, Array(identifier)).first
   end
 
   def self.default_organization

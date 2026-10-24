@@ -2,6 +2,7 @@
 
 class User < ApplicationRecord
   has_secure_password
+  belongs_to :organization, foreign_key: :tenant_id
 
   ROLES = %w[admin user].freeze
 

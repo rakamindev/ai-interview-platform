@@ -10,6 +10,7 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
+        Portfolios::GenerationManager.new(@portfolio).expire_stalled! if @portfolio
         if @portfolio.nil? || @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
@@ -32,12 +33,17 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        Portfolios::GenerationManager.new(portfolio).expire_stalled!
+
+        unless portfolio.failed? || portfolio.generation_error.present?
+          return json_error("Portfolio can only be regenerated after a failure", :unprocessable_entity)
         end
 
-        portfolio.update!(generation_status: "pending", generation_error: nil)
-        PortfolioGeneratorWorker.perform_async(@session.id)
+        begin
+          Portfolios::GenerationManager.new(portfolio).queue
+        rescue Portfolios::GenerationManager::EnqueueError
+          return json_error("Could not queue portfolio generation. Try again.", :service_unavailable)
+        end
 
         json_response(
           message:   "Portfolio generation queued",
@@ -57,8 +63,18 @@ module Api
           return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})", :unprocessable_entity)
         end
 
+        vacancy = nil
+        if params[:vacancy_id].present?
+          vacancy = tenant_vacancies.find_by(id: params[:vacancy_id])
+          return json_error("Vacancy not found", :not_found) unless vacancy
+
+          state = FitGap::GenerationManager.new(portfolio: @portfolio, vacancy: vacancy).state
+          if state[:report].nil? || state[:stale]
+            return json_error("A current fit/gap report is required for this export", :conflict)
+          end
+        end
+
         if format == "pdf"
-          vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
@@ -79,62 +95,56 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = tenant_portfolios.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
 
-        vacancy = Vacancy.find_by(id: vacancy_id)
+        vacancy = tenant_vacancies.find_by(id: vacancy_id)
         return json_error("Vacancy not found", :not_found) unless vacancy
 
         unless portfolio.complete?
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-
-        render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+        state = FitGap::GenerationManager.new(portfolio: portfolio, vacancy: vacancy).queue(force: true)
+        render json: fit_gap_state_json(state), status: :accepted
+      rescue FitGap::GenerationManager::EnqueueError
+        json_error("Could not queue fit/gap generation. Try again.", :service_unavailable)
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = tenant_portfolios.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
 
-        vacancy = Vacancy.find_by(id: vacancy_id)
+        vacancy = tenant_vacancies.find_by(id: vacancy_id)
         return json_error("Vacancy not found", :not_found) unless vacancy
 
         unless portfolio.complete?
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
-        existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
-          return json_response(report: fit_gap_json(existing))
-        end
-
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        state = FitGap::GenerationManager.new(portfolio: portfolio, vacancy: vacancy).queue
+        render json: fit_gap_state_json(state), status: state[:report] && !state[:stale] ? :ok : :accepted
+      rescue FitGap::GenerationManager::EnqueueError
+        json_error("Could not queue fit/gap generation. Try again.", :service_unavailable)
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        portfolio = tenant_portfolios.find(params[:id])
+        vacancy = tenant_vacancies.find_by(id: params[:vacancy_id])
+        return json_error("Vacancy not found", :not_found) unless vacancy
 
-        if report.nil?
-          return json_error("Fit/gap report not found", :not_found)
-        end
-
-        json_response(report: fit_gap_json(report))
+        state = FitGap::GenerationManager.new(portfolio: portfolio, vacancy: vacancy).state
+        json_response(fit_gap_state_json(state))
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
@@ -142,7 +152,7 @@ module Api
       private
 
       def set_session
-        @session = Session.find(params[:id])
+        @session = Session.where(tenant_id: current_tenant_id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found)
       end
@@ -153,7 +163,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = tenant_portfolios.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -165,11 +175,20 @@ module Api
           session_id:        portfolio.session_id,
           candidate_id:      portfolio.candidate_id,
           generation_status: portfolio.generation_status,
+          generation_in_progress: portfolio.generation_attempt_token.present?,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
+      end
+
+      def tenant_portfolios
+        Portfolio.joins(:session).where(sessions: { tenant_id: current_tenant_id })
+      end
+
+      def tenant_vacancies
+        Vacancy.where(tenant_id: current_tenant_id)
       end
 
       def portfolio_skill_json(skill)
@@ -202,11 +221,26 @@ module Api
           id:                report.id,
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
+          skill_comparisons: report.skill_comparisons.map { |comparison| normalize_comparison(comparison) },
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at
         }
+      end
+
+      def fit_gap_state_json(state)
+        {
+          report: state[:report] && fit_gap_json(state[:report]),
+          stale: state[:stale] || false,
+          generation: state[:generation]
+        }
+      end
+
+      def normalize_comparison(comparison)
+        comparison = comparison.stringify_keys
+        comparison['required_level'] ||= comparison['expected_level']
+        comparison['is_override'] = comparison['overridden'] || false unless comparison.key?('is_override')
+        comparison.except('expected_level', 'overridden')
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
