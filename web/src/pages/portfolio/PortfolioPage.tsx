@@ -17,6 +17,8 @@ export default function PortfolioPage() {
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationTimedOut, setGenerationTimedOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -29,9 +31,12 @@ export default function PortfolioPage() {
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
+      setGenerationStartedAt((startedAt) => startedAt ?? Date.now());
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
+      setGenerationStartedAt(null);
+      setGenerationTimedOut(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -51,8 +56,17 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  // Poll while generating and surface a bounded waiting state if the worker is stale.
+  usePolling(fetchPortfolio, 5000, generating && !generationTimedOut);
+
+  useEffect(() => {
+    if (!generating || !generationStartedAt || generationTimedOut) return;
+    const timeout = window.setTimeout(() => {
+      setGenerationTimedOut(true);
+      setGenerating(false);
+    }, 5 * 60 * 1000);
+    return () => window.clearTimeout(timeout);
+  }, [generating, generationStartedAt, generationTimedOut]);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -154,14 +168,41 @@ export default function PortfolioPage() {
       </div>
 
       {/* Generating state */}
-      {generating && (
+      {generating && !generationTimedOut && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              The AI is analyzing the interview transcript. This usually takes about 2 minutes.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Timed-out state */}
+      {generationTimedOut && (
+        <div className="border border-amber-300 bg-amber-50/60 rounded-lg p-6 text-center space-y-3">
+          <p className="font-medium text-amber-900">Portfolio generation is taking longer than expected.</p>
+          <p className="text-sm text-amber-800/80">
+            The interview is complete, but the analysis worker has not finished after 5 minutes. No candidate score has been assigned.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => {
+              setGenerationTimedOut(false);
+              setGenerationStartedAt(Date.now());
+              setGenerating(true);
+            }}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh status
+            </Button>
+            <Button size="sm" onClick={async () => {
+              await sessionsApi.regeneratePortfolio(Number(sessionId));
+              setGenerationTimedOut(false);
+              setGenerationStartedAt(Date.now());
+              setGenerating(true);
+            }}>
+              Retry generation
+            </Button>
           </div>
         </div>
       )}

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Activity, AlertTriangle, CheckCircle2, Radio } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -242,6 +242,42 @@ export default function AssessmentInvitePage() {
           </Button>
         </div>
       </div>
+
+      {(() => {
+        const liveCount = sessions.filter((s) => s.status === "active").length;
+        const completedCount = sessions.filter((s) => s.status === "ended" && s.end_reason !== "error").length;
+        const attentionCount = sessions.filter((s) => s.status === "ended" && s.end_reason === "error").length;
+        const pendingCount = sessions.filter((s) => s.status === "pending").length;
+
+        return (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Candidates</span><Activity className="h-4 w-4 text-muted-foreground" /></div><p className="mt-2 text-2xl font-semibold">{sessions.length}</p></CardContent></Card>
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Live now</span><Radio className="h-4 w-4 text-primary" /></div><p className="mt-2 text-2xl font-semibold">{liveCount}</p></CardContent></Card>
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Completed</span><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div><p className="mt-2 text-2xl font-semibold">{completedCount}</p></CardContent></Card>
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Needs attention</span><AlertTriangle className="h-4 w-4 text-destructive" /></div><p className="mt-2 text-2xl font-semibold">{attentionCount}</p></CardContent></Card>
+            </div>
+            {(attentionCount > 0 || pendingCount > 0) && (
+              <Card className="border-amber-200 bg-amber-50/50">
+                <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-medium">Review queue</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {attentionCount > 0 && `${attentionCount} session${attentionCount > 1 ? "s" : ""} need attention.`}
+                        {attentionCount > 0 && pendingCount > 0 ? " " : ""}
+                        {pendingCount > 0 && `${pendingCount} invite${pendingCount > 1 ? "s are" : " is"} awaiting a candidate.`}
+                      </p>
+                    </div>
+                  </div>
+                  {attentionCount > 0 && <span className="text-xs font-medium text-amber-700">Action required</span>}
+                </CardContent>
+              </Card>
+            )}
+          </>
+        );
+      })()}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
