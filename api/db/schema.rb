@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_25_000000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_25_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -202,6 +202,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_25_000000) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.integer "expected_level", null: false
+    t.index ["vacancy_id", "skill_id"], name: "index_vacancy_skills_on_vacancy_and_taxonomy_skill", unique: true, where: "(skill_id IS NOT NULL)"
     t.index ["vacancy_id"], name: "index_vacancy_skills_on_vacancy_id"
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
