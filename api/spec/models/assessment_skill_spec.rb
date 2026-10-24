@@ -34,6 +34,13 @@ RSpec.describe AssessmentSkill, type: :model do
     expect(duplicate.errors[:skill_id]).to include('has already been taken')
   end
 
+  it 'rejects a symbol-only assessment name' do
+    assessment = Assessment.new(name: '*&#$*#%&#%', time_limit_min: 45, tenant_id: 1, created_by: 1)
+
+    expect(assessment).not_to be_valid
+    expect(assessment.errors[:name]).to include('must include at least one letter or number')
+  end
+
   it 'rejects a taxonomy skill already used by the same vacancy' do
     vacancy = Vacancy.create!(
       role_title: 'Test vacancy',

@@ -133,7 +133,11 @@ export default function AssessmentNewPage() {
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
+            aria-invalid={errors.name ? "true" : undefined}
+            {...register("name", {
+              required: "Role title is required",
+              validate: (value) => /[A-Za-z0-9]/.test(value) || "Role title must include at least one letter or number",
+            })}
           />
           {errors.name && (
             <p className="text-xs text-destructive">{errors.name.message}</p>

@@ -112,7 +112,15 @@ export default function AssessmentEditPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
+          <Input
+            id="name"
+            aria-invalid={errors.name ? "true" : undefined}
+            {...register("name", {
+              required: "Role title is required",
+              validate: (value) => /[A-Za-z0-9]/.test(value) || "Role title must include at least one letter or number",
+            })}
+          />
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-1.5">
