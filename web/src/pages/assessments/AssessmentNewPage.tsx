@@ -77,6 +77,12 @@ export default function AssessmentNewPage() {
   };
 
   const addB7Skill = (skill: Partial<AssessmentSkill>) => {
+    if (!skill.skill_id || fields.some((field) => field.skill_id === skill.skill_id)) {
+      setError("This taxonomy skill is already added.");
+      return;
+    }
+
+    setError(null);
     append({ ...skill, display_order: fields.length });
   };
 
