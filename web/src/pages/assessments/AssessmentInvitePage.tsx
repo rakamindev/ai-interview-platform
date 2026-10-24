@@ -67,9 +67,9 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
+          <span className="flex items-center gap-1 text-xs text-destructive" title="The AI interview could not connect. Check AI integration configuration and invite the candidate again.">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
+            Failed · AI connection unavailable
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
