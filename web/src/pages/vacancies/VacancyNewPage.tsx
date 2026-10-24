@@ -63,7 +63,15 @@ export default function VacancyNewPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Input
+            id="role_title"
+            placeholder="Senior Frontend Engineer"
+            aria-invalid={errors.role_title ? "true" : undefined}
+            {...register("role_title", { required: "Role title is required" })}
+          />
+          {errors.role_title && (
+            <p className="text-xs text-destructive">{errors.role_title.message}</p>
+          )}
         </div>
 
         <Separator />
