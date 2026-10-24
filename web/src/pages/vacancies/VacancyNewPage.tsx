@@ -147,7 +147,15 @@ export default function VacancyNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        onSelect={(s) => {
+          const existingSkillIds = watch("skills").map((skill) => String(skill.skill_id));
+          if (s.skill_id != null && existingSkillIds.includes(String(s.skill_id))) {
+            setError("This taxonomy skill is already added.");
+            return;
+          }
+          setError(null);
+          append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 });
+        }}
       />
     </div>
   );

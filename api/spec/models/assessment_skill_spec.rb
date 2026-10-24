@@ -33,4 +33,21 @@ RSpec.describe AssessmentSkill, type: :model do
     expect(duplicate).not_to be_valid
     expect(duplicate.errors[:skill_id]).to include('has already been taken')
   end
+
+  it 'rejects a taxonomy skill already used by the same vacancy' do
+    vacancy = Vacancy.create!(
+      role_title: 'Test vacancy',
+      tenant_id: 1,
+      created_by: 1
+    )
+    existing = vacancy.vacancy_skills.create!(
+      skill_id: 'sk-vacancy-001', skill_label: 'React', expected_level: 3
+    )
+    duplicate = vacancy.vacancy_skills.build(
+      skill_id: existing.skill_id, skill_label: 'React', expected_level: 3
+    )
+
+    expect(duplicate).not_to be_valid
+    expect(duplicate.errors[:skill_id]).to include('has already been taken')
+  end
 end
