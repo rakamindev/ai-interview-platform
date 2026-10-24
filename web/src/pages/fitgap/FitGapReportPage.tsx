@@ -142,7 +142,7 @@ export default function FitGapReportPage() {
 
       {/* Generating */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
+        <div className="rounded-lg border bg-white p-12 text-center shadow-sm space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
         </div>

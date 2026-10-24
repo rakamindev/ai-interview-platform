@@ -81,13 +81,13 @@ export default function VacancyNewPage() {
           <Label>Expected skills</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-white p-4 text-center text-sm text-muted-foreground shadow-sm">
               No skills added yet.
             </div>
           ) : (
             <div className="space-y-2">
               {fields.map((field, index) => (
-                <div key={field.id} className="border rounded-lg p-3 space-y-2">
+                <div key={field.id} className="rounded-lg border bg-white p-3 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
                     <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">

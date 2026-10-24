@@ -143,7 +143,7 @@ export default function AssessmentEditPage() {
         <div className="space-y-3">
           <Label>Skills to assess</Label>
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground shadow-sm">
               No skills added yet.
             </div>
           ) : (

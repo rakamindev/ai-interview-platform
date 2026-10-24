@@ -60,7 +60,7 @@ export default function AssessmentListPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 bg-white p-4 text-sm text-destructive shadow-sm">
           Failed to load assessments. Please refresh the page.
         </div>
       )}
@@ -79,7 +79,7 @@ export default function AssessmentListPage() {
           </div>
 
           {assessments.length === 0 ? (
-            <div className="rounded-lg border p-12 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-white p-12 text-center text-sm text-muted-foreground shadow-sm">
               <p className="mb-3">No assessments yet.</p>
               <Button variant="outline" onClick={() => navigate("/assessments/new")}>
                 <Plus className="mr-1.5 h-4 w-4" /> Create your first assessment

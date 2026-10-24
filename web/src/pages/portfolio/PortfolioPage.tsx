@@ -169,7 +169,7 @@ export default function PortfolioPage() {
 
       {/* Generating state */}
       {generating && !generationTimedOut && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
+        <div className="rounded-lg border bg-white p-12 text-center shadow-sm space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
@@ -209,7 +209,7 @@ export default function PortfolioPage() {
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+        <div className="rounded-lg border border-destructive/40 bg-white p-6 text-center shadow-sm space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
           <Button
             variant="outline"

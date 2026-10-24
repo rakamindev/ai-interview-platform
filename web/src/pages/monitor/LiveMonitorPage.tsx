@@ -170,7 +170,7 @@ export default function LiveMonitorPage() {
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm shadow-sm">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>

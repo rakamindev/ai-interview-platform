@@ -190,7 +190,7 @@ export default function AssessmentNewPage() {
           <Label>Skills to assess</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground shadow-sm">
               <p className="mb-1">No skills added yet.</p>
               <p>Add at least one skill to continue.</p>
             </div>

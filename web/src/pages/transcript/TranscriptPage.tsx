@@ -74,13 +74,13 @@ export default function TranscriptPage() {
       )}
 
       {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
+        <div className="rounded-lg border bg-white p-6 text-center text-sm text-destructive shadow-sm">
           Failed to load transcript. Please refresh.
         </div>
       )}
 
       {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground shadow-sm">
           No transcript available for this session.
         </div>
       )}
