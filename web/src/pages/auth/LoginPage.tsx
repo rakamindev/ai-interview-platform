@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
+import { authAtom, saveAuthSession } from "@/stores/authAtom";
+import { tenantAtom, saveActiveOrg } from "@/stores/tenantAtom";
 import { authApi } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,10 @@ import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isExpired = searchParams.get("expired") === "true";
   const setAuth = useSetAtom(authAtom);
+  const setTenant = useSetAtom(tenantAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,9 +26,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authApi.login({ email, password });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
+      const { token, user, active_organization, organizations } = res.data;
+      saveAuthSession({ token, user, organizations });
+      saveActiveOrg(active_organization);
+      setAuth({ token, user, organizations });
+      setTenant(active_organization || { id: null, name: null, scheme: null });
       navigate("/assessments");
     } catch {
       setError("Invalid email or password.");
@@ -66,6 +72,12 @@ export default function LoginPage() {
             />
           </div>
 
+          {isExpired && !error && (
+            <div className="p-3 text-sm rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              Your session has expired. Please sign in again.
+            </div>
+          )}
+
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
@@ -74,6 +86,12 @@ export default function LoginPage() {
           </Button>
         </form>
 
+        <p className="text-center text-sm text-muted-foreground">
+          Don't have an account?{" "}
+          <Link to="/signup" className="text-primary hover:underline">
+            Create an account
+          </Link>
+        </p>
       </div>
     </div>
   );

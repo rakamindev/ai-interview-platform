@@ -39,14 +39,20 @@ module ExceptionHandler
 
   def render_exception(e)
     status = exception_status(e)
-    message = Rails.env.production? ? human_message(e) : e.message
+    Rails.logger.error("[ExceptionHandler #{status}] #{e.class}: #{e.message}\n#{e.backtrace&.first(15)&.join("\n")}")
+
+    message = if status >= 500
+                "An unexpected server error occurred. Please try again later."
+              else
+                human_message(e)
+              end
 
     render json: {
+      error: message,
       errors: [{
-        status:,
-        message:,
-        backtrace: (Rails.env.development? ? e.backtrace&.first(10) : nil)
-      }.compact]
+        status: status,
+        message: message
+      }]
     }, status: status
   end
 

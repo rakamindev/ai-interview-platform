@@ -34,9 +34,15 @@ export const assessmentsApi = {
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
-  createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
+  createSession: (assessmentId: number, candidateName?: string, candidateEmail?: string, candidateId?: number) =>
     api.post<{ session: Session; invite_url: string }>(
       `/assessments/${assessmentId}/sessions`,
-      { session: { candidate_name: candidateName, candidate_id: candidateId } }
+      { session: { candidate_name: candidateName, candidate_email: candidateEmail, candidate_id: candidateId } }
+    ),
+
+  batchCreateSessions: (assessmentId: number, candidates: { name: string; email?: string }[]) =>
+    api.post<{ count: number; sessions: Session[] }>(
+      `/assessments/${assessmentId}/sessions/batch`,
+      { candidates }
     ),
 };

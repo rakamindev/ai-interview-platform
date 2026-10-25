@@ -53,7 +53,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
                   {c.candidate_level != null ? (
                     <span>
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.is_override && <span className="text-xs text-muted-foreground ml-1" title="Human override applied">✏</span>}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>

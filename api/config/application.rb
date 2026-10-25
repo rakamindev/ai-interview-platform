@@ -19,6 +19,23 @@ module AiInterview
     # API-only mode
     config.api_only = true
 
+    # Filter sensitive parameters such as passwords and tokens from logs
+    config.filter_parameters += [
+      :passw,
+      :secret,
+      :token,
+      :_key,
+      :crypt,
+      :salt,
+      :certificate,
+      :otp,
+      :ssn,
+      :cvv,
+      :cvc,
+      :credential,
+      :authorization
+    ]
+
     # Auto-load paths
     config.autoload_paths += %W[
       #{config.root}/app/auth

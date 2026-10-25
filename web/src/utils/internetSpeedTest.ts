@@ -17,13 +17,14 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minDownloadMbps: 0.5,
+    minUploadMbps: 0.5,
     maxPingMs: 300,
 };
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
 const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const SPEED_TEST_DOWNLOAD_URL = import.meta.env.VITE_SPEED_TEST_DOWNLOAD_URL as string | undefined;
 
 async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {
@@ -53,6 +54,23 @@ async function measurePing(): Promise<number> {
 }
 
 async function measureDownloadSpeed(): Promise<number> {
+    if (SPEED_TEST_DOWNLOAD_URL) {
+        try {
+            const start = performance.now();
+            const response = await fetch(SPEED_TEST_DOWNLOAD_URL, { cache: "no-cache" });
+            if (response.ok) {
+                const blob = await response.blob();
+                const seconds = (performance.now() - start) / 1000;
+                const sizeMB = blob.size / (1024 * 1024);
+                if (seconds > 0 && sizeMB > 0) {
+                    return sizeMB / seconds;
+                }
+            }
+        } catch {
+            // Fall back to public CDNs if custom download URL fails
+        }
+    }
+
     const testFiles = [
         { url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css", size: 0.2 },
         { url: "https://unpkg.com/react@18/umd/react.development.js", size: 1.2 },

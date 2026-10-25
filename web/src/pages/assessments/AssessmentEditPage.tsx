@@ -36,9 +36,10 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialSkillIds, setInitialSkillIds] = useState<number[]>([]);
 
   const form = useForm<AssessmentFormValues>({
-    defaultValues: { name: "", time_limit_min: 45, skills: [] },
+    defaultValues: { name: "", time_limit_min: 45, language: "en", skills: [] },
   });
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
@@ -49,7 +50,8 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        setInitialSkillIds((a.skills || []).map((s: any) => s.id).filter(Boolean));
+        reset({ name: a.name, time_limit_min: a.time_limit_min, language: a.language || "en", skills: a.skills });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -74,10 +76,21 @@ export default function AssessmentEditPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const currentIds = new Set(data.skills.map((s) => s.id).filter(Boolean));
+      const deletedAttributes = initialSkillIds
+        .filter((skillId) => !currentIds.has(skillId))
+        .map((skillId) => ({ id: skillId, _destroy: true }));
+
+      const activeAttributes = data.skills.map((s, i) => ({
+        ...s,
+        display_order: i,
+      }));
+
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        language: data.language,
+        assessment_skills_attributes: [...activeAttributes, ...deletedAttributes],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
@@ -126,6 +139,22 @@ export default function AssessmentEditPage() {
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Interview language</Label>
+          <Select
+            value={form.watch("language") || "en"}
+            onValueChange={(v) => setValue("language", v as "en" | "id")}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="id">Indonesian</SelectItem>
             </SelectContent>
           </Select>
         </div>

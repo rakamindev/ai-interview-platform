@@ -24,10 +24,31 @@ class Session < ApplicationRecord
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+  def consented? = consented_at.present?
+
+  def record_consent!(ip:, version: '2026.1')
+    update!(
+      consented_at:  Time.current,
+      consent_ip:    ip,
+      terms_version: version
+    )
+  end
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
     "#{base}/interview/#{invite_token}"
+  end
+
+  def remaining_seconds
+    return 0 if ended?
+
+    target_assessment = assessment || Assessment.unscoped.find_by(id: assessment_id)
+    return unless target_assessment&.time_limit_min
+
+    limit = target_assessment.time_limit_min * 60
+    return limit unless started_at
+
+    [(limit - (Time.current - started_at)).to_i, 0].max
   end
 
   private

@@ -25,13 +25,20 @@ module Assessments
     private
 
     def intro_section
-      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(@assessment.language.presence || 'en', 'English')
+      lang_code = @assessment.language.presence || 'en'
+      language_name = Assessment::SUPPORTED_LANGUAGES.fetch(lang_code, 'English')
+
+      language_instruction = if lang_code == 'id'
+                               "Conduct this interview primarily in Bahasa Indonesia. However, candidates are fully permitted to use standard English technical terminology, industry jargon, and architecture concepts (e.g., race condition, dependency injection, middleware, sharding, event loop). Do not reprimand candidates or force awkward translations of standard software engineering terms."
+                             else
+                               "Conduct this entire interview in #{language_name}. Respond only in #{language_name}."
+                             end
 
       <<~TEXT.strip
         You are an expert skills assessor conducting a live audio interview.
         Your job is to assess the candidate's real capability — not their ability to recite theory.
 
-        LANGUAGE: Conduct this entire interview in #{language_name}. Respond only in #{language_name}. Do not switch languages even if the candidate uses another language.
+        LANGUAGE: #{language_instruction}
       TEXT
     end
 

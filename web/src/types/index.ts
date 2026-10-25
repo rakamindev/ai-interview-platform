@@ -37,6 +37,7 @@ export interface Session {
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
+  candidate_email?: string;
   invite_token: string;
   invite_url: string;
   status: "pending" | "active" | "ended";
@@ -44,6 +45,9 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  consented_at?: string | null;
+  consent_ip?: string | null;
+  terms_version?: string | null;
   created_at?: string;
 }
 
@@ -90,7 +94,7 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: number;       // 1..5
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
@@ -128,6 +132,7 @@ export interface VacancySkill {
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
+  skill_id?: number;
   skill_label: string;
   required_level: number;
   candidate_level?: number;
@@ -163,7 +168,13 @@ export interface CandidateInfo {
   session_id: number;
   role_title: string;
   time_limit_min: number;
+  remaining_seconds?: number;
+  started_at?: string | null;
   session_status: string;
+  end_reason?: string | null;
+  consented?: boolean;
+  consented_at?: string | null;
+  terms_version?: string | null;
 }
 
 export interface PaginationMeta {
@@ -200,6 +211,9 @@ export interface WsControlMessage {
   speaker?: "candidate" | "ai";
   role?: "candidate" | "ai";
   text?: string;
+  turn_number?: number;
+  remaining_seconds?: number;
+  server_timestamp?: string;
   reason?: string;
   code?: string;
   message?: string;

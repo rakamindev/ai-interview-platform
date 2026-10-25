@@ -27,9 +27,18 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const status = error.response?.status;
+    if (status === 401) {
       clearToken();
-      window.location.href = "/login";
+      const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+      const isPublicOrAuthRoute =
+        pathname === "/login" ||
+        pathname === "/signup" ||
+        pathname.startsWith("/interview");
+
+      if (!isPublicOrAuthRoute && typeof window !== "undefined") {
+        window.location.href = "/login?expired=true";
+      }
     }
     return Promise.reject(error);
   }

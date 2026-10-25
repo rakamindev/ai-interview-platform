@@ -3,10 +3,10 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session reopen coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -23,9 +23,10 @@ module Api
         assessment = Assessment.find(params[:assessment_id])
 
         session = assessment.sessions.new(
-          candidate_id:   params.dig(:session, :candidate_id),
-          candidate_name: params.dig(:session, :candidate_name).presence,
-          tenant_id:      current_tenant_id
+          candidate_id:    params.dig(:session, :candidate_id),
+          candidate_name:  params.dig(:session, :candidate_name).presence,
+          candidate_email: params.dig(:session, :candidate_email).presence,
+          tenant_id:       current_tenant_id
         )
 
         if session.save
@@ -41,6 +42,49 @@ module Api
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
+      end
+
+      # POST /api/v1/assessments/:assessment_id/sessions/batch
+      def batch
+        assessment = Assessment.find(params[:assessment_id])
+        candidates = params[:candidates] || params[:sessions] || []
+
+        if candidates.blank? || !candidates.is_a?(Array)
+          return json_error("Candidates list must be a non-empty array", :unprocessable_entity)
+        end
+
+        if candidates.length > 500
+          return json_error("Batch size cannot exceed 500 candidates per upload", :unprocessable_entity)
+        end
+
+        created_sessions = []
+
+        ActiveRecord::Base.transaction do
+          candidates.each do |c|
+            name  = c[:name].presence || c[:candidate_name].presence || "Candidate"
+            email = c[:email].presence || c[:candidate_email].presence
+
+            session = assessment.sessions.create!(
+              tenant_id:       current_tenant_id,
+              candidate_name:  name.to_s.strip,
+              candidate_email: email&.to_s&.strip,
+              candidate_id:    c[:candidate_id]
+            )
+            created_sessions << session
+          end
+        end
+
+        json_response(
+          {
+            count:    created_sessions.length,
+            sessions: created_sessions.map(&method(:session_json))
+          },
+          :created
+        )
+      rescue ActiveRecord::RecordNotFound
+        json_error("Assessment not found", :not_found)
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.message, :unprocessable_entity)
       end
 
       # GET /api/v1/sessions/:id
@@ -75,6 +119,37 @@ module Api
         else
           json_error("Failed to end session", :unprocessable_entity)
         end
+      end
+
+      # POST /api/v1/sessions/:id/reopen
+      def reopen
+        unless @session.ended?
+          return json_error("Only ended sessions can be reopened", :unprocessable_entity)
+        end
+
+        unless @session.end_reason == "error" || params[:force] == true
+          return json_error("Only sessions ended due to connection or system errors can be reopened", :unprocessable_entity)
+        end
+
+        ActiveRecord::Base.transaction do
+          @session.portfolio&.destroy
+
+          @session.update!(
+            status:                  "pending",
+            end_reason:              nil,
+            ended_at:                nil,
+            duration_seconds:        nil,
+            started_at:              nil,
+            gemini_resumption_token: nil
+          )
+        end
+
+        json_response(
+          session: session_json(@session.reload),
+          message: "Session successfully reopened. Candidate may now resume the interview."
+        )
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.message, :unprocessable_entity)
       end
 
       # GET /api/v1/sessions/:id/coverage
@@ -128,6 +203,27 @@ module Api
         json_response(ended: true, message: "Session ended")
       end
 
+      # POST /sessions/:token/consent — no JWT, invite token in URL
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.ended?
+          return json_error("Session is already ended", :unprocessable_entity)
+        end
+
+        version = params[:terms_version].presence || "2026.1"
+        session.record_consent!(ip: request.remote_ip, version: version)
+
+        json_response(
+          consented:     true,
+          consented_at:  session.consented_at,
+          terms_version: session.terms_version
+        )
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.message, :unprocessable_entity)
+      end
+
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
       def candidate_info
         session = Session.unscoped.find_by(invite_token: params[:token])
@@ -146,10 +242,16 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:        session.id,
+          role_title:        assessment.name,
+          time_limit_min:    assessment.time_limit_min,
+          remaining_seconds: session.remaining_seconds,
+          started_at:        session.started_at,
+          session_status:    session.status,
+          end_reason:        session.end_reason,
+          consented:         session.consented?,
+          consented_at:      session.consented_at,
+          terms_version:     session.terms_version
         )
       end
 
@@ -168,6 +270,7 @@ module Api
           tenant_id:        session.tenant_id,
           candidate_id:     session.candidate_id,
           candidate_name:   session.candidate_name,
+          candidate_email:  session.candidate_email,
           invite_token:     session.invite_token,
           invite_url:       session.invite_url,
           status:           session.status,
@@ -175,6 +278,8 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          consented_at:     session.consented_at,
+          terms_version:    session.terms_version,
           created_at:       session.created_at
         }
       end

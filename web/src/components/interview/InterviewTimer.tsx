@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface InterviewTimerProps {
   totalSeconds: number;
+  remainingSeconds?: number;
   onExpired?: () => void;
   running: boolean;
 }
@@ -13,19 +14,64 @@ function formatTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
-  const [remaining, setRemaining] = useState(totalSeconds);
+export default function InterviewTimer({
+  totalSeconds,
+  remainingSeconds,
+  onExpired,
+  running,
+}: InterviewTimerProps) {
+  const initialTime = typeof remainingSeconds === "number" ? remainingSeconds : totalSeconds;
+  const [remaining, setRemaining] = useState(initialTime);
 
-  useEffect(() => {
-    setRemaining(totalSeconds);
-  }, [totalSeconds]);
+  const anchorRef = useRef<{ baseSeconds: number; timestamp: number }>({
+    baseSeconds: initialTime,
+    timestamp: performance.now(),
+  });
 
+  // Re-anchor whenever remainingSeconds from server changes (initial load or WebSocket calibration)
   useEffect(() => {
-    if (!running) return;
-    if (remaining <= 0) { onExpired?.(); return; }
-    const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
-    return () => clearTimeout(id);
-  }, [running, remaining, onExpired]);
+    if (typeof remainingSeconds === "number") {
+      anchorRef.current = {
+        baseSeconds: remainingSeconds,
+        timestamp: performance.now(),
+      };
+      setRemaining(remainingSeconds);
+    }
+  }, [remainingSeconds]);
+
+  // When totalSeconds changes (if remainingSeconds is unset)
+  useEffect(() => {
+    if (remainingSeconds === undefined) {
+      anchorRef.current = {
+        baseSeconds: totalSeconds,
+        timestamp: performance.now(),
+      };
+      setRemaining(totalSeconds);
+    }
+  }, [totalSeconds, remainingSeconds]);
+
+  // Monotonic timer tick calculation — immune to background tab throttling drift
+  useEffect(() => {
+    if (!running) {
+      anchorRef.current.timestamp = performance.now();
+      return;
+    }
+
+    const updateTimer = () => {
+      const elapsedSeconds = Math.floor((performance.now() - anchorRef.current.timestamp) / 1000);
+      const currentRemaining = Math.max(0, anchorRef.current.baseSeconds - elapsedSeconds);
+      setRemaining(currentRemaining);
+
+      if (currentRemaining <= 0) {
+        onExpired?.();
+      }
+    };
+
+    updateTimer();
+    const intervalId = setInterval(updateTimer, 500);
+
+    return () => clearInterval(intervalId);
+  }, [running, onExpired]);
 
   const isWarning = remaining <= 300; // ≤5 min
   const isUrgent = remaining <= 60;

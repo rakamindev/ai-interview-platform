@@ -9,7 +9,10 @@ module Response
   end
 
   def json_error(message, status = :unprocessable_entity, details: nil)
-    payload = { errors: [{ status: Rack::Utils.status_code(status), message: }] }
+    payload = {
+      error: message,
+      errors: [{ status: Rack::Utils.status_code(status), message: }]
+    }
     payload[:errors][0][:detail] = details if details
     render json: payload, status:
   end

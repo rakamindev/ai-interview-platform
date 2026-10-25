@@ -47,4 +47,7 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Disable rate limiting in test environment
+  Rack::Attack.enabled = false
 end

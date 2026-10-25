@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
-import { Zap } from "lucide-react";
-import { parseLevel } from "@/utils/constants";
+import { Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface SkillPortfolioCardProps {
@@ -17,7 +18,9 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const effectiveLevel = override?.override_level ?? Number(skill.ai_level);
+  const isLong = (skill.competency_summary?.length ?? 0) > 200;
 
   return (
     <Card>
@@ -70,9 +73,31 @@ export default function SkillPortfolioCard({
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Competency summary
             </span>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p
+              className={cn(
+                "text-sm text-muted-foreground leading-relaxed transition-all duration-200",
+                !isExpanded && isLong && "line-clamp-3"
+              )}
+            >
               {skill.competency_summary}
             </p>
+            {isLong && (
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1 mt-0.5 transition-colors"
+              >
+                {isExpanded ? (
+                  <>
+                    Show less <ChevronUp className="h-3 w-3" />
+                  </>
+                ) : (
+                  <>
+                    Show full analysis <ChevronDown className="h-3 w-3" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </CardContent>

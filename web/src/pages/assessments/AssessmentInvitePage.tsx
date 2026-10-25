@@ -14,8 +14,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  RotateCcw,
+  Loader2,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -24,12 +40,16 @@ function SessionRow({
   assessmentId,
   onCopy,
   copiedId,
+  onReopen,
+  reopeningId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
   copiedId: number | null;
+  onReopen: (id: number) => void;
+  reopeningId: number | null;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
@@ -45,11 +65,13 @@ function SessionRow({
         </div>
         <div className="space-y-0.5">
           <div className="text-sm font-medium">{displayName}</div>
-          {session.started_at && (
-            <div className="text-xs text-muted-foreground">
-              {new Date(session.started_at).toLocaleDateString()}
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+            {session.candidate_email && <span>{session.candidate_email}</span>}
+            {session.candidate_email && session.started_at && <span>•</span>}
+            {session.started_at && (
+              <span>{new Date(session.started_at).toLocaleDateString()}</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -114,6 +136,21 @@ function SessionRow({
               Results
             </Button>
           )}
+          {isEnded && session.end_reason === "error" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+              onClick={() => onReopen(session.id)}
+              disabled={reopeningId === session.id}
+            >
+              {reopeningId === session.id ? (
+                <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Re-opening...</>
+              ) : (
+                <><RotateCcw className="h-3 w-3 mr-1" /> Re-open</>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -132,11 +169,142 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [candidateEmailInput, setCandidateEmailInput] = useState("");
+  const [reopeningId, setReopeningId] = useState<number | null>(null);
+
+  // Bulk CSV invite states
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<Array<{ name: string; email: string; valid: boolean; error?: string }>>([]);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
     setSessions(res.data.sessions);
   }, [id]);
+
+  const handleReopen = async (sessionId: number) => {
+    setReopeningId(sessionId);
+    try {
+      await sessionsApi.reopen(sessionId);
+      await loadSessions();
+    } catch (err) {
+      console.error("Failed to re-open session:", err);
+    } finally {
+      setReopeningId(null);
+    }
+  };
+
+  const exportInviteLinksCsv = () => {
+    if (!sessions || sessions.length === 0) return;
+    const headers = ["Candidate Name", "Email", "Status", "Invite URL", "Created At"];
+    const rows = sessions.map((s) => [
+      s.candidate_name || "Candidate",
+      s.candidate_email || "",
+      s.status,
+      s.invite_url,
+      s.created_at ? new Date(s.created_at).toISOString() : ""
+    ]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((r) => r.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(","))
+    ].join("\r\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = (assessment?.name || "assessment").toLowerCase().replace(/[^a-z0-9]/g, "-");
+    link.setAttribute("download", `${safeName}-candidate-invites.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCsvText = (text: string) => {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+    if (lines.length === 0) {
+      setBulkError("Uploaded CSV file is empty");
+      setBulkPreview([]);
+      return;
+    }
+
+    const headerLine = lines[0];
+    const rawHeaders = headerLine.split(",").map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
+
+    let nameIdx = rawHeaders.findIndex((h) => h.includes("name"));
+    let emailIdx = rawHeaders.findIndex((h) => h.includes("email"));
+
+    let dataLines = lines.slice(1);
+    if (nameIdx === -1 && emailIdx === -1) {
+      nameIdx = 0;
+      emailIdx = 1;
+      dataLines = lines;
+    } else {
+      if (nameIdx === -1) nameIdx = 0;
+      if (emailIdx === -1) emailIdx = 1;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const parsed: Array<{ name: string; email: string; valid: boolean; error?: string }> = [];
+
+    for (let i = 0; i < dataLines.length; i++) {
+      const line = dataLines[i];
+      const parts = line.split(",").map((p) => p.replace(/^["']|["']$/g, "").trim());
+      const name = parts[nameIdx] || "";
+      const email = parts[emailIdx] || "";
+
+      if (!name) {
+        parsed.push({ name, email, valid: false, error: "Missing candidate name" });
+      } else if (email && !emailRegex.test(email)) {
+        parsed.push({ name, email, valid: false, error: "Invalid email format" });
+      } else {
+        parsed.push({ name, email, valid: true });
+      }
+    }
+
+    setBulkPreview(parsed);
+    if (parsed.length === 0) {
+      setBulkError("No candidates found in file");
+    } else {
+      setBulkError(null);
+    }
+  };
+
+  const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result;
+      if (typeof content === "string") {
+        parseCsvText(content);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const handleBatchCreate = async () => {
+    const validCandidates = bulkPreview.filter((c) => c.valid).map((c) => ({
+      name: c.name,
+      email: c.email || undefined,
+    }));
+    if (validCandidates.length === 0) return;
+    setBulkImporting(true);
+    setBulkError(null);
+    try {
+      await assessmentsApi.batchCreateSessions(Number(id), validCandidates);
+      await loadSessions();
+      setShowBulkDialog(false);
+      setBulkPreview([]);
+    } catch {
+      setBulkError("Failed to import candidate batch. Please check format.");
+    } finally {
+      setBulkImporting(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -158,6 +326,7 @@ export default function AssessmentInvitePage() {
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
+    setCandidateEmailInput("");
     setShowInviteDialog(true);
   };
 
@@ -166,7 +335,11 @@ export default function AssessmentInvitePage() {
     setShowInviteDialog(false);
     setNewSession(null);
     try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
+      const res = await assessmentsApi.createSession(
+        Number(id),
+        candidateNameInput.trim() || undefined,
+        candidateEmailInput.trim() || undefined
+      );
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
@@ -215,9 +388,20 @@ export default function AssessmentInvitePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setBulkPreview([]);
+              setBulkError(null);
+              setShowBulkDialog(true);
+            }}
+          >
+            <Upload className="h-3.5 w-3.5 mr-1.5" /> Bulk Invite (CSV)
           </Button>
           <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -232,21 +416,130 @@ export default function AssessmentInvitePage() {
           <DialogHeader>
             <DialogTitle>Invite Candidate</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="candidate-name">Candidate name</Label>
-            <Input
-              id="candidate-name"
-              placeholder="e.g. Budi Santoso"
-              value={candidateNameInput}
-              onChange={(e) => setCandidateNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
-              autoFocus
-            />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label htmlFor="candidate-name">Candidate name</Label>
+              <Input
+                id="candidate-name"
+                placeholder="e.g. Budi Santoso"
+                value={candidateNameInput}
+                onChange={(e) => setCandidateNameInput(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="candidate-email">Candidate email (optional)</Label>
+              <Input
+                id="candidate-email"
+                type="email"
+                placeholder="e.g. budi@example.com"
+                value={candidateEmailInput}
+                onChange={(e) => setCandidateEmailInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Helps identify and track candidate sessions.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
-            <Button onClick={handleInviteCandidate}>Create Link</Button>
+            <Button onClick={handleInviteCandidate} disabled={creatingSession}>
+              {creatingSession ? "Creating..." : "Create Link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk invite dialog */}
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Bulk Invite Candidates via CSV
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Upload a <code>.csv</code> file containing candidate names and optional email addresses.
+              The CSV should have column headers like <code>name, email</code>.
+            </p>
+
+            <div className="border-2 border-dashed border-border rounded-lg p-5 text-center hover:bg-muted/30 transition-colors cursor-pointer relative">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleCsvFileUpload}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+              <Upload className="h-7 w-7 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground">
+                Click to browse or drag and drop CSV file here
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Supports up to 500 candidates per batch</p>
+            </div>
+
+            {bulkError && (
+              <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{bulkError}</span>
+              </div>
+            )}
+
+            {bulkPreview.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">
+                    Parsed: {bulkPreview.length} total (
+                    <span className="text-green-600 font-semibold">{bulkPreview.filter((c) => c.valid).length} valid</span>,{" "}
+                    <span className="text-destructive font-semibold">{bulkPreview.filter((c) => !c.valid).length} invalid</span>)
+                  </span>
+                  <span className="text-muted-foreground">Showing preview</span>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto border rounded-md text-xs divide-y">
+                  {bulkPreview.slice(0, 50).map((row, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2">
+                      <div className="truncate mr-2">
+                        <span className="font-medium">{row.name || "—"}</span>
+                        {row.email && <span className="text-muted-foreground ml-2">({row.email})</span>}
+                      </div>
+                      {row.valid ? (
+                        <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-[11px] font-medium shrink-0">
+                          Valid
+                        </span>
+                      ) : (
+                        <span className="text-destructive bg-destructive/10 px-2 py-0.5 rounded text-[11px] font-medium shrink-0">
+                          {row.error || "Invalid"}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {bulkPreview.length > 50 && (
+                    <div className="p-2 text-center text-muted-foreground text-[11px]">
+                      + {bulkPreview.length - 50} more candidates in file
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDialog(false)}>Cancel</Button>
+            <Button
+              onClick={handleBatchCreate}
+              disabled={bulkPreview.filter((c) => c.valid).length === 0 || bulkImporting}
+            >
+              {bulkImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                `Generate ${bulkPreview.filter((c) => c.valid).length} Invites`
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -287,6 +580,17 @@ export default function AssessmentInvitePage() {
               <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
             )}
           </h2>
+          {sessions.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={exportInviteLinksCsv}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Export Invite Links (CSV)
+            </Button>
+          )}
         </div>
 
         {sessions.length === 0 ? (
@@ -313,6 +617,8 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onReopen={handleReopen}
+                  reopeningId={reopeningId}
                 />
               ))}
             </CardContent>

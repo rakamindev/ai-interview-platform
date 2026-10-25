@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_25_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -94,6 +94,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
   end
 
+  create_table "organization_memberships", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "organization_id", null: false
+    t.string "role", limit: 20, default: "assessor", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "idx_org_memberships_org"
+    t.index ["user_id", "organization_id"], name: "idx_org_memberships_user_org", unique: true
+  end
+
   create_table "organizations", force: :cascade do |t|
     t.string "name", limit: 255, null: false
     t.string "scheme", limit: 255, null: false
@@ -143,6 +153,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "consented_at"
+    t.string "consent_ip", limit: 45
+    t.string "terms_version", limit: 50
+    t.string "candidate_email", limit: 255
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true

@@ -6,14 +6,19 @@ class Rack::Attack
     url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1')
   )
 
-  # Throttle login attempts: 5 per minute per IP.
-  throttle('auth/login', limit: 5, period: 1.minute) do |req|
-    req.ip if req.path == '/api/v1/auth/login' && req.post?
+  # Throttle auth attempts (login & signup): 5 per minute per IP.
+  throttle('auth/endpoints', limit: 5, period: 1.minute) do |req|
+    req.ip if req.path.match?(%r{\A/api/v1/(auth/login|auth/signup|signup)(/.*)?\z}) && req.post?
   end
 
   # Throttle candidate-facing endpoints: 30 per minute per IP.
   throttle('candidate/session', limit: 30, period: 1.minute) do |req|
     req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})
+  end
+
+  # Throttle speed test upload endpoint: 10 per minute per IP.
+  throttle('speed_test', limit: 10, period: 1.minute) do |req|
+    req.ip if req.path == '/api/v1/speed_test' && req.post?
   end
 
   # Return 429 JSON instead of the default plain-text response.

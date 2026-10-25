@@ -192,7 +192,8 @@ class AudioWebSocketMiddleware
       end
 
       send_json(browser_ws, type: 'transcription', speaker: 'candidate',
-                            text: text, turn_number: turn_number)
+                            text: text, turn_number: turn_number,
+                            remaining_seconds: session.remaining_seconds)
 
       check_time_ceiling(session, state, browser_ws)
     }
@@ -240,7 +241,8 @@ class AudioWebSocketMiddleware
       end
 
       send_json(browser_ws, type: 'transcription', speaker: 'ai',
-                            text: text, turn_number: turn_number)
+                            text: text, turn_number: turn_number,
+                            remaining_seconds: session.remaining_seconds)
 
       # Track whether the AI's last turn ended with a question — drives wrap-up branching.
       state.last_ai_turn_ends_with_question = text.rstrip.end_with?('?')
@@ -328,7 +330,7 @@ class AudioWebSocketMiddleware
         Rails.logger.info("[AudioWS] Gemini reconnected for session #{session.id}")
         state.reconnecting = false
         state.reconnect_attempts = 0
-        send_json(browser_ws, type: 'reconnected')
+        send_json(browser_ws, type: 'reconnected', remaining_seconds: session.remaining_seconds)
         send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
       else
         Rails.logger.info("[AudioWS] Gemini ready — sending session_started for session #{session.id}")
@@ -337,7 +339,7 @@ class AudioWebSocketMiddleware
           send_json(browser_ws, type: 'speaker_changed', speaker: 'ai')
           state.gemini_client.trigger_opening
         end
-        send_json(browser_ws, type: 'session_started', session_id: session.id)
+        send_json(browser_ws, type: 'session_started', session_id: session.id, remaining_seconds: session.remaining_seconds)
       end
 
       schedule_proactive_reconnect(browser_ws, state)
@@ -756,6 +758,7 @@ class AudioWebSocketMiddleware
     return [nil, 'Session not found'] unless session
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
+    return [nil, 'Consent required prior to audio connection'] unless session.consented?
 
     [session, nil]
   end

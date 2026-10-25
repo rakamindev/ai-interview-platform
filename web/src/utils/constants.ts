@@ -15,6 +15,11 @@ export const LEVEL_LABELS: Record<number, string> = {
   5: "L5",
 };
 
+/** Format integer level 1..5 → "L1".."L5" */
+export function formatLevel(level: number): string {
+  return LEVEL_LABELS[level] ?? `L${level}`;
+}
+
 export const LEVEL_DESCRIPTIONS: Record<number, string> = {
   1: "Foundational",
   2: "Functional",
