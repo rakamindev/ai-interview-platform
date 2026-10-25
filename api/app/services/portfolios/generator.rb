@@ -8,7 +8,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODELS', ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001')),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -20,12 +20,20 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      PortfolioRevision.capture!(portfolio) if portfolio.complete? || portfolio.portfolio_skills.exists?
+
       portfolio.update!(generation_status: 'generating')
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      candidate_turns = @session.transcript_turns.ordered.select { |turn| turn.speaker == 'candidate' }
 
-      save_skills(portfolio, response)
+      if candidate_turns.empty?
+        save_baseline_skills(portfolio)
+      else
+        prompt   = build_prompt
+        response = @gemini_client.generate_content(prompt, temperature: 0.2)
+        save_skills(portfolio, response, candidate_turns)
+      end
+
       portfolio.update!(generation_status: 'complete', generated_at: Time.current)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
@@ -99,6 +107,12 @@ module Portfolios
            medium — probe_count = 2 OR state = partial
            low — probe_count <= 1 OR state = initiated
 
+        STRICT EVIDENCE RULES:
+        - Use only facts explicitly stated by the CANDIDATE in the transcript.
+        - Never infer experience from the role, skill definitions, AI questions, or silence.
+        - If no candidate evidence supports a configured skill, assign L1, confidence low, evidence [], and state that there was insufficient evidence.
+        - Do not create discovered skills unless the candidate explicitly demonstrated them.
+
         OUTPUT (JSON only, no prose):
         {
           "configured_skills": [
@@ -147,35 +161,106 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
+    def save_baseline_skills(portfolio)
+      preserved_overrides = capture_overrides(portfolio)
+      portfolio.portfolio_skills.destroy_all
+
+      @session.assessment.assessment_skills.order(:display_order).each do |skill|
+        portfolio_skill = portfolio.portfolio_skills.create!(
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          is_discovered:      false,
+          ai_level:           1,
+          ai_confidence:      'low',
+          evidence:           [],
+          competency_summary: 'No candidate responses were recorded, so proficiency could not be demonstrated.'
+        )
+        restore_override(portfolio_skill, preserved_overrides)
+      end
+    end
+
+    def save_skills(portfolio, response, candidate_turns)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      candidate_text = candidate_turns.map(&:text).join(' ')
+
+      preserved_overrides = capture_overrides(portfolio)
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
+        evidence = valid_evidence(skill_data['evidence'], candidate_text)
+        portfolio_skill = portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          ai_level:           evidence.empty? ? 1 : skill_data['level'].to_i.clamp(1, 5),
+          ai_confidence:      evidence.empty? ? 'low' : skill_data['confidence'],
+          evidence:           evidence,
+          competency_summary: evidence.empty? ? insufficient_evidence_summary : skill_data['competency_summary']
         )
+        restore_override(portfolio_skill, preserved_overrides)
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        evidence = valid_evidence(skill_data['evidence'], candidate_text)
+        next if evidence.empty?
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
           ai_level:           skill_data['level'].to_i.clamp(1, 5),
           ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
+          evidence:           evidence,
           competency_summary: skill_data['competency_summary']
         )
       end
+    end
+
+    def capture_overrides(portfolio)
+      portfolio.portfolio_skills.includes(:assessor_override).each_with_object({}) do |skill, overrides|
+        override = skill.assessor_override
+        next unless override && override.override_level != skill.ai_level
+
+        key = skill.skill_id.present? ? "skill:#{skill.skill_id}" : "label:#{skill.skill_label}"
+        overrides[key] = {
+          override_level: override.override_level,
+          assessor_notes: override.assessor_notes,
+          overridden_by:  override.overridden_by,
+          overridden_at:  override.overridden_at
+        }
+      end
+    end
+
+    def restore_override(portfolio_skill, preserved_overrides)
+      key = portfolio_skill.skill_id.present? ? "skill:#{portfolio_skill.skill_id}" : "label:#{portfolio_skill.skill_label}"
+      attributes = preserved_overrides[key]
+      return unless attributes
+
+      portfolio_skill.create_assessor_override!(attributes.merge(ai_level: portfolio_skill.ai_level))
+    end
+
+    def valid_evidence(evidence, candidate_text)
+      normalized_candidate_text = normalize_evidence(candidate_text)
+
+      Array(evidence).filter_map do |quote|
+        next unless quote.present?
+
+        normalized_quote = normalize_evidence(quote)
+        next if normalized_quote.length < 8
+        next unless normalized_candidate_text.include?(normalized_quote)
+
+        quote.to_s
+      end.first(3)
+    end
+
+    def normalize_evidence(text)
+      text.to_s.downcase.gsub(/[^\p{L}\p{N}\s]/, ' ').gsub(/\s+/, ' ').strip
+    end
+
+    def insufficient_evidence_summary
+      'Insufficient directly attributable candidate evidence was recorded for this skill.'
     end
   end
 end

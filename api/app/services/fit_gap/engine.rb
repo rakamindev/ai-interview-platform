@@ -4,11 +4,12 @@ module FitGap
   # N13: Generates a fit/gap report comparing a portfolio against a vacancy.
   # Uses rule-based comparison for skill levels + Gemini Flash for culture narrative.
   class Engine
-    def initialize(portfolio:, vacancy:, gemini_client: nil)
+    def initialize(portfolio:, vacancy:, portfolio_revision: nil, gemini_client: nil)
       @portfolio = portfolio
       @vacancy   = vacancy
+      @portfolio_revision = portfolio_revision
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODELS', ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001')),
         timeout: 30
       )
     end
@@ -19,18 +20,19 @@ module FitGap
       narratives        = generate_narratives(skill_comparisons)
 
       report = FitGapReport.find_or_initialize_by(
-        portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
+        portfolio_id:     @portfolio.id,
+        vacancy_id:       @vacancy.id,
+        portfolio_revision_id: @portfolio_revision&.id
       )
-
-      report.update!(
+      report.assign_attributes(
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
         generated_at:      Time.current
       )
+      report.save!
 
-      Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
+      Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id} revision=#{@portfolio_revision&.id || 'current'}")
       report
     end
 
@@ -62,7 +64,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
 
@@ -71,8 +74,12 @@ module FitGap
 
     # Returns portfolio skills with overrides applied.
     def effective_portfolio_skills
+      if @portfolio_revision
+        return snapshot_effective_portfolio_skills
+      end
+
       @portfolio.portfolio_skills.includes(:assessor_override).map do |skill|
-        override = skill.assessor_override
+        override = skill.assessor_override if skill.assessor_override&.override_level != skill.ai_level
         {
           id:              skill.id,
           skill_id:        skill.skill_id,
@@ -80,6 +87,30 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
+          overridden:      override.present?
+        }
+      end
+    end
+
+    def snapshot_effective_portfolio_skills
+      snapshot = @portfolio_revision.snapshot
+      skills = Array(snapshot['skills'] || snapshot[:skills])
+      overrides = Array(snapshot['overrides'] || snapshot[:overrides]).index_by do |override|
+        override['portfolio_skill_id'] || override[:portfolio_skill_id]
+      end
+
+      skills.map do |skill|
+        skill_id = skill['id'] || skill[:id]
+        ai_level = skill['ai_level'] || skill[:ai_level]
+        override = overrides[skill_id]
+        override = nil if override && (override['override_level'] || override[:override_level]) == ai_level
+        {
+          id:              skill_id,
+          skill_id:        skill['skill_id'] || skill[:skill_id],
+          skill_label:     skill['skill_label'] || skill[:skill_label],
+          ai_level:        ai_level,
+          effective_level: override ? (override['override_level'] || override[:override_level]) : ai_level,
+          confidence:      skill['ai_confidence'] || skill[:ai_confidence],
           overridden:      override.present?
         }
       end

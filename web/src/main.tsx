@@ -4,13 +4,16 @@ import { Provider as JotaiProvider } from "jotai";
 import "./index.css";
 import App from "./App";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
-        <JotaiProvider>
-            <BrowserRouter>
-                <App />
-            </BrowserRouter>
-        </JotaiProvider>
+        <ThemeProvider>
+            <JotaiProvider>
+                <BrowserRouter>
+                    <App />
+                </BrowserRouter>
+            </JotaiProvider>
+        </ThemeProvider>
     </ErrorBoundary>
 );

@@ -3,17 +3,20 @@
 module Api
   module V1
     class VacanciesController < ApiController
-      authorize_auth_token! :assessor
+      authorize_auth_token! :admin
 
-      before_action :set_vacancy, only: %i[show update destroy]
+      before_action :set_vacancy, only: %i[show update destroy archive unarchive]
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(filtered_vacancy_scope.order(created_at: :desc))
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
-          meta: pagination_meta(vacancies)
+          meta: pagination_meta(vacancies).merge(
+            active_count: Vacancy.active.count,
+            archived_count: Vacancy.archived.count
+          )
         )
       end
 
@@ -45,11 +48,53 @@ module Api
 
       # DELETE /api/v1/vacancies/:id
       def destroy
-        @vacancy.destroy
-        json_response(message: "Vacancy deleted")
+        if RetentionPolicy.vacancy_action(has_fit_gap_reports: @vacancy.fit_gap_reports.exists?) == :archive
+          @vacancy.update!(archived_at: Time.current)
+          json_response(message: "Vacancy archived; Fit/Gap reports preserved")
+        elsif @vacancy.destroy
+          json_response(message: "Vacancy deleted")
+        else
+          json_error(@vacancy.errors.full_messages.first || "Vacancy could not be deleted", :conflict)
+        end
+      end
+
+      def archive
+        @vacancy.update!(archived_at: Time.current)
+        json_response(message: "Vacancy archived; Fit/Gap reports preserved")
+      end
+
+      def unarchive
+        @vacancy.update!(archived_at: nil)
+        json_response(message: "Vacancy restored")
+      end
+
+      def bulk_archive
+        ids = Array(params[:ids]).filter_map { |id| Integer(id, exception: false) }
+        archived = Vacancy.active.where(id: ids).update_all(archived_at: Time.current)
+        json_response(message: "Vacancies archived", archived_count: archived)
+      end
+
+      def bulk_unarchive
+        ids = Array(params[:ids]).filter_map { |id| Integer(id, exception: false) }
+        restored = Vacancy.archived.where(id: ids).update_all(archived_at: nil, updated_at: Time.current)
+        json_response(message: "Vacancies restored", restored_count: restored)
       end
 
       private
+
+      def vacancy_scope
+        params[:archived].to_s == "true" ? Vacancy.archived : Vacancy.active
+      end
+
+      def filtered_vacancy_scope
+        search = params[:search].to_s.strip
+        return vacancy_scope if search.blank?
+
+        vacancy_scope.where(
+          "role_title ILIKE ?",
+          "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
+        )
+      end
 
       def set_vacancy
         @vacancy = Vacancy.find(params[:id])
@@ -76,7 +121,8 @@ module Api
           competency_expectations:  vacancy.competency_expectations,
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
+          updated_at:               vacancy.updated_at,
+          archived_at:              vacancy.archived_at
         }
       end
 

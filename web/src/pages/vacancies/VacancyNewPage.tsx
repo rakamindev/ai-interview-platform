@@ -6,18 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import VacancySkillCard, { type VacancyFormValues } from "@/components/vacancy/VacancySkillCard";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
-import type { VacancySkill } from "@/types";
-
-interface VacancyFormValues {
-  role_title: string;
-  culture_dimensions: string;
-  competency_expectations: string;
-  skills: Partial<VacancySkill>[];
-}
+import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
@@ -25,9 +17,10 @@ export default function VacancyNewPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
+  const form = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
   });
+  const { register, handleSubmit, control, formState: { errors } } = form;
 
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
@@ -78,23 +71,7 @@ export default function VacancyNewPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {fields.map((field, index) => (
-                <div key={field.id} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">Expected level:</span>
-                    <LevelRadio
-                      value={watch(`skills.${index}.expected_level`) ?? 3}
-                      onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
-                    />
-                  </div>
-                </div>
-              ))}
+              {fields.map((field, index) => <VacancySkillCard key={field.id} index={index} form={form} onRemove={() => remove(index)} />)}
             </div>
           )}
 

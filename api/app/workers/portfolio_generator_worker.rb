@@ -17,6 +17,15 @@ class PortfolioGeneratorWorker
 
   def perform(session_id)
     session = Session.find(session_id)
+
+    # EndHandler is idempotent, but a duplicate job can still be present in
+    # Redis after a retry or manual requeue. Once a portfolio is complete,
+    # processing it again would create another revision and repeat the AI call.
+    if session.portfolio&.complete?
+      Rails.logger.info("[N10] Skipping duplicate portfolio generation for session #{session_id}")
+      return
+    end
+
     Portfolios::Generator.new(session: session).call
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N10] Session #{session_id} not found — skipping")

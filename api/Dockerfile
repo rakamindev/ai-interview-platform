@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libpq-dev \
   tzdata \
   libjemalloc2 \
+  fonts-dejavu-core \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ai-interview
@@ -24,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libpq-dev \
   tzdata \
   libjemalloc2 \
+  fonts-dejavu-core \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ai-interview

@@ -5,6 +5,9 @@ tech-docs
 # env
 .env
 .env.local
+.env.*
+!.env.example
+!.env.sample
 .env.*.local
 
 # editor

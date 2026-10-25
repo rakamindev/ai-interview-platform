@@ -18,16 +18,22 @@ Rails.application.routes.draw do
 
       # Assessments
       resources :assessments do
+        collection { post :bulk_archive; post :bulk_unarchive }
+        member do
+          patch :archive
+          patch :unarchive
+        end
         resources :sessions, only: %i[index create]
       end
 
       # Sessions
-      resources :sessions, only: %i[show] do
+      resources :sessions, only: %i[show destroy] do
         member do
           post :end_session
           get  :coverage
           get  :transcript
           get  :portfolio, to: 'portfolios#show'
+          get  'portfolio/history', to: 'portfolios#history'
           post 'portfolio/regenerate', to: 'portfolios#regenerate'
         end
       end
@@ -48,7 +54,13 @@ Rails.application.routes.draw do
       get  'skill_taxonomies/:skill_id', to: 'skill_taxonomies#show', as: :skill_taxonomy
 
       # Vacancies
-      resources :vacancies
+      resources :vacancies do
+        collection { post :bulk_archive; post :bulk_unarchive }
+        member do
+          patch :archive
+          patch :unarchive
+        end
+      end
 
       # Portfolios — fit/gap and export
       resources :portfolios, only: [] do

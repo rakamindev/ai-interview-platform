@@ -4,6 +4,14 @@
 # Env / secrets
 **/.env
 **/.env.local
+**/.env.*
+!**/.env.example
+!**/.env.sample
+**/config/master.key
+**/*credentials*.json
+**/*.pem
+**/*.p12
+**/*.jks
 api/config/application.yml
 
 # Logs and temp

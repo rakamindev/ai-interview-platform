@@ -6,6 +6,13 @@ class Assessment < ApplicationRecord
   has_many :assessment_skills, dependent: :destroy, inverse_of: :assessment
   has_many :sessions, dependent: :restrict_with_error
 
+  scope :active, -> { where(archived_at: nil) }
+  scope :archived, -> { where.not(archived_at: nil) }
+
+  def archived?
+    archived_at.present?
+  end
+
   SUPPORTED_LANGUAGES = { 'en' => 'English', 'id' => 'Bahasa Indonesia' }.freeze
 
   validates :name, presence: true

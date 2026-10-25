@@ -138,6 +138,8 @@ class AudioWebSocketMiddleware
 
     state.gemini_client = Gemini::LiveClient.new(
       system_prompt: session.assessment.system_prompt,
+      model: ENV.fetch('GEMINI_LIVE_MODELS', ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')),
+      model_index: state.live_model_index || 0,
       on_audio: build_on_audio(browser_ws, state),
       on_input_transcription: build_on_input_transcription(browser_ws, state, session),
       on_output_transcription: build_on_output_transcription(browser_ws, state, session),
@@ -379,6 +381,10 @@ class AudioWebSocketMiddleware
 
     state.proactive_reconnect_timer&.cancel
     state.reconnect_attempts ||= 0
+
+    if !state.gemini_client.ready_once? && state.gemini_client.fallback_model!
+      state.live_model_index = state.gemini_client.model_index
+    end
 
     if state.reconnect_attempts < MAX_RECONNECT_ATTEMPTS
       schedule_gemini_reconnect(browser_ws, state, code)
@@ -732,9 +738,11 @@ class AudioWebSocketMiddleware
 
   def authenticate_and_load(env, session_id)
     request = Rack::Request.new(env)
+    candidate_invite = false
 
     session = begin
       invite_token = request.params['token']
+      candidate_invite = invite_token.present?
 
       if invite_token.present?
         Session.unscoped.find_by(invite_token: invite_token)
@@ -744,6 +752,7 @@ class AudioWebSocketMiddleware
 
         token = auth_header.split(' ').last
         payload = JsonWebToken.decode(token)
+        return [nil, 'Unauthorized'] unless payload[:role].to_s == 'admin'
         tenant_id = Organization.find_by(scheme: payload[:scheme])&.id
         return [nil, 'Invalid tenant'] unless tenant_id
 
@@ -754,6 +763,7 @@ class AudioWebSocketMiddleware
     end
 
     return [nil, 'Session not found'] unless session
+    return [nil, 'Invite is no longer available'] if candidate_invite && session.assessment&.archived?
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 
@@ -782,6 +792,7 @@ class AudioWebSocketMiddleware
                   :logged_gate_suppressed, :reconnect_after_turn,
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
+                  :live_model_index,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
                   :waiting_for_candidate_response
 

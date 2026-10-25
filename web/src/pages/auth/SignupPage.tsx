@@ -25,8 +25,9 @@ export default function SignupPage() {
     try {
       const res = await authApi.signup({ email, password, role });
       const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
+      const userEmail = res.data.user?.email ?? email;
+      saveToken(token, userEmail);
+      setAuth({ token, email: userEmail });
       navigate("/assessments");
     } catch {
       setError("Signup failed. Please try again.");

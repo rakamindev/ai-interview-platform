@@ -7,6 +7,7 @@ export interface Assessment {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
+  archived_at?: string;
   skills?: AssessmentSkill[];
   latest_session?: {
     status: "pending" | "active" | "ended";
@@ -39,7 +40,7 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
@@ -85,6 +86,20 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+export interface PortfolioRevision {
+  id: number;
+  portfolio_id: number;
+  version: number;
+  generation_status: "pending" | "generating" | "complete" | "failed";
+  generated_at?: string;
+  generation_error?: string;
+  snapshot: {
+    skills: PortfolioSkill[];
+    overrides: AssessorOverride[];
+  };
+  created_at: string;
+}
+
 export interface PortfolioSkill {
   id: number;
   skill_id?: number;
@@ -114,6 +129,7 @@ export interface Vacancy {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
+  archived_at?: string;
   skills: VacancySkill[];
 }
 
@@ -129,7 +145,8 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
+  required_level?: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -140,6 +157,8 @@ export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
+  portfolio_revision_id?: number;
+  portfolio_version?: number;
   skill_comparisons: SkillComparison[];
   culture_narrative: string;
   overall_narrative: string;
@@ -171,6 +190,8 @@ export interface PaginationMeta {
   total_pages: number;
   total_count: number;
   per_page: number;
+  active_count?: number;
+  archived_count?: number;
 }
 
 // WebSocket message types

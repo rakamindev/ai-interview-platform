@@ -7,6 +7,9 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   token: string;
+  user?: {
+    email: string;
+  };
 }
 
 export const authApi = {

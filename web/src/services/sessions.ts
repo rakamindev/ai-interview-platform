@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type { Session, CoverageMap, TranscriptTurn, Portfolio, PortfolioRevision, CandidateInfo } from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
@@ -15,13 +15,20 @@ export const sessionsApi = {
   getCoverage: (id: number) =>
     api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
-  getTranscript: (id: number, fromTurn?: number) =>
+  getTranscript: (id: number, fromTurn?: number, limit?: number, query?: string) =>
     api.get<{ turns: TranscriptTurn[]; total: number }>(`/sessions/${id}/transcript`, {
-      params: fromTurn ? { from_turn: fromTurn } : undefined,
+      params: {
+        ...(fromTurn ? { from_turn: fromTurn } : {}),
+        ...(limit ? { limit } : {}),
+        ...(query ? { query } : {}),
+      },
     }),
 
   getPortfolio: (id: number) =>
     api.get<{ portfolio: Portfolio } | { status: string }>(`/sessions/${id}/portfolio`),
+
+  getPortfolioHistory: (id: number) =>
+    api.get<{ revisions: PortfolioRevision[] }>(`/sessions/${id}/portfolio/history`),
 
   regeneratePortfolio: (id: number) =>
     api.post<{ message: string; portfolio: Portfolio }>(`/sessions/${id}/portfolio/regenerate`),

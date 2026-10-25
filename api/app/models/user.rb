@@ -4,6 +4,7 @@ class User < ApplicationRecord
   has_secure_password
 
   ROLES = %w[admin user].freeze
+  STAFF_ROLES = %w[admin].freeze
 
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },

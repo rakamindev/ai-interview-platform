@@ -18,7 +18,7 @@ module Gemini
     SILENCE_FRAME_SAMPLES = 640
     SILENCE_FRAME = ("\x00" * (SILENCE_FRAME_SAMPLES * 2)).freeze
 
-    attr_reader :resumption_token, :connected, :connected_at, :inactivity_close
+    attr_reader :resumption_token, :connected, :connected_at, :inactivity_close, :model, :model_index
 
     def initialize(
       system_prompt:,
@@ -33,11 +33,15 @@ module Gemini
       on_close: nil,
       on_error: nil,
       on_ready: nil,
-      on_resumption_token_update: nil
+      on_resumption_token_update: nil,
+      model_index: 0
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      configured_models = model || ENV.fetch('GEMINI_LIVE_MODELS', ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview'))
+      @models = configured_models.to_s.split(',').map(&:strip).reject(&:empty?)
+      @model_index = [model_index.to_i, @models.length - 1].min
+      @model = @models[@model_index]
       @voice = voice
       @resumption_token = nil
       @connected = false
@@ -58,6 +62,19 @@ module Gemini
       @on_error = on_error
       @on_ready = on_ready
       @on_resumption_token_update = on_resumption_token_update
+    end
+
+    def ready_once?
+      !@connected_at.nil?
+    end
+
+    def fallback_model!
+      return false if @model_index >= @models.length - 1
+
+      @model_index += 1
+      @model = @models[@model_index]
+      Rails.logger.warn("[Gemini::LiveClient] Falling back to model #{@model}")
+      true
     end
 
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.

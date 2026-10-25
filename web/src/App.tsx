@@ -15,6 +15,7 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import ProfilePage from "@/pages/profile/ProfilePage";
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
       </Route>
 

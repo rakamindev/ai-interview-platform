@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
-import OverridePanel from "./OverridePanel";
+import OverridePanel, { OverrideStatus } from "./OverridePanel";
 import { Zap } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
@@ -9,13 +9,15 @@ import type { PortfolioSkill, AssessorOverride } from "@/types";
 interface SkillPortfolioCardProps {
   skill: PortfolioSkill;
   override?: AssessorOverride;
-  onOverrideSaved: (override: AssessorOverride) => void;
+  onOverrideSaved: (override: AssessorOverride | null) => void;
+  readOnly?: boolean;
 }
 
 export default function SkillPortfolioCard({
   skill,
   override,
   onOverrideSaved,
+  readOnly = false,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
 
@@ -36,14 +38,17 @@ export default function SkillPortfolioCard({
                 )}
               </div>
               <ConfidenceIndicator confidence={skill.ai_confidence} />
+              {!readOnly && <OverrideStatus skill={skill} existingOverride={override} />}
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          {!readOnly && (
+            <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          )}
         </div>
 
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
-          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-muted-foreground dark:border-amber-700/70 dark:bg-amber-950/40">
             Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
           </div>
         )}

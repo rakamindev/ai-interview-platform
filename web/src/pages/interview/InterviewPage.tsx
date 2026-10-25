@@ -27,6 +27,7 @@ import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [inviteError, setInviteError] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
@@ -38,6 +39,12 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const transcriptPanel = transcriptScrollRef.current;
+    if (transcriptPanel) transcriptPanel.scrollTop = transcriptPanel.scrollHeight;
+  }, [transcript]);
 
   // Fetch candidate info
   useEffect(() => {
@@ -48,7 +55,7 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInviteError(true));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -144,6 +151,28 @@ export default function InterviewPage() {
     onFrame: send,
   });
 
+  // An assessment can be archived while this page is already open. Re-check the
+  // invite so an existing candidate page does not remain usable indefinitely.
+  useEffect(() => {
+    if (!token || !sessionId || inviteError) return;
+
+    const checkInvite = async () => {
+      try {
+        await sessionsApi.getCandidateInfo(token);
+      } catch (error) {
+        const status = (error as { response?: { status?: number } }).response?.status;
+        if (status === 404) {
+          stopCapture();
+          disconnect();
+          setInviteError(true);
+        }
+      }
+    };
+
+    const interval = setInterval(checkInvite, 5_000);
+    return () => clearInterval(interval);
+  }, [token, sessionId, inviteError, stopCapture, disconnect]);
+
   muteRef.current = mute;
   unmuteRef.current = unmute;
 
@@ -188,6 +217,18 @@ export default function InterviewPage() {
       : "reconnecting";
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
+  if (inviteError) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-3">
+        <h2 className="text-xl font-semibold">Interview invite unavailable</h2>
+        <p className="text-sm text-muted-foreground">
+          This interview invitation is invalid, expired, or has been withdrawn.
+          Please contact the hiring team for a new invitation.
+        </p>
+      </div>
+    );
+  }
+
   if (interviewState === "idle") {
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
@@ -246,10 +287,9 @@ export default function InterviewPage() {
   const candidateSpeaking = speaker === "candidate";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <div className="mx-auto flex h-full max-w-5xl flex-col px-4">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
-        <span className="text-sm font-medium">AI Interview</span>
+      <div className="flex items-center justify-end py-3 border-b sticky top-12 bg-background/95 backdrop-blur z-10">
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
@@ -282,45 +322,56 @@ export default function InterviewPage() {
         </div>
       )}
 
-      {/* Voice indicator */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
-        {interviewState === "connecting" ? (
-          <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
-        ) : interviewState === "draining_audio" ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <VoiceBars active={true} label="AI speaking" variant="ai" />
-            <p className="text-xs text-muted-foreground">Wrapping up...</p>
+      {/* Voice status and conversation */}
+      <div className="grid flex-1 items-center gap-8 lg:grid-cols-[minmax(15rem,0.8fr)_minmax(0,1.2fr)]">
+        <div className="flex flex-col items-center justify-center gap-6 py-8">
+          {interviewState === "connecting" ? (
+            <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
+          ) : interviewState === "draining_audio" ? (
+            <div className="flex flex-col items-center gap-2 text-center">
+              <VoiceBars active={true} label="AI speaking" variant="ai" />
+              <p className="text-xs text-muted-foreground">Wrapping up...</p>
+            </div>
+          ) : (
+            <>
+              <VoiceBars
+                active={aiSpeaking}
+                label={aiSpeaking ? "AI speaking" : "Listening..."}
+                variant="ai"
+              />
+
+              {candidateSpeaking && (
+                <VoiceBars
+                  active={true}
+                  label="You're speaking"
+                  variant="candidate"
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {transcript.length > 0 ? (
+          <div
+            ref={transcriptScrollRef}
+            aria-label="Interview conversation"
+            className="min-h-32 max-h-[min(55vh,34rem)] w-full overflow-y-auto overscroll-contain rounded-lg border bg-card/30 p-3 shadow-sm"
+          >
+            <div className="space-y-2">
+              {transcript.map((turn, i) => (
+                <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
+              ))}
+            </div>
           </div>
         ) : (
-          <>
-            <VoiceBars
-              active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
-              variant="ai"
-            />
-
-            {candidateSpeaking && (
-              <VoiceBars
-                active={true}
-                label="You're speaking"
-                variant="candidate"
-              />
-            )}
-
-            {/* Transcript */}
-            {transcript.length > 0 && (
-              <div className="w-full space-y-2 overflow-y-auto max-h-[60vh]">
-                {transcript.map((turn, i) => (
-                  <TranscriptBubble key={i} speaker={turn.speaker} text={turn.text} />
-                ))}
-              </div>
-            )}
-          </>
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            Conversation will appear here.
+          </div>
         )}
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background/95 backdrop-blur">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">

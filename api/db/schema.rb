@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_25_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -52,6 +52,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "language", default: "en"
+    t.datetime "archived_at"
+    t.index ["archived_at"], name: "index_assessments_on_archived_at"
     t.index ["tenant_id"], name: "index_assessments_on_tenant_id"
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
@@ -89,8 +91,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
-    t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
+    t.bigint "portfolio_revision_id"
+    t.index ["portfolio_id", "vacancy_id", "portfolio_revision_id"], name: "idx_fit_gap_reports_revision", unique: true, where: "(portfolio_revision_id IS NOT NULL)"
+    t.index ["portfolio_id", "vacancy_id"], name: "idx_fit_gap_reports_current", unique: true, where: "(portfolio_revision_id IS NULL)"
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
+    t.index ["portfolio_revision_id"], name: "index_fit_gap_reports_on_portfolio_revision_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
   end
 
@@ -105,6 +110,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.timestamptz "updated_at", default: -> { "now()" }, null: false
     t.index ["host"], name: "index_organizations_on_host"
     t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
+  end
+
+  create_table "portfolio_revisions", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.integer "version", null: false
+    t.string "generation_status", null: false
+    t.datetime "generated_at"
+    t.text "generation_error"
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["portfolio_id", "version"], name: "index_portfolio_revisions_on_portfolio_id_and_version", unique: true
+    t.index ["portfolio_id"], name: "index_portfolio_revisions_on_portfolio_id"
   end
 
   create_table "portfolio_skills", force: :cascade do |t|
@@ -193,6 +211,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "archived_at"
+    t.index ["archived_at"], name: "index_vacancies_on_archived_at"
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
   end
 
@@ -208,8 +228,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
+  add_foreign_key "fit_gap_reports", "portfolio_revisions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "portfolio_revisions", "portfolios"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"

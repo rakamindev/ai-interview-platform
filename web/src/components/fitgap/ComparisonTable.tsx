@@ -4,6 +4,7 @@ import type { SkillComparison } from "@/types";
 
 interface ComparisonTableProps {
   comparisons: SkillComparison[];
+  overriddenSkillLabels?: Set<string>;
 }
 
 function ResultBadge({ comparison }: { comparison: SkillComparison }) {
@@ -24,11 +25,14 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   );
 }
 
-export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
+export default function ComparisonTable({ comparisons, overriddenSkillLabels = new Set() }: ComparisonTableProps) {
   // Summary counts
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+  const hasOverrides = comparisons.some(
+    (c) => c.is_override || overriddenSkillLabels.has(c.skill_label)
+  );
 
   return (
     <div className="space-y-3">
@@ -43,17 +47,21 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
+            {comparisons.map((c, i) => {
+              const requiredLevel = c.expected_level ?? c.required_level;
+              const isOverride = c.is_override || overriddenSkillLabels.has(c.skill_label);
+
+              return (
               <tr key={i} className="border-b last:border-0">
                 <td className="px-4 py-2.5">{c.skill_label}</td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+                  {requiredLevel != null ? LEVEL_LABELS[requiredLevel] : "—"}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
                     <span>
+                      {isOverride && <span aria-label="Human override applied">✏️ </span>}
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -63,7 +71,8 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
                   <ResultBadge comparison={c} />
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -73,7 +82,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+        {hasOverrides && <span className="ml-auto">✏️ = human override applied</span>}
       </div>
     </div>
   );

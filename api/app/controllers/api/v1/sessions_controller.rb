@@ -3,10 +3,10 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
+      authorize_auth_token! :admin, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show destroy end_session coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -21,6 +21,10 @@ module Api
       # POST /api/v1/assessments/:assessment_id/sessions
       def create
         assessment = Assessment.find(params[:assessment_id])
+
+        if assessment.archived?
+          return json_error("Archived assessments cannot accept candidate sessions", :unprocessable_entity)
+        end
 
         session = assessment.sessions.new(
           candidate_id:   params.dig(:session, :candidate_id),
@@ -54,6 +58,20 @@ module Api
             }
           )
         )
+      end
+
+      # DELETE /api/v1/sessions/:id
+      # Pending invites may be withdrawn; active and ended sessions are retained
+      # so candidate evidence and audit history cannot be removed accidentally.
+      def destroy
+        unless RetentionPolicy.session_deletable?(@session.status)
+          return json_error("Only pending candidate sessions can be deleted", :conflict)
+        end
+
+        @session.destroy!
+        json_response({ message: "Candidate session deleted" })
+      rescue ActiveRecord::RecordNotDestroyed => e
+        json_error(e.record.errors.full_messages.first || "Candidate session could not be deleted", :conflict)
       end
 
       # POST /api/v1/sessions/:id/end
@@ -92,9 +110,13 @@ module Api
       # GET /api/v1/sessions/:id/transcript
       def transcript
         from_turn = params[:from_turn].to_i
-        turns     = @session.transcript_turns
-                             .ordered
-                             .then { from_turn > 0 ? _1.where("turn_number >= ?", from_turn) : _1 }
+        limit     = params[:limit].to_i
+        query     = params[:query].to_s.strip
+        scope     = @session.transcript_turns.ordered
+        scope     = scope.where("turn_number >= ?", from_turn) if from_turn > 0
+        scope     = scope.where("text ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(query)}%") if query.present?
+        total     = scope.count
+        turns     = limit > 0 ? scope.limit([limit, 100].min) : scope
 
         json_response(
           turns: turns.map do |t|
@@ -108,7 +130,7 @@ module Api
               created_at:     t.created_at
             }
           end,
-          total: turns.count
+          total: total
         )
       end
 
@@ -118,6 +140,10 @@ module Api
       def audio_complete
         session = Session.unscoped.find_by(invite_token: params[:token])
         return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.assessment&.archived?
+          return json_error("This invite is no longer available", :not_found)
+        end
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
@@ -143,6 +169,10 @@ module Api
 
         unless assessment
           return json_error("Assessment not found", :not_found)
+        end
+
+        if assessment.archived?
+          return json_error("This invite is no longer available", :not_found)
         end
 
         json_response(

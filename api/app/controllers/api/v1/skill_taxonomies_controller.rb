@@ -3,7 +3,7 @@
 module Api
   module V1
     class SkillTaxonomiesController < ApiController
-      authorize_auth_token! :assessor
+      authorize_auth_token! :admin
 
       # GET /api/v1/skill_taxonomies
       def index

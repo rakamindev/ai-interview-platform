@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
@@ -24,7 +25,7 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Radio, Search, X, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ export default function LiveMonitorPage() {
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [assessmentName, setAssessmentName] = useState<string>("");
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
+  const [transcriptSearch, setTranscriptSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
@@ -139,9 +141,12 @@ export default function LiveMonitorPage() {
 
   const configuredSkills = coverageMap?.skills ?? [];
   const discoveredSkills = coverageMap?.discovered ?? [];
+  const filteredTranscript = transcriptSearch.trim()
+    ? transcript.filter((turn) => turn.text.toLowerCase().includes(transcriptSearch.trim().toLowerCase()))
+    : transcript;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -191,6 +196,7 @@ export default function LiveMonitorPage() {
         </div>
       )}
 
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
       {/* Coverage map */}
       <Card>
         <CardHeader className="pb-3">
@@ -266,22 +272,55 @@ export default function LiveMonitorPage() {
       </Card>
 
       {/* Live transcript */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Live Transcript</CardTitle>
+      <Card className="lg:sticky lg:top-4">
+        <CardHeader className="space-y-3 pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-sm">Live Transcript</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Latest conversation turns</p>
+            </div>
+            <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+              {filteredTranscript.length}/{transcript.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border bg-background px-2">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Input
+              value={transcriptSearch}
+              onChange={(event) => setTranscriptSearch(event.target.value)}
+              placeholder="Search transcript..."
+              aria-label="Search live transcript"
+              className="border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
+            />
+            {transcriptSearch && (
+              <button
+                type="button"
+                onClick={() => setTranscriptSearch("")}
+                className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Clear transcript search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {transcript.length === 0 ? (
             <p className="text-sm text-muted-foreground">No transcript yet.</p>
+          ) : filteredTranscript.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No turns match “{transcriptSearch}”.
+            </p>
           ) : (
-            <div className="space-y-2">
-              {transcript.map((turn) => (
+            <div className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto pr-2">
+              {filteredTranscript.map((turn) => (
                 <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+      </div>
 
       {endError && (
         <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">

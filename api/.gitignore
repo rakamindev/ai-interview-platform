@@ -21,8 +21,15 @@
 /config/master.key
 
 *.env
+.env.*
+!.env.example
+!.env.sample
 config/application.yml
-vertex_ai_credentials.json
+config/master.key
+*credentials*.json
+*.pem
+*.p12
+*.jks
 
 
 # Ignore Public Docs

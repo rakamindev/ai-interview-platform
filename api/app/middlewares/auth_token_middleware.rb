@@ -6,7 +6,6 @@
 #
 # Usage in ApplicationController:
 #   authorize_auth_token! :admin            # require admin role
-#   authorize_auth_token! :assessor         # require assessor or admin
 #   authorize_auth_token! :any              # any authenticated user
 #   authorize_auth_token!                   # just validate token; no role check
 class AuthTokenMiddleware < ApplicationMiddleware

@@ -25,11 +25,11 @@ export const LEVEL_DESCRIPTIONS: Record<number, string> = {
 
 // L-badge colors (Tailwind classes)
 export const LEVEL_BADGE_CLASSES: Record<number, string> = {
-  1: "bg-neutral-200 text-neutral-700",
-  2: "bg-blue-100 text-blue-700",
-  3: "bg-teal-100 text-teal-700",
-  4: "bg-purple-100 text-purple-700",
-  5: "bg-yellow-100 text-yellow-700",
+  1: "bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200",
+  2: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-200",
+  3: "bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-200",
+  4: "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-200",
+  5: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/60 dark:text-yellow-200",
 };
 
 // Coverage state display
@@ -63,8 +63,8 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-950/60",
+  gap: "text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/60",
+  exceed: "text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-950/60",
+  not_assessed: "text-neutral-500 bg-neutral-50 dark:text-neutral-300 dark:bg-neutral-800/80",
 };

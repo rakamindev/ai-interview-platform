@@ -18,6 +18,7 @@ interface SkillCardProps {
 
 export default function SkillCard({ index, id, form, onRemove }: SkillCardProps) {
   const [anchorsOpen, setAnchorsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id });
 
@@ -35,15 +36,16 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       ref={setNodeRef}
       style={style}
       className={cn(
-        "border rounded-lg bg-white",
+        "rounded-lg border border-border bg-card text-card-foreground",
         isDragging && "opacity-50 shadow-lg"
       )}
     >
       {/* Card header */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex cursor-pointer items-center gap-2 px-3 py-2.5 hover:bg-muted/30" role="button" tabIndex={0} aria-expanded={!collapsed} aria-label={`${collapsed ? "Expand" : "Collapse"} ${skillLabel}`} onClick={() => setCollapsed((current) => !current)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setCollapsed((current) => !current); } }}>
         <button
           type="button"
           className="cursor-grab text-muted-foreground hover:text-foreground touch-none"
+          onClick={(event) => event.stopPropagation()}
           {...attributes}
           {...listeners}
         >
@@ -61,7 +63,17 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
 
         <button
           type="button"
-          onClick={onRemove}
+          onClick={(event) => { event.stopPropagation(); setCollapsed((current) => !current); }}
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${collapsed ? "Expand" : "Collapse"} ${skillLabel}`}
+          aria-expanded={!collapsed}
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+
+        <button
+          type="button"
+          onClick={(event) => { event.stopPropagation(); onRemove(); }}
           className="text-muted-foreground hover:text-destructive transition-colors"
           aria-label="Remove skill"
         >
@@ -70,7 +82,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       </div>
 
       {/* Card body */}
-      <div className="px-3 pb-3 space-y-3">
+      {!collapsed && <div className="px-3 pb-3 space-y-3">
         {isCustom ? (
           <CustomSkillForm index={index} form={form} />
         ) : (
@@ -102,12 +114,12 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
               <span className="text-xs text-muted-foreground">Expected level:</span>
               <LevelRadio
                 value={skill?.expected_level ?? 3}
-                onChange={(v) => form.setValue(`skills.${index}.expected_level`, v)}
+                onChange={(v) => form.setValue(`skills.${index}.expected_level`, v, { shouldDirty: true, shouldValidate: true })}
               />
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

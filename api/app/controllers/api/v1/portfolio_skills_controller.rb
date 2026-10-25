@@ -3,13 +3,20 @@
 module Api
   module V1
     class PortfolioSkillsController < ApiController
-      authorize_auth_token! :assessor
+      authorize_auth_token! :admin
 
       before_action :set_portfolio_skill
 
       # POST /api/v1/portfolio-skills/:id/override
       def override
         existing = @portfolio_skill.assessor_override
+        restoring_ai_rating = override_params[:override_level].present? && override_params[:override_level].to_i == @portfolio_skill.ai_level
+
+        if restoring_ai_rating
+          existing&.destroy!
+          regenerate_stale_fitgap_reports if existing
+          return json_response(override: nil, restored: true)
+        end
 
         if existing
           if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
