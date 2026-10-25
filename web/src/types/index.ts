@@ -129,10 +129,13 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | number | null;
+  expected_level: number;
+  candidate_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta: number | null;
+  confidence?: string | null;
+  overridden?: boolean;
   is_override?: boolean;
 }
 

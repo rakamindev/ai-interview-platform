@@ -1,0 +1,71 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD || 'postgres' }}
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: ${{ vars.RAILS_ENV || 'test' }}
+      DB_HOST: ${{ vars.DB_HOST || 'localhost' }}
+      DB_PORT: ${{ vars.DB_PORT || '5432' }}
+      DB_USERNAME: ${{ vars.DB_USERNAME || 'postgres' }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD || 'postgres' }}
+      DB_NAME: ${{ vars.DB_NAME || 'rakamin_test' }}
+      REDIS_URL: ${{ vars.REDIS_URL || 'redis://localhost:6379/0' }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+      ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS || 'http://localhost:3000' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.2"
+          bundler-cache: true
+          working-directory: api
+      - name: Prepare database
+        working-directory: api
+        run: bundle exec rails db:prepare
+      - name: Run RSpec
+        working-directory: api
+        run: bundle exec rspec --format progress
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+      - name: Typecheck
+        working-directory: web
+        run: npm run typecheck
+      - name: Run tests
+        working-directory: web
+        run: npm test

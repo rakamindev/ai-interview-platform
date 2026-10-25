@@ -47,4 +47,8 @@ Rails.application.configure do
 
   # Log level
   config.log_level = :warn
+
+  # Integration tests use the default host (www.example.com); disable host
+  # authorization so request specs don't get blocked by Rails' HostAuthorization.
+  config.hosts.clear
 end

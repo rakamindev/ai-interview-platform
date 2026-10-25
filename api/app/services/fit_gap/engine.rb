@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 module FitGap
   # N13: Generates a fit/gap report comparing a portfolio against a vacancy.
   # Uses rule-based comparison for skill levels + Gemini Flash for culture narrative.
@@ -17,20 +19,42 @@ module FitGap
     def call
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
+      fingerprint       = compute_fingerprint
 
-      report = FitGapReport.find_or_initialize_by(
-        portfolio_id: @portfolio.id,
-        vacancy_id:   @vacancy.id
-      )
+      # Serialize concurrent callers on one (portfolio, vacancy) pair.
+      # pg_advisory_xact_lock is transaction-scoped: it is only held while a
+      # transaction is open, so the lock MUST wrap the find-or-create below.
+      # Without the surrounding transaction the SELECT would autocommit and the
+      # lock would release before the unique index is touched, letting two
+      # racers both insert and raise RecordNotUnique.
+      #
+      # Note: We use a deterministic 64-bit signed integer derived from SHA256
+      # rather than Ruby's String#hash (which has a per-process randomized seed)
+      # so that Puma web workers and Sidekiq background workers across processes
+      # serialize on the exact same lock key.
+      lock_key = advisory_lock_key
 
-      report.update!(
-        skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
-      )
+      report = ActiveRecord::Base.transaction do
+        ActiveRecord::Base.connection.execute(
+          ActiveRecord::Base.sanitize_sql_array(["SELECT pg_advisory_xact_lock(?)", lock_key])
+        )
 
-      Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
+        r = FitGapReport.find_or_initialize_by(
+          portfolio_id: @portfolio.id,
+          vacancy_id:   @vacancy.id
+        )
+
+        r.update!(
+          skill_comparisons: skill_comparisons,
+          culture_narrative: narratives[:culture],
+          overall_narrative: narratives[:overall],
+          generated_at:      Time.current,
+          source_fingerprint: fingerprint
+        )
+        r
+      end
+
+      Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id} fingerprint=#{fingerprint}")
       report
     end
 
@@ -62,7 +86,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          overridden:      portfolio_skill ? !!portfolio_skill[:overridden] : false
         }
       end
 
@@ -88,6 +113,31 @@ module FitGap
     def find_portfolio_skill(portfolio_skills, label, skill_id)
       portfolio_skills.find { |s| s[:skill_id] == skill_id && skill_id.present? } ||
         portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
+    end
+
+    # Hash of every input that affects the generated report. Changing any skill
+    # level, override level, or override timestamp busts the fingerprint.
+    # AssessorOverride carries `overridden_at` (no updated_at column), so we use
+    # that — including it is what makes the staleness check catch a newly-added
+    # or edited human override (AC8).
+    def compute_fingerprint
+      parts = []
+
+      parts += @portfolio.portfolio_skills.order(:id)
+                       .pluck(:ai_level)
+                       .map { |lvl| "#{lvl}" }
+
+      parts += AssessorOverride.joins(:portfolio_skill)
+                       .where(portfolio_skills: { portfolio_id: @portfolio.id })
+                       .order(:id)
+                       .pluck(:override_level, :overridden_at)
+                       .map { |lvl, ts| "o#{lvl}@#{ts.to_i}" }
+
+      parts += @vacancy.vacancy_skills.order(:id)
+                       .pluck(:skill_label, :expected_level)
+                       .map { |lbl, lvl| "#{lbl}:#{lvl}" }
+
+      Digest::SHA256.hexdigest(parts.join("|"))[0, 16]
     end
 
     def generate_narratives(skill_comparisons)
@@ -144,6 +194,13 @@ module FitGap
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
 
       "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+    end
+
+    # Deterministic 64-bit signed integer key for pg_advisory_xact_lock(bigint).
+    # Uses SHA256 rather than Ruby's process-salted Object#hash to ensure cross-process
+    # synchronization across all Puma workers and Sidekiq threads.
+    def advisory_lock_key
+      Digest::SHA256.digest("fitgap:#{@portfolio.id}:#{@vacancy.id}")[0...8].unpack1('q>')
     end
   end
 end

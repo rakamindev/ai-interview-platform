@@ -91,7 +91,7 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
+        # Preserve existing report for atomic update in worker to prevent data loss on failure
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
@@ -113,12 +113,15 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
+        # Return cached report if it exists and inputs haven't changed.
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
-        if existing
+        if existing && !fitgap_stale?(existing, portfolio, vacancy)
           return json_response(report: fit_gap_json(existing))
         end
 
+        # Stale or missing → enqueue regeneration.
+        # Existing report is preserved and replaced atomically inside FitGap::Engine
+        # so that a worker failure does not leave the report unavailable.
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
@@ -132,6 +135,19 @@ module Api
 
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
+        end
+
+        vacancy = Vacancy.find_by(id: params[:vacancy_id])
+        if vacancy && fitgap_stale?(report, portfolio, vacancy)
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+          # Keep the previous report available while the new one is generated.
+          # `stale: true` makes it explicit that this is not fresh data.
+          return render json: {
+            status: "generating",
+            stale: true,
+            report: fit_gap_json(report),
+            message: "Report stale — regeneration queued"
+          }, status: :accepted
         end
 
         json_response(report: fit_gap_json(report))
@@ -197,6 +213,33 @@ module Api
         }
       end
 
+      # Standalone fingerprint of the report inputs — mirrors
+      # FitGap::Engine#compute_fingerprint without needing an Engine instance.
+      def current_fingerprint(portfolio, vacancy)
+        parts = []
+
+        parts += portfolio.portfolio_skills.order(:id)
+                         .pluck(:ai_level)
+                         .map { |lvl| "#{lvl}" }
+
+        parts += AssessorOverride.joins(:portfolio_skill)
+                         .where(portfolio_skills: { portfolio_id: portfolio.id })
+                         .order(:id)
+                         .pluck(:override_level, :overridden_at)
+                         .map { |lvl, ts| "o#{lvl}@#{ts.to_i}" }
+
+        parts += vacancy.vacancy_skills.order(:id)
+                         .pluck(:skill_label, :expected_level)
+                         .map { |lbl, lvl| "#{lbl}:#{lvl}" }
+
+        Digest::SHA256.hexdigest(parts.join("|"))[0, 16]
+      end
+
+      def fitgap_stale?(report, portfolio, vacancy)
+        return true if report.source_fingerprint.nil?
+        report.source_fingerprint != current_fingerprint(portfolio, vacancy)
+      end
+
       def fit_gap_json(report)
         {
           id:                report.id,
@@ -205,7 +248,8 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          generated_at:      report.generated_at,
+          source_fingerprint: report.source_fingerprint
         }
       end
 
