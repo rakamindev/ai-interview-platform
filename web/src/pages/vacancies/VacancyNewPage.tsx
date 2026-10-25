@@ -11,6 +11,7 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
+import { toast } from "sonner";
 
 interface VacancyFormValues {
   role_title: string;
@@ -41,6 +42,7 @@ export default function VacancyNewPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
+      toast.success("Vacancy created", { description: "The role is ready for assessment matching." });
       navigate("/vacancies");
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
@@ -60,10 +62,18 @@ export default function VacancyNewPage() {
         <span className="text-sm font-medium">New Vacancy</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
         <div className="space-y-1.5">
           <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Input
+            id="role_title"
+            placeholder="Senior Frontend Engineer"
+            aria-invalid={errors.role_title ? "true" : undefined}
+            {...register("role_title", { required: "Role title is required" })}
+          />
+          {errors.role_title && (
+            <p className="text-xs text-destructive">{errors.role_title.message}</p>
+          )}
         </div>
 
         <Separator />
@@ -73,13 +83,13 @@ export default function VacancyNewPage() {
           <Label>Expected skills</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-white p-4 text-center text-sm text-muted-foreground shadow-sm">
               No skills added yet.
             </div>
           ) : (
             <div className="space-y-2">
               {fields.map((field, index) => (
-                <div key={field.id} className="border rounded-lg p-3 space-y-2">
+                <div key={field.id} className="rounded-lg border bg-white p-3 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
                     <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
@@ -139,7 +149,15 @@ export default function VacancyNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        onSelect={(s) => {
+          const existingSkillIds = watch("skills").map((skill) => String(skill.skill_id));
+          if (s.skill_id != null && existingSkillIds.includes(String(s.skill_id))) {
+            setError("This taxonomy skill is already added.");
+            return;
+          }
+          setError(null);
+          append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 });
+        }}
       />
     </div>
   );

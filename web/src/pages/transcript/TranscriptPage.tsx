@@ -41,7 +41,7 @@ export default function TranscriptPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link
@@ -74,13 +74,13 @@ export default function TranscriptPage() {
       )}
 
       {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
+        <div className="rounded-lg border bg-white p-6 text-center text-sm text-destructive shadow-sm">
           Failed to load transcript. Please refresh.
         </div>
       )}
 
       {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground shadow-sm">
           No transcript available for this session.
         </div>
       )}

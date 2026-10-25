@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -15,8 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Activity, AlertTriangle, CheckCircle2, Radio } from "lucide-react";
 import type { Assessment, Session } from "@/types";
+import { toast } from "sonner";
 
 function SessionRow({
   session,
@@ -38,7 +39,7 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
+    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
@@ -53,7 +54,7 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 sm:justify-end">
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -67,9 +68,9 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
+          <span className="flex items-center gap-1 text-xs text-destructive" title="The AI interview could not connect. Check AI integration configuration and invite the candidate again.">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
+            Failed · AI connection unavailable
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
@@ -126,6 +127,7 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -145,7 +147,7 @@ export default function AssessmentInvitePage() {
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -170,6 +172,7 @@ export default function AssessmentInvitePage() {
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+      toast.success("Candidate invite created", { description: "Copy the link and send it to your candidate." });
     } finally {
       setCreatingSession(false);
     }
@@ -190,7 +193,7 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="w-full space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -198,8 +201,24 @@ export default function AssessmentInvitePage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="w-full space-y-4">
+        <div className="border border-destructive/40 rounded-lg p-6 text-center">
+          <h1 className="text-lg font-semibold">Assessment unavailable</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This assessment could not be loaded. It may not exist or you may no longer have access.
+          </p>
+          <Button className="mt-4" variant="outline" onClick={() => navigate("/assessments")}>
+            Back to assessments
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -225,6 +244,42 @@ export default function AssessmentInvitePage() {
           </Button>
         </div>
       </div>
+
+      {(() => {
+        const liveCount = sessions.filter((s) => s.status === "active").length;
+        const completedCount = sessions.filter((s) => s.status === "ended" && s.end_reason !== "error").length;
+        const attentionCount = sessions.filter((s) => s.status === "ended" && s.end_reason === "error").length;
+        const pendingCount = sessions.filter((s) => s.status === "pending").length;
+
+        return (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Candidates</span><Activity className="h-4 w-4 text-muted-foreground" /></div><p className="mt-2 text-2xl font-semibold">{sessions.length}</p></CardContent></Card>
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Live now</span><Radio className="h-4 w-4 text-primary" /></div><p className="mt-2 text-2xl font-semibold">{liveCount}</p></CardContent></Card>
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Completed</span><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div><p className="mt-2 text-2xl font-semibold">{completedCount}</p></CardContent></Card>
+              <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Needs attention</span><AlertTriangle className="h-4 w-4 text-destructive" /></div><p className="mt-2 text-2xl font-semibold">{attentionCount}</p></CardContent></Card>
+            </div>
+            {(attentionCount > 0 || pendingCount > 0) && (
+              <Card className="border-amber-200 bg-amber-50/50">
+                <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-medium">Review queue</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {attentionCount > 0 && `${attentionCount} session${attentionCount > 1 ? "s" : ""} need attention.`}
+                        {attentionCount > 0 && pendingCount > 0 ? " " : ""}
+                        {pendingCount > 0 && `${pendingCount} invite${pendingCount > 1 ? "s are" : " is"} awaiting a candidate.`}
+                      </p>
+                    </div>
+                  </div>
+                  {attentionCount > 0 && <span className="text-xs font-medium text-amber-700">Action required</span>}
+                </CardContent>
+              </Card>
+            )}
+          </>
+        );
+      })()}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -279,29 +334,27 @@ export default function AssessmentInvitePage() {
       <Separator />
 
       {/* Sessions list */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            Candidates
-            {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
-            )}
-          </h2>
-        </div>
-
-        {sessions.length === 0 ? (
-          <div className="border rounded-lg p-10 text-center space-y-3">
-            <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
-            <div>
-              <p className="text-sm font-medium">No candidates yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Click "Invite Candidate" to generate an interview link.
-              </p>
-            </div>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+          <div>
+            <CardTitle className="text-base">Candidates</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Track invitations and review candidate session outcomes.</p>
           </div>
-        ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
+          <span className="text-sm text-muted-foreground">{sessions.length} total</span>
+        </CardHeader>
+        <CardContent className="p-0">
+          {sessions.length === 0 ? (
+            <div className="border-t p-10 text-center space-y-3">
+              <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
+              <div>
+                <p className="text-sm font-medium">No candidates yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Click "Invite Candidate" to generate an interview link.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y">
               {sessions.map((session, i) => (
                 <SessionRow
                   key={session.id}
@@ -315,10 +368,10 @@ export default function AssessmentInvitePage() {
                   copiedId={copiedId}
                 />
               ))}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (

@@ -10,6 +10,7 @@ import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+import { MOCK_AI_ENABLED, mockFitGapReport, mockPortfolio } from "@/mocks/aiFixtures";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -27,6 +28,11 @@ export default function FitGapReportPage() {
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
+    if (MOCK_AI_ENABLED) {
+      setReport(mockFitGapReport);
+      setGenerating(false);
+      return;
+    }
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
@@ -44,6 +50,11 @@ export default function FitGapReportPage() {
   }, [portfolio, vacancyId]);
 
   useEffect(() => {
+    if (MOCK_AI_ENABLED) {
+      setPortfolio({ ...mockPortfolio, id: mockPortfolio.id, session_id: Number(sessionId) });
+      setLoading(false);
+      return;
+    }
     sessionsApi
       .getPortfolio(Number(sessionId))
       .then(async (res) => {
@@ -95,7 +106,7 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="w-full space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -103,7 +114,7 @@ export default function FitGapReportPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -142,7 +153,7 @@ export default function FitGapReportPage() {
 
       {/* Generating */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
+        <div className="rounded-lg border bg-white p-12 text-center shadow-sm space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
         </div>

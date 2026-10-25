@@ -28,6 +28,7 @@ import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
+import { toast } from "sonner";
 
 export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,6 +80,7 @@ export default function AssessmentEditPage() {
         time_limit_min: data.time_limit_min,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
+      toast.success("Assessment updated", { description: "Your changes have been saved." });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
@@ -109,10 +111,18 @@ export default function AssessmentEditPage() {
         <span className="text-sm font-medium">Edit Assessment</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
         <div className="space-y-1.5">
           <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
+          <Input
+            id="name"
+            aria-invalid={errors.name ? "true" : undefined}
+            {...register("name", {
+              required: "Role title is required",
+              validate: (value) => /[A-Za-z0-9]/.test(value) || "Role title must include at least one letter or number",
+            })}
+          />
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-1.5">
@@ -135,7 +145,7 @@ export default function AssessmentEditPage() {
         <div className="space-y-3">
           <Label>Skills to assess</Label>
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground shadow-sm">
               No skills added yet.
             </div>
           ) : (

@@ -27,6 +27,7 @@ import {
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
+import { MOCK_AI_ENABLED } from "@/mocks/aiFixtures";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -75,6 +76,17 @@ export default function LiveMonitorPage() {
 
   // Initial load
   useEffect(() => {
+    if (MOCK_AI_ENABLED) {
+      setStartedAt(new Date(Date.now() - 8 * 60 * 1000).toISOString());
+      setAssessmentName("Senior Frontend Engineer");
+      setTranscript([
+        { id: 1, turn_number: 1, speaker: "ai", text: "Tell me about a frontend system you designed.", created_at: new Date().toISOString() },
+        { id: 2, turn_number: 2, speaker: "candidate", text: "I designed a typed component system with clear state boundaries and reusable patterns.", created_at: new Date().toISOString() },
+        { id: 3, turn_number: 3, speaker: "ai", text: "How did you validate reliability and accessibility?", created_at: new Date().toISOString() },
+      ]);
+      setLoading(false);
+      return;
+    }
     Promise.all([
       sessionsApi.get(Number(sessionId)),
       sessionsApi.getTranscript(Number(sessionId)),
@@ -129,7 +141,7 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="w-full space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
@@ -141,7 +153,7 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -170,7 +182,7 @@ export default function LiveMonitorPage() {
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm shadow-sm">
           <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>

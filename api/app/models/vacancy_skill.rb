@@ -5,4 +5,5 @@ class VacancySkill < ApplicationRecord
 
   validates :skill_label, presence: true
   validates :expected_level, numericality: { only_integer: true, in: 1..5 }
+  validates :skill_id, uniqueness: { scope: :vacancy_id }, allow_nil: true
 end

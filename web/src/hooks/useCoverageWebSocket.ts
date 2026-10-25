@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
 import { getStoredToken } from "@/stores/authAtom";
 import type { CoverageMap } from "@/types";
+import { MOCK_AI_ENABLED, mockCoverageMap } from "@/mocks/aiFixtures";
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
 
@@ -13,10 +14,10 @@ interface UseCoverageWebSocketResult {
 }
 
 export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketResult {
-  const [coverageMap, setCoverageMap] = useState<CoverageMap | null>(null);
+  const [coverageMap, setCoverageMap] = useState<CoverageMap | null>(MOCK_AI_ENABLED ? mockCoverageMap : null);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(MOCK_AI_ENABLED);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -72,6 +73,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   }, [sessionId]);
 
   useEffect(() => {
+    if (MOCK_AI_ENABLED) return;
     activeRef.current = true;
     connect();
     return () => {

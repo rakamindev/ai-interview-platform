@@ -27,6 +27,7 @@ import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
+import { toast } from "sonner";
 
 export interface AssessmentFormValues {
   name: string;
@@ -77,6 +78,12 @@ export default function AssessmentNewPage() {
   };
 
   const addB7Skill = (skill: Partial<AssessmentSkill>) => {
+    if (!skill.skill_id || fields.some((field) => field.skill_id === skill.skill_id)) {
+      setError("This taxonomy skill is already added.");
+      return;
+    }
+
+    setError(null);
     append({ ...skill, display_order: fields.length });
   };
 
@@ -98,6 +105,7 @@ export default function AssessmentNewPage() {
         })),
       };
       const res = await assessmentsApi.create(payload);
+      toast.success("Assessment created", { description: "Your assessment is ready for candidate invites." });
       navigate(`/assessments/${res.data.assessment.id}/invite`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
@@ -118,7 +126,7 @@ export default function AssessmentNewPage() {
         <span className="text-sm font-medium">New Assessment</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
         {/* Role title */}
         <div className="space-y-1.5">
           <Label htmlFor="name">
@@ -127,7 +135,11 @@ export default function AssessmentNewPage() {
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
+            aria-invalid={errors.name ? "true" : undefined}
+            {...register("name", {
+              required: "Role title is required",
+              validate: (value) => /[A-Za-z0-9]/.test(value) || "Role title must include at least one letter or number",
+            })}
           />
           {errors.name && (
             <p className="text-xs text-destructive">{errors.name.message}</p>
@@ -180,7 +192,7 @@ export default function AssessmentNewPage() {
           <Label>Skills to assess</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground shadow-sm">
               <p className="mb-1">No skills added yet.</p>
               <p>Add at least one skill to continue.</p>
             </div>

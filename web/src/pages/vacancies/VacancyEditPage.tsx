@@ -12,6 +12,7 @@ import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
+import { toast } from "sonner";
 
 interface VacancyFormValues {
   role_title: string;
@@ -48,6 +49,7 @@ export default function VacancyEditPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
+      toast.success("Vacancy updated", { description: "Your changes have been saved." });
       navigate("/vacancies");
     } finally {
       setSubmitting(false);
@@ -63,7 +65,7 @@ export default function VacancyEditPage() {
         <span className="text-sm font-medium">Edit Vacancy</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-xl border bg-white p-6 shadow-sm">
         <div className="space-y-1.5">
           <Label>Role title <span className="text-destructive">*</span></Label>
           <Input {...register("role_title", { required: true })} />
@@ -72,7 +74,7 @@ export default function VacancyEditPage() {
         <div className="space-y-3">
           <Label>Expected skills</Label>
           {fields.map((field, index) => (
-            <div key={field.id} className="border rounded-lg p-3 space-y-2">
+            <div key={field.id} className="rounded-lg border bg-white p-3 shadow-sm space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
                 <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>

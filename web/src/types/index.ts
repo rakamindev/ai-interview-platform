@@ -16,7 +16,7 @@ export interface Assessment {
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: number | string;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -119,7 +119,7 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: number | string;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -182,7 +182,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

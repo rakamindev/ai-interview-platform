@@ -11,12 +11,15 @@ import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import { MOCK_AI_ENABLED, mockPortfolio } from "@/mocks/aiFixtures";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationTimedOut, setGenerationTimedOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -25,13 +28,25 @@ export default function PortfolioPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
+    if (MOCK_AI_ENABLED) {
+      setPortfolio(mockPortfolio);
+      setGenerating(false);
+      setGenerationTimedOut(false);
+      const overrideMap: Record<number, AssessorOverride> = {};
+      mockPortfolio.overrides.forEach((o) => { overrideMap[o.portfolio_skill_id] = o; });
+      setOverrides(overrideMap);
+      return;
+    }
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
+      setGenerationStartedAt((startedAt) => startedAt ?? Date.now());
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
+      setGenerationStartedAt(null);
+      setGenerationTimedOut(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
       data.portfolio.overrides.forEach((o: AssessorOverride) => {
@@ -42,6 +57,12 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
+    if (MOCK_AI_ENABLED) {
+      setCandidateName("Budi Santoso");
+      setVacancies([{ id: 1, role_title: "Senior Frontend Engineer", culture_dimensions: "", competency_expectations: "", skills: [] }]);
+      fetchPortfolio().finally(() => setLoading(false));
+      return;
+    }
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
@@ -51,8 +72,17 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  // Poll while generating and surface a bounded waiting state if the worker is stale.
+  usePolling(fetchPortfolio, 5000, generating && !generationTimedOut);
+
+  useEffect(() => {
+    if (!generating || !generationStartedAt || generationTimedOut) return;
+    const timeout = window.setTimeout(() => {
+      setGenerationTimedOut(true);
+      setGenerating(false);
+    }, 5 * 60 * 1000);
+    return () => window.clearTimeout(timeout);
+  }, [generating, generationStartedAt, generationTimedOut]);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -96,7 +126,7 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="w-full space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -105,22 +135,21 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full space-y-7">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-start gap-3">
+          <Link to={`/assessments/${id}/invite`} className="mt-1 rounded-md p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Decision workspace</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Portfolio results</h1>
+            {candidateName && <p className="mt-1 text-sm text-slate-500">{candidateName} · Evidence-backed assessment</p>}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -154,21 +183,48 @@ export default function PortfolioPage() {
       </div>
 
       {/* Generating state */}
-      {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
+      {generating && !generationTimedOut && (
+        <div className="rounded-lg border bg-white p-12 text-center shadow-sm space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              The AI is analyzing the interview transcript. This usually takes about 2 minutes.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Timed-out state */}
+      {generationTimedOut && (
+        <div className="border border-amber-300 bg-amber-50/60 rounded-lg p-6 text-center space-y-3">
+          <p className="font-medium text-amber-900">Portfolio generation is taking longer than expected.</p>
+          <p className="text-sm text-amber-800/80">
+            The interview is complete, but the analysis worker has not finished after 5 minutes. No candidate score has been assigned.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => {
+              setGenerationTimedOut(false);
+              setGenerationStartedAt(Date.now());
+              setGenerating(true);
+            }}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh status
+            </Button>
+            <Button size="sm" onClick={async () => {
+              await sessionsApi.regeneratePortfolio(Number(sessionId));
+              setGenerationTimedOut(false);
+              setGenerationStartedAt(Date.now());
+              setGenerating(true);
+            }}>
+              Retry generation
+            </Button>
           </div>
         </div>
       )}
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
+        <div className="rounded-lg border border-destructive/40 bg-white p-6 text-center shadow-sm space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
           <Button
             variant="outline"

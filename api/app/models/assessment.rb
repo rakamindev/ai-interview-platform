@@ -9,6 +9,7 @@ class Assessment < ApplicationRecord
   SUPPORTED_LANGUAGES = { 'en' => 'English', 'id' => 'Bahasa Indonesia' }.freeze
 
   validates :name, presence: true
+  validates :name, format: { with: /[[:alnum:]]/, message: 'must include at least one letter or number' }
   validates :time_limit_min, presence: true,
                               inclusion: { in: [10, 30, 45, 60, 90] }
   validates :language, inclusion: { in: SUPPORTED_LANGUAGES.keys }, allow_nil: true

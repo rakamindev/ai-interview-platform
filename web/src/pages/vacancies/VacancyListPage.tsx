@@ -30,7 +30,7 @@ export default function VacancyListPage() {
       </div>
 
       {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 bg-white p-4 text-sm text-destructive shadow-sm">
           Failed to load vacancies. Please refresh the page.
         </div>
       )}
@@ -40,7 +40,7 @@ export default function VacancyListPage() {
           {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
       ) : vacancies.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border bg-white p-12 text-center text-sm text-muted-foreground shadow-sm">
           <p className="mb-3">No vacancies yet.</p>
           <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
             <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy

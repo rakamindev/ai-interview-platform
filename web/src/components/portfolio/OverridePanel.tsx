@@ -67,9 +67,14 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   }
 
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Override
+    <div className="relative">
+      <div className="absolute right-0 top-full z-30 mt-2 w-[min(320px,calc(100vw-2rem))] rounded-xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-slate-950/5 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm font-semibold text-slate-900">Override assessment</div>
+          <p className="mt-0.5 text-xs text-slate-500">Adjust the AI rating with human context.</p>
+        </div>
+        <Pencil className="h-4 w-4 text-slate-400" />
       </div>
 
       <div className="space-y-1.5">
@@ -98,6 +103,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
           {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
           Save override
         </Button>
+      </div>
       </div>
     </div>
   );
