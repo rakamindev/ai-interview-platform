@@ -3,6 +3,7 @@
 :queues:
   - [coverage, 6]    # N7 — runs every candidate turn, must be fast (< 3s)
   - [portfolio, 3]   # N10 — runs once per session, can take up to 3 min
+  - [mailers, 2]     # Notification emails
   - [default, 1]     # N2, N13 — lower frequency
 
 :timeout: 300        # 5 min — matches N10's 3 min target + buffer

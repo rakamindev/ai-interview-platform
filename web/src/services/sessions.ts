@@ -31,4 +31,7 @@ export const sessionsApi = {
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+
+  sendInvitation: (id: number) =>
+    api.post<{ message: string; session: Session }>(`/sessions/${id}/invitation`),
 };

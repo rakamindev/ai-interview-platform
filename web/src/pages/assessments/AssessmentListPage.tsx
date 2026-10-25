@@ -41,6 +41,19 @@ export default function AssessmentListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const groupedAssessments = assessments.reduce<Record<string, Assessment[]>>((acc, assessment) => {
+    const groupName = assessment.vacancy?.role_title || "Standalone Assessments";
+    if (!acc[groupName]) acc[groupName] = [];
+    acc[groupName].push(assessment);
+    return acc;
+  }, {});
+
+  const groupKeys = Object.keys(groupedAssessments).sort((a, b) => {
+    if (a === "Standalone Assessments") return 1;
+    if (b === "Standalone Assessments") return -1;
+    return a.localeCompare(b);
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -68,32 +81,59 @@ export default function AssessmentListPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {assessments.map((a) => (
-            <Card
-              key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/assessments/${a.id}/invite`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {a.time_limit_min} min
-                    </span>
-                    {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+        <div className="space-y-8">
+          {groupKeys.map((groupName) => (
+            <div key={groupName} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{groupName}</h2>
+                {groupName !== "Standalone Assessments" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      const vacancy = groupedAssessments[groupName][0]?.vacancy;
+                      navigate("/assessments/new", {
+                        state: {
+                          vacancyId: vacancy?.id,
+                          roleTitle: vacancy?.role_title
+                        }
+                      });
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                {groupedAssessments[groupName].map((a) => (
+                  <Card
+                    key={a.id}
+                    className="cursor-pointer hover:border-primary/40 transition-colors"
+                    onClick={() => navigate(`/assessments/${a.id}/invite`)}
+                  >
+                    <CardContent className="py-3 px-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{a.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {a.time_limit_min} min
+                          </span>
+                          {a.latest_session && (
+                            <>
+                              <span>·</span>
+                              <SessionSummary session={a.latest_session} />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

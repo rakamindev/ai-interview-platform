@@ -34,9 +34,9 @@ export const assessmentsApi = {
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
-  createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
+  createSession: (assessmentId: number, payload: { candidate_name?: string; candidate_email?: string; candidate_id?: number }) =>
     api.post<{ session: Session; invite_url: string }>(
       `/assessments/${assessmentId}/sessions`,
-      { session: { candidate_name: candidateName, candidate_id: candidateId } }
+      { session: payload }
     ),
 };

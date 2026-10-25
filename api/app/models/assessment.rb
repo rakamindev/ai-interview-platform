@@ -5,6 +5,7 @@ class Assessment < ApplicationRecord
 
   has_many :assessment_skills, dependent: :destroy, inverse_of: :assessment
   has_many :sessions, dependent: :restrict_with_error
+  belongs_to :vacancy, optional: true
 
   SUPPORTED_LANGUAGES = { 'en' => 'English', 'id' => 'Bahasa Indonesia' }.freeze
 

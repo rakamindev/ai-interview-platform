@@ -1,0 +1,9 @@
+<p>Hello <%= @session.candidate_name %>,</p>
+
+<p>You have been invited to complete an AI-driven assessment for the role of <strong><%= @assessment.name %></strong>.</p>
+
+<p>Please click the link below to begin your interview (you will have up to <%= @assessment.time_limit_min %> minutes to complete it):</p>
+
+<p><a href="<%= @session.invite_url %>">Start Interview</a></p>
+
+<p>Best regards,<br>Hiring Team</p>

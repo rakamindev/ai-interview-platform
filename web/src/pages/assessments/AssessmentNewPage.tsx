@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   DndContext,
   closestCenter,
@@ -25,11 +25,13 @@ import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { vacanciesApi } from "@/services/vacancies";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
 export interface AssessmentFormValues {
   name: string;
+  vacancy_id?: string;
   time_limit_min: number;
   language: "en" | "id";
   skills: Partial<AssessmentSkill>[];
@@ -37,16 +39,28 @@ export interface AssessmentFormValues {
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vacancies, setVacancies] = useState<any[]>([]);
+
+  useEffect(() => {
+    vacanciesApi.list(1).then((res) => {
+      setVacancies(res.data.vacancies || []);
+    }).catch(console.error);
+  }, []);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
-      name: "",
+      name: location.state?.roleTitle || "",
+      vacancy_id: location.state?.vacancyId ? String(location.state.vacancyId) : "none",
       time_limit_min: 45,
       language: "en",
-      skills: [],
+      skills: (location.state?.skills || []).map((s: any) => {
+        const { id, vacancy_id, _destroy, ...rest } = s;
+        return rest;
+      }),
     },
   });
 
@@ -90,6 +104,7 @@ export default function AssessmentNewPage() {
     try {
       const payload = {
         name: data.name,
+        vacancy_id: data.vacancy_id === "none" ? undefined : Number(data.vacancy_id),
         time_limit_min: data.time_limit_min,
         language: data.language,
         assessment_skills_attributes: data.skills.map((s, i) => ({
@@ -132,6 +147,27 @@ export default function AssessmentNewPage() {
           {errors.name && (
             <p className="text-xs text-destructive">{errors.name.message}</p>
           )}
+        </div>
+
+        {/* Vacancy selector */}
+        <div className="space-y-1.5">
+          <Label>Linked Vacancy (Optional)</Label>
+          <Select
+            value={watch("vacancy_id") || "none"}
+            onValueChange={(v) => setValue("vacancy_id", v)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a vacancy..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">-- Standalone Assessment (No Vacancy) --</SelectItem>
+              {vacancies.map(v => (
+                <SelectItem key={v.id} value={String(v.id)}>
+                  {v.role_title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Time limit */}

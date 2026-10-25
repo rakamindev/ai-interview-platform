@@ -38,6 +38,8 @@ module ExceptionHandler
   private
 
   def render_exception(e)
+    File.write("../error.txt", "#{e.class} - #{e.message}\n#{e.backtrace.first(15).join(%(\n))}\n\n")
+    puts "\n\nEXCEPTION: #{e.class} - #{e.message}\n#{e.backtrace.first(15).join("\n")}\n\n"
     status = exception_status(e)
     message = Rails.env.production? ? human_message(e) : e.message
 

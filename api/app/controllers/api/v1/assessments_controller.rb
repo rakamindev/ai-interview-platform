@@ -10,7 +10,7 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(:sessions, :vacancy).order(created_at: :desc)
         )
 
         json_response(
@@ -64,6 +64,7 @@ module Api
       def assessment_params
         params.require(:assessment).permit(
           :name,
+          :vacancy_id,
           :time_limit_min,
           :language,
           assessment_skills_attributes: %i[
@@ -80,6 +81,7 @@ module Api
 
         {
           id:             assessment.id,
+          vacancy_id:     assessment.vacancy_id,
           name:           assessment.name,
           time_limit_min: assessment.time_limit_min,
           language:       assessment.language || 'en',
@@ -87,6 +89,10 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          vacancy:        assessment.vacancy && {
+            id:           assessment.vacancy.id,
+            role_title:   assessment.vacancy.role_title
+          },
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,

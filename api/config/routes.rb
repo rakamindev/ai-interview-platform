@@ -25,6 +25,7 @@ Rails.application.routes.draw do
       resources :sessions, only: %i[show] do
         member do
           post :end_session
+          post :invitation
           get  :coverage
           get  :transcript
           get  :portfolio, to: 'portfolios#show'

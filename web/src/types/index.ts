@@ -12,6 +12,10 @@ export interface Assessment {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
   };
+  vacancy?: {
+    id: number;
+    role_title: string;
+  };
 }
 
 export interface AssessmentSkill {
@@ -37,9 +41,12 @@ export interface Session {
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
+  candidate_email?: string;
   invite_token: string;
   invite_url: string;
   status: "pending" | "active" | "ended";
+  invitation_status?: "pending" | "sent" | "failed";
+  invitation_error?: string;
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
@@ -188,15 +195,15 @@ export type InterviewSpeaker = "ai" | "candidate" | null;
 
 export interface WsControlMessage {
   type:
-    | "session_started"
-    | "session_ended"
-    | "transcript"
-    | "transcription"
-    | "reconnecting"
-    | "reconnected"
-    | "speaker_changed"
-    | "preparing_to_end"
-    | "error";
+  | "session_started"
+  | "session_ended"
+  | "transcript"
+  | "transcription"
+  | "reconnecting"
+  | "reconnected"
+  | "speaker_changed"
+  | "preparing_to_end"
+  | "error";
   speaker?: "candidate" | "ai";
   role?: "candidate" | "ai";
   text?: string;

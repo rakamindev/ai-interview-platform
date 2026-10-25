@@ -23,9 +23,11 @@ module Api
         assessment = Assessment.find(params[:assessment_id])
 
         session = assessment.sessions.new(
-          candidate_id:   params.dig(:session, :candidate_id),
-          candidate_name: params.dig(:session, :candidate_name).presence,
-          tenant_id:      current_tenant_id
+          candidate_id:    params.dig(:session, :candidate_id),
+          candidate_name:  params.dig(:session, :candidate_name).presence,
+          candidate_email: params.dig(:session, :candidate_email).presence,
+          tenant_id:       current_tenant_id,
+          invitation_status: 'pending'
         )
 
         if session.save
@@ -121,11 +123,35 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
+        # Re-check coverage against the DB. The WebSocket middleware's poll_for_session_end
+        # already retries every second, so returning 422 here is safe — the frontend
+        # useAudioComplete retry loop will call this endpoint again without any sleep
+        # blocking the request thread between attempts.
+        if session.coverage_maps.configured.where.not(state: 'covered').exists?
+          Rails.logger.warn("[Security] Blocked premature audio_complete for session #{session.id}")
+          return json_error("Cannot end session: skills not fully covered", :unprocessable_entity)
+        end
+
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
+      end
+
+      # POST /sessions/:id/invitation
+      def invitation
+        @session = Session.find(params[:id])
+
+        if @session.candidate_email.blank?
+          return json_error("No email address configured for this candidate.", :unprocessable_entity)
+        end
+
+        # Only prevent sending if it's already sent successfully, otherwise retry is fine.
+        if @session.invitation_status == 'sent'
+          return json_error("Invitation already sent", :unprocessable_entity)
+        end
+
+        InvitationSenderWorker.perform_async(@session.id)
+        
+        json_response(message: "Invitation queued successfully", session: session_json(@session))
       end
 
       # GET /sessions/:token/candidate  — no JWT, invite token in URL
@@ -168,9 +194,13 @@ module Api
           tenant_id:        session.tenant_id,
           candidate_id:     session.candidate_id,
           candidate_name:   session.candidate_name,
+          candidate_email:  session.candidate_email,
           invite_token:     session.invite_token,
           invite_url:       session.invite_url,
           status:           session.status,
+          invitation_status: session.invitation_status,
+          invitation_sent_at: session.invitation_sent_at,
+          invitation_error: session.invitation_error,
           end_reason:       session.end_reason,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
