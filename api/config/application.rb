@@ -20,7 +20,7 @@ module AiInterview
     config.api_only = true
 
     # Auto-load paths
-    config.autoload_paths += %W[
+    autoload_dirs = %W[
       #{config.root}/app/auth
       #{config.root}/app/lib
       #{config.root}/app/middlewares
@@ -29,6 +29,7 @@ module AiInterview
       #{config.root}/app/clients
       #{config.root}/app/workers
     ]
+    config.autoload_paths = (config.autoload_paths + autoload_dirs).uniq
 
     # Use UUID primary keys by default
     config.generators do |g|

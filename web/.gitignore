@@ -18,6 +18,6 @@ tech-docs
 .DS_Store
 Thumbs.db
 
-# logs
-*.log
-npm-debug.log*
+# test artifacts
+test-results/
+playwright-report/

@@ -1,40 +1,28 @@
 # frozen_string_literal: true
 
-# Seeds for local development and testing.
-# Safe to re-run — all operations are idempotent.
+# Seeds for local development, multi-tenant verification, and end-to-end feature demos.
+# Resets all data cleanly and seeds 2 isolated tenant accounts with rich example data
+# across every feature (Assessments, Sessions, Transcripts, Coverage Maps, Portfolios,
+# Discovered Skills, Assessor Overrides, Vacancies, and Materialized Fit/Gap Reports).
 #
 # Usage:
 #   bundle exec rails db:seed
-#
-# After seeding, use the Rails console to mint a JWT for testing:
-#   bundle exec rails console
-#   > token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' })
-#   > puts token
 
-puts "== Seeding AI Interview development data =="
+puts "== Resetting all existing AI Interview data =="
 
-# ── Organization ─────────────────────────────────────────────────────────────
-#
-# We write directly to public.organizations (shared with rakamin-api).
-# We use raw SQL so we don't have to mirror all of rakamin-api's validations
-# and callbacks in our read-only Organization model.
-#
-# Columns required by the rakamin-api schema:
-#   name        — display name
-#   scheme      — used as the Apartment schema name AND as the JWT `scheme` claim
-#   identifier  — URL-safe slug (lowercase, min 3 chars)
-#   host        — primary host for HostService resolution
-#   alias_hosts — additional hosts (postgres array)
-#   config      — JSONB config blob (Configurable concern)
-#
-# id = 0 is reserved in rakamin-api as the "default" org — do not use it here.
-
-TEST_ORG = {
-  name:       "Test Corp",
-  scheme:     "test-corp",
-  identifier: "test-corp",
-  host:       "localhost"
-}.freeze
+FitGapReport.unscoped.delete_all
+AssessorOverride.unscoped.delete_all
+PortfolioSkill.unscoped.delete_all
+Portfolio.unscoped.delete_all
+TranscriptTurn.unscoped.delete_all
+CoverageMap.unscoped.delete_all
+Session.unscoped.delete_all
+AssessmentSkill.unscoped.delete_all
+Assessment.unscoped.delete_all
+VacancySkill.unscoped.delete_all
+Vacancy.unscoped.delete_all
+SkillTaxonomy.unscoped.delete_all
+User.unscoped.delete_all
 
 ActiveRecord::Base.connection.execute(<<~SQL)
   CREATE TABLE IF NOT EXISTS public.organizations (
@@ -48,24 +36,38 @@ ActiveRecord::Base.connection.execute(<<~SQL)
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+  TRUNCATE TABLE public.organizations RESTART IDENTITY CASCADE;
 SQL
 
-existing = ActiveRecord::Base.connection.select_one(
-  "SELECT id, name, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
+puts "  All tables cleared."
+puts ""
+puts "== Seeding Organizations & Multi-Tenant Admin Accounts =="
 
-if existing
-  puts "  Organization already exists: id=#{existing['id']} scheme=#{existing['scheme']} (skipped)"
-else
+TEST_ORGS = [
+  {
+    name:       "Test Corp",
+    scheme:     "test-corp",
+    identifier: "test-corp",
+    host:       "localhost"
+  },
+  {
+    name:       "Acme Corp",
+    scheme:     "acme-corp",
+    identifier: "acme-corp",
+    host:       "acme.localhost"
+  }
+].freeze
+
+TEST_ORGS.each do |org_data|
   result = ActiveRecord::Base.connection.select_one(<<~SQL)
     INSERT INTO public.organizations
       (name, scheme, identifier, host, alias_hosts, config, created_at, updated_at)
     VALUES
       (
-        '#{TEST_ORG[:name]}',
-        '#{TEST_ORG[:scheme]}',
-        '#{TEST_ORG[:identifier]}',
-        '#{TEST_ORG[:host]}',
+        '#{org_data[:name]}',
+        '#{org_data[:scheme]}',
+        '#{org_data[:identifier]}',
+        '#{org_data[:host]}',
         '{}',
         '{}',
         NOW(),
@@ -73,9 +75,27 @@ else
       )
     RETURNING id, name, scheme;
   SQL
-
-  puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+  puts "  Created organization: id=#{result['id']} name='#{result['name']}' scheme=#{result['scheme']}"
 end
+
+test_org_id = ActiveRecord::Base.connection.select_value("SELECT id FROM public.organizations WHERE scheme = 'test-corp'").to_i
+acme_org_id = ActiveRecord::Base.connection.select_value("SELECT id FROM public.organizations WHERE scheme = 'acme-corp'").to_i
+
+admin1 = User.create!(
+  email:    "admin@example.com",
+  password: "password123",
+  role:     "admin",
+  scheme:   "test-corp"
+)
+puts "  [Account 1 - Test Corp] email=admin@example.com password=password123 (scheme=test-corp, tenant_id=#{test_org_id})"
+
+admin2 = User.create!(
+  email:    "admin@acme.com",
+  password: "password123",
+  role:     "admin",
+  scheme:   "acme-corp"
+)
+puts "  [Account 2 - Acme Corp] email=admin@acme.com password=password123 (scheme=acme-corp, tenant_id=#{acme_org_id})"
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
@@ -354,52 +374,536 @@ B7_SKILLS = [
 puts ""
 puts "== Seeding B7 Skill Taxonomy (22 pilot skills) =="
 
+SKILLS_BY_ID = {}
 B7_SKILLS.each do |attrs|
-  skill = SkillTaxonomy.find_or_initialize_by(skill_id: attrs[:skill_id])
-  skill.assign_attributes(attrs)
+  skill = SkillTaxonomy.create!(attrs)
+  SKILLS_BY_ID[skill.skill_id] = skill
+end
+puts "  Done — #{SKILLS_BY_ID.size} skills seeded."
 
-  if skill.save
-    action = skill.previously_new_record? ? "Created" : "Updated"
-    puts "  #{action}: #{skill.skill_id} — #{skill.skill_label}"
-  else
-    puts "  ERROR #{attrs[:skill_id]}: #{skill.errors.full_messages.join(', ')}"
+# Helper to add an AssessmentSkill from a SkillTaxonomy ID
+def add_assessment_skill!(assessment, skill_id, expected_level, order)
+  tax = SKILLS_BY_ID.fetch(skill_id)
+  assessment.assessment_skills.create!(
+    skill_id:       tax.skill_id,
+    skill_label:    tax.skill_label,
+    is_custom:      false,
+    scope_include:  tax.scope_include,
+    scope_exclude:  tax.scope_exclude,
+    l1_anchor:      tax.l1_anchor,
+    l2_anchor:      tax.l2_anchor,
+    l3_anchor:      tax.l3_anchor,
+    l4_anchor:      tax.l4_anchor,
+    l5_anchor:      tax.l5_anchor,
+    expected_level: expected_level,
+    display_order:  order
+  )
+end
+
+# Deterministic stub client for seeding Fit/Gap reports instantaneously without external network wait
+class SeedNarrativeStub
+  def initialize(culture:, overall:)
+    @culture = culture
+    @overall = overall
+  end
+
+  def generate_content(_prompt, **_opts)
+    {
+      "culture_narrative" => @culture,
+      "overall_narrative" => @overall
+    }
   end
 end
 
-puts "  Done — #{B7_SKILLS.size} skills seeded."
+# ══════════════════════════════════════════════════════════════════════════════
+# TENANT 1: TEST CORP (scheme: test-corp)
+# ══════════════════════════════════════════════════════════════════════════════
 puts ""
+puts "== Seeding Tenant 1: Test Corp (scheme=test-corp) =="
 
-# ── Print usage instructions ──────────────────────────────────────────────────
+Current.using(tenant_id: test_org_id) do
+  # 1. Assessments
+  a1 = Assessment.create!(
+    name:           "Senior Fullstack Product Engineer Assessment",
+    time_limit_min: 30,
+    language:       "en",
+    created_by:     admin1.id
+  )
+  add_assessment_skill!(a1, "SK-ENG-001", 4, 0) # React / Frontend Development Core
+  add_assessment_skill!(a1, "SK-ENG-002", 3, 1) # Node.js / Backend Development
+  add_assessment_skill!(a1, "SK-ENG-003", 3, 2) # System Design & Architecture
+  add_assessment_skill!(a1, "SK-SOFT-002", 3, 3) # Problem Solving & Analytical Thinking
+  a1.update!(system_prompt: Assessments::SystemPromptCompiler.new(a1).call)
 
-org = ActiveRecord::Base.connection.select_one(
-  "SELECT id, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
+  a2 = Assessment.create!(
+    name:           "Backend & Cloud Reliability Assessment",
+    time_limit_min: 45,
+    language:       "en",
+    created_by:     admin1.id
+  )
+  add_assessment_skill!(a2, "SK-ENG-004", 4, 0) # Database Design & SQL
+  add_assessment_skill!(a2, "SK-ENG-008", 3, 1) # Cloud Infrastructure
+  add_assessment_skill!(a2, "SK-ENG-010", 3, 2) # Security Engineering
+  a2.update!(system_prompt: Assessments::SystemPromptCompiler.new(a2).call)
+
+  # 2. Candidate Session 1: Budi Santoso (Completed, Calibrated Override, Discovered Skill, Fit/Gap Reports)
+  s1 = Session.create!(
+    assessment:       a1,
+    candidate_id:     101,
+    candidate_name:   "Budi Santoso",
+    invite_token:     "test-corp-budi-completed-session-token-001",
+    status:           "ended",
+    end_reason:       "all_covered",
+    started_at:       2.hours.ago,
+    ended_at:         96.minutes.ago,
+    duration_seconds: 1420
+  )
+
+  budi_turns = [
+    ["ai",        "Hi Budi, thanks for joining today. Tell me about the most technically demanding frontend and backend architecture you've owned recently.", 0, 8200],
+    ["candidate", "Thanks! Over the past year I led the revamp of our multi-tenant talent evaluation dashboard in React 18 and TypeScript. We migrated from scattered prop-drilling and ad-hoc fetch hooks to vertical feature slices backed by TanStack Query with optimistic cache mutations and automatic rollback on failure, which cut perceived UI latency on score overrides to under 16 milliseconds.", 8500, 34200],
+    ["ai",        "Optimistic updates across linked views can get tricky when background jobs are still running. How did you prevent stale reads between the portfolio view and downstream reports?", 34800, 44100],
+    ["candidate", "Great question. Whenever an assessor saves a skill override, we immediately patch the in-memory React Query cache and recalculate the Fit/Gap comparison deltas client-side using a pure TypeScript reducer. On the backend, the controller persists the AssessorOverride record without mutating the baseline AI score, invalidates affected FitGapReport rows, and enqueues an idempotent Sidekiq worker with exponential backoff.", 44600, 76500],
+    ["ai",        "Let's dig into that backend worker and API layer. What happens if Redis is unavailable or if the upstream LLM times out mid-synthesis?", 77100, 86000],
+    ["candidate", "We designed every external boundary to fail gracefully. If Sidekiq enqueueing fails because Redis is down, the service rescues the connection error and falls back to an inline background thread using ActiveRecord's connection pool. And if Gemini Flash times out or hits a 429 rate limit, FitGap::Engine catches the error, logs a sanitized warning without PII, and synthesizes a deterministic rule-based narrative so the HTTP endpoint still returns 200 OK.", 86600, 119400],
+    ["ai",        "Walk me through a tricky production root-cause investigation where your initial hypothesis turned out to be wrong.", 120000, 127500],
+    ["candidate", "We had a P0 report where candidates on macOS heard a repetitive chime and their microphone froze during live interviews. Initially we suspected WebSocket backpressure in ActionCable. I instrumented RMS audio level telemetry and discovered the real culprit: the browser's Web Speech API was competing with our 16kHz AudioWorklet PCM stream for exclusive hardware access. Removing the duplicate SpeechRecognition instance and moving turn detection to a 1.7-second server-side silence timer resolved 100% of the lockups.", 128000, 165000]
+  ]
+  budi_turns.each_with_index do |(speaker, text, start_ms, end_ms), idx|
+    s1.transcript_turns.create!(
+      turn_number:    idx + 1,
+      speaker:        speaker,
+      text:           text,
+      audio_start_ms: start_ms,
+      audio_end_ms:   end_ms
+    )
+  end
+
+  [
+    ["SK-ENG-001", "React / Frontend Development Core", false, "covered", 3, "Strong L4 architecture signal on vertical slices & optimistic query cache"],
+    ["SK-ENG-002", "Node.js / Backend Development", false, "covered", 2, "Solid background job resilience, idempotency, and fallback handling"],
+    ["SK-ENG-003", "System Design & Architecture", false, "covered", 3, "Clear multi-tenant isolation, read-through caching, and failure mode design"],
+    ["SK-SOFT-002", "Problem Solving & Analytical Thinking", false, "covered", 2, "Hypothesis-driven debugging of macOS WebAudio vs SpeechRecognition lockup"],
+    ["SK-ENG-009", "TypeScript & Type Systems", true, "covered", 2, "Spontaneously demonstrated strict type-safe API contracts and reducers"]
+  ].each do |skill_id, label, discovered, state, probes, signal|
+    s1.coverage_maps.create!(
+      skill_id:      skill_id,
+      skill_label:   label,
+      is_discovered: discovered,
+      state:         state,
+      probe_count:   probes,
+      last_signal:   signal
+    )
+  end
+
+  p1 = Portfolio.create!(
+    session:           s1,
+    candidate_id:      s1.candidate_id,
+    generation_status: "complete",
+    generated_at:      95.minutes.ago
+  )
+
+  p1.portfolio_skills.create!(
+    skill_id:           "SK-ENG-001",
+    skill_label:        "React / Frontend Development Core",
+    is_discovered:      false,
+    ai_level:           4,
+    ai_confidence:      "high",
+    assessment_state:   "assessed",
+    competency_summary: "Demonstrates L4 mastery of React 18 architecture, leading a migration to vertical feature slices and TanStack Query with optimistic mutations, rollback handling, and cross-feature cache synchronization.",
+    evidence:           [
+      "Over the past year I led the revamp of our multi-tenant talent evaluation dashboard in React 18 and TypeScript. We migrated from scattered prop-drilling and ad-hoc fetch hooks to vertical feature slices backed by TanStack Query with optimistic cache mutations and automatic rollback on failure, which cut perceived UI latency on score overrides to under 16 milliseconds.",
+      "Whenever an assessor saves a skill override, we immediately patch the in-memory React Query cache and recalculate the Fit/Gap comparison deltas client-side using a pure TypeScript reducer."
+    ]
+  )
+
+  budi_node_skill = p1.portfolio_skills.create!(
+    skill_id:           "SK-ENG-002",
+    skill_label:        "Node.js / Backend Development",
+    is_discovered:      false,
+    ai_level:           3,
+    ai_confidence:      "high",
+    assessment_state:   "assessed",
+    competency_summary: "Designs resilient backend service boundaries with non-destructive audit models, idempotent background jobs, and deterministic fallbacks when Redis or upstream AI APIs fail.",
+    evidence:           [
+      "On the backend, the controller persists the AssessorOverride record without mutating the baseline AI score, invalidates affected FitGapReport rows, and enqueues an idempotent Sidekiq worker with exponential backoff.",
+      "If Sidekiq enqueueing fails because Redis is down, the service rescues the connection error and falls back to an inline background thread using ActiveRecord's connection pool."
+    ]
+  )
+
+  # Human Assessor Override on Budi's Backend skill (AI L3 -> Override L4)
+  AssessorOverride.create!(
+    portfolio_skill: budi_node_skill,
+    ai_level:        3,
+    override_level:  4,
+    assessor_notes:  "Calibrated from L3 to L4: Candidate demonstrated staff-level production ownership of idempotent worker design, connection-pool thread safety, and multi-tenant cache invalidation.",
+    overridden_by:   admin1.id,
+    overridden_at:   60.minutes.ago
+  )
+
+  p1.portfolio_skills.create!(
+    skill_id:           "SK-ENG-003",
+    skill_label:        "System Design & Architecture",
+    is_discovered:      false,
+    ai_level:           3,
+    ai_confidence:      "high",
+    assessment_state:   "assessed",
+    competency_summary: "Articulates clear trade-offs between compute-on-read and materialized compute-on-write architectures, with explicit failure paths for LLM timeouts and rate limits.",
+    evidence:           [
+      "We designed every external boundary to fail gracefully... if Gemini Flash times out or hits a 429 rate limit, FitGap::Engine catches the error, logs a sanitized warning without PII, and synthesizes a deterministic rule-based narrative so the HTTP endpoint still returns 200 OK."
+    ]
+  )
+
+  p1.portfolio_skills.create!(
+    skill_id:           "SK-SOFT-002",
+    skill_label:        "Problem Solving & Analytical Thinking",
+    is_discovered:      false,
+    ai_level:           4,
+    ai_confidence:      "high",
+    assessment_state:   "assessed",
+    competency_summary: "Uses hypothesis-driven instrumentation to isolate complex cross-layer hardware and browser audio bugs rather than guessing.",
+    evidence:           [
+      "Initially we suspected WebSocket backpressure in ActionCable. I instrumented RMS audio level telemetry and discovered the real culprit: the browser's Web Speech API was competing with our 16kHz AudioWorklet PCM stream for exclusive hardware access."
+    ]
+  )
+
+  p1.portfolio_skills.create!(
+    skill_id:           "SK-ENG-009",
+    skill_label:        "TypeScript & Type Systems",
+    is_discovered:      true,
+    ai_level:           4,
+    ai_confidence:      "medium",
+    assessment_state:   "assessed",
+    competency_summary: "Discovered during frontend architecture discussion: enforces strict end-to-end TypeScript contracts and pure typed reducers across evaluation slices.",
+    evidence:           [
+      "We immediately patch the in-memory React Query cache and recalculate the Fit/Gap comparison deltas client-side using a pure TypeScript reducer."
+    ]
+  )
+
+  # 3. Candidate Session 2: Siti Rahmawati (Completed — Mid-Level Profile with Skill Gaps)
+  s2 = Session.create!(
+    assessment:       a1,
+    candidate_id:     102,
+    candidate_name:   "Siti Rahmawati",
+    invite_token:     "test-corp-siti-completed-session-token-002",
+    status:           "ended",
+    end_reason:       "all_covered",
+    started_at:       4.hours.ago,
+    ended_at:         220.minutes.ago,
+    duration_seconds: 1180
+  )
+
+  [
+    ["ai",        "Welcome Siti! Could you share a recent React project where you owned component architecture and state management?", 0, 7100],
+    ["candidate", "Sure! I led the design system and checkout flow revamp in React and Tailwind. I built reusable compound components with Radix primitives, added keyboard accessibility and responsive breakpoints from 375px to 1440px, and reduced bundle size by 28% with route-level code splitting.", 7500, 31000],
+    ["ai",        "How much experience have you had designing backend services or distributed system architectures?", 31500, 38000],
+    ["candidate", "On the backend I mostly build standard CRUD endpoints and wire up validation middleware from existing specs. For larger system design decisions like queue partitioning or multi-service caching, I usually partner with our tech lead rather than designing them from scratch.", 38500, 62000],
+    ["ai",        "When a UI bug is reported with vague reproduction steps, how do you approach debugging it?", 62500, 69000],
+    ["candidate", "I start by reproducing the issue in staging, inspecting network payloads and React DevTools profiler flamegraphs, and writing a failing Vitest regression test before shipping the fix.", 69500, 89000]
+  ].each_with_index do |(speaker, text, start_ms, end_ms), idx|
+    s2.transcript_turns.create!(turn_number: idx + 1, speaker: speaker, text: text, audio_start_ms: start_ms, audio_end_ms: end_ms)
+  end
+
+  [
+    ["SK-ENG-001", "React / Frontend Development Core", false, "covered", 2, "Strong UI component architecture, accessibility, and code splitting"],
+    ["SK-ENG-002", "Node.js / Backend Development", false, "covered", 2, "Builds routine CRUD APIs; relies on senior guidance for async workers"],
+    ["SK-ENG-003", "System Design & Architecture", false, "covered", 2, "L2 single-service familiarity; limited distributed systems design"],
+    ["SK-SOFT-002", "Problem Solving & Analytical Thinking", false, "covered", 2, "Structured reproduction and test-first debugging"],
+    ["SK-SOFT-001", "Communication", true, "covered", 1, "Clear, concise explanation of trade-offs and scope boundaries"]
+  ].each do |skill_id, label, discovered, state, probes, signal|
+    s2.coverage_maps.create!(skill_id: skill_id, skill_label: label, is_discovered: discovered, state: state, probe_count: probes, last_signal: signal)
+  end
+
+  p2 = Portfolio.create!(
+    session:           s2,
+    candidate_id:      s2.candidate_id,
+    generation_status: "complete",
+    generated_at:      218.minutes.ago
+  )
+
+  p2.portfolio_skills.create!(
+    skill_id: "SK-ENG-001", skill_label: "React / Frontend Development Core", is_discovered: false,
+    ai_level: 4, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Strong frontend craft: builds accessible Radix compound components, responsive layouts, and route-level code splitting.",
+    evidence: ["I built reusable compound components with Radix primitives, added keyboard accessibility and responsive breakpoints from 375px to 1440px, and reduced bundle size by 28% with route-level code splitting."]
+  )
+  p2.portfolio_skills.create!(
+    skill_id: "SK-ENG-002", skill_label: "Node.js / Backend Development", is_discovered: false,
+    ai_level: 2, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Builds standard CRUD endpoints and validation middleware independently, but has limited experience with async workers and service boundaries.",
+    evidence: ["On the backend I mostly build standard CRUD endpoints and wire up validation middleware from existing specs."]
+  )
+  p2.portfolio_skills.create!(
+    skill_id: "SK-ENG-003", skill_label: "System Design & Architecture", is_discovered: false,
+    ai_level: 2, ai_confidence: "medium", assessment_state: "assessed",
+    competency_summary: "Understands single-service and database patterns; relies on senior leads for multi-service scaling and queue architecture.",
+    evidence: ["For larger system design decisions like queue partitioning or multi-service caching, I usually partner with our tech lead rather than designing them from scratch."]
+  )
+  p2.portfolio_skills.create!(
+    skill_id: "SK-SOFT-002", skill_label: "Problem Solving & Analytical Thinking", is_discovered: false,
+    ai_level: 3, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Methodical root-cause analysis using profiler flamegraphs and regression tests.",
+    evidence: ["I start by reproducing the issue in staging, inspecting network payloads and React DevTools profiler flamegraphs, and writing a failing Vitest regression test before shipping the fix."]
+  )
+  p2.portfolio_skills.create!(
+    skill_id: "SK-SOFT-001", skill_label: "Communication", is_discovered: true,
+    ai_level: 3, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Communicates technical contributions and personal scope boundaries with transparency and clarity.",
+    evidence: ["For larger system design decisions like queue partitioning or multi-service caching, I usually partner with our tech lead rather than designing them from scratch."]
+  )
+
+  # 4. Candidate Session 3 & 4: Pending Invites Ready for Live Interview Demo
+  s3 = Session.create!(
+    assessment:     a1,
+    candidate_id:   103,
+    candidate_name: "Andi Pratama (Ready to Interview)",
+    invite_token:   "test-corp-andi-live-interview-demo",
+    status:         "pending"
+  )
+  a1.assessment_skills.each do |ask|
+    s3.coverage_maps.create!(skill_id: ask.skill_id, skill_label: ask.skill_label, is_discovered: false, state: "not_yet", probe_count: 0)
+  end
+
+  s4 = Session.create!(
+    assessment:     a2,
+    candidate_id:   104,
+    candidate_name: "Dewi Lestari (Cloud Architecture Invite)",
+    invite_token:   "test-corp-dewi-cloud-interview-demo",
+    status:         "pending"
+  )
+  a2.assessment_skills.each do |ask|
+    s4.coverage_maps.create!(skill_id: ask.skill_id, skill_label: ask.skill_label, is_discovered: false, state: "not_yet", probe_count: 0)
+  end
+
+  # 5. Vacancies & Materialized Fit/Gap Reports for Test Corp
+  v1 = Vacancy.create!(
+    role_title:              "Senior Frontend Engineer",
+    created_by:              admin1.id,
+    culture_dimensions:      "Monozukuri craftsmanship, high ownership, collaborative code reviews, and user empathy.",
+    competency_expectations: "L4 React & modern state architecture, L3 backend API integration, L3 system design, and L3 automated testing."
+  )
+  v1.vacancy_skills.create!(skill_id: "SK-ENG-001", skill_label: "React / Frontend Development Core", expected_level: 4)
+  v1.vacancy_skills.create!(skill_id: "SK-ENG-002", skill_label: "Node.js / Backend Development", expected_level: 3)
+  v1.vacancy_skills.create!(skill_id: "SK-ENG-003", skill_label: "System Design & Architecture", expected_level: 3)
+  v1.vacancy_skills.create!(skill_id: "SK-ENG-006", skill_label: "Testing & Quality Assurance", expected_level: 3) # Not Assessed in interview!
+
+  v2 = Vacancy.create!(
+    role_title:              "Staff Fullstack Product Engineer",
+    created_by:              admin1.id,
+    culture_dimensions:      "First-principles thinking, end-to-end product accountability, and technical mentorship.",
+    competency_expectations: "L4 across React, Node.js, System Design, and Analytical Problem Solving, plus L3 Leadership."
+  )
+  v2.vacancy_skills.create!(skill_id: "SK-ENG-001", skill_label: "React / Frontend Development Core", expected_level: 4)
+  v2.vacancy_skills.create!(skill_id: "SK-ENG-002", skill_label: "Node.js / Backend Development", expected_level: 4)
+  v2.vacancy_skills.create!(skill_id: "SK-ENG-003", skill_label: "System Design & Architecture", expected_level: 4)
+  v2.vacancy_skills.create!(skill_id: "SK-SOFT-002", skill_label: "Problem Solving & Analytical Thinking", expected_level: 4)
+  v2.vacancy_skills.create!(skill_id: "SK-SOFT-004", skill_label: "Leadership & Ownership", expected_level: 3) # Not Assessed
+
+  FitGap::Engine.new(
+    portfolio: p1,
+    vacancy:   v1,
+    gemini_client: SeedNarrativeStub.new(
+      culture: "Budi exhibits exceptional Monozukuri craftsmanship and ownership, backed by verifiable evidence of leading vertical slice migrations and root-cause hardware debugging.",
+      overall: "Strong Hire for Senior Frontend Engineer: Budi matches L4 React and L3 System Design expectations, exceeds Node.js requirements (L4 calibrated override vs L3 target), and brings bonus L4 TypeScript depth. Recommend a brief follow-up on Testing & QA (not assessed in session)."
+    )
+  ).call
+
+  FitGap::Engine.new(
+    portfolio: p1,
+    vacancy:   v2,
+    gemini_client: SeedNarrativeStub.new(
+      culture: "Strong alignment with first-principles product engineering; Budi consistently connects low-level technical trade-offs to recruiter and candidate UX outcomes.",
+      overall: "Promising Staff Fullstack candidate: Matches L4 across React, calibrated Node.js, and Problem Solving, with a -1 level gap on System Design (L3 vs L4 target) and unassessed formal Leadership."
+    )
+  ).call
+
+  FitGap::Engine.new(
+    portfolio: p2,
+    vacancy:   v1,
+    gemini_client: SeedNarrativeStub.new(
+      culture: "Siti demonstrates strong UI craftsmanship, accessibility empathy, and transparent communication across team boundaries.",
+      overall: "Conditional Fit for Senior Frontend Engineer: Matches the core L4 React requirement, but exhibits -1 gaps in Node.js (L2 vs L3) and System Design (L2 vs L3). Ideal for a frontend-focused squad with backend mentorship."
+    )
+  ).call
+
+  FitGap::Engine.new(
+    portfolio: p2,
+    vacancy:   v2,
+    gemini_client: SeedNarrativeStub.new(
+      culture: "Collaborative and methodical on frontend quality, though currently operating at a mid-level scope on cross-service architecture.",
+      overall: "Not yet ready for Staff Fullstack Product Engineer: Meets L4 React, but has -2 gaps in Node.js and System Design (L2 vs L4) and -1 gap in Problem Solving (L3 vs L4)."
+    )
+  ).call
+
+  puts "  [Test Corp] Seeded 2 Assessments, 4 Sessions (2 Completed with Portfolios/Overrides + 2 Pending), 2 Vacancies, and 4 Fit/Gap Reports."
+end
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TENANT 2: ACME CORP (scheme: acme-corp)
+# ══════════════════════════════════════════════════════════════════════════════
+puts ""
+puts "== Seeding Tenant 2: Acme Corp (scheme=acme-corp) =="
+
+Current.using(tenant_id: acme_org_id) do
+  # 1. Assessment
+  acme_a1 = Assessment.create!(
+    name:           "Acme Lead Product Manager Assessment",
+    time_limit_min: 30,
+    language:       "en",
+    created_by:     admin2.id
+  )
+  add_assessment_skill!(acme_a1, "SK-PM-001", 4, 0)   # Product Thinking
+  add_assessment_skill!(acme_a1, "SK-PM-003", 4, 1)   # Data-Driven Decision Making
+  add_assessment_skill!(acme_a1, "SK-PM-004", 4, 2)   # Stakeholder Management
+  add_assessment_skill!(acme_a1, "SK-SOFT-001", 4, 3) # Communication
+  acme_a1.update!(system_prompt: Assessments::SystemPromptCompiler.new(acme_a1).call)
+
+  # 2. Completed Candidate Session: Rizky Mahendra
+  acme_s1 = Session.create!(
+    assessment:       acme_a1,
+    candidate_id:     201,
+    candidate_name:   "Rizky Mahendra",
+    invite_token:     "acme-corp-rizky-completed-session-token-001",
+    status:           "ended",
+    end_reason:       "all_covered",
+    started_at:       3.hours.ago,
+    ended_at:         155.minutes.ago,
+    duration_seconds: 1510
+  )
+
+  [
+    ["ai",        "Hi Rizky, welcome to the Acme Corp product leadership interview. Tell me about a product bet you led where you had to reframe the problem before building.", 0, 8000],
+    ["candidate", "At our B2B SaaS platform, enterprise customers asked for custom PDF workflow builders. Instead of building a 6-month drag-and-drop editor, I shadowed 14 hiring managers and realized 90% of their friction was simply comparing candidate rubric deltas side-by-side. We shipped a structured Fit/Gap matrix in 3 weeks that increased shortlist conversion by 41%.", 8400, 35000],
+    ["ai",        "How did you instrument that launch and guard against vanity metrics?", 35500, 41200],
+    ["candidate", "We avoided raw page-view counts and defined our North Star around 'Time-to-Calibrated-Shortlist' paired with a guardrail metric tracking assessor override rate. We ran a 4-week cohort experiment across 32 enterprise tenants and verified statistical significance before deprecating the legacy export flow.", 41800, 68000],
+    ["ai",        "Tell me about a time when engineering, legal compliance, and sales executives disagreed on your roadmap.", 68600, 76000],
+    ["candidate", "When Indonesia's UU PDP data privacy regulations took effect, sales wanted instant transcript sharing while legal wanted strict retention locks. I facilitated a joint architecture review, proposed non-destructive assessor overrides with PII-scrubbed audit logs, and got unanimous sign-off from both the DPO and VP of Sales within 48 hours.", 76500, 108000]
+  ].each_with_index do |(speaker, text, start_ms, end_ms), idx|
+    acme_s1.transcript_turns.create!(turn_number: idx + 1, speaker: speaker, text: text, audio_start_ms: start_ms, audio_end_ms: end_ms)
+  end
+
+  [
+    ["SK-PM-001", "Product Thinking", false, "covered", 2, "Reframed 6-month feature request into 3-week high-leverage outcome"],
+    ["SK-PM-003", "Data-Driven Decision Making", false, "covered", 2, "Rigorous North Star + guardrail cohort experimentation"],
+    ["SK-PM-004", "Stakeholder Management", false, "covered", 2, "Aligned VP Sales and Legal DPO around UU PDP compliance"],
+    ["SK-SOFT-001", "Communication", false, "covered", 2, "Structured executive storytelling and clear trade-off framing"],
+    ["SK-SOFT-004", "Leadership & Ownership", true, "covered", 1, "Discovered strong cross-functional initiative under regulatory pressure"]
+  ].each do |skill_id, label, discovered, state, probes, signal|
+    acme_s1.coverage_maps.create!(skill_id: skill_id, skill_label: label, is_discovered: discovered, state: state, probe_count: probes, last_signal: signal)
+  end
+
+  acme_p1 = Portfolio.create!(
+    session:           acme_s1,
+    candidate_id:      acme_s1.candidate_id,
+    generation_status: "complete",
+    generated_at:      154.minutes.ago
+  )
+
+  acme_p1.portfolio_skills.create!(
+    skill_id: "SK-PM-001", skill_label: "Product Thinking", is_discovered: false,
+    ai_level: 4, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Demonstrates L4 outcome-over-output product discovery, cutting a 6-month feature request down to a 3-week solution that lifted conversion by 41%.",
+    evidence: ["Instead of building a 6-month drag-and-drop editor, I shadowed 14 hiring managers and realized 90% of their friction was simply comparing candidate rubric deltas side-by-side. We shipped a structured Fit/Gap matrix in 3 weeks that increased shortlist conversion by 41%."]
+  )
+  acme_p1.portfolio_skills.create!(
+    skill_id: "SK-PM-003", skill_label: "Data-Driven Decision Making", is_discovered: false,
+    ai_level: 4, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Pairs North Star outcome metrics with quality guardrails in controlled multi-tenant cohort experiments.",
+    evidence: ["We avoided raw page-view counts and defined our North Star around 'Time-to-Calibrated-Shortlist' paired with a guardrail metric tracking assessor override rate."]
+  )
+  rizky_stakeholder_skill = acme_p1.portfolio_skills.create!(
+    skill_id: "SK-PM-004", skill_label: "Stakeholder Management", is_discovered: false,
+    ai_level: 3, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Navigates competing executive and regulatory priorities between sales and legal teams.",
+    evidence: ["I facilitated a joint architecture review, proposed non-destructive assessor overrides with PII-scrubbed audit logs, and got unanimous sign-off from both the DPO and VP of Sales within 48 hours."]
+  )
+  AssessorOverride.create!(
+    portfolio_skill: rizky_stakeholder_skill,
+    ai_level:        3,
+    override_level:  4,
+    assessor_notes:  "Calibrated from L3 to L4: Resolving a deadlocked UU PDP compliance conflict between Legal DPO and VP of Sales in 48 hours is a textbook L4 executive alignment example.",
+    overridden_by:   admin2.id,
+    overridden_at:   45.minutes.ago
+  )
+  acme_p1.portfolio_skills.create!(
+    skill_id: "SK-SOFT-001", skill_label: "Communication", is_discovered: false,
+    ai_level: 4, ai_confidence: "high", assessment_state: "assessed",
+    competency_summary: "Articulates product hypotheses, metrics, and regulatory constraints with executive clarity.",
+    evidence: ["We shipped a structured Fit/Gap matrix in 3 weeks that increased shortlist conversion by 41%."]
+  )
+  acme_p1.portfolio_skills.create!(
+    skill_id: "SK-SOFT-004", skill_label: "Leadership & Ownership", is_discovered: true,
+    ai_level: 4, ai_confidence: "medium", assessment_state: "assessed",
+    competency_summary: "Discovered skill: drives cross-departmental alignment without formal authority.",
+    evidence: ["I facilitated a joint architecture review, proposed non-destructive assessor overrides with PII-scrubbed audit logs, and got unanimous sign-off."]
+  )
+
+  # 3. Pending Candidate Session for Acme Corp
+  acme_s2 = Session.create!(
+    assessment:     acme_a1,
+    candidate_id:   202,
+    candidate_name: "Nadia Putri (Ready to Interview)",
+    invite_token:   "acme-corp-nadia-live-interview-demo",
+    status:         "pending"
+  )
+  acme_a1.assessment_skills.each do |ask|
+    acme_s2.coverage_maps.create!(skill_id: ask.skill_id, skill_label: ask.skill_label, is_discovered: false, state: "not_yet", probe_count: 0)
+  end
+
+  # 4. Vacancies & Fit/Gap Reports for Acme Corp
+  acme_v1 = Vacancy.create!(
+    role_title:              "Acme Lead Product Manager",
+    created_by:              admin2.id,
+    culture_dimensions:      "Customer obsession, high bias for action, data-informed experimentation, and regulatory trust.",
+    competency_expectations: "L4 Product Thinking, L4 Data-Driven Decision Making, L4 Stakeholder Management, and L3 Technical Writing."
+  )
+  acme_v1.vacancy_skills.create!(skill_id: "SK-PM-001", skill_label: "Product Thinking", expected_level: 4)
+  acme_v1.vacancy_skills.create!(skill_id: "SK-PM-003", skill_label: "Data-Driven Decision Making", expected_level: 4)
+  acme_v1.vacancy_skills.create!(skill_id: "SK-PM-004", skill_label: "Stakeholder Management", expected_level: 4)
+  acme_v1.vacancy_skills.create!(skill_id: "SK-PM-005", skill_label: "Technical Writing & Documentation", expected_level: 3) # Not Assessed
+
+  acme_v2 = Vacancy.create!(
+    role_title:              "VP of Product Strategy",
+    created_by:              admin2.id,
+    culture_dimensions:      "Org-wide product vision, board-level communication, and multi-year portfolio bets.",
+    competency_expectations: "L5 Product Thinking, L5 Data-Driven Decision Making, L4 Stakeholder Management, and L4 Communication."
+  )
+  acme_v2.vacancy_skills.create!(skill_id: "SK-PM-001", skill_label: "Product Thinking", expected_level: 5)
+  acme_v2.vacancy_skills.create!(skill_id: "SK-PM-003", skill_label: "Data-Driven Decision Making", expected_level: 5)
+  acme_v2.vacancy_skills.create!(skill_id: "SK-PM-004", skill_label: "Stakeholder Management", expected_level: 4)
+  acme_v2.vacancy_skills.create!(skill_id: "SK-SOFT-001", skill_label: "Communication", expected_level: 4)
+
+  FitGap::Engine.new(
+    portfolio: acme_p1,
+    vacancy:   acme_v1,
+    gemini_client: SeedNarrativeStub.new(
+      culture: "Rizky embodies Acme Corp's customer obsession and data-informed culture, backed by concrete B2B SaaS discovery and UU PDP governance outcomes.",
+      overall: "Strong Hire for Acme Lead Product Manager: Matches L4 across Product Thinking, Data-Driven Decision Making, and calibrated Stakeholder Management, with bonus L4 Leadership & Communication."
+    )
+  ).call
+
+  FitGap::Engine.new(
+    portfolio: acme_p1,
+    vacancy:   acme_v2,
+    gemini_client: SeedNarrativeStub.new(
+      culture: "Strong executive presence and cross-functional influence, operating solidly at L4 Lead PM scope with clear trajectory toward VP-level strategy.",
+      overall: "High-Potential Bench for VP of Product Strategy: Matches L4 Stakeholder Management and Communication, with -1 level growth gaps on org-wide L5 Product Thinking and L5 Data Strategy."
+    )
+  ).call
+
+  puts "  [Acme Corp] Seeded 1 Assessment, 2 Sessions (1 Completed with Portfolio/Override + 1 Pending), 2 Vacancies, and 2 Fit/Gap Reports."
+end
 
 puts ""
-puts "== Done! =="
+puts "== Done! Multi-Tenant Demo Environment Reset & Seeded =="
 puts ""
-puts "Your test organization:"
-puts "  id     : #{org['id']}"
-puts "  scheme : #{org['scheme']}"
+puts "Account 1 — Test Corp (tenant_id: #{test_org_id}, scheme: test-corp):"
+puts "  Email    : admin@example.com"
+puts "  Password : password123"
+puts "  Data     : 2 Assessments, 4 Sessions (Budi Santoso, Siti Rahmawati, Andi Pratama, Dewi Lestari), 2 Vacancies, 4 Fit/Gap Reports"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
-puts ""
-puts "  bundle exec rails console"
-puts ""
-puts "Then run:"
-puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "Then hit the API:"
-puts ""
-puts "  curl -s http://localhost:3001/api/v1/health"
-puts ""
-puts "  curl -s -H 'Authorization: Bearer <your_token>' \\"
-puts "       http://localhost:3001/api/v1/assessments"
+puts "Account 2 — Acme Corp (tenant_id: #{acme_org_id}, scheme: acme-corp):"
+puts "  Email    : admin@acme.com"
+puts "  Password : password123"
+puts "  Data     : 1 Assessment, 2 Sessions (Rizky Mahendra, Nadia Putri), 2 Vacancies, 2 Fit/Gap Reports"
 puts ""

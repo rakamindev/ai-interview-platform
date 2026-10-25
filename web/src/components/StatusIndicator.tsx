@@ -1,6 +1,6 @@
 import React from "react";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { ProctoringState } from "@/utils/hardwareUtils";
+import { ProctoringState } from "@/features/interview/utils/hardwareUtils";
 
 interface StatusIndicatorProps {
     state: ProctoringState;

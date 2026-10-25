@@ -136,6 +136,11 @@ module Api
           return json_error("Invalid or expired invite token", :not_found)
         end
 
+        if session.ended? && session.end_reason == 'error' && session.transcript_turns.none?
+          session.update!(status: 'pending', end_reason: nil, ended_at: nil, duration_seconds: nil)
+          session.portfolio&.destroy
+        end
+
         # Resolve tenant from the session's own tenant_id so we can load the assessment
         assessment = Assessment.unscoped
                                .where(tenant_id: session.tenant_id)

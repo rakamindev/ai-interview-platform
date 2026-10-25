@@ -37,6 +37,7 @@ module Api
       # PUT /api/v1/vacancies/:id
       def update
         if @vacancy.update(vacancy_params)
+          @vacancy.fit_gap_reports.destroy_all
           json_response(vacancy: vacancy_with_skills_json(@vacancy))
         else
           json_error(@vacancy.errors.full_messages.first, :unprocessable_entity)

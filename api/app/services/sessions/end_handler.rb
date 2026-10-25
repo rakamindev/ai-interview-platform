@@ -70,6 +70,17 @@ module Sessions
 
       PortfolioGeneratorWorker.perform_async(@session.id)
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+    rescue StandardError => e
+      Rails.logger.warn("[N9/EndHandler] Sidekiq unavailable for session #{@session.id} (#{e.message}) — synthesizing portfolio inline in background thread")
+      session_id = @session.id
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          s = Session.unscoped.find_by(id: session_id)
+          Portfolios::Generator.new(session: s).call if s
+        end
+      rescue StandardError => gen_err
+        Rails.logger.error("[N9/EndHandler] Inline portfolio synthesis failed for session #{session_id}: #{gen_err.message}")
+      end
     end
   end
 end
