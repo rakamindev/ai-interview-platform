@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +9,16 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
+import {
+  MAX_FETCH_FAILURES,
+  canRetry,
+  derivePortfolioState,
+  isInProgress,
+  retryErrorMessage,
+  type PortfolioResponseBody,
+  type PortfolioViewState,
+} from "@/utils/portfolioState";
+import axios from "axios";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
@@ -16,7 +26,11 @@ export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
+  const [viewState, setViewState] = useState<PortfolioViewState>({ kind: "generating" });
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const failuresRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -24,25 +38,36 @@ export default function PortfolioPage() {
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
-  const fetchPortfolio = useCallback(async () => {
-    const res = await sessionsApi.getPortfolio(Number(sessionId));
-    const data = res.data as any;
-    if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-      setGenerating(true);
-    } else if (data.portfolio) {
-      setPortfolio(data.portfolio);
-      setGenerating(false);
-      // Build overrides map
-      const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
-        overrideMap[o.portfolio_skill_id] = o;
-      });
-      setOverrides(overrideMap);
-    }
-  }, [sessionId]);
+  const fetchPortfolio = useCallback(
+    async (initial = false) => {
+      try {
+        const res = await sessionsApi.getPortfolio(Number(sessionId));
+        failuresRef.current = 0;
+        const data = res.data as PortfolioResponseBody & { portfolio?: Portfolio };
+        const next = derivePortfolioState(data, Date.now());
+        setViewState(next);
+        if (next.kind === "complete" && data.portfolio) {
+          setPortfolio(data.portfolio);
+          // Build overrides map
+          const overrideMap: Record<number, AssessorOverride> = {};
+          data.portfolio.overrides.forEach((o: AssessorOverride) => {
+            overrideMap[o.portfolio_skill_id] = o;
+          });
+          setOverrides(overrideMap);
+        }
+      } catch {
+        // A first failure means we know nothing yet; later ones may be a blip.
+        failuresRef.current += 1;
+        if (initial || failuresRef.current >= MAX_FETCH_FAILURES) {
+          setViewState({ kind: "unreachable" });
+        }
+      }
+    },
+    [sessionId]
+  );
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
+    Promise.all([fetchPortfolio(true), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
@@ -51,8 +76,28 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  // Poll only while a job may still finish; the API reports stale/failed when it cannot.
+  usePolling(() => fetchPortfolio(), 5000, isInProgress(viewState));
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      await sessionsApi.regeneratePortfolio(Number(sessionId));
+      failuresRef.current = 0;
+      setViewState({ kind: "generating" });
+    } catch (err) {
+      setRetryError(retryErrorMessage(axios.isAxiosError(err) ? err.response?.status : undefined));
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const handleCheckAgain = () => {
+    failuresRef.current = 0;
+    setViewState({ kind: "generating" });
+    fetchPortfolio(true);
+  };
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -66,6 +111,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -89,6 +135,8 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch {
+      setExportError(`Could not export the ${format.toUpperCase()}. Please try again.`);
     } finally {
       setExporting(null);
     }
@@ -128,7 +176,7 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {viewState.kind === "complete" && portfolio && (
             <>
               <Button
                 variant="outline"
@@ -153,38 +201,71 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {exportError && (
+        <p role="alert" className="text-sm text-destructive">
+          {exportError}
+        </p>
+      )}
+
       {/* Generating state */}
-      {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
+      {(viewState.kind === "generating" || viewState.kind === "slow") && (
+        <div className="border rounded-lg p-12 text-center space-y-3" role="status" aria-live="polite">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              {viewState.kind === "slow"
+                ? "This is taking longer than usual. The AI may be busy. You can keep waiting or come back later."
+                : "The AI is analyzing the interview transcript. This takes about 2 minutes."}
             </p>
           </div>
         </div>
       )}
 
-      {/* Failed state */}
-      {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+      {/* Stalled or failed state */}
+      {(viewState.kind === "stale" || viewState.kind === "failed") && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3" role="alert">
+          <p className="font-medium text-destructive">
+            {viewState.kind === "stale" ? "Portfolio generation seems to have stalled." : "Portfolio generation failed."}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {viewState.kind === "stale"
+              ? "There has been no progress for over 10 minutes. The interview is saved, so you can generate the portfolio again."
+              : "The interview is saved, so you can generate the portfolio again."}
+          </p>
+          {viewState.kind === "failed" && viewState.reason && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer">Technical details</summary>
+              <p className="mt-1 break-words">{viewState.reason}</p>
+            </details>
+          )}
+          {retryError && <p className="text-sm text-destructive">{retryError}</p>}
+          {canRetry(viewState) && (
+            <Button variant="outline" size="sm" onClick={handleRetry} disabled={retrying}>
+              {retrying ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Try again
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Server unreachable state */}
+      {viewState.kind === "unreachable" && (
+        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3" role="alert">
+          <p className="font-medium text-destructive">Could not reach the server.</p>
+          <p className="text-sm text-muted-foreground">Check your connection, then try loading the portfolio again.</p>
+          <Button variant="outline" size="sm" onClick={handleCheckAgain}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Check again
           </Button>
         </div>
       )}
 
       {/* Ready state */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {viewState.kind === "complete" && portfolio && (
         <>
           {/* Configured skills */}
           <div className="space-y-3">

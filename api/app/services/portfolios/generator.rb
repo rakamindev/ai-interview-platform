@@ -26,7 +26,7 @@ module Portfolios
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio

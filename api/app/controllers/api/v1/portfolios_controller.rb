@@ -10,8 +10,16 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @portfolio.nil?
           return render json: { status: "generating" }, status: :accepted
+        end
+
+        if @portfolio.pending? || @portfolio.generating?
+          return render json: {
+            status:    @portfolio.stale? ? "stale" : "generating",
+            stale:     @portfolio.stale?,
+            portfolio: portfolio_json(@portfolio)
+          }, status: :accepted
         end
 
         if @portfolio.failed?
@@ -32,17 +40,16 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
-        end
-
-        portfolio.update!(generation_status: "pending", generation_error: nil)
-        PortfolioGeneratorWorker.perform_async(@session.id)
+        Portfolios::Regenerator.new(portfolio).call
 
         json_response(
           message:   "Portfolio generation queued",
-          portfolio: portfolio_json(portfolio)
+          portfolio: portfolio_json(portfolio.reload)
         )
+      rescue Portfolios::Regenerator::NotRegenerable => e
+        json_error(e.message, :conflict)
+      rescue Portfolios::Regenerator::QueueUnavailable
+        json_error("The generation queue is unavailable. Please try again shortly.", :service_unavailable)
       end
 
       # GET /api/v1/portfolios/:id/export
@@ -165,6 +172,9 @@ module Api
           session_id:        portfolio.session_id,
           candidate_id:      portfolio.candidate_id,
           generation_status: portfolio.generation_status,
+          stale:             portfolio.stale?,
+          regenerable:       portfolio.regenerable?,
+          status_changed_at: portfolio.status_changed_at,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),

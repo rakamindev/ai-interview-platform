@@ -64,12 +64,19 @@ module Sessions
       )
     end
 
+    ENQUEUE_FAILED_MESSAGE = 'enqueue_failed: the generation queue was unavailable. Use "Try again" to regenerate.'
+
     def enqueue_portfolio_generation
       portfolio = @session.reload.portfolio
       return unless portfolio
 
       PortfolioGeneratorWorker.perform_async(@session.id)
       Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+    rescue StandardError => e
+      # The session is already committed as ended; never leave its portfolio
+      # 'pending' without a job. Record a safe, user-facing reason instead.
+      Rails.logger.error("[N9/EndHandler] Could not enqueue portfolio generation for session #{@session.id}: #{e.class}")
+      portfolio&.update!(generation_status: 'failed', generation_error: ENQUEUE_FAILED_MESSAGE)
     end
   end
 end

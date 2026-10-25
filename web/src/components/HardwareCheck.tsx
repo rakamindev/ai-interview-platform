@@ -43,6 +43,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         microphone: ProctoringState.WAITING,
     });
     const [allPassed, setAllPassed] = useState(false);
+    const [attempt, setAttempt] = useState(0);
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
@@ -102,10 +103,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         } catch { /* silent */ }
     };
 
-    // Step 1: OS & browser
+    // Step 1: OS & browser (re-runs on every retry via `attempt`)
     useEffect(() => {
         setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -115,12 +116,15 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
-    }, []);
+        return () => clearTimeout(timer);
+    }, [attempt]);
 
     // Step 2: Internet
     useEffect(() => {
         if (progress.internet !== ProctoringState.LOADING) return;
+        let cancelled = false;
         testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
+            if (cancelled) return;
             setInternetResult(result);
             setProgress((p) => ({
                 ...p,
@@ -132,6 +136,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     : {}),
             }));
         });
+        return () => { cancelled = true; };
     }, [progress.internet]);
 
     // Step 3: Camera + microphone (or microphone-only when camera disabled)
@@ -180,12 +185,13 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         setVideoStream(null);
         setInternetResult(null);
         setProgress({
-            osAndBrowser: ProctoringState.LOADING,
+            osAndBrowser: ProctoringState.WAITING,
             internet: ProctoringState.WAITING,
             camera: ProctoringState.WAITING,
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,
         });
+        setAttempt((n) => n + 1);
     };
 
     const thresholds = DEFAULT_THRESHOLDS;
