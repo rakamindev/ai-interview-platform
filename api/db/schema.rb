@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_25_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -85,13 +85,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_table "fit_gap_reports", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.bigint "vacancy_id", null: false
-    t.jsonb "skill_comparisons", null: false
+    t.jsonb "skill_comparisons", default: [], null: false
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "generation_status", default: "complete", null: false
+    t.string "generation_token"
+    t.datetime "requested_at"
+    t.string "error_code"
+    t.string "source_digest"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.check_constraint "generation_status::text = ANY (ARRAY['pending'::character varying, 'generating'::character varying, 'complete'::character varying, 'failed'::character varying, 'stale'::character varying]::text[])", name: "chk_fit_gap_generation_status"
   end
 
   create_table "organizations", force: :cascade do |t|

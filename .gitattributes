@@ -1,0 +1,6 @@
+* text=auto
+*.rb text eol=lf
+*.rake text eol=lf
+*.sh text eol=lf
+api/bin/* text eol=lf
+*.pdf binary

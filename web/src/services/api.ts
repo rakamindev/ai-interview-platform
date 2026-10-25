@@ -8,6 +8,7 @@ export const WS_URL = WS_BASE_URL;
 
 export const api = axios.create({
   baseURL: BASE_URL,
+  timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
 

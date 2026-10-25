@@ -1,0 +1,56 @@
+name: rakamin-assessment
+x-api: &api
+  image: rakamin-assessment-api
+  build:
+    context: ./api
+    dockerfile: Dockerfile.dev
+  volumes:
+    - ./api:/app
+  environment: &environment
+    DB_HOST: db
+    DB_PORT: 5432
+    DB_USERNAME: assessment
+    DB_PASSWORD: local-development-only
+    SECRET_KEY_BASE: local-development-only-do-not-use-in-production-0123456789abcdef
+    REDIS_URL: redis://redis:6379/1
+    ALLOWED_ORIGINS: http://localhost:5174,http://127.0.0.1:5174
+    APP_BASE_URL: http://localhost:5174
+    RAILS_LOG_TO_STDOUT: "true"
+    POLLING_FILE_WATCHER: "true"
+    WEB_CONCURRENCY: "0"
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: assessment
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_DB: rakamin_development
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assessment -d rakamin_development"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  api:
+    <<: *api
+    command: ["ruby", "bin/dev-server"]
+    ports:
+      - "127.0.0.1:3001:3001"
+  worker:
+    <<: *api
+    command: ["bundle", "exec", "sidekiq", "-r", "./config/environment.rb", "-C", "config/sidekiq.yml"]
+volumes:
+  postgres:

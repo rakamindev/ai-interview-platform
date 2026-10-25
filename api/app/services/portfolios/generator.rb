@@ -20,19 +20,26 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      return portfolio if portfolio.complete?
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.with_lock do
+        unless portfolio.complete?
+          save_skills(portfolio, response)
+          portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
+          FitGapReport.where(portfolio_id: portfolio.id).update_all(generation_status: 'stale', generation_token: nil)
+        end
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      portfolio&.update!(generation_status: 'failed', generation_error: 'Portfolio processing failed. Please retry.') unless portfolio&.reload&.complete?
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
@@ -149,32 +156,42 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
-
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      raise ArgumentError, 'Invalid portfolio response' unless data.is_a?(Hash) && data.key?('configured_skills')
+      retained = []
+      identities = []
+      %w[configured_skills discovered_skills].each do |collection|
+        entries = data.fetch(collection, [])
+        raise ArgumentError, 'Expected a skill array' unless entries.is_a?(Array)
+        entries.each do |skill_data|
+          raise ArgumentError, 'Expected a skill object' unless skill_data.is_a?(Hash)
+          raw_level = skill_data['level']
+          next if raw_level.nil? || raw_level == ''
+          level = FitGap::Snapshot.level(raw_level)
+          raise ArgumentError, 'Invalid skill level' unless level
+          label = skill_data['skill_label']
+          raise ArgumentError, 'Invalid skill label' unless label.is_a?(String) && label.strip.present?
+          evidence = skill_data.fetch('evidence', [])
+          raise ArgumentError, 'Invalid evidence' unless evidence.is_a?(Array) && evidence.all? { |quote| quote.is_a?(String) }
+          summary = skill_data['competency_summary']
+          raise ArgumentError, 'Invalid competency summary' unless summary.is_a?(String) && summary.strip.present?
+          discovered = collection == 'discovered_skills'
+          skill_id = discovered ? nil : skill_data['skill_id']
+          raise ArgumentError, 'Invalid skill identity' unless skill_id.nil? || skill_id.is_a?(String)
+          key = [discovered, FitGap::Snapshot.normalize(skill_id.presence || label)]
+          raise ArgumentError, 'Duplicate skill identity' if identities.include?(key)
+          identities << key
+          matches = portfolio.portfolio_skills.select do |skill|
+            [skill.is_discovered, FitGap::Snapshot.normalize(skill.skill_id.presence || skill.skill_label)] == key
+          end
+          raise ArgumentError, 'Ambiguous existing skill identity' if matches.length > 1
+          skill = matches.first || portfolio.portfolio_skills.build
+          skill.update!(skill_id: skill_id, skill_label: label.strip, is_discovered: discovered, ai_level: level,
+            ai_confidence: skill_data['confidence'], evidence: evidence.first(3), competency_summary: summary)
+          retained << skill.id
+        end
       end
-
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      portfolio.portfolio_skills.where.not(id: retained).includes(:assessor_override).each do |skill|
+        skill.destroy! unless skill.assessor_override
       end
     end
   end

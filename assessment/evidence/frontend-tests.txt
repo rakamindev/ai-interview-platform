@@ -1,0 +1,13 @@
+
+> ai-interview-web@0.0.0 test
+> vitest run
+
+
+ RUN  v5.0.5 C:/Users/Dixon/Documents/Project/ai-interview-platform/web
+
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  22:31:03
+   Duration  2.06s (environment 51%, setup 19%, tests 17%, import 8%, transform 5%)
+

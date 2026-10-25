@@ -14,6 +14,12 @@ api/storage/
 # Build output
 web/dist/
 web/.vite/
+web/.vitest/
+web/test-results/
+web/playwright-report/
+api/.bundle/
+**/coverage/
+work/
 
 # OS
 .DS_Store

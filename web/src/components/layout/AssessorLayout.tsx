@@ -28,13 +28,13 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+        <div className="max-w-7xl mx-auto px-4 min-h-14 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-3">
             <Link to="/assessments" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
-            <nav className="flex items-center gap-1">
+            <nav aria-label="Main navigation" className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
@@ -42,7 +42,7 @@ export default function AssessorLayout() {
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
                     location.pathname.startsWith(href)
-                      ? "bg-primary/10 text-primary font-medium"
+                      ? "bg-primary/10 text-teal-800 font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >

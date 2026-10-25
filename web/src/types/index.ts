@@ -78,6 +78,7 @@ export interface Portfolio {
   id: number;
   session_id: number;
   candidate_id?: number;
+  candidate_name?: string;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
@@ -87,10 +88,10 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_level: number;
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
@@ -129,10 +130,20 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  requirement_id?: number;
+  portfolio_skill_id?: number;
+  expected_level: number | null;
+  candidate_level: number | null;
+  ai_level?: number | null;
+  confidence?: string | null;
+  rating_source: 'ai' | 'assessor' | 'none';
+  evidence?: string[];
+  competency_summary?: string;
+  assessor_notes?: string | null;
+  overridden_at?: string | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta: number | null;
   is_override?: boolean;
 }
 
@@ -141,9 +152,23 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
-  generated_at: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  generated_at: string | null;
+  requested_at?: string | null;
+  role_title: string;
+  generation_status: 'pending' | 'generating' | 'complete' | 'failed' | 'stale';
+  error_code?: string | null;
+  summary: {
+    total_requirements: number;
+    assessed_count: number;
+    match_count: number;
+    gap_count: number;
+    exceed_count: number;
+    not_assessed_count: number;
+    reviewed_count: number;
+    low_confidence_count: number;
+  };
 }
 
 export interface SkillTaxonomy {

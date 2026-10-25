@@ -1,0 +1,11 @@
+
+Running 4 tests using 1 worker
+
+(node:39656) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 e2e\review.spec.ts:18:1 › real API: evidence, filter, refresh, JSON and PDF downloads (10.8s)
+  ok 2 e2e\review.spec.ts:46:1 › real API: narrow screen, keyboard evidence control, and accessible comparison (3.4s)
+  ok 3 e2e\review.spec.ts:60:1 › simulated response: failed refresh preserves the last successful report (6.5s)
+  ok 4 e2e\review.spec.ts:78:1 › simulated response: long labels and empty requirements remain readable (5.0s)
+
+  4 passed (27.2s)

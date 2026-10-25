@@ -1,0 +1,3 @@
+require 'fileutils'
+FileUtils.rm_f(File.expand_path('../tmp/pids/server.pid', __dir__))
+exec('bundle', 'exec', 'rails', 'server', '-b', '0.0.0.0', '-p', '3001')

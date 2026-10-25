@@ -1,0 +1,55 @@
+name: Review integrity
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  fullstack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build Ruby environment
+        run: docker compose build api
+      - name: Initialize isolated databases
+        run: |
+          docker compose up -d db redis
+          docker compose run --rm -e RAILS_ENV=test api bundle exec rails db:create db:migrate
+      - name: Backend regression and failure paths
+        run: docker compose run --rm -e RAILS_ENV=test -e CI=true api bundle exec rspec
+      - name: Verify reversible migration with existing rows
+        run: docker compose run --rm -e RAILS_ENV=test api bundle exec rails runner script/verify_review_migration.rb
+      - name: Frontend tests and build
+        working-directory: web
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Seed synthetic browser workflow
+        run: |
+          docker compose run --rm api bundle exec rails db:migrate review:demo
+          docker compose up -d --no-build api worker
+      - name: Browser tests including accessibility
+        working-directory: web
+        env:
+          CI: 'true'
+          VITE_API_BASE_URL: http://localhost:3001/api/v1
+          VITE_WS_BASE_URL: ws://localhost:3001
+        run: |
+          npx playwright install --with-deps chromium
+          curl --retry 30 --retry-connrefused --retry-delay 1 --fail --silent http://localhost:3001/health
+          npm run dev -- --host 0.0.0.0 --port 5174 > /tmp/rakamin-vite.log 2>&1 &
+          npx playwright test e2e/review.spec.ts
+      - name: Preserve failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-browser-failure
+          path: web/test-results/
+      - name: Stop services
+        if: always()
+        run: docker compose down

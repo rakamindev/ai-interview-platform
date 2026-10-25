@@ -1,0 +1,158 @@
+{
+  "exported_at": "2026-10-25T15:18:34Z",
+  "portfolio": {
+    "id": 1,
+    "session_id": 1,
+    "candidate_id": null,
+    "generation_status": "complete",
+    "generated_at": "2026-10-25T14:31:42.805Z",
+    "generation_error": null,
+    "candidate_name": "Demo Candidate (synthetic)",
+    "skills": [
+      {
+        "id": 1,
+        "skill_id": "SK-ENG-004",
+        "skill_label": "Database Design & SQL",
+        "is_discovered": false,
+        "ai_level": 3,
+        "ai_confidence": "high",
+        "evidence": [
+          "Synthetic example: I verified the failure path before releasing the change."
+        ],
+        "competency_summary": "Demonstrates the stated level in this synthetic fixture. Not a real candidate assessment."
+      },
+      {
+        "id": 2,
+        "skill_id": "SK-ENG-005",
+        "skill_label": "RESTful API Design",
+        "is_discovered": false,
+        "ai_level": 2,
+        "ai_confidence": "medium",
+        "evidence": [
+          "Synthetic example: I verified the failure path before releasing the change."
+        ],
+        "competency_summary": "Demonstrates the stated level in this synthetic fixture. Not a real candidate assessment."
+      },
+      {
+        "id": 3,
+        "skill_id": "SK-ENG-006",
+        "skill_label": "Testing & Quality Assurance",
+        "is_discovered": false,
+        "ai_level": 4,
+        "ai_confidence": "high",
+        "evidence": [
+          "Synthetic example: I verified the failure path before releasing the change."
+        ],
+        "competency_summary": "Demonstrates the stated level in this synthetic fixture. Not a real candidate assessment."
+      }
+    ],
+    "overrides": [
+      {
+        "id": 1,
+        "portfolio_skill_id": 2,
+        "ai_level": 2,
+        "override_level": 3,
+        "assessor_notes": "Synthetic human review: evidence supports L3, with room for improvement.",
+        "overridden_by": 1,
+        "overridden_at": "2026-10-25T14:31:43.041Z"
+      }
+    ]
+  },
+  "fit_gap_report": {
+    "id": 1,
+    "portfolio_id": 1,
+    "vacancy_id": 1,
+    "skill_comparisons": [
+      {
+        "delta": 0,
+        "result": "match",
+        "ai_level": 3,
+        "evidence": [
+          "Synthetic example: I verified the failure path before releasing the change."
+        ],
+        "skill_id": "SK-ENG-004",
+        "confidence": "high",
+        "is_override": false,
+        "skill_label": "Database Design & SQL",
+        "overridden_at": null,
+        "rating_source": "ai",
+        "assessor_notes": null,
+        "expected_level": 3,
+        "requirement_id": 1,
+        "candidate_level": 3,
+        "competency_summary": "Demonstrates the stated level in this synthetic fixture. Not a real candidate assessment.",
+        "portfolio_skill_id": 1
+      },
+      {
+        "delta": -1,
+        "result": "gap",
+        "ai_level": 2,
+        "evidence": [
+          "Synthetic example: I verified the failure path before releasing the change."
+        ],
+        "skill_id": "SK-ENG-005",
+        "confidence": "medium",
+        "is_override": true,
+        "skill_label": "RESTful API Design",
+        "overridden_at": "2026-10-25T14:31:43.041250Z",
+        "rating_source": "assessor",
+        "assessor_notes": "Synthetic human review: evidence supports L3, with room for improvement.",
+        "expected_level": 4,
+        "requirement_id": 2,
+        "candidate_level": 3,
+        "competency_summary": "Demonstrates the stated level in this synthetic fixture. Not a real candidate assessment.",
+        "portfolio_skill_id": 2
+      },
+      {
+        "delta": 2,
+        "result": "exceed",
+        "ai_level": 4,
+        "evidence": [
+          "Synthetic example: I verified the failure path before releasing the change."
+        ],
+        "skill_id": "SK-ENG-006",
+        "confidence": "high",
+        "is_override": false,
+        "skill_label": "Testing & Quality Assurance",
+        "overridden_at": null,
+        "rating_source": "ai",
+        "assessor_notes": null,
+        "expected_level": 2,
+        "requirement_id": 3,
+        "candidate_level": 4,
+        "competency_summary": "Demonstrates the stated level in this synthetic fixture. Not a real candidate assessment.",
+        "portfolio_skill_id": 3
+      },
+      {
+        "delta": null,
+        "result": "not_assessed",
+        "ai_level": null,
+        "skill_id": "SK-SOFT-001",
+        "confidence": null,
+        "is_override": false,
+        "skill_label": "Communication",
+        "rating_source": "none",
+        "expected_level": 3,
+        "requirement_id": 4,
+        "candidate_level": null
+      }
+    ],
+    "culture_narrative": null,
+    "overall_narrative": "1 match, 1 exceed, 1 gap, and 1 not assessed. Missing evidence is not a skill deficit. Review supporting evidence and follow up before making a hiring decision.",
+    "generated_at": "2026-10-25T15:18:31.764Z",
+    "generation_status": "complete",
+    "error_code": null,
+    "requested_at": "2026-10-25T15:18:29.172Z",
+    "summary": {
+      "total_requirements": 4,
+      "assessed_count": 3,
+      "match_count": 1,
+      "exceed_count": 1,
+      "gap_count": 1,
+      "not_assessed_count": 1,
+      "reviewed_count": 1,
+      "low_confidence_count": 0
+    },
+    "role_title": "Backend Engineer | synthetic demo"
+  }
+}

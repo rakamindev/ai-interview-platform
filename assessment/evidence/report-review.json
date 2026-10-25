@@ -1,0 +1,83 @@
+{
+  "report_sha256": "740210b13f25038daf27811211b4dc8ec49a35ec75dd92582571a583177c4c50",
+  "pages": 12,
+  "bytes": 414090,
+  "headings_checked": 59,
+  "title_case": "pass",
+  "footer": "pass",
+  "authored_em_dashes": 0,
+  "universal_control_claim_removed": true,
+  "uri_annotations": 42,
+  "unique_urls": 31,
+  "geometry": [
+    {
+      "page": 1,
+      "body_bottom_pt": 772.17,
+      "words": 255
+    },
+    {
+      "page": 2,
+      "body_bottom_pt": 655.63,
+      "words": 219
+    },
+    {
+      "page": 3,
+      "body_bottom_pt": 740.67,
+      "words": 343
+    },
+    {
+      "page": 4,
+      "body_bottom_pt": 708.17,
+      "words": 326
+    },
+    {
+      "page": 5,
+      "body_bottom_pt": 754.17,
+      "words": 332
+    },
+    {
+      "page": 6,
+      "body_bottom_pt": 661.4,
+      "words": 285
+    },
+    {
+      "page": 7,
+      "body_bottom_pt": 691.67,
+      "words": 286
+    },
+    {
+      "page": 8,
+      "body_bottom_pt": 784.69,
+      "words": 138
+    },
+    {
+      "page": 9,
+      "body_bottom_pt": 599.64,
+      "words": 149
+    },
+    {
+      "page": 10,
+      "body_bottom_pt": 668.65,
+      "words": 163
+    },
+    {
+      "page": 11,
+      "body_bottom_pt": 693.17,
+      "words": 322
+    },
+    {
+      "page": 12,
+      "body_bottom_pt": 632.17,
+      "words": 260
+    }
+  ],
+  "application_test_snapshot": "fd15a9d8a99090ec46c1c31ad28e819bf5a64286",
+  "application_ci_run": 40207781087,
+  "new_application_tests_run": false,
+  "all_text_margin_checks": "pass",
+  "mobile_column_overflow_corrected": true,
+  "defense_guide_snapshot": "2e3c81b15b29b31578c0f8e1d641e3c9a33c873c",
+  "final_renders_match_visually_inspected_pages": true,
+  "cover_date": "25 October 2026",
+  "deadline_submission_paragraph_removed": true
+}

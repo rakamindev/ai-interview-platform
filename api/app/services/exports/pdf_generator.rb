@@ -27,6 +27,11 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        pdf.font_families.update('ReviewSans' => {
+          normal: Rails.root.join('assets/fonts/Vera.ttf').to_s,
+          bold: Rails.root.join('assets/fonts/VeraBd.ttf').to_s
+        })
+        pdf.font 'ReviewSans'
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -45,7 +50,7 @@ module Exports
       pdf.font_size(10) do
         pdf.text "Session: #{@session.id}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
-        pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
+        pdf.text "Exported: #{Time.current.in_time_zone('Asia/Jakarta').strftime('%Y-%m-%d %H:%M WIB')}"
       end
 
       pdf.stroke_horizontal_rule
@@ -82,7 +87,7 @@ module Exports
         pdf.text "#{skill.skill_label}", style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+        level_text += " (AI at review: #{LEVEL_LABELS[override.ai_level]}; human review: #{LEVEL_LABELS[override.override_level]})" if override
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
         pdf.text level_text
       end
@@ -126,7 +131,7 @@ module Exports
         table_data << [
           c['skill_label'],
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
+          c['candidate_level'] ? "L#{c['candidate_level']}#{c['rating_source'] == 'assessor' ? " (human; AI L#{c['ai_level']})" : ' (AI)'}" : 'No rating',
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
         ]
@@ -138,6 +143,9 @@ module Exports
         t.cells.padding = [6, 8]
         t.cells.size = 10
       end
+
+      pdf.move_down 12
+      pdf.font_size(10) { pdf.text 'Missing evidence is not a skill deficit. Skill levels do not establish culture fit or an automatic hiring decision.' }
 
       if @fit_gap.culture_narrative.present?
         pdf.move_down 12
@@ -160,7 +168,7 @@ module Exports
                         width:  pdf.bounds.right,
                         align:  :center,
                         size:   9,
-                        color:  '999999'
+                        color:  '64748B'
     end
 
     def format_duration(seconds)

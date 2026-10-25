@@ -1,0 +1,7 @@
+FROM ruby:3.3.2-slim
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev libssl-dev libyaml-dev pkg-config git ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY Gemfile Gemfile.lock ./
+RUN gem install bundler -v 2.5.11 --no-document && bundle install
+EXPOSE 3001
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3001"]

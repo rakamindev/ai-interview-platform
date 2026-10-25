@@ -25,3 +25,9 @@ Each service has its own setup guide. Run the API first, then the web app pointe
 - This is the codebase you assess, harden, and release. Treat it as a version about to ship to a client.
 - Work in the `/assessment` folder at the repo root for your written deliverables; code changes go in `api/` or `web/`.
 - See the case-study brief you were given for what to produce and how it is evaluated.
+
+## Evidence-based fit/gap review
+
+The submission improves the portfolio-to-vacancy review flow: explicit expected levels, human-rating provenance, missing-evidence handling, durable refresh/failure states, tenant ownership checks, and consistent exports. Fit/gap comparison works without an AI key.
+
+Start with [the reproducible runbook](assessment/RUNBOOK.md), [discovery and acceptance criteria](assessment/01-discovery-and-plan.md), and [product context](assessment/02-product-context.md). Development services run through `compose.yml`; the web app uses port 5174 for this submission. Written evidence and submission materials live under `assessment/`.
