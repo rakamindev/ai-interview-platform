@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
-import { authApi } from "@/services/auth";
+import { authAtom } from "@/stores/authAtom";
+import { useLogin } from "@/useCases/auth";
+import { FormAlert } from "@/components/ui/form-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,24 +14,20 @@ export default function LoginPage() {
   const setAuth = useSetAtom(authAtom);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const login = useLogin({
+    onSuccess: (data) => {
+      setAuth({ token: data.token });
+      navigate("/assessments");
+    },
+    onError: () => setError("Invalid email or password."),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
-    try {
-      const res = await authApi.login({ email, password });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
-      navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
-    } finally {
-      setLoading(false);
-    }
+    login.mutate({ email, password });
   };
 
   return (
@@ -66,14 +63,13 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          <FormAlert message={error} />
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="submit" className="w-full" disabled={login.isPending}>
+            {login.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Sign in
           </Button>
         </form>
-
       </div>
     </div>
   );

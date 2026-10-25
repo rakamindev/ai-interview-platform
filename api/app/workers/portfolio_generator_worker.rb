@@ -3,7 +3,15 @@
 class PortfolioGeneratorWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :portfolio, retry: 3
+  sidekiq_options queue: :portfolio, retry: 10
+
+  sidekiq_retry_in do |count, exception|
+    if exception.is_a?(Gemini::HttpClient::RateLimitError)
+      (count + 2) * 60 # 2m, 3m, 4m, ... up to ~11m
+    else
+      30
+    end
+  end
 
   sidekiq_retries_exhausted do |msg, _ex|
     session_id = msg['args'].first

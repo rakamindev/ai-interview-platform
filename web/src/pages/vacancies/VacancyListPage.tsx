@@ -1,24 +1,14 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { vacanciesApi } from "@/services/vacancies";
+import { useGetVacancies } from "@/useCases/vacancies";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
-import type { Vacancy } from "@/types";
 
 export default function VacancyListPage() {
-  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data, isLoading, isError } = useGetVacancies();
+  const vacancies = data?.vacancies ?? [];
   const navigate = useNavigate();
-
-  useEffect(() => {
-    vacanciesApi.list()
-      .then((res) => setVacancies(res.data.vacancies))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
 
   return (
     <div className="space-y-4">
@@ -29,15 +19,17 @@ export default function VacancyListPage() {
         </Button>
       </div>
 
-      {error && (
+      {isError && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
           Failed to load vacancies. Please refresh the page.
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
         </div>
       ) : vacancies.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">

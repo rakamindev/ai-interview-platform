@@ -37,6 +37,8 @@ export interface Session {
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
+  candidate_online?: boolean;
+  candidate_last_seen_at?: string | null;
   invite_token: string;
   invite_url: string;
   status: "pending" | "active" | "ended";
@@ -80,6 +82,7 @@ export interface Portfolio {
   candidate_id?: number;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
+  reviewed_at?: string;
   generation_error?: string;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
@@ -90,8 +93,8 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: string; // "L1" | "L2" | "L3" | "L4" | "L5"
+  ai_confidence: string; // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
 }
@@ -164,6 +167,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  started_at?: string | null;
 }
 
 export interface PaginationMeta {

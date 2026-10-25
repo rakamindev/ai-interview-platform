@@ -16,6 +16,18 @@ Rails.application.routes.draw do
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
       }
 
+      # Download speed test — returns 1MB payload
+      get 'speed_test', to: proc {
+        [200, { 'Content-Type' => 'application/octet-stream' }, [SecureRandom.random_bytes(1024 * 1024)]]
+      }
+
+      # Candidate-facing (no JWT — invite token only).
+      # The hex constraint prevents these routes from stealing numeric :id requests
+      # that belong to the assessor resources below (e.g. /sessions/13/transcript).
+      get  'sessions/:token/transcript',     to: 'sessions#candidate_transcript', constraints: { token: /[0-9a-f]{20,}/ }
+      get  'sessions/:token/candidate',      to: 'sessions#candidate_info',       constraints: { token: /[0-9a-f]{20,}/ }
+      post 'sessions/:token/audio_complete', to: 'sessions#audio_complete',       constraints: { token: /[0-9a-f]{20,}/ }
+
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
@@ -29,12 +41,9 @@ Rails.application.routes.draw do
           get  :transcript
           get  :portfolio, to: 'portfolios#show'
           post 'portfolio/regenerate', to: 'portfolios#regenerate'
+          post 'portfolio/mark_reviewed', to: 'portfolios#mark_reviewed'
         end
       end
-
-      # Candidate-facing (no JWT — invite token only)
-      get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
-      post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

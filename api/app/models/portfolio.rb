@@ -16,4 +16,9 @@ class Portfolio < ApplicationRecord
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
+  def reviewed?    = reviewed_at.present?
+
+  def mark_reviewed!
+    update!(reviewed_at: Time.current) unless reviewed?
+  end
 end

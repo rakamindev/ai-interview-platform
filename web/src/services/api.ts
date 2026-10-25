@@ -18,7 +18,9 @@ api.interceptors.request.use((config) => {
 });
 
 // Unwrap backend envelope: { data: { ... } } → { ... }
-// On 401/403, clear stored credentials and redirect to login.
+// On 401/403 WITH an existing token, the session expired — clear + redirect to login.
+// A 401/403 WITHOUT a stored token (e.g. wrong-credential login attempt) is left to the
+// caller to render inline; we must NOT full-page reload mid-form (loses the error state).
 api.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === "object" && "data" in response.data) {
@@ -27,7 +29,8 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const token = getStoredToken();
+    if ((error.response?.status === 401 || error.response?.status === 403) && token) {
       clearToken();
       window.location.href = "/login";
     }

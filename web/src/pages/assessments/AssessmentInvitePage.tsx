@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,23 +13,42 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { assessmentsApi } from "@/services/assessments";
+import {
+  useGetAssessment,
+  useGetAssessmentSessions,
+  useCreateSession,
+} from "@/useCases/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
-import type { Assessment, Session } from "@/types";
+import { usePolling } from "@/hooks/usePolling";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  RotateCcw,
+} from "lucide-react";
+import type { Session } from "@/types";
 
 function SessionRow({
   session,
   index,
   assessmentId,
   onCopy,
+  onReschedule,
   copiedId,
+  rescheduling,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onReschedule: (session: Session) => void;
   copiedId: number | null;
+  rescheduling: boolean;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
@@ -38,13 +57,13 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 px-4">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground shrink-0">
           {index}
         </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
+        <div className="space-y-0.5 min-w-0">
+          <div className="text-sm font-medium truncate">{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -53,7 +72,7 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -72,14 +91,20 @@ function SessionRow({
             Failed
           </span>
         )}
-        {isEnded && session.end_reason !== "error" && (
+        {isEnded && session.end_reason === "abandoned" && (
+          <span className="flex items-center gap-1 text-xs text-amber-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Abandoned
+          </span>
+        )}
+        {isEnded && session.end_reason !== "error" && session.end_reason !== "abandoned" && (
           <span className="flex items-center gap-1 text-xs text-green-600">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
           </span>
         )}
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
           {isPending && (
             <Button
               variant="ghost"
@@ -88,9 +113,13 @@ function SessionRow({
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
+                <>
+                  <Check className="h-3 w-3 mr-1" /> Copied
+                </>
               ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                <>
+                  <Copy className="h-3 w-3 mr-1" /> Copy link
+                </>
               )}
             </Button>
           )}
@@ -99,19 +128,34 @@ function SessionRow({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
+              onClick={() =>
+                navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)
+              }
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
           )}
-          {isEnded && session.end_reason !== "error" && (
+          {isEnded && session.end_reason !== "error" && session.end_reason !== "abandoned" && (
             <Button
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              onClick={() =>
+                navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)
+              }
             >
               Results
+            </Button>
+          )}
+          {isEnded && (session.end_reason === "error" || session.end_reason === "abandoned") && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onReschedule(session)}
+              disabled={rescheduling}
+            >
+              <RotateCcw className="h-3 w-3 mr-1" /> Reschedule
             </Button>
           )}
         </div>
@@ -123,56 +167,50 @@ function SessionRow({
 export default function AssessmentInvitePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [assessment, setAssessment] = useState<Assessment | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
-  const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
-  }, [id]);
+  const { data: assessmentData, isLoading: assessmentLoading } = useGetAssessment(Number(id));
+  const {
+    data: sessionsData,
+    isLoading: sessionsLoading,
+    refetch: refetchSessions,
+  } = useGetAssessmentSessions(Number(id));
 
-  useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
+  const assessment = assessmentData?.assessment;
+  const sessions = sessionsData?.sessions ?? [];
+  const loading = assessmentLoading || sessionsLoading;
 
-  // Poll while any session is live or pending
-  useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
-    if (!hasActive) return;
-    const interval = setInterval(loadSessions, 5000);
-    return () => clearInterval(interval);
-  }, [sessions, loadSessions]);
+  const createSession = useCreateSession({
+    onSuccess: (data) => {
+      setNewSession(data.session);
+      refetchSessions();
+    },
+  });
+
+  // Poll while any session is live or pending so status changes surface automatically
+  const hasLiveOrPending = sessions.some((s) => s.status !== "ended");
+  usePolling(() => void refetchSessions(), 5000, hasLiveOrPending);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
     setShowInviteDialog(true);
   };
 
-  const handleInviteCandidate = async () => {
-    setCreatingSession(true);
+  const handleInviteCandidate = () => {
     setShowInviteDialog(false);
     setNewSession(null);
-    try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
-      const created = res.data.session;
-      setNewSession(created);
-      setSessions((prev) => [created, ...prev]);
-    } finally {
-      setCreatingSession(false);
-    }
+    createSession.mutate({
+      assessmentId: Number(id),
+      candidateName: candidateNameInput.trim() || undefined,
+    });
+  };
+
+  const handleReschedule = (session: Session) => {
+    createSession.mutate({ assessmentId: Number(id), candidateName: session.candidate_name });
   };
 
   const copyLink = (session: Session, id: number) => {
@@ -201,27 +239,27 @@ export default function AssessmentInvitePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Link to="/assessments" className="text-muted-foreground hover:text-foreground shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold truncate">{assessment?.name ?? "—"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
+              <Clock className="h-3 w-3 shrink-0" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button size="sm" onClick={openInviteDialog} disabled={createSession.isPending}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            {creatingSession ? "Creating..." : "Invite Candidate"}
+            {createSession.isPending ? "Creating..." : "Invite Candidate"}
           </Button>
         </div>
       </div>
@@ -242,10 +280,14 @@ export default function AssessmentInvitePage() {
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-xs text-muted-foreground">
+              Optional — helps you identify this session later.
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleInviteCandidate}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
@@ -256,9 +298,14 @@ export default function AssessmentInvitePage() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-4 space-y-2">
             <p className="text-sm font-medium">
-              {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
+              {newSession.candidate_name ? (
+                <>
+                  Link for <span className="font-semibold">{newSession.candidate_name}</span> ready
+                  — share with your candidate:
+                </>
+              ) : (
+                <>New invite link ready — share with your candidate:</>
+              )}
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
@@ -267,9 +314,13 @@ export default function AssessmentInvitePage() {
             </div>
             <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
               {newSessionCopied ? (
-                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+                <>
+                  <Check className="h-3.5 w-3.5 mr-1.5" /> Copied!
+                </>
               ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link
+                </>
               )}
             </Button>
           </CardContent>
@@ -312,7 +363,9 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onReschedule={handleReschedule}
                   copiedId={copiedId}
+                  rescheduling={createSession.isPending}
                 />
               ))}
             </CardContent>
@@ -328,7 +381,10 @@ export default function AssessmentInvitePage() {
             <h2 className="text-sm font-semibold">Skills assessed</h2>
             <ul className="space-y-1">
               {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <li
+                  key={s.id ?? s.skill_label}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                   <span>•</span>
                   <span>{s.skill_label}</span>
                   <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>

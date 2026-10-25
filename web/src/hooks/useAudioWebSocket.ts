@@ -10,9 +10,11 @@ interface UseAudioWebSocketOptions {
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  onSessionEnded?: (reason?: string, message?: string) => void;
 }
 
-const RECONNECT_DELAYS = [1000, 2000, 4000];
+// Deep traffic-light grace runs the full server window (BROWSER_GRACE_PERIOD=120s) before giving up.
+const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 15000, 20000, 20000, 20000];
 
 export function useAudioWebSocket({
   sessionId,
@@ -22,14 +24,15 @@ export function useAudioWebSocket({
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onSessionEnded,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
-  const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
-    "disconnected"
-  );
+  const [connectionState, setConnectionState] = useState<
+    "disconnected" | "connecting" | "connected"
+  >("disconnected");
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -70,7 +73,10 @@ export function useAudioWebSocket({
             case "transcription":
             case "transcript":
               if (msg.speaker && msg.text) {
-                onTranscript({ speaker: msg.speaker === "candidate" ? "candidate" : "assessor", text: msg.text });
+                onTranscript({
+                  speaker: msg.speaker === "candidate" ? "candidate" : "assessor",
+                  text: msg.text,
+                });
               }
               break;
             case "speaker_changed":
@@ -100,10 +106,16 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
+              onSessionEnded?.(msg.reason, msg.message);
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+                onSessionEnded?.(msg.reason ?? "error", msg.message);
+                onStateChange("complete");
+              }
               break;
           }
         } catch {
@@ -127,10 +139,20 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
+        onSessionEnded?.(undefined, "The connection was lost before the interview finished.");
         onStateChange("complete");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    sessionId,
+    token,
+    onAudioChunk,
+    onTranscript,
+    onStateChange,
+    onSpeakerChange,
+    onSessionEnded,
+  ]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -147,6 +169,7 @@ export function useAudioWebSocket({
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
+    sessionEndedRef.current = true;
     wsRef.current?.close();
   }, []);
 

@@ -1,0 +1,51 @@
+name: Drift Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  model-manifest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Load model values from sample
+        run: |
+          echo "GEMINI_LIVE_MODEL=$(awk '/GEMINI_LIVE_MODEL:/{print $2}' config/application.yml.sample | tr -d '\"')" >> $GITHUB_ENV
+          echo "GEMINI_FLASH_MODEL=$(awk '/GEMINI_FLASH_MODEL:/{print $2}' config/application.yml.sample | tr -d '\"')" >> $GITHUB_ENV
+          echo "GEMINI_PRO_MODEL=$(awk '/GEMINI_PRO_MODEL:/{print $2}' config/application.yml.sample | tr -d '\"')" >> $GITHUB_ENV
+          if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
+          fi
+
+      - name: Validate model manifest
+        # Advisory: the live Google API probe depends on network/quota and an optional
+        # secret - external failures must not block a PR. The deterministic docs lint
+        # below is the blocking gate.
+        continue-on-error: true
+        run: RAILS_ENV=test bundle exec rake model_manifest:validate
+
+      - name: Docs drift lint
+        run: |
+          set -eo pipefail
+          sample=config/application.yml.sample
+          live=$(awk '/GEMINI_LIVE_MODEL:/{print $2}' $sample | tr -d '\"')
+          flash=$(awk '/GEMINI_FLASH_MODEL:/{print $2}' $sample | tr -d '\"')
+          pro=$(awk '/GEMINI_PRO_MODEL:/{print $2}' $sample | tr -d '\"')
+          for doc in README.md k8s/configmap.yaml; do
+            for model in "$live" "$flash" "$pro"; do
+              grep -q "$model" "$doc" || { echo "FAIL: $doc is missing model $model"; exit 1; }
+            done
+          done
+          echo "Docs drift lint OK"

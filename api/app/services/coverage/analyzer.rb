@@ -10,8 +10,9 @@ module Coverage
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
-        timeout: 45
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.5-flash-lite'),
+        timeout: 45,
+        fallback_models: %w[gemini-3.1-flash-lite]
       )
     end
 

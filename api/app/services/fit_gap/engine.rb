@@ -8,8 +8,9 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
-        timeout: 30
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.5-flash-lite'),
+        timeout: 30,
+        fallback_models: %w[gemini-3.1-flash-lite]
       )
     end
 

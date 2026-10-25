@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
+import { useGetSession, useGetTranscript, useEndSession } from "@/useCases/sessions";
 import {
   COVERAGE_STATE_LABELS,
   COVERAGE_STATE_WIDTH,
@@ -52,18 +53,33 @@ function ElapsedTimer({ startedAt }: { startedAt: string }) {
 export default function LiveMonitorPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
-  const [startedAt, setStartedAt] = useState<string | null>(null);
-  const [assessmentName, setAssessmentName] = useState<string>("");
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
   const [sessionActive, setSessionActive] = useState(true);
+  const [candidateOnline, setCandidateOnline] = useState<boolean | null>(null);
+  const [candidateLastSeen, setCandidateLastSeen] = useState<string | null>(null);
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { coverageMap, sessionEnded, sessionEndReason, isConnected } =
-    useCoverageWebSocket(Number(sessionId));
+  const { coverageMap, sessionEnded, sessionEndReason, isConnected } = useCoverageWebSocket(
+    Number(sessionId)
+  );
+
+  const { data: sessionData, isLoading: sessionLoading } = useGetSession(Number(sessionId));
+  const { data: transcriptData, isLoading: transcriptLoading } = useGetTranscript(
+    Number(sessionId)
+  );
+
+  const session = sessionData?.session as any;
+  const assessmentName = session?.assessment?.name ?? "";
+  const startedAt = session?.started_at ?? null;
+
+  const endSession = useEndSession({
+    onSuccess: () => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`),
+    onError: () => setEndError(true),
+  });
+
+  const loading = sessionLoading || transcriptLoading;
 
   // On session_ended from WS — stop polling, update local state
   useEffect(() => {
@@ -73,34 +89,31 @@ export default function LiveMonitorPage() {
     }
   }, [sessionEnded]);
 
-  // Initial load
+  // Seed transcript + lastTurn from the query; real-time appends come from the poll below
   useEffect(() => {
-    Promise.all([
-      sessionsApi.get(Number(sessionId)),
-      sessionsApi.getTranscript(Number(sessionId)),
-    ])
-      .then(([sRes, tRes]) => {
-        const s = sRes.data.session as any;
-        setStartedAt(s.started_at ?? null);
-        setAssessmentName(s.assessment?.name ?? "");
-        if (s.status !== "active") setSessionActive(false);
+    const turns = transcriptData?.turns ?? [];
+    setTranscript(turns.slice(-10));
+    if (turns.length > 0) {
+      lastTurnRef.current = turns[turns.length - 1].turn_number;
+    }
+  }, [transcriptData]);
 
-        const turns = tRes.data.turns;
-        setTranscript(turns.slice(-10));
-        if (turns.length > 0) {
-          lastTurnRef.current = turns[turns.length - 1].turn_number;
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+  // Seed candidate presence from the query; refreshed by the poll below
+  useEffect(() => {
+    if (!session) return;
+    setCandidateOnline(session.candidate_online ?? null);
+    setCandidateLastSeen(session.candidate_last_seen_at ?? null);
+  }, [session]);
+
+  // Set sessionActive based on session data
+  useEffect(() => {
+    if (session && session.status !== "active") setSessionActive(false);
+  }, [session]);
 
   // Poll transcript every 3s while session is active
   const fetchNewTurns = useCallback(async () => {
     try {
-      const res = await sessionsApi.getTranscript(
-        Number(sessionId),
-        lastTurnRef.current + 1
-      );
+      const res = await sessionsApi.getTranscript(Number(sessionId), lastTurnRef.current + 1);
       if (res.data.turns.length > 0) {
         setTranscript((prev) => [...prev, ...res.data.turns].slice(-10));
         lastTurnRef.current = res.data.turns[res.data.turns.length - 1].turn_number;
@@ -113,18 +126,30 @@ export default function LiveMonitorPage() {
   useEffect(() => {
     if (!sessionActive || loading) return;
     pollTimerRef.current = setInterval(fetchNewTurns, 3000);
-    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
   }, [sessionActive, loading, fetchNewTurns]);
 
-  const handleEndSession = async () => {
-    setEnding(true);
-    try {
-      await sessionsApi.endSession(Number(sessionId));
-      navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`);
-    } catch {
-      setEnding(false);
-      setEndError(true);
-    }
+  // Refresh candidate presence every 10s so the assessor sees when the candidate
+  // leaves and when they come back.
+  useEffect(() => {
+    if (!sessionActive || loading) return;
+    const id = setInterval(() => {
+      sessionsApi
+        .get(Number(sessionId))
+        .then((res) => {
+          const s = res.data.session as any;
+          setCandidateOnline(s.candidate_online ?? null);
+          setCandidateLastSeen(s.candidate_last_seen_at ?? null);
+        })
+        .catch(() => {});
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [sessionActive, loading, sessionId]);
+
+  const handleEndSession = () => {
+    endSession.mutate({ id: Number(sessionId) });
   };
 
   if (loading) {
@@ -146,22 +171,42 @@ export default function LiveMonitorPage() {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+            <Link
+              to={`/assessments/${id}/invite`}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <h1 className="text-lg font-semibold">Live Monitor</h1>
           </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
+          {assessmentName && <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>}
+          {candidateOnline === false && (
+            <p className="flex items-center gap-1.5 pl-6 text-xs text-amber-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Candidate offline
+              {candidateLastSeen && (
+                <span className="text-muted-foreground">
+                  since {new Date(candidateLastSeen).toLocaleTimeString()}
+                </span>
+              )}
+            </p>
+          )}
+          {candidateOnline && (
+            <p className="flex items-center gap-1.5 pl-6 text-xs text-green-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Candidate online
+            </p>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
+          <span
+            className={cn(
+              "flex items-center gap-1 text-xs",
+              isConnected ? "text-green-600" : "text-muted-foreground"
+            )}
+          >
             <Radio className="h-3 w-3" />
             {isConnected ? "Live" : "Reconnecting..."}
           </span>
@@ -206,7 +251,9 @@ export default function LiveMonitorPage() {
                   <span className="font-medium">{skill.skill_label}</span>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {skill.probe_count > 0 && (
-                      <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                      <span>
+                        {skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}
+                      </span>
                     )}
                     <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                   </div>
@@ -217,9 +264,7 @@ export default function LiveMonitorPage() {
                   className="h-2"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    "{skill.last_signal}"
-                  </p>
+                  <p className="text-xs text-muted-foreground truncate">"{skill.last_signal}"</p>
                 )}
               </div>
             ))
@@ -242,7 +287,9 @@ export default function LiveMonitorPage() {
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {skill.probe_count > 0 && (
-                          <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
+                          <span>
+                            {skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}
+                          </span>
                         )}
                         <span className="capitalize">{COVERAGE_STATE_LABELS[skill.state]}</span>
                       </div>
@@ -272,7 +319,9 @@ export default function LiveMonitorPage() {
         </CardHeader>
         <CardContent>
           {transcript.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No transcript yet.</p>
+            <p className="text-xs text-muted-foreground text-center py-4">
+              {sessionActive ? "Waiting for conversation to begin…" : "No transcript yet."}
+            </p>
           ) : (
             <div className="space-y-2">
               {transcript.map((turn) => (
@@ -294,8 +343,8 @@ export default function LiveMonitorPage() {
         {sessionActive ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={ending}>
-                {ending ? "Ending..." : "End Session"}
+              <Button variant="destructive" disabled={endSession.isPending}>
+                {endSession.isPending ? "Ending..." : "End Session"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

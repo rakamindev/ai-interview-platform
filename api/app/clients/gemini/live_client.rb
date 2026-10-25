@@ -11,6 +11,7 @@ module Gemini
 
     INACTIVITY_TIMEOUT = 30 # reconnect if Gemini produces no meaningful response
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
+    CONNECT_TIMEOUT    = 15  # force-close if setupComplete doesn't arrive — a silently-stuck socket would otherwise wedge reconnects
 
     # Silence pump: synthetic silent PCM frames sent during browser silence so Gemini's VAD detects end-of-speech.
     SILENCE_PUMP_DELAY    = 1
@@ -63,6 +64,7 @@ module Gemini
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
       @setup_complete = false
+      @connect_timeout_timer&.cancel
       @ws = Faye::WebSocket::Client.new(
         GEMINI_WS_URL,
         nil,
@@ -73,6 +75,14 @@ module Gemini
       @ws.on(:message) { |event|  handle_message(event.data) }
       @ws.on(:close)   { |event|  handle_ws_close(event) }
       @ws.on(:error)   { |event|  handle_ws_error(event) }
+
+      # Watchdog: if setup never completes, force-close so the reconnect loop can retry.
+      @connect_timeout_timer = EM::Timer.new(CONNECT_TIMEOUT) do
+        unless @setup_complete
+          Rails.logger.warn('[Gemini::LiveClient] Connect timeout — forcing close')
+          @ws&.close
+        end
+      end
 
       @ws
     end
@@ -117,6 +127,8 @@ module Gemini
     def close
       @inactivity_timer&.cancel
       @gate_timer&.cancel
+      @connect_timeout_timer&.cancel
+      @connect_timeout_timer = nil
       stop_silence_pump
       @ws&.close
       @connected = false
@@ -127,7 +139,16 @@ module Gemini
       @superseded = true
       @inactivity_timer&.cancel
       @gate_timer&.cancel
+      @connect_timeout_timer&.cancel
+      @connect_timeout_timer = nil
       stop_silence_pump
+    end
+
+    # Re-enables a superseded client — used when a proactive-reconnect probe fails and we roll
+    # back to the still-live socket. Timers (inactivity, silence pump) re-arm lazily on demand.
+    def reactivate!
+      @superseded = false
+      Rails.logger.info('[Gemini::LiveClient] Client reactivated (proactive rollback)')
     end
 
     private
@@ -139,6 +160,8 @@ module Gemini
 
     def handle_ws_close(event)
       @connected = false
+      @connect_timeout_timer&.cancel
+      @connect_timeout_timer = nil
       Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{event.code} reason=#{event.reason} superseded=#{@superseded}")
       # Skip on_close for superseded clients to avoid duplicate reconnect from the replaced instance.
       @on_close&.call(code: event.code, reason: event.reason) unless @superseded
@@ -458,6 +481,8 @@ module Gemini
     def handle_setup_complete(data)
       return unless data['setupComplete']
 
+      @connect_timeout_timer&.cancel
+      @connect_timeout_timer = nil
       @setup_complete = true
       @connected_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       activate_connection!

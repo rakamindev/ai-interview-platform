@@ -14,17 +14,23 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
-import { assessmentsApi } from "@/services/assessments";
+import { useCreateAssessment } from "@/useCases/assessments";
+import { FormAlert, FieldError } from "@/components/ui/form-feedback";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
@@ -37,9 +43,13 @@ export interface AssessmentFormValues {
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const createAssessment = useCreateAssessment({
+    onSuccess: (data) => navigate(`/assessments/${data.assessment.id}/invite`),
+    onError: (e) => setError(e?.message ?? "Failed to save assessment."),
+  });
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
@@ -50,7 +60,13 @@ export default function AssessmentNewPage() {
     },
   });
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   const sensors = useSensors(
@@ -80,30 +96,22 @@ export default function AssessmentNewPage() {
     append({ ...skill, display_order: fields.length });
   };
 
-  const onSubmit = async (data: AssessmentFormValues) => {
+  const onSubmit = (data: AssessmentFormValues) => {
     if (data.skills.length === 0) {
       setError("Add at least one skill to continue.");
       return;
     }
     setError(null);
-    setSubmitting(true);
-    try {
-      const payload = {
-        name: data.name,
-        time_limit_min: data.time_limit_min,
-        language: data.language,
-        assessment_skills_attributes: data.skills.map((s, i) => ({
-          ...s,
-          display_order: i,
-        })),
-      };
-      const res = await assessmentsApi.create(payload);
-      navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
-    } finally {
-      setSubmitting(false);
-    }
+    const payload = {
+      name: data.name,
+      time_limit_min: data.time_limit_min,
+      language: data.language,
+      assessment_skills_attributes: data.skills.map((s, i) => ({
+        ...s,
+        display_order: i,
+      })),
+    };
+    createAssessment.mutate(payload);
   };
 
   return (
@@ -127,11 +135,11 @@ export default function AssessmentNewPage() {
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? "name-error" : undefined}
             {...register("name", { required: "Role title is required" })}
           />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
-          )}
+          <FieldError id="name-error" message={errors.name?.message} />
         </div>
 
         {/* Time limit */}
@@ -139,10 +147,7 @@ export default function AssessmentNewPage() {
           <Label>
             Session time limit <span className="text-destructive">*</span>
           </Label>
-          <Select
-            defaultValue="45"
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
+          <Select defaultValue="45" onValueChange={(v) => setValue("time_limit_min", Number(v))}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -159,10 +164,7 @@ export default function AssessmentNewPage() {
         {/* Language */}
         <div className="space-y-1.5">
           <Label>Interview language</Label>
-          <Select
-            defaultValue="en"
-            onValueChange={(v) => setValue("language", v as "en" | "id")}
-          >
+          <Select defaultValue="en" onValueChange={(v) => setValue("language", v as "en" | "id")}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -209,22 +211,12 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPickerOpen(true)}
-            >
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add from Skill Taxonomy
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addCustomSkill}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={addCustomSkill}>
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add custom skill
             </Button>
@@ -233,31 +225,21 @@ export default function AssessmentNewPage() {
 
         <Separator />
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        <FormAlert message={error} />
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/assessments")}
-          >
+          <Button type="button" variant="outline" onClick={() => navigate("/assessments")}>
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="submit" disabled={createAssessment.isPending}>
+            {createAssessment.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save &amp; Create Session →
           </Button>
         </div>
       </form>
 
-      <SkillPicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        onSelect={addB7Skill}
-      />
+      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={addB7Skill} />
     </div>
   );
 }

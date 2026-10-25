@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { vacanciesApi } from "@/services/vacancies";
+import { useCreateVacancy } from "@/useCases/vacancies";
+import { FormAlert, FieldError } from "@/components/ui/form-feedback";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
@@ -21,32 +22,39 @@ interface VacancyFormValues {
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<VacancyFormValues>({
-    defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
+  const createVacancy = useCreateVacancy({
+    onSuccess: () => navigate("/vacancies"),
+    onError: (e) => setError(e?.message ?? "Failed to save vacancy."),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<VacancyFormValues>({
+    defaultValues: {
+      role_title: "",
+      culture_dimensions: "",
+      competency_expectations: "",
+      skills: [],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
-  const onSubmit = async (data: VacancyFormValues) => {
-    setError(null);
-    setSubmitting(true);
-    try {
-      await vacanciesApi.create({
-        role_title: data.role_title,
-        culture_dimensions: data.culture_dimensions,
-        competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
-      });
-      navigate("/vacancies");
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
-    } finally {
-      setSubmitting(false);
-    }
+  const onSubmit = (data: VacancyFormValues) => {
+    createVacancy.mutate({
+      role_title: data.role_title,
+      culture_dimensions: data.culture_dimensions,
+      competency_expectations: data.competency_expectations,
+      vacancy_skills_attributes: data.skills,
+    });
   };
 
   return (
@@ -62,8 +70,17 @@ export default function VacancyNewPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-1.5">
-          <Label htmlFor="role_title">Role title <span className="text-destructive">*</span></Label>
-          <Input id="role_title" placeholder="Senior Frontend Engineer" {...register("role_title", { required: true })} />
+          <Label htmlFor="role_title">
+            Role title <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="role_title"
+            placeholder="Senior Frontend Engineer"
+            aria-invalid={!!errors.role_title}
+            aria-describedby={errors.role_title ? "role_title-error" : undefined}
+            {...register("role_title", { required: "Role title is required" })}
+          />
+          <FieldError id="role_title-error" message={errors.role_title?.message} />
         </div>
 
         <Separator />
@@ -74,19 +91,28 @@ export default function VacancyNewPage() {
 
           {fields.length === 0 ? (
             <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
-              No skills added yet.
+              No skills added yet. Click below to add an expected skill.
             </div>
           ) : (
             <div className="space-y-2">
               {fields.map((field, index) => (
-                <div key={field.id} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
-                    <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive">
+                <div key={field.id} className="border rounded-lg bg-white">
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm truncate block">
+                        {watch(`skills.${index}.skill_label`)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      aria-label={`Remove skill ${watch(`skills.${index}.skill_label`)}`}
+                      className="text-muted-foreground hover:text-destructive shrink-0"
+                    >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="space-y-1">
+                  <div className="px-3 pb-3 space-y-1">
                     <span className="text-xs text-muted-foreground">Expected level:</span>
                     <LevelRadio
                       value={watch(`skills.${index}.expected_level`) ?? 3}
@@ -116,7 +142,9 @@ export default function VacancyNewPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="competency_expectations">Competency expectations (used in AI narrative)</Label>
+          <Label htmlFor="competency_expectations">
+            Competency expectations (used in AI narrative)
+          </Label>
           <Textarea
             id="competency_expectations"
             placeholder="Strong communicator who can align cross-functional teams..."
@@ -125,12 +153,14 @@ export default function VacancyNewPage() {
           />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <FormAlert message={error} />
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={createVacancy.isPending}>
+            {createVacancy.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Vacancy
           </Button>
         </div>
@@ -139,7 +169,9 @@ export default function VacancyNewPage() {
       <SkillPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })}
+        onSelect={(s) =>
+          append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })
+        }
       />
     </div>
   );

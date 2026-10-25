@@ -8,8 +8,9 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.5-flash'),
+        timeout: 180,  # up to 3 minutes for large transcripts
+        fallback_models: %w[gemini-3.1-flash-lite]
       )
     end
 
@@ -26,7 +27,7 @@ module Portfolios
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(generation_status: 'complete', generated_at: Time.current, generation_error: nil)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio

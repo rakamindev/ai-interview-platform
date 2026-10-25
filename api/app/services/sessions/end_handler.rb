@@ -38,6 +38,7 @@ module Sessions
 
       enqueue_portfolio_generation
       publish_status_update
+      publish_assessment_status
       Rails.logger.info("[N9/EndHandler] Session #{@session.id} ended (reason=#{reason})")
 
       @session
@@ -50,6 +51,23 @@ module Sessions
       redis.publish("coverage:#{@session.id}", { type: 'session_status', status: @session.status, end_reason: @session.end_reason }.to_json)
     rescue => e
       Rails.logger.error("[EndHandler] Failed to publish status update: #{e.message}")
+    ensure
+      redis&.close
+    end
+
+    def publish_assessment_status
+      redis = ::Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1'))
+      redis.publish(
+        "assessment:#{@session.assessment_id}",
+        {
+          type: 'session_status',
+          session_id: @session.id,
+          status: @session.status,
+          end_reason: @session.end_reason
+        }.to_json
+      )
+    rescue => e
+      Rails.logger.error("[EndHandler] Failed to publish assessment status: #{e.message}")
     ensure
       redis&.close
     end

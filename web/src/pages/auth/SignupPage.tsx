@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useSetAtom } from "jotai";
-import { authAtom, saveToken } from "@/stores/authAtom";
-import { authApi } from "@/services/auth";
+import { authAtom } from "@/stores/authAtom";
+import { useSignup } from "@/useCases/auth";
+import { FormAlert } from "@/components/ui/form-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,24 +16,20 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const signup = useSignup({
+    onSuccess: (data) => {
+      setAuth({ token: data.token });
+      navigate("/assessments");
+    },
+    onError: () => setError("Signup failed. Please try again."),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
-    try {
-      const res = await authApi.signup({ email, password, role });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
-      navigate("/assessments");
-    } catch {
-      setError("Signup failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    signup.mutate({ email, password, role });
   };
 
   return (
@@ -50,6 +47,7 @@ export default function SignupPage() {
               id="email"
               type="email"
               autoComplete="email"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -69,7 +67,7 @@ export default function SignupPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Role</Label>
+            <span className="text-sm font-medium leading-none">Role</span>
             <RadioGroup
               value={role}
               onValueChange={(v) => setRole(v as "admin" | "user")}
@@ -77,19 +75,23 @@ export default function SignupPage() {
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="user" id="role-user" />
-                <Label htmlFor="role-user" className="font-normal cursor-pointer">User</Label>
+                <Label htmlFor="role-user" className="font-normal cursor-pointer">
+                  User
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="admin" id="role-admin" />
-                <Label htmlFor="role-admin" className="font-normal cursor-pointer">Admin</Label>
+                <Label htmlFor="role-admin" className="font-normal cursor-pointer">
+                  Admin
+                </Label>
               </div>
             </RadioGroup>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          <FormAlert message={error} />
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="submit" className="w-full" disabled={signup.isPending}>
+            {signup.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Sign up
           </Button>
         </form>

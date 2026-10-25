@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { assessmentsApi } from "@/services/assessments";
+import { useGetAssessments } from "@/useCases/assessments";
 import { Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
 
@@ -21,6 +20,9 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
   if (session.status === "ended" && session.end_reason === "error")
     return <span className="text-xs text-destructive">Last: failed</span>;
 
+  if (session.status === "ended" && session.end_reason === "abandoned")
+    return <span className="text-xs text-amber-600">Last: abandoned</span>;
+
   if (session.status === "ended")
     return <span className="text-xs text-muted-foreground">Last: completed</span>;
 
@@ -28,18 +30,9 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
 }
 
 export default function AssessmentListPage() {
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data, isLoading, isError } = useGetAssessments();
+  const assessments = data?.assessments ?? [];
   const navigate = useNavigate();
-
-  useEffect(() => {
-    assessmentsApi
-      .list()
-      .then((res) => setAssessments(res.data.assessments))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
 
   return (
     <div className="space-y-4">
@@ -50,15 +43,17 @@ export default function AssessmentListPage() {
         </Button>
       </div>
 
-      {error && (
+      {isError && (
         <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
           Failed to load assessments. Please refresh the page.
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
         </div>
       ) : assessments.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">

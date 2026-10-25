@@ -1,15 +1,9 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
-
 
 interface SkillPickerProps {
   open: boolean;
@@ -28,13 +22,14 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     skillTaxonomiesApi
       .list()
       .then((res) => setSkills(res.data.skill_taxonomies ?? []))
-      .catch((err) => { console.error("skill_taxonomies fetch failed:", err); setSkills([]); })
+      .catch((err) => {
+        console.error("skill_taxonomies fetch failed:", err);
+        setSkills([]);
+      })
       .finally(() => setLoading(false));
   }, [open]);
 
-  const filtered = skills.filter((s) =>
-    s.skill_label.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = skills.filter((s) => s.skill_label.toLowerCase().includes(query.toLowerCase()));
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({

@@ -57,6 +57,10 @@ module Api
           return json_error("Portfolio is not ready for export (status: #{@portfolio.generation_status})", :unprocessable_entity)
         end
 
+        unless @portfolio.reviewed?
+          return json_error("Portfolio must be reviewed before export", :unprocessable_entity)
+        end
+
         if format == "pdf"
           vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
@@ -113,6 +117,10 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
+        unless portfolio.reviewed?
+          return json_error("Portfolio must be reviewed before running Fit/Gap analysis", :unprocessable_entity)
+        end
+
         # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
@@ -137,6 +145,16 @@ module Api
         json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
+      end
+
+      # POST /api/v1/sessions/:id/portfolio/mark_reviewed
+      def mark_reviewed
+        @session = Session.find(params[:id])
+        portfolio = @session.portfolio
+        return json_error("No portfolio found", :not_found) unless portfolio
+
+        portfolio.update!(reviewed_at: Time.current)
+        json_response(portfolio: portfolio_json(portfolio))
       end
 
       private
@@ -166,6 +184,7 @@ module Api
           candidate_id:      portfolio.candidate_id,
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
+          reviewed_at:       portfolio.reviewed_at&.iso8601,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
