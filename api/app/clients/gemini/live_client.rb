@@ -13,7 +13,8 @@ module Gemini
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
 
     # Silence pump: synthetic silent PCM frames sent during browser silence so Gemini's VAD detects end-of-speech.
-    SILENCE_PUMP_DELAY    = 1
+    # 2.5s gives candidates thinking time between sentences; 1s cut off "ee..." pauses mid-answer.
+    SILENCE_PUMP_DELAY    = 2.5
     SILENCE_PUMP_INTERVAL = 0.03
     SILENCE_FRAME_SAMPLES = 640
     SILENCE_FRAME = ("\x00" * (SILENCE_FRAME_SAMPLES * 2)).freeze
@@ -217,7 +218,7 @@ module Gemini
       return if @silence_pumping || !@connected || !@ws || @model_emitting_audio
 
       @silence_pumping = true
-      Rails.logger.info('[Gemini::LiveClient] Silence pump started — no real audio for 500ms')
+      Rails.logger.info("[Gemini::LiveClient] Silence pump started — no real audio for #{SILENCE_PUMP_DELAY}s")
 
       silence_msg = {
         realtimeInput: {

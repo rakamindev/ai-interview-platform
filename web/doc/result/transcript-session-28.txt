@@ -1,0 +1,59 @@
+[AI]
+Halo, terima kasih sudah hadir di sesi wawancara ini. Kita langsung mulai saja ya. Bisa ceritakan tentang proyek paling menantang secara teknis yang pernah Anda kerjakan baru-baru ini?
+
+[Candidate]
+Hello. Hello hello. Check. 1 2 3.
+
+[AI]
+Halo, ya, suaranya terdengar jelas kok. Bagaimana, bisa dilanjutkan ceritanya tentang proyek yang paling menantang tadi?
+
+[Candidate]
+Hello.
+
+[AI]
+Halo, ya? Masih terhubung? Silakan dilanjutkan ceritanya tentang proyek menantang yang pernah Anda kerjakan. Saya siap mendengarkan.
+
+[Candidate]
+Oke, apakah ada kriteria khusus dari proyek yang sudah saya sudah pernah saya kerjakan? Apakah harus dalam bahasa tertentu atau dalam ee framework spesifik?
+
+[AI]
+Tidak harus dalam bahasa tertentu, tapi saya ingin tahu tentang proyek yang menurut Anda paling menunjukkan kemampuan Anda, terutama kalau ada kaitannya dengan React dan frontend. Bisa mulai dari situ?
+
+[Candidate]
+Que bole. Eh, ¿entry, eh? O
+
+[AI]
+Ya, dari React dulu boleh. Proyek apa yang pernah Anda kerjakan dengan React, dan bagian mana yang paling menantang buat Anda? Entah itu dari state management, performa, atau yang lain.
+
+[Candidate]
+Oke, kalau untuk pria ada beberapa proyek yang pernah saya kerjakan tapi proyek terakhir yang paling besar yang saya kerjakan itu ada dua. React JS dan React Native. Untuk React JS aplikasi yang sudah saya garap itu adalah ee PMSS.com. Di mana
+
+[Candidate]
+Untuk back end-nya saya menggunakan Java. Dan front end-nya itu menggunakan React. Untuk tech stack dari React sendiri ee seperti dasarnya default React with, kemudian Tailwind, kemudian kita juga sedikit menggunakan dependensi dan lebih banyak mengguna ee manual coding. atau di-print-print library yang kita buat sendiri. Dan beberapa fitur yang ada di dalam nya yang memper- mudahkan untuk aplikasi ini dalam digunakan. Ee yaitu seperti ee data table, kemudian RSQL ee builder, lalu kita juga ada untuk koneksinya itu setelah dari pada mengguna- kan restu. Kita menggunakan web socket. Ee terus ada satu lagi yaitu adalah ee GrabQL. Begitu. Ee lalu untuk proyek dari React Native yang sudah saya kerjakan itu adalah aplikasi
+
+[Candidate]
+milik BNI. Untuk secara kapabilitas aplikasi ini sebenarnya cukup besar bahkan sangat besar ya, lebih besar daripada React JS itu sebelumnya. Karena setiap pagi ee besaran input dan throughput-nya itu ee cukup besar gitu. Dalam artian karena setiap pagi itu ada karyawan yang presensi di semua tempat dan ini tidak terbatas di Indonesia, tapi internasional karena karyawan BNI itu ada di beberapa negara juga. Untuk aplikasinya itu ee meng-handle konkurensi lebih dari 10.000 user dalam waktu singkat. Ee kemudian untuk dependensi di dalamnya juga sama, kita menggunakan sedikit dependensi dan ee
+
+[AI]
+Wah, menarik sekali! Ada ReactJS dan React Native dengan skala yang cukup besar. Anda menyebutkan banyak menggunakan manual coding dan library buatan sendiri. Bisa ceritakan lebih detail tentang library apa yang Anda bangun dan masalah apa yang coba Anda selesaikan dengan itu? Lalu, terkait koneksi ke backend yang menggunakan GraphQL dan Web Socket, bagaimana pertimbangan Anda dalam memilih protokol tersebut dibanding RESTful API standar?
+
+[Candidate]
+Oke, sebetulnya untuk protokol mungkin saya akan menjawab dulu terkait dengan protokol ee penggunaan WebSocket dan GraphQL. Ee pada dasarnya menggunakan WebSocket itu adalah ketentuan dari tim. Kalau dari komunikasi bersama pertimbangan bersama kenapa kita menggunakan WebSocket dibandingan SSE? dan sinkronisasi antara server dan klien. Ee
+
+[Candidate]
+untuk GrabQL karena memang ee apa namanya? Kita prioritas adalah kemudahan dalam ekstraksi data dan aplikasi ini full in house kita buat. Jadi, untuk ee pengkodeannya itu dan ee karena datanya itu cukup besar dan banyak, jadi kita tidak ada waktu untuk berpindah-pindah antar teks editor. Back end, front end, back end, front end. Sehingga, kita memiliki satu endpoint khusus. Untuk input dari grafQL. Tapi nantinya untuk ee request, custom request, dan sebagainya itu semua sudah di-handle oleh grafQL. Tapi memang untuk beberapa seperti reporting, kemudian data table, ee dan sebagainya itu kita cenderung masih pakai restful. Begitu. Untuk grafQL itu hanya di beberapa sisi saja. Lalu untuk ee library yang sudah pernah kita bangun, ee kenapa kita membangun library sendiri? Alasannya yang pertama adalah security. Di mana layer security perbankan itu cukup ketat sehingga kita tidak bisa sembarangan menginstal library. Lalu yang kedua, pertimbangannya adalah agar tidak depen atau tidak bergantung atau tidak terlalu konstrain dengan ee third party sehingga ketika main core dari React JS ini di-upgrade atau di-update, itu tidak mengalami masalah back ee backward compatibility. Sehingga ee dengan pendekatan manual ini memang akan membutuhkan waktu yang lebih lama, tapi memiliki ee versi long term yang jauh lebih stabil. Oke.
+
+[AI]
+Baik, berarti penggunaan GraphQL lebih untuk kemudahan ekstraksi data ya, dan manual coding untuk alasan keamanan serta kompatibilitas jangka panjang. Nah, terkait data yang besar di aplikasi React Native BNI, bagaimana Anda menangani konkurensi user yang tinggi di sisi frontend agar aplikasinya tetap responsif? Apakah ada strategi khusus seperti caching atau pagination data? Dan bagaimana Anda memastikan kontrak API dengan backend tetap konsisten dengan data yang besar itu?
+
+[Candidate]
+Okay. Eh pada dasarnya karena BNI kaya ya. Jadi kita tidak ada vertical scaling. Vertical scaling kita cukup kecil. Kita berfokus pada horizontal scaling dan meminimalisir layer transport data. Selain daripada itu untuk penggunaan performa data yang cukup besar. Tidak ada masalah yang signifikan sebenarnya karena memang pagination itu sudah pasti kita implementasikan. Untuk casing belum ada. Tapi memang ke depannya kita akan optimasi ke sana. Tapi dengan eh horizontal scaling dan pagination nah ini kita sudah cukup sejauh ini kita sudah cukup. Lalu juga karena jumlah user yang terprediksi artinya kita tahu maksimal konkurensi user, maksimal request dalam suatu waktu itu berapa sehingga tidak diperlukan eh enhancement spesifik untuk performa dengan eh keputusan menggunakan horizontal scaling dirasa sudah cukup dan dalam simulasi jumlah user eh sesuai dengan karyawan yang ada di BNI itu pun sudah ter eh sudah cukup gitu. Ya sudah tidak ada enhancement ataupun terkait dengan eh perbaikan performa ke depan.
+
+[AI]
+Baik, berarti pendekatan horizontal scaling dan pagination sudah memadai ya untuk saat ini. Terakhir, mungkin bisa cerita sedikit tentang bagaimana Anda biasanya berkomunikasi dengan tim backend atau stakeholder lain? Terutama dalam menyelaraskan kontrak API atau fitur baru agar tidak terjadi miskomunikasi. Apakah ada proses dokumentasi formal atau lebih ke diskusi langsung?
+
+[AI]
+, "discovered": [], "pacing": "critical", "priority_next": "communication"}
+]
+
+terkait komunikasi dengan backend, bagaimana biasanya Anda menyepakati kontrak data dengan tim backend untuk memastikan konsistensi, terutama saat ada perubahan data? Dan kalau ada miskomunikasi, bagaimana cara Anda menyelesaikannya?

@@ -34,7 +34,8 @@ module Coverage
         skills_remaining:                skills_left,
         avg_minutes_per_remaining_skill: avg_min,
         pacing:                          pacing_bucket(avg_min),
-        priority_next:                   priority_next(configured)
+        priority_next:                   priority_next(configured),
+        early_exit_rule:                 'If candidate explicitly wants to stop early, confirm once before concluding with a polite closing statement.'
       }
 
       Rails.logger.info("[MapInjector] Coverage map: skills_remaining=#{skills_left} avg_min=#{avg_min} pacing=#{pacing_bucket(avg_min)} priority_next=#{payload[:priority_next]}")

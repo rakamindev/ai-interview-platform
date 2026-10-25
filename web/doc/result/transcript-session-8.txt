@@ -1,0 +1,71 @@
+[AI]
+Halo, terima kasih sudah meluangkan waktu. Kita langsung mulai saja ya. Bisa ceritakan tentang proyek teknis terbaru yang paling menantang buat kamu? Apa tantangan terbesarnya?
+
+[Candidate]
+Oke, ya mungkin yang pernah saya kerjakan yang paling menantang itu adalah aplikasi payment gateway yang saya buat khusus untuk perusahaan saya. Jadi memang ee ini bukan payment gateway general seperti Xendit atau Doku begitu, tapi ini khusus untuk setiap klien yang ada di perusahaan saya sebelumnya.
+
+[AI]
+Oh, menarik. Sebuah payment gateway internal. Bisa tolong jelaskan sedikit tentang arsitektur utamanya? Bagaimana data pembayarannya mengalir dan komponen apa saja yang terlibat di situ?
+
+[Candidate]
+memang mungkin ee sedikit back story dulu ee di di perusahaan saya sebelumnya itu klien kita tuh cukup banyak ada 200-an dan ee sebelumnya itu masing-masing klien itu menembak langsung ke ee B2B langsung. Ke BNI sehingga susah-susah atau rumit untuk di-call. Alur data nya. Ee log nya dan sebagainya untuk melakukan hal itu.
+
+[Candidate]
+Jadi untuk arsitektur utamanya itu secara teknologi saya pakai ee maaf untuk arsitektur ini maksudnya teknologi kah? Atau apa ya?
+
+[AI]
+Yang saya maksud lebih ke struktur sistemnya, seperti bagaimana antar komponen saling terhubung dan bagaimana data mengalir dari klien sampai ke bank. Nah, dari cerita kamu tadi, berarti payment gateway ini bertindak sebagai perantara ya? Bisa tolong jelaskan lebih detail bagaimana gateway ini menangani permintaan dari klien dan meneruskannya ke bank? Terus, bagaimana kalau ada masalah sinkronisasi data?
+
+[Candidate]
+Oke, aku jawab satu-satu ya. Jadi yang pertama itu tentang arsitektur utamanya, di sini mungkin saya pakai bahasa yang kurang populer. Maaf, bukan kurang populer ya, yang kurang sesuai dengan ee dengan ee case-nya. Karena ini payment gateway di mana ini akan sentralize dan digunakan oleh banyak klien. Di sini saya pakai PHP dengan framework Laravel. Dengan data base ee my mySQL yang sudah dioptimasi juga. Ee lalu juga ee untuk instance-nya saya buat beberapa yang di koneksikan ee dengan Engine X. Jadi ada beberapa instance Laravel yang berjalan. Dan itu disatukan dengan Engine X gitu. Hal ini juga karena PHP itu blocking ya. Jadi prosesnya itu menunggu proses yang lainnya. Request satu menunggu request yang lainnya, begitu. Lalu juga
+
+[AI]
+Baik, jadi ada beberapa instance Laravel di balik Nginx ya untuk menangani blocking nature-nya PHP. Nah, dengan arsitektur seperti itu, bagaimana kamu memastikan konsistensi data kalau ada request yang datang bersamaan dan mencoba mengubah data yang sama? Misalnya pembaruan status pembayaran dari bank. Lalu, kalau salah satu instance down, apa yang terjadi dengan request yang sedang diproses? Apakah ada mekanisme recovery?
+
+[Candidate]
+Oh.
+
+[AI]
+Oh iya, tadi kamu juga menyebutkan tentang database MySQL yang sudah dioptimasi. Bisa tolong ceritakan lebih lanjut? Optimasi seperti apa yang kamu lakukan? Apakah ada perubahan skema, penggunaan indeks, atau mungkin query yang disesuaikan?
+
+[Candidate]
+Ya, yang pertama itu untuk ee apa namanya? Konsistensi kalau data-datanya bersamaan. Itu sudah di-handle oleh ee jadi kalau untuk konsistensi data datang bersamaan, itu pasti akan di-handle satu per satu. Karena memang pertama PHP ini belum fix.
+
+[Candidate]
+semisal data ini dua-duanya masuk tetap data yang masuk ke database itu menunggu data yang lainnya jadi ketika ada data dua data yang bersamaan nah di sini saya mengecek dengan eksternal ID namanya atau independensi key yang memang disedia kan oleh bank ini sendiri jadi ketika ID ini sudah masuk maka jangan terima request dengan ID yang sama gitu jadi memang untuk handle double request itu berdasarkan independensi key lalu untuk instance down itu akan otomatis dilempar ke instance CA. Begitu saja itu memang sudah diotomatisasi oleh Engine X-nya.
+
+[AI]
+Baik, soal konsistensi data dengan idempotency key dan penanganan instance down sudah cukup jelas. Sekarang kembali ke database MySQL tadi. Bisa ceritakan lebih lanjut tentang optimasinya? Perubahan apa saja yang kamu lakukan pada skema, indeks, atau mungkin query-nya untuk meningkatkan performa?
+
+[Candidate]
+Oke, mungkin karena memang ide awalnya itu saya itu adalah apa namanya ya? Implementasi secepat-cepatnya, implementasi sesegera mungkin. Jadi pada saat itu saya implementasinya itu tidak tidak tidak over engineering ya. Tidak tidak banyak ya. Memang bisa sih tapi optimasi dasar seperti indexing, kemudian query yang bagus, struktur arsitektur yang bagus dan sebagainya. Itu sudah diputuskan sejak awal. Begitupun untuk jenis ataupun cara data keuangan ini disimpan. Cara data keuangan ini di simpan saya pakai ledger. Saya sehingga ketika data transaksi nya itu sudah jutaan row. Itu
+
+[Candidate]
+bisa saya optimasi dengan melakukan summary pada data-datanya sehingga query itu bisa menjadi lebih cepat.
+
+[AI]
+Menarik soal penggunaan ledger dan optimasi dengan summary data. Untuk query summary itu sendiri, seberapa sering kamu menjalankannya dan bagaimana dampaknya terhadap performa database saat proses summary berlangsung? Apakah ada strategi tertentu yang diterapkan, misalnya dijalankan pada jam-jam tidak sibuk? Terus, kalau data transaksinya sudah benar-benar besar sekali, apakah kamu mempertimbangkan strategi lain selain summary, seperti partitioning, mungkin?
+
+[Candidate]
+Yeah. Itu sebetulnya memang sudah direncanakan sejak awal karena memang ee dari data transaksi sebelumnya pun itu sudah sudah ratusan ribu begitu loh. Yang baru berjalan hanya ee 2 tahun. Jadi memang ini sudah dipikirkan juga data itu akan sebesar apa. Tapi memang ee pada saat itu kita belum sampai ke tahapan partisi. Memang ada rencana, sudah sempat diskusi juga dengan ee senior saya dan manajer saya. Kalau memang ke depan pasti akan ada rencana untuk partisi dan sumari. Tapi untuk secara waktu itu kita rencananya akan di- lakukan sumari kalau memang data transaksinya tunggu. Ee bisa ratusan ribu per bulan itu akan di- akan dilakukan sumari per bulan. Jadi memang kuncinya itu bukan waktu, tapi kuncinya adalah jumlah data. Kalau memang misal ternyata dalam 1 hari itu sudah ada 100.000 data, maka akan langsung di-sumari. Begitu dan seterusnya. Jadi memang ada indikatornya itu bukan waktu, tapi indikatornya adalah jumlah data.
+
+[AI]
+Baik, menarik soal penentuan indikator summary berdasarkan jumlah data, bukan waktu. Terima kasih sudah berbagi detailnya. Kita sudah membahas tentang arsitektur sistem dan optimasi database. Ada hal lain yang ingin kamu sampaikan terkait pengalamanmu pada proyek ini? Mungkin tantangan di area lain?
+
+[Candidate]
+Ya, tantangan GRL lain itu terkait dengan sebetulnya ada hal yang belum saya jelaskan juga yaitu terkait messaging. Jadi memang setiap ada apa namanya? ee jadi secara flow itu kan sebetulnya nanti dari misal ada request dari ee M-Banking ya. M-Banking input virtual code
+
+[Candidate]
+kemudian nanti request ini akan masuk ke payment gateway, ke bank, kemudian dari bank masuk ke payment gateway saya dan dari payment gateway saya itu akan mencari di database client gitu. Nah, proses ini tuh kan banyak-banyak pipe yang harus dilalui, banyak servis yang harus dilewati. Nah, yang bisa saya toleransi itu adalah ketika dari payment gateway ke client. ke aplikasi klien kita. Nah, di sini itu saya tidak langsung memberikan respon ke aplikasi klien, tapi saya pakai messaging dulu. Tapi di sisi lain untuk respons dari gateway ke bank BRI-nya langsung gitu saya langsung. Jadi tidak ada messaging, tidak ada asinkronus tapi sinkronus prosesnya langsung. Jadi mungkin itu yang ee kurang saya tambahkan. Di sini saya juga pakai messaging untuk memberikan respon atau callback ke aplikasi client.
+
+[AI]
+Oh, jadi ada penggunaan messaging untuk notifikasi ke aplikasi klien ya, secara asinkron. Nah, terkait dengan respons sinkron dari bank ke gateway kamu, bagaimana kamu menangani potensi keterlambatan respons dari bank? Apakah ada timeout yang ditetapkan, dan apa yang dilakukan sistem jika terjadi timeout? Selain itu, untuk messaging tadi, bagaimana kamu memastikan keandalan pengiriman pesannya?
+
+[Candidate]
+Terkait dengan ee sinkronisasi dari bank ke payment gateway kamu. Kalau semisal ada keterlambatan respon dari bank itu sih sebenarnya hampir tidak mungkin ya. Bank itu jadi memang kita tuh tetap single source-nya itu adalah bank. Jadi memang yang biasanya memberikan tema itu justru kita
+
+[Candidate]
+Kalau bank timeout itu kayaknya nggak pernah, saya belum pernah mengalami. Nah, untuk kasusnya semisal dari server saya timeout jika ada request dari bank, itu biasanya bank akan mengirimkan beberapa request secara terus-menerus selama 15 menit tapi dengan ee timer yang eksponensial. Misal ee pertama tiga kali request langsung ee satu, dua, tiga dan kemudian nanti jeda satu menit nanti kalau satu menit masih nggak ada respon jeda lima belas menit dan seterusnya. Biasanya sampai maksimal itu 15 menit. doang. Nah, kalau semisal kayak gini ya sistemnya ya harus diandalkan. Artinya di sini jika ada keterlambatan respon tetap si source-nya karena dari bank ya kita membiarkan bank itu nge-hit API kita lagi ketika memang server kita sudah nyala gitu. Dan biasanya pun akan dikoordinasikan lewat ee grup gitu kalau semisal terjadi delay respon dari server kita. Nah, nantinya kita akan cek apa masalahnya dan sebagainya baru kita sampaikan ke grup. Misal masalahnya adalah sudah terselesaikan, ya sudah dari tim BRI bisa melakukan pengulangan gitu.
+
+[AI]
+Oh, jadi ada penggunaan messaging queue untuk callback ke klien ya. Terima kasih sudah menjelaskan detailnya, itu sangat membantu. Saya rasa saya sudah mendapatkan gambaran yang cukup jelas tentang pengalamanmu. Terima kasih banyak atas waktunya dan semoga berhasil!

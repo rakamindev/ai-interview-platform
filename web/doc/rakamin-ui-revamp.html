@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rakamin AI Interview — Revamped UI</title>
+  <style>
+    /* ─── RESET & BASE ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal-50:  #E1F5EE;
+      --teal-100: #9FE1CB;
+      --teal-400: #1D9E75;
+      --teal-600: #0F7B6C;
+      --teal-700: #0a5f54;
+      --teal-800: #085041;
+
+      --gray-0:   #ffffff;
+      --gray-50:  #F8F9FA;
+      --gray-100: #F1F3F5;
+      --gray-200: #E9ECEF;
+      --gray-300: #DEE2E6;
+      --gray-500: #ADB5BD;
+      --gray-700: #495057;
+      --gray-800: #343A40;
+      --gray-900: #212529;
+
+      --amber-50:  #FAEEDA;
+      --amber-700: #854F0B;
+      --blue-50:   #E6F1FB;
+      --blue-700:  #185FA5;
+      --purple-50: #EEEDFE;
+      --purple-700:#534AB7;
+      --green-50:  #EAF3DE;
+      --green-700: #3B6D11;
+      --red-50:    #FCEBEB;
+      --red-700:   #A32D2D;
+
+      --surface:        #FFFFFF;
+      --surface-subtle: #F8F9FA;
+      --surface-raised: #FFFFFF;
+      --border:         #E9ECEF;
+      --border-strong:  #DEE2E6;
+      --text-primary:   #212529;
+      --text-secondary: #495057;
+      --text-muted:     #868E96;
+      --text-danger:    #A32D2D;
+
+      --radius-sm: 6px;
+      --radius:    8px;
+      --radius-lg: 12px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--surface-subtle);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ─── NAVBAR ──────────────────────────────────────────────────── */
+    .navbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-decoration: none;
+      margin-right: 28px;
+      flex-shrink: 0;
+    }
+
+    .brand-logo {
+      width: 30px;
+      height: 30px;
+      background: var(--teal-600);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-logo svg { display: block; }
+
+    .nav-links {
+      display: flex;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .nav-tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border: none;
+      background: none;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .nav-tab:hover { background: var(--surface-subtle); color: var(--text-primary); }
+
+    .nav-tab.active {
+      background: var(--teal-50);
+      color: var(--teal-600);
+    }
+
+    .nav-tab svg { width: 16px; height: 16px; }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .tenant-pill {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border-strong);
+      padding: 4px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: none;
+      border: 1px solid transparent;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+
+    .logout-btn:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    /* ─── LAYOUT ──────────────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 28px;
+    }
+
+    /* ─── PAGE HEADER ─────────────────────────────────────────────── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+
+    .page-title { font-size: 22px; font-weight: 600; color: var(--text-primary); }
+    .page-meta  { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+
+    /* ─── BUTTONS ─────────────────────────────────────────────────── */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--teal-600);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .btn-primary:hover { background: var(--teal-700); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover { background: var(--surface-subtle); color: var(--text-primary); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      color: var(--text-secondary);
+      border: none;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .btn-ghost:hover { background: var(--surface-subtle); color: var(--text-primary); }
+
+    /* ─── FILTER PILLS ────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .filter-pill {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .filter-pill:hover { background: var(--surface-subtle); color: var(--text-primary); }
+    .filter-pill.active { background: var(--teal-50); color: var(--teal-600); border-color: var(--teal-100); }
+
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: var(--teal-600);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    /* ─── ASSESSMENT CARDS ────────────────────────────────────────── */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .assessment-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.12s, box-shadow 0.12s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .assessment-card:hover {
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-icon svg { width: 20px; height: 20px; }
+
+    .card-body { flex: 1; min-width: 0; }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .meta-item svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .meta-divider {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--gray-300);
+    }
+
+    .cand-chip {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      padding: 2px 9px;
+      border-radius: 20px;
+    }
+
+    .card-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .chevron svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+    }
+
+    /* ─── BADGES ──────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .badge-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    .badge-completed { background: var(--teal-50);   color: #0F6E56; }
+    .badge-waiting   { background: var(--amber-50);  color: #854F0B; }
+    .badge-failed    { background: var(--red-50);    color: #A32D2D; }
+    .badge-active    { background: var(--blue-50);   color: #185FA5; }
+
+    /* ─── SKILL TAGS ──────────────────────────────────────────────── */
+    .skills-wrap { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .skill-tag {
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      padding: 2px 9px;
+      border-radius: 20px;
+    }
+
+    /* ─── BREADCRUMB ──────────────────────────────────────────────── */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .breadcrumb a {
+      color: var(--text-muted);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .breadcrumb a:hover { color: var(--teal-600); text-decoration: underline; }
+    .breadcrumb-sep { font-size: 11px; }
+    .breadcrumb-current { color: var(--text-primary); font-weight: 500; }
+
+    /* ─── FORM CARD ───────────────────────────────────────────────── */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 28px;
+      max-width: 680px;
+    }
+
+    .form-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .form-required { color: var(--text-danger); font-size: 12px; }
+
+    .form-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .form-input {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.12s, box-shadow 0.12s;
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      border-color: var(--teal-600);
+      box-shadow: 0 0 0 3px rgba(15, 123, 108, 0.12);
+    }
+
+    .form-input::placeholder { color: var(--text-muted); }
+
+    textarea.form-input {
+      resize: vertical;
+      min-height: 96px;
+      line-height: 1.6;
+    }
+
+    select.form-input { cursor: pointer; }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+
+    /* ─── SKILLS WIDGET ───────────────────────────────────────────── */
+    .skills-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .skills-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .skills-required {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Empty skills state */
+    .skills-empty {
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+    }
+
+    .skills-empty-icon {
+      margin: 0 auto 10px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .skills-empty-icon svg {
+      width: 28px;
+      height: 28px;
+      color: var(--gray-500);
+    }
+
+    .skills-empty-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .skills-empty-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Populated skills state */
+    .skills-list {
+      display: none; /* show when skills added */
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .skill-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .skill-row:last-child { border-bottom: none; }
+
+    .skill-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .skill-weight {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .skill-remove {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 4px;
+      transition: color 0.1s;
+      display: flex;
+      align-items: center;
+    }
+
+    .skill-remove:hover { color: var(--text-danger); }
+    .skill-remove svg { width: 14px; height: 14px; }
+
+    /* Add skill buttons */
+    .skill-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    /* ─── FORM ACTIONS ────────────────────────────────────────────── */
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      margin-top: 24px;
+    }
+
+    /* ─── ASSESSMENT DETAIL PAGE ──────────────────────────────────── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ─── SESSION STATS ───────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ─── CANDIDATE TABLE ─────────────────────────────────────────── */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    table.cand-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .cand-table th {
+      padding: 9px 18px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cand-table td {
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    .cand-table tr:last-child td { border-bottom: none; }
+
+    .cand-table tr:hover td { background: var(--surface-subtle); }
+
+    .cand-name {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    /* Score bar */
+    .score-wrap { display: flex; align-items: center; gap: 8px; }
+
+    .score-bar {
+      flex: 1;
+      height: 5px;
+      background: var(--border-strong);
+      border-radius: 3px;
+      overflow: hidden;
+      min-width: 60px;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .score-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      min-width: 28px;
+      text-align: right;
+    }
+
+    /* ─── SIDEBAR ─────────────────────────────────────────────────── */
+    .sidebar-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-title svg { width: 15px; height: 15px; color: var(--teal-400); }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .info-row:last-child { border-bottom: none; }
+
+    .info-key { color: var(--text-muted); }
+    .info-val { color: var(--text-primary); font-weight: 500; }
+
+    /* Skills breakdown */
+    .skill-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .skill-item {}
+    .skill-item-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .skill-item-name { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+    .skill-item-score { font-size: 12px; color: var(--text-muted); }
+
+    .skill-bar {
+      height: 5px;
+      background: var(--border-strong);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .skill-bar-fill {
+      height: 100%;
+      background: var(--teal-400);
+      border-radius: 3px;
+    }
+
+    /* ─── EMPTY STATE ─────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
+    }
+
+    .empty-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .empty-icon svg { width: 24px; height: 24px; color: var(--text-muted); }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    .empty-desc  { font-size: 13px; color: var(--text-secondary); margin-bottom: 18px; }
+
+    /* ─── LINK SESSION BANNER ─────────────────────────────────────── */
+    .link-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--teal-50);
+      border: 1px solid var(--teal-100);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+
+    .link-banner svg { width: 18px; height: 18px; color: var(--teal-400); flex-shrink: 0; }
+
+    .link-banner-text { flex: 1; font-size: 12px; color: var(--teal-800); }
+    .link-banner-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
+
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--teal-600);
+      background: #fff;
+      border: 1px solid var(--teal-100);
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.1s;
+    }
+
+    .copy-btn:hover { background: var(--teal-50); }
+    .copy-btn svg { width: 13px; height: 13px; }
+
+    /* ─── TOAST ───────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--gray-900);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast svg { width: 15px; height: 15px; color: var(--teal-100); }
+
+    /* ─── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      .detail-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .form-row-2 { grid-template-columns: 1fr; }
+      .container { padding: 20px 16px; }
+      .navbar { padding: 0 16px; }
+      .brand-name { display: none; }
+      .tenant-pill { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════════ -->
+<nav class="navbar">
+  <a class="brand" href="#" onclick="showPage('assessments')">
+    <div class="brand-logo">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="white" opacity="0.9"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="white" opacity="0.6"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="white" opacity="0.6"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="white" opacity="0.9"/>
+      </svg>
+    </div>
+    <span class="brand-name">Rakamin AI Interview</span>
+  </a>
+
+  <div class="nav-links">
+    <button class="nav-tab active" id="nav-assessments" onclick="showPage('assessments')">
+      <!-- clipboard icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="1"/>
+        <path d="M9 12h6M9 16h4"/>
+      </svg>
+      Assessments
+    </button>
+    <button class="nav-tab" id="nav-vacancies" onclick="showPage('vacancies')">
+      <!-- briefcase icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="2" y="7" width="20" height="14" rx="2"/>
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        <line x1="12" y1="12" x2="12" y2="12"/>
+        <path d="M2 12h20"/>
+      </svg>
+      Vacancies
+    </button>
+  </div>
+
+  <div class="nav-right">
+    <span class="tenant-pill">Demo Tenant</span>
+    <button class="logout-btn" onclick="showToast('Logged out')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+      </svg>
+      Logout
+    </button>
+  </div>
+</nav>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE: ASSESSMENTS LIST
+════════════════════════════════════════════════════ -->
+<div class="page active" id="page-assessments">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Assessments</h1>
+        <p class="page-meta">7 templates &nbsp;·&nbsp; last session today</p>
+      </div>
+      <button class="btn-primary" onclick="showPage('new-assessment')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New assessment
+      </button>
+    </div>
+
+    <!-- Filter pills -->
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="setFilter(this)">All <span class="filter-count">7</span></button>
+      <button class="filter-pill" onclick="setFilter(this)">Completed</button>
+      <button class="filter-pill" onclick="setFilter(this)">Awaiting</button>
+      <button class="filter-pill" onclick="setFilter(this)">Failed</button>
+    </div>
+
+    <!-- Assessment cards -->
+    <div class="card-list">
+
+      <!-- Card 1: Completed -->
+      <a class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#E1F5EE;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Senior Backend Engineer</div>
+          <div class="card-meta">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              45 min
+            </span>
+            <span class="meta-divider"></span>
+            <span class="cand-chip">3 candidates</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Card 2: Awaiting -->
+      <a class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#E6F1FB;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Front End Developer</div>
+          <div class="card-meta">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              45 min
+            </span>
+            <span class="meta-divider"></span>
+            <span class="cand-chip">1 candidate</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-waiting"><span class="badge-dot"></span>Awaiting candidate</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Card 3: Awaiting -->
+      <a class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#EEEDFE;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="1.8">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Team Lead Back End</div>
+          <div class="card-meta">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              45 min
+            </span>
+            <span class="meta-divider"></span>
+            <span class="cand-chip">2 candidates</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-waiting"><span class="badge-dot"></span>Awaiting candidate</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Card 4: Completed -->
+      <a class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#E1F5EE;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Senior Back End</div>
+          <div class="card-meta">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              60 min
+            </span>
+            <span class="meta-divider"></span>
+            <span class="cand-chip">5 candidates</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Card 5: Completed -->
+      <a class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#FAEEDA;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+            <line x1="12" y1="2" x2="12" y2="22"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Full Stack Developer</div>
+          <div class="card-meta">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              45 min
+            </span>
+            <span class="meta-divider"></span>
+            <span class="cand-chip">4 candidates</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </a>
+
+      <!-- Card 6: Failed -->
+      <a class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#FCEBEB;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Tes</div>
+          <div class="card-meta">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              45 min
+            </span>
+            <span class="meta-divider"></span>
+            <span class="cand-chip">0 candidates</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-failed"><span class="badge-dot"></span>Failed</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE: NEW ASSESSMENT FORM
+════════════════════════════════════════════════════ -->
+<div class="page" id="page-new-assessment">
+  <div class="container">
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">New assessment</span>
+    </div>
+
+    <div class="form-card">
+      <!-- Section: Role -->
+      <div class="form-section-title">Role details</div>
+
+      <div class="form-group">
+        <label class="form-label">
+          Role title
+          <span class="form-required">*</span>
+        </label>
+        <input class="form-input" type="text" placeholder="e.g. Senior Frontend Engineer" />
+        <p class="form-hint">Used to generate AI interview questions and identify the session.</p>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">
+            Session time limit
+            <span class="form-required">*</span>
+          </label>
+          <select class="form-input">
+            <option>30 min</option>
+            <option selected>45 min</option>
+            <option>60 min</option>
+            <option>90 min</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Interview language</label>
+          <select class="form-input">
+            <option selected>English</option>
+            <option>Bahasa Indonesia</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="form-divider" />
+
+      <!-- Section: Skills -->
+      <div class="skills-header">
+        <span class="skills-label">Skills to assess</span>
+        <span class="skills-required">At least 1 required</span>
+      </div>
+
+      <!-- Empty state (default) -->
+      <div class="skills-empty" id="skills-empty">
+        <div class="skills-empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+          </svg>
+        </div>
+        <div class="skills-empty-text">No skills added yet.</div>
+        <div class="skills-empty-sub">Add at least one to continue.</div>
+      </div>
+
+      <!-- Populated state (shown after adding) -->
+      <div class="skills-list" id="skills-list">
+        <div class="skill-row">
+          <div class="skill-name">Node.js</div>
+          <span class="badge badge-completed" style="font-size:10px;padding:2px 8px;">Core</span>
+          <button class="skill-remove" onclick="removeSkill(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">System Design</div>
+          <span class="badge badge-active" style="font-size:10px;padding:2px 8px;">Core</span>
+          <button class="skill-remove" onclick="removeSkill(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">PostgreSQL</div>
+          <span class="badge badge-waiting" style="font-size:10px;padding:2px 8px;">Secondary</span>
+          <button class="skill-remove" onclick="removeSkill(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="skill-actions">
+        <button class="btn-secondary" onclick="addSkillDemo()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add from taxonomy
+        </button>
+        <button class="btn-secondary" onclick="addSkillDemo()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add custom skill
+        </button>
+      </div>
+
+      <!-- Form actions -->
+      <div class="form-actions">
+        <button class="btn-ghost" onclick="showPage('assessments')">Cancel</button>
+        <button class="btn-primary" onclick="showToast('Assessment saved and session created')">
+          Save and create session
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE: ASSESSMENT DETAIL
+════════════════════════════════════════════════════ -->
+<div class="page" id="page-detail">
+  <div class="container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Senior Backend Engineer</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Senior Backend Engineer</h1>
+        <p class="page-meta">Created 12 Aug 2026 &nbsp;·&nbsp; 45 min &nbsp;·&nbsp; English</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="showPage('new-assessment')">Edit</button>
+        <button class="btn-primary" onclick="showToast('New session link copied')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New session
+        </button>
+      </div>
+    </div>
+
+    <!-- Session link banner -->
+    <div class="link-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+      <div class="link-banner-text">
+        <strong>Candidate session link ready</strong>
+        Share this link with candidates to start the interview
+      </div>
+      <button class="copy-btn" onclick="showToast('Link copied to clipboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy link
+      </button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total candidates</div>
+        <div class="stat-value">3</div>
+        <div class="stat-sub">2 completed &nbsp;·&nbsp; 1 pending</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg. score</div>
+        <div class="stat-value">74<span style="font-size:16px;color:var(--text-muted);">/100</span></div>
+        <div class="stat-sub">across 2 completed sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Completion rate</div>
+        <div class="stat-value">67<span style="font-size:16px;color:var(--text-muted);">%</span></div>
+        <div class="stat-sub">2 of 3 finished</div>
+      </div>
+    </div>
+
+    <!-- Main + sidebar -->
+    <div class="detail-grid">
+      <div>
+        <!-- Candidates table -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-title">Candidates</span>
+            <button class="btn-ghost" style="font-size:12px;padding:5px 10px;">Export CSV</button>
+          </div>
+          <table class="cand-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Submitted</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="cand-name">
+                    <div class="avatar" style="background:#E1F5EE;color:#0F6E56;">AB</div>
+                    Andi Budiman
+                  </div>
+                </td>
+                <td style="color:var(--text-muted);font-size:12px;">14 Aug 2026</td>
+                <td>
+                  <div class="score-wrap">
+                    <div class="score-bar">
+                      <div class="score-fill" style="width:82%;background:#1D9E75;"></div>
+                    </div>
+                    <span class="score-text">82</span>
+                  </div>
+                </td>
+                <td><span class="badge badge-completed"><span class="badge-dot"></span>Completed</span></td>
+                <td><button class="btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="showToast('Opening Andi\'s report...')">View report</button></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cand-name">
+                    <div class="avatar" style="background:#E6F1FB;color:#185FA5;">SR</div>
+                    Sari Rahayu
+                  </div>
+                </td>
+                <td style="color:var(--text-muted);font-size:12px;">15 Aug 2026</td>
+                <td>
+                  <div class="score-wrap">
+                    <div class="score-bar">
+                      <div class="score-fill" style="width:66%;background:#1D9E75;"></div>
+                    </div>
+                    <span class="score-text">66</span>
+                  </div>
+                </td>
+                <td><span class="badge badge-completed"><span class="badge-dot"></span>Completed</span></td>
+                <td><button class="btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="showToast('Opening Sari\'s report...')">View report</button></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cand-name">
+                    <div class="avatar" style="background:#FAEEDA;color:#854F0B;">DP</div>
+                    Dika Pratama
+                  </div>
+                </td>
+                <td style="color:var(--text-muted);font-size:12px;">—</td>
+                <td style="color:var(--text-muted);font-size:12px;">Not yet</td>
+                <td><span class="badge badge-waiting"><span class="badge-dot"></span>Awaiting</span></td>
+                <td><button class="btn-ghost" style="font-size:12px;padding:5px 10px;color:var(--text-muted);" disabled>View report</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div>
+        <!-- Assessment info -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Assessment details
+          </div>
+          <div class="info-row">
+            <span class="info-key">Duration</span>
+            <span class="info-val">45 min</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Language</span>
+            <span class="info-val">English</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Skills</span>
+            <span class="info-val">3 assessed</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Created</span>
+            <span class="info-val">12 Aug 2026</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Status</span>
+            <span class="badge badge-completed" style="font-size:11px;"><span class="badge-dot"></span>Active</span>
+          </div>
+        </div>
+
+        <!-- Skills breakdown -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            Avg. skill scores
+          </div>
+          <div class="skill-breakdown">
+            <div class="skill-item">
+              <div class="skill-item-header">
+                <span class="skill-item-name">Node.js</span>
+                <span class="skill-item-score">78/100</span>
+              </div>
+              <div class="skill-bar">
+                <div class="skill-bar-fill" style="width:78%;"></div>
+              </div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-item-header">
+                <span class="skill-item-name">System Design</span>
+                <span class="skill-item-score">70/100</span>
+              </div>
+              <div class="skill-bar">
+                <div class="skill-bar-fill" style="width:70%;"></div>
+              </div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-item-header">
+                <span class="skill-item-name">PostgreSQL</span>
+                <span class="skill-item-score">74/100</span>
+              </div>
+              <div class="skill-bar">
+                <div class="skill-bar-fill" style="width:74%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE: VACANCIES (EMPTY STATE)
+════════════════════════════════════════════════════ -->
+<div class="page" id="page-vacancies">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Vacancies</h1>
+        <p class="page-meta">Link assessments to open roles</p>
+      </div>
+      <button class="btn-primary" onclick="showToast('New vacancy form coming soon')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New vacancy
+      </button>
+    </div>
+
+    <div class="section-card">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+            <line x1="12" y1="12" x2="12" y2="12"/>
+            <path d="M2 12h20"/>
+          </svg>
+        </div>
+        <h2 class="empty-title">No vacancies yet</h2>
+        <p class="empty-desc">Create a vacancy to start assessing candidates against an open role. Vacancies let you track multiple candidates for the same position.</p>
+        <button class="btn-secondary" onclick="showToast('New vacancy form coming soon')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Create your first vacancy
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+  <span id="toast-text"></span>
+</div>
+
+
+<script>
+  // ─── Navigation ────────────────────────────────────
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+    const pageMap = {
+      'assessments':    'page-assessments',
+      'new-assessment': 'page-new-assessment',
+      'detail':         'page-detail',
+      'vacancies':      'page-vacancies',
+    };
+
+    const navMap = {
+      'assessments':    'nav-assessments',
+      'new-assessment': 'nav-assessments',
+      'detail':         'nav-assessments',
+      'vacancies':      'nav-vacancies',
+    };
+
+    const pageEl = document.getElementById(pageMap[name]);
+    const navEl  = document.getElementById(navMap[name]);
+    if (pageEl) pageEl.classList.add('active');
+    if (navEl)  navEl.classList.add('active');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ─── Filter pills ──────────────────────────────────
+  function setFilter(el) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // ─── Skill demo toggle ─────────────────────────────
+  let skillsVisible = true; // starts shown in demo
+
+  function addSkillDemo() {
+    document.getElementById('skills-empty').style.display = 'none';
+    document.getElementById('skills-list').style.display  = 'block';
+    showToast('Skill added');
+  }
+
+  function removeSkill(btn) {
+    const row  = btn.closest('.skill-row');
+    const list = document.getElementById('skills-list');
+    row.remove();
+    if (!list.querySelectorAll('.skill-row').length) {
+      list.style.display = 'none';
+      document.getElementById('skills-empty').style.display = 'block';
+    }
+  }
+
+  // ─── Toast ────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = msg;
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), 2400);
+  }
+
+  // Show skills list by default in form demo
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('skills-empty').style.display = 'none';
+    document.getElementById('skills-list').style.display  = 'block';
+  });
+</script>
+</body>
+</html>

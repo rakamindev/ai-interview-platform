@@ -1,0 +1,62 @@
+[AI]
+Halo, terima kasih sudah meluangkan waktu. Langsung saja ya, bisa ceritakan tentang proyek teknis yang paling menantang yang kamu kerjakan belakangan ini? Apa yang bikin proyek itu susah?
+
+[Candidate]
+Halo, kamu bisa dengar aku nggak?
+
+[AI]
+Halo, ya, suaramu jelas sekali. Bagaimana, bisa ceritakan tentang proyek menantang yang tadi saya tanyakan?
+
+[Candidate]
+pengenalan bikin project dashboard
+
+[AI]
+Oh, dashboard. Menarik. Di dashboard itu, fitur apa saja yang kamu implementasikan? Dan tantangan terbesarnya ada di bagian mana?
+
+[Candidate]
+untuk ada beberapa dashboard sih yang pertama itu dashboard tentang dashboard Viva Viva Bank BRI di mana
+
+[AI]
+Oke, ada beberapa dashboard. Untuk dashboard BRIVA tadi, kamu mengelola data yang ditampilkan bagaimana? Pakai state management khusus atau cuma lempar data dari API saja? Dan pernah ngalamin masalah performa nggak di situ?
+
+[Candidate]
+untuk performa sih ya sejauh ini nggak ada karena emang dari back end itu udah ee sih udah clean gitulah. Mungkin untuk ee penerapan ee data agar lebih mudah di baca, terus pokoknya aku sih lebih ke front end nya ya untuk ee
+
+[AI]
+Wait, input contains valid wrap_up signal, but not all skills are covered. Continuing interview.
+
+
+Baik, jadi performa aman ya. Nah, kalau soal data tadi, kamu pernah nggak ngalamin masalah dengan response time API yang lambat? Atau mungkin struktur datanya kurang sesuai dengan kebutuhan front end? Bagaimana kamu mengakalinya?
+
+[Candidate]
+Nah kebetulan aku tuh full stack jadi kadang itu aku benerin sendiri gitu sesuai dengan front end POV front end nya Q karena kan kadang tuh back end nya itu kurang lengkap lah memberi informasi yang pengen aku sampaikan nih ke
+
+[AI]
+Wait, input contains valid wrap_up signal, but not all skills are covered. Continuing interview.
+
+
+Oh, jadi kamu handle full stack ya? Menarik. Berarti kamu juga yang desain skema databasenya? Bisa ceritakan sedikit tentang desain database untuk dashboard BRIVA tadi? Pakai relasi antar tabel atau gimana? Dan sejauh ini ada query yang perlu dioptimasi nggak?
+
+[Candidate]
+stack tapi aku nggak megang ke database intinya sih aku lebih ke ee CRUD back end CRUD terus penamaan-penamaan kolom yang palingan kayak cuman ee emang butuh gitu loh kayak semisal oh ini baiknya di coba deh di-improve ditambahin kolom apa gitu loh kalau emang ada studi case tuh jadi itu ee untuk ee apa ya?
+
+[AI]
+Oh, jadi lebih ke penyesuaian kolom di level back end ya, bukan desain skema dari awal. Nah, kalau gitu, pernah nggak kamu mengusulkan perubahan pada API yang sudah ada karena alasan performa atau kemudahan data yang harus ditampilkan di front end? Contoh kasusnya seperti apa?
+
+[Candidate]
+Ee itu pernah pas itu ada ee
+
+[AI]
+Bisa kamu ceritakan lebih detail saat kamu mengusulkan perubahan itu? Apa yang mendasari keputusanmu dan apa dampaknya setelah diubah?
+
+[Candidate]
+Ya, pertama sih ini ya, di perusahaan saat ini aku tuh kayak menjadi ee review
+
+[AI]
+Itu pengalaman yang bagus ya, bisa memberikan review dan masukan. Saya rasa saya sudah punya gambaran yang cukup jelas, terima kasih atas penjelasannya. Kamu bisa tunggu kabar selanjutnya dari tim kami.
+
+[Candidate]
+ini ada kelanjutan interview-nya?
+
+[AI]
+Saya pikir saya sudah dapat gambaran yang jelas, terima kasih atas waktunya. Kamu bisa tunggu kabar selanjutnya dari tim kami.

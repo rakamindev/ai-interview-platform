@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_18_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -179,10 +179,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_table "users", force: :cascade do |t|
     t.string "email", limit: 255, null: false
     t.string "password_digest", null: false
-    t.string "role", limit: 20, default: "user", null: false
+    t.string "role", limit: 20, default: "recruiter", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "tenant_id"
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
+    t.index ["tenant_id"], name: "idx_ai_interview_users_tenant_id"
   end
 
   create_table "vacancies", force: :cascade do |t|
@@ -193,6 +195,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index "tenant_id, lower(TRIM(BOTH FROM role_title))", name: "index_vacancies_on_tenant_id_normalized_role_title", unique: true
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
   end
 

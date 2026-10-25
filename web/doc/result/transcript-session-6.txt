@@ -1,0 +1,62 @@
+[AI]
+Halo, terima kasih sudah meluangkan waktu. Mari kita mulai saja. Bisa ceritakan tentang proyek yang menurutmu paling menantang secara teknis akhir-akhir ini? Apa yang membuatnya begitu kompleks?
+
+[Candidate]
+Mhm. Oke. Salah satunya yang pernah saya kerjakan dan cukup kompleks itu adalah payment gateway. Saya pernah membuat semacam payment gateway untuk perusahaan di mana saya di tempat ee di mana saya bekerja sebelumnya. Jadi, payment gateway tapi payment gateway ini memiliki scope yang jelas yaitu hanya digunakan oleh internal perusahaan. Dan juga hanya untuk saat satu bank saja di mana bank itu adalah Bank Negara Indonesia. Atau BNI. Eh, sori. Bank Rakyat Indonesia.
+
+[AI]
+Oh, menarik ya, membangun payment gateway internal untuk satu bank. Bisa ceritakan lebih detail soal teknologi yang kamu gunakan dan bagaimana kamu mendesain aliran datanya supaya aman dan handal? Terutama dalam hal menangani transaksi.
+
+[Candidate]
+teknologi yang aku pakai sih sebenarnya cukup mengejutkan juga ya. Banyak yang nggak menyangka kalau teknologi ini bisa dipakai untuk payment gateway. Saya pakai PHP. Tapi dengan optimasi dengan optimasi di engine X nya sehingga ee pembagian balancing apa? Pembagian apa? nama nya sih bebannya itu merata load balancer nya juga saya optimasi. Begitu. pun untuk case nya ee vertikal vertikal ataupun baik ee vertikal ataupun horizontal scaling nya sudah saya sesuaikan sehingga bisa meng-handle transaksi ribuan. Dan untuk transaksinya itu cukup besar. Terakhir saya cek dalam waktu 1 hari itu sekitar Rp200 juta. untuk angka nominal yang berhasil di ee transaksi kan. dan untuk aliran datanya itu ee beberapa karena PHP itu adalah blokir ya. Jadi saya pakai ee message queue dari RabbitMQ untuk handle beberapa data yang memerlukan ee sori beberapa klien yang memang memerlukan retry secara otomatis. Dan biasanya ini ee RabbitMQ saya gunakan untuk callback ke API klien nya gitu.
+
+[AI]
+Baik, berarti ada PHP, Nginx, lalu RabbitMQ untuk antrean callback. Nah, dengan volume transaksi yang cukup besar itu, bagaimana kamu mengelola konsistensi data saat terjadi lonjakan trafik? Dan apa yang terjadi kalau RabbitMQ-nya down? Adakah backup plan-nya?
+
+[Candidate]
+Iya, jadi kalau semisal ee sejauh ini sih kita punya beberapa servis. Sebenarnya sih belum pernah down ya untungnya. Tapi memang kalau semisal sampai down, ee langkah yang saya lakukan itu adalah membuat beberapa instance RabbitMQ. Tapi memang untuk lonjakan trafik sejauh ini belum pernah ter- jadi sampai dengan membuat server down. Karena memang semuanya itu kita kontrol sendiri. Server kita kontrol sendiri. VPS. Kemudian, ya pokoknya semuanya kita mandiri. Sehingga karena kemandirian ini kontrol semua itu menjadi lebih ee
+
+[AI]
+Baik, berarti kontrolnya penuh ya. Nah, sempat disinggung juga soal volume transaksi yang besar. Bisa ceritakan bagaimana kamu mendesain skema database-nya saat awal pengembangan? Dan apakah ada strategi khusus waktu melakukan migrasi data jika diperlukan? Misalnya untuk optimasi performa.
+
+[Candidate]
+B. Oke, sebetulnya sih pada pengembangan awal saya itu tidak terlalu over engineering ataupun berlebihan ketika mendesain database. Fokus saya itu utama yaitu adalah bisa ee meng-handle transaksi ribuan dulu, belum puluhan ribu. Jadi memang konsep dasarnya itu saya pakai ledger biasa. Dan data base-nya pun belum saya splitting sampai jadi beberapa partisi. Jadi memang masih ee sederhana yang penting konsepnya itu tercapai. Tujuannya itu tercapai dan ee aplikasi ataupun database bisa me-handle-nya dengan baik. Jadi secara performa itu sudah cukup. Dengan kondisi yang sudah saya kerjakan.
+
+[AI]
+Baik, pendekatan ledger biasa untuk awal ya. Nah, seiring bertambahnya data dan transaksi, kapan kamu mulai memikirkan optimasi lebih lanjut seperti indexing atau query optimization? Ada kasus konkret nggak, di mana query tertentu jadi lambat dan harus kamu perbaiki?
+
+[Candidate]
+Enggak, kalau itu sudah by design, pasti saya indexing. Setiap kolom yang sering saya query itu pasti saya indexing. Kolom ID, kolom ee waktu created at, created by, dan sebagainya itu pasti saya indexing. Untuk query optimization, itu juga by default saya pasti pasti sering pasti saya optimasi. Dari awal jadi sejauh ini di ee development itu saya belum eh sori, di operasional saya belum pernah mengalami bottleneck secara kode ya.
+
+[AI]
+Baik, berarti sudah terencana dengan baik ya dari awal. Nah, dari semua yang sudah kamu kerjakan di proyek payment gateway ini, kalau disuruh melihat kembali, ada hal apa yang ingin kamu ubah atau tingkatkan kalau punya kesempatan lagi? Mungkin dari segi arsitektur atau pemilihan teknologi lainnya.
+
+[Candidate]
+Betul betul betul. Emang untuk teknologinya itu yang paling kacau sih. Karena memang dengan saya pakai HP otomatis gaya servernya itu bengkak. Oke. Pada saat itu total ee konsumsi CPU-nya itu sangat tinggi. Tapi memang karena server kita juga besar jadi enggak ada isu sama sekali. Di CPU atau pun di RAM. Jadi kalau memang ada kesempatan pun untuk menyesuaikan lagi saya akan ubah teknologi nya. Mungkin pakai Golang. Yang lebih ke
+
+[Candidate]
+murah secara konsumsi RAM ataupun konsumsi prosesornya begitu. Dan juga untuk arsitektur saya rasa sudah cukup. Di mana menggunakan RabbitMQ untuk messaging. Paling satu pendekatan saya belum paakai caching seperti Redis. Untuk lebih cepat memberikan respon. Paling itu yang akan saya kembangkan.
+
+[AI]
+Menarik, kamu mempertimbangkan Golang untuk efisiensinya dan Redis untuk caching. Itu ide bagus ya. Nah, terkait dengan lonjakan trafik yang sempat kita bahas, bagaimana kamu memastikan kalau database-mu bisa menangani peningkatan beban baca dan tulis sejalan dengan pertumbuhan pengguna? Apakah ada rencana untuk menerapkan replikasi atau partitioning?
+
+[Candidate]
+Iya, ada rencana ada rencana. Sempat saya mau buat eh partisi link untuk eh summary karena saya konsepnya ledger jadi memang rencana ke depannya itu sudah saya eh note juga. Jadi
+
+[Candidate]
+saksi rowing jumlah rowing itu sudah sangat besar atau sudah sampai jutaan. Itu bisa saya summary per ee saya lupa. Kalau enggak salah per nomor virtual gitu loh. Jadi nantinya bisa menjadi lebih efisien dan kecepatan untuk transaksi nya. Ee untuk
+
+[AI]
+Rencana partitioning untuk summary data transaksi itu strategi yang bagus buat performa. Oke, saya sudah dapat gambaran cukup jelas tentang proyekmu. Terima kasih sudah berbagi detailnya. Ada yang mau kamu tanyakan tentang saya atau peran ini?
+
+[Candidate]
+Oke, mungkin saya mau tanya terkait ini aja sih, perusahaan itu sebetulnya seberapa mungkin seberapa butuhnya dalam hal ini teknologi ya. Karena kan case yang saya maaf job yang saya lamar itu terkait dengan arsitek desain dan database desain. Kan apakah ini spesifik ke IT saja atau termasuk ke
+
+[AI]
+Tentu, peran ini sangat krusial ya, karena pondasi sistem dan database yang kuat itu kunci untuk skalabilitas dan keandalan layanan kami dalam jangka panjang. Jadi, kontribusinya bisa berdampak langsung pada kesuksesan produk dan bisnis. Ada yang ingin kamu ketahui lebih lanjut soal timnya atau proyek mendatang?
+
+[Candidate]
+Hansel lebih ingin tahu soal tax sexy, apa yang dipakai di perusahaan ya?
+
+[AI]
+Baik, saya paham ketertarikanmu pada stack teknologi perusahaan. Terima kasih atas waktunya hari ini, kami akan kabari segera proses selanjutnya.

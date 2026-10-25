@@ -1,0 +1,68 @@
+[AI]
+Halo, terima kasih sudah datang. Kita langsung mulai saja ya. Bisa ceritakan tentang proyek terbaru kamu yang paling menantang secara teknis? Apa tantangannya dan bagaimana kamu menyelesaikannya?
+
+[AI]
+Ceritakan tentang proyek React yang paling menantang secara teknis yang pernah kamu kerjakan baru-baru ini. Bagian mana yang paling sulit?
+
+[Candidate]
+Hello.
+
+[AI]
+Halo. Bisa ceritakan tentang proyek React yang paling menantang secara teknis yang pernah kamu kerjakan? Bagian mana yang paling sulit?
+
+[Candidate]
+Ya, aku pernah bikin ee sistem, yaitu sistem manufaktur inventori stok. Untuk ee manufaktur tekstil, di mana ee user ini membutuhkan sebuah dashboard untuk melihat visibility, status pembayaran, status deal. Free, status hutang maupun piutang. Jadi ee di mana saya harus membuata dashboard yang mudah di ee memberikan informasi cepat untuk si user agar bisa membuat decision yang lebih tepat. Ee dari data tersebut itu. Dan untuk ee datanya kan banyak. Untuk penyajian dari data tersebut. Itu saya ee menggunakan paginasi. Untuk mengatur optimize dari front end. Agar ee data yang di-load itu tidak berat di front end. Jadi saya memutuskan untuk semua queries, semua filter, semua paginasi itu di-handle di back end. Seperti itu.
+
+[AI]
+Oh, jadi kamu pakai paginasi di backend ya untuk optimasi. Nah, kalau misal data yang di-load banyak terus user sering pindah-pindah halaman, ada pertimbangan khusus nggak sih di sisi frontend buat caching atau semacamnya biar performanya tetap bagus? Apa cuma ngandelin respon dari API aja?
+
+[Candidate]
+Aku juga nambahin cacing itu pakai cacing sih aku pakai. Itu
+
+[AI]
+Pakai caching ya, oke. Bisa diperjelas nggak implementasi caching-nya seperti apa? Misal, kamu nyimpen datanya di mana, terus kapan data itu dianggap basi dan harus diambil ulang?
+
+[Candidate]
+Aku pakai library, eh library-nya itu namanya aku lupa. Jadi untuk eh apa namanya? eh menyimpan datanya itu di local storage eh browser itu sendiri. Jadi untuk eh men-trigger apakah data basi atau tidak, itu udah ada function-function-nya gitu loh yang dari eh library itu. sendiri
+
+[Candidate]
+kalau emang udah ada nanti di di di-fetch urangnya gitu. Nah, tapi untuk masalah yang ee masalahnya lain itu adalah ee ada kendala, ada keterbatasan dari library ini yaitu ketika user itu beda browser, beda user itu akan beda data juga gitu loh. Jadi, enggak yang real time itu ee sama gitu loh dari setiap usernya kayak gitu sih.
+
+[AI]
+Oh, jadi karena datanya disimpan di local storage per user, jadi bisa beda ya kalau beda browser atau piranti. Nah, kalau misalnya dalam situasi yang butuh data real-time dan konsisten antar pengguna, kamu punya ide nggak, gimana cara ngatasin masalah itu, selain pakai local storage?
+
+[Candidate]
+Oke, untuk ide pasti ada. Itu aku udah nyari tahu sih. Palingan itu pakai web socket. Kalau nggak itu pakai Redis. Gitu. Tapi aku belum pernah mengimplementasi karena emang ee kebutuhan project yang aku tangani itu belum sampai segitunya dan kalau kita ngomongin Redis itu mahal. Ee butuh ekstra apa ya? Ee
+
+[Candidate]
+extra biaya untuk operasionalnya jadi ee untuk hal itu belum kita implementasikan kayak gitu. Karena ee user pun belum terlalu ee aktif banget untuk hal itu kayak gitu sih.
+
+[AI]
+Paham, berarti pertimbangannya di kebutuhan dan biaya ya. Nah, tadi kamu sempat menyinggung soal komunikasi dengan backend terkait filtering dan paginasi. Selama ini, gimana cara kamu berkolaborasi dengan tim backend untuk menyepakati struktur data atau endpoint yang dibutuhkan? Ada dokumentasi formal atau cuma ngobrol biasa?
+
+[Candidate]
+Oke, untuk ee integrasi backend ya aku sendiri itu fullstack emang bidangnya itu fullstack dan untuk ee standarisasi di project ini pun ee aku udah bikin jadi aku udah tahu ee backend apa sih ya dan aku juga sudah menerapkan swagger-swagger untuk dokumentasi. ee apa? Dokumentasi apinya kayak gitu. Jadi emang dari kita sendiri, kita tim tuh emang udah bikin backend-nya itu punya standarisasi respon api yang seperti apa. Kemudian untuk dokumentasi apinya kita pakainya swagger di rest api seperti itu.
+
+[AI]
+Wah menarik, kamu fullstack ya! Berarti kamu bisa lihat kedua sisi pengembangan. Tadi kamu sebutkan soal Swagger untuk dokumentasi. Nah, dalam mendesain API yang kamu bangun sendiri, gimana caramu memastikan API itu konsisten, terus punya respon yang jelas, dan mudah dipahami oleh frontend, meskipun kamu yang ngerjain juga? Ada standar atau aturan khusus yang kamu terapkan?
+
+[Candidate]
+Iya betul, aku bikin kayak utils di backend di mana itu untuk mengatur standar respon kalau oke tuh gimana, kayak misal ada metanya. Meta terus isinya tuh kayak pagination, size pagination, terus nanti data, terus ada message. Ketika error apa, ketika oke 200 tuh apa gitu. Jadi emang udah ada standarisasi kita bikin. File utils gitu, utils di backend-nya gitu untuk mengatur respon backend kayak gitu. Itu udah ada. Gitu sih.
+
+[AI]
+Bagus kalau sudah ada standarisasi respon dan meta seperti itu. Nah, terkait dengan fullstack development tadi, dari sisi frontend, ada pertimbangan khusus nggak sih saat mengintegrasikan endpoint yang datanya besar atau punya struktur yang kompleks, biar performa aplikasinya tetap enteng? Mungkin ada teknik splitting atau optimasi lain yang kamu lakukan?
+
+[Candidate]
+Dan untuk front end-nya itu aku pakai ZUSTAND. Itu untuk state global ketika kita memang butuh state gitu.
+
+[AI]
+Oh, kamu pakai Zustand ya untuk state global. Terkait data yang besar tadi, gimana cara kamu mengelola data yang kompleks dalam store Zustand biar nggak menyebabkan render yang berlebihan atau masalah performa di sisi frontend? Ada teknik khusus yang kamu pakai untuk memilih bagian data mana yang perlu didengarkan oleh komponen?
+
+[AI]
+Terima kasih atas penjelasannya soal Zustand tadi. Saya rasa saya sudah mendapatkan gambaran yang cukup tentang kemampuan kamu. Terima kasih banyak sudah meluangkan waktu untuk wawancara hari ini. Sukses selalu buat kamu!
+
+[Candidate]
+Thank you.
+
+[AI]
+Sama-sama! Selamat beraktivitas kembali.

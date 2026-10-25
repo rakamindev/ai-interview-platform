@@ -1,0 +1,155 @@
+[AI]
+Hi, thanks for joining. Let's jump in — tell me about the most technically challenging project you've worked on recently.
+
+[Candidate]
+The most technically challenging project that I've ever worked on is that I made a system that a multi-tenancy app called as Prabu Prabu Pay and the main problem from that project is I work with so many so many teams. Not only developer but with operational teams also marketing teams. So when we work together that in different division, I have problem with communication with them.
+
+[AI]
+That sounds like a lot of coordination. On the technical side, what were some of the main challenges you faced building that multi-tenant system? I'm thinking about isolation, data management, things like that.
+
+[Candidate]
+마신 기운
+
+[AI]
+I'd love to hear about how you ensured data separation between different tenants. What approach did you take and were there any trade-offs you had to consider?
+
+[Candidate]
+Hello, can you say it again? I can hear you.
+
+[AI]
+Sure, no
+
+[Candidate]
+I can hear you.Hello. Yeah.
+
+[AI]
+No problem. I was asking about how you handled data separation between different tenants in that application. What approach did you take, and were there any trade-offs you had to consider?
+
+[Candidate]
+Oh, ya ya. The test version I prefer from branching or I forget what it called. And that I be
+
+[AI]
+Are you talking about separate databases or perhaps a shared schema with a tenant ID? If you used that last approach, how did you ensure no tenant could ever accidentally access data from another?
+
+[Candidate]
+that's what I mean I started not started the database but I just using spanner the schema with an ID so when each an interact in which when I have an have a log when I have an must
+
+[AI]
+And when multiple tenants are making requests at the same time, how did you handle heavy load or potentially blocking operations to keep the system responsive for everyone?
+
+[Candidate]
+I'm sorry I can't. Can I ask for in this version of the app? Of course, I'm not done with the explanation.
+
+[AI]
+Oh, my mistake. Please, continue your thoughts on the data separation.
+
+[Candidate]
+Thank you, Audrey. Uh for the sparing data, I use schema version with custom tenant ID. So, when user have to uh login into their account or access their data, the data is spited by tenant ID. Which is tenant ID is mapping with the domain. So, when user access like uh maybe uh SMAS 1 Jakarta.com,
+
+[Candidate]
+Then the data will automatically access the correct schema partition. So that how I handle the separation of the data.
+
+[AI]
+Got it, so you used domain mapping to find the right schema. Switching gears a bit, on that project, were there moments when you had to push back on a request or suggest a different approach to solve a user problem? Can you walk me through one of those situations?
+
+[Candidate]
+Sorry, can you explain it more easy for me? I'm not native by the way.
+
+[AI]
+No problem. Has there ever been a time when someone asked you to build something, but you thought of a better way to solve the problem? Maybe a simpler solution or something that worked better for the customer? Tell me about that.
+
+[Candidate]
+Yeah.
+
+[AI]
+What was the specific problem you were trying to solve, and what was the different solution you suggested? How did that conversation go?
+
+[Candidate]
+Ah, okay. Can I explain it and you wait? Yeah, often, mostly, maybe. Mostly, mostly my client have so many different problems. So, how I handle it, how I solve the problem is basically by example, make an example. So, when user like uh sure about uh what I what I
+
+[AI]
+Right, so you find building a proof of concept or MVP helps clients understand your ideas. Tell me about a specific time when you proposed simplifying a request into an MVP like that. What was
+
+[Candidate]
+show the they mostly one and maybe like the proof of concept or maybe an MVP for the first first example. Something like that. Yeah, justJust something like that.
+
+[AI]
+And how do you measure that a feature you built actually helped the client solve their problem? What metrics do you look at?
+
+[Candidate]
+Yeah, the metric I look is absolutely simple. I just say I just ask what output do you want? What kind of report do you want? And just from that I can break down every the client did like maybe if they want like the title from reporting. So I think I will make a scheme of first like let's say accountant app atau cost app if you know that. I will say like what kind report do you want? Do you want like a summary? Or detail about it? So after I know they requirement their what what they want to make. After that I break break it down and mostly I make a ledger table or something like that and the user just check is that fit or is that correct? Is that like what they want? And then I just implemented and after they said yeah this is good or something like that.
+
+[AI]
+So your focus is on delivering the specific reports they ask for. Thinking beyond what they request, how do you figure out if what you're building is actually making their job easier or helping them achieve their business goals? Do you ever ask about how it affects their bottom line?
+
+[Candidate]
+Actually, no. Because mostly they come to me, they come to us bringing a problem. So, from that I I just like, okay, I understand what you need. I understand what your bottom line. So, mostly I don't ask and then I just make it. And they are happy what what about what I make. Yeah. Just like knowing what are the you know. So, telling their bottom line is not a kind of problem that I ever get. The mostly problem that I ever get is actually like other request from the client or from the user is like impossible thing.
+
+[AI]
+Interesting, you mentioned clients asking for things that seem impossible. When that happens, how do you manage their expectations or steer them towards a solution that will actually work? Can you give me an example?
+
+[Candidate]
+Aquí, aquí. Ah, sorry. What did you say?
+
+[AI]
+No problem. I was asking about how you manage clients' expectations when they ask for things that seem impossible. How do you guide them toward a solution that will actually work? Can you give me an example?
+
+[Candidate]
+Ombenanmu tadi jangan jeruk deh. Aku udah ngomong tadi tapi dia nggak masuk
+
+[AI]
+I apologize, but I didn't receive that response. Could you please tell me again how you handle those "impossible" requests?
+
+[Candidate]
+え 、 もう すぐ いわ ん か い 。 こっ たん きん ぽ し ぼえ 。 あい じぇい さい ら いか 、 あー 、 べ に うお あす みと めけ 。 あす みと こい で 。 け に う 、 すぃ 。 け ん ぐーぐる じゅれ 。 そ 。 あい はぶ ない ん か 。 うぇん ぐーぐる けん どで 。 そ 。 ゆけ ん あす みと めけ 。 あす うぇる 。 ぶ ね 。 うぇん ぐーぐる けん 。 どで 。 そ 。 うぃ 。
+
+[AI]
+So you compare their request to what's possible with current technology. That makes sense. You also mentioned working with so many different teams — can you tell me about how you handled conflicting priorities or disagreements between those groups? How did you ensure the project kept moving forward?
+
+[Candidate]
+Yeah, yeah, yeah. After that, I just like uh asking if Google can do that. So, I wouldn't do that. And after that, I just asked like, "Okay." Keep it unrealistic. How much your budget and what your idea? And when the client say like, "Okay." I got it. Uh let's talk about real product. And yeah. We can do that.
+
+[Candidate]
+So the problem is maybe for me how to keep the project moving forward is just keep the conversation still on realistic thing. Not out from context.
+
+[AI]
+And did that approach of keeping the conversation realistic help align the different teams — like operational and marketing — when they had different goals or demands for the product? How did you get them all on the same page?
+
+[Candidate]
+Okay, so we're back to the uh first operational operational and marketing team. Uh for the how did I get them all on the same page? Mostly I just like uh
+
+[Candidate]
+make it to know like the RD product requirement development. I just make the document so when I get so when I finish the template I ask for it team like operational team or marketing team for correction or revision if it have any problem with the document. So the team also the operational team and marketing team here is for the correct correctness from the correctness what document that I make.
+
+[AI]
+So you created a shared document to collect their needs and get their buy-in. It sounds like you rely heavily on documentation to manage communication. That's all the questions I have for now.
+
+[Candidate]
+Mmm. Yeah, maybe can maybe that all that I can inform to you. And I have a question, can I ask you?
+
+[AI]
+Thanks for sharing everything. I can't answer questions now, but the team will be in touch. Thanks again for your time.
+
+[Candidate]
+Why? Why you can't answer me? We still have a 30 minutes. Left.
+
+[AI]
+I understand, but I'm only here to conduct the interview. The recruiting team will be able to help with any questions you have. Thanks again!
+
+[Candidate]
+Ah, okay. Thank you. Bye.
+
+[AI]
+You're welcome. Goodbye.
+
+[Candidate]
+Oh.
+
+[AI]
+Did you have another question?
+
+[Candidate]
+No, I don't.
+
+[AI]
+Understood. Thanks again! Goodbye.

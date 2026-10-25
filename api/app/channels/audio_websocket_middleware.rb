@@ -16,9 +16,14 @@ class AudioWebSocketMiddleware
   SYSTEM_SIGNAL_TOKEN = 'SYS-TC-7x9k'
 
   WRAP_UP_SIGNAL = "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"wrap_up\": true, \"all_skills_covered\": true }" \
-                   ' — Close the interview NOW. Do NOT ask any more questions.' \
-                   ' Acknowledge their last answer in one sentence, then say goodbye in one sentence.' \
-                   ' Two sentences total, then stop.'
+                   ' — All skill topics have been covered.' \
+                   ' If the candidate asked a question in their last message, answer it briefly first.' \
+                   ' Then explain that you have gathered enough information to complete the assessment today.' \
+                   ' Thank them for their time and say goodbye naturally. Do NOT ask any new questions.'
+
+  CONTINUE_SIGNAL = '[SISTEM] Interview belum selesai. Jangan menutup wawancara. Ajukan pertanyaan lanjutan berikutnya.'
+
+  MAX_PREMATURE_CLOSE_NUDGES = 3
 
   def initialize(app)
     @app = app
@@ -92,6 +97,8 @@ class AudioWebSocketMiddleware
 
   def handle_browser_close(event, browser_ws, state, session_id)
     Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code}")
+    return if state.ending_scheduled || state.early_exit_in_progress
+
     state.browser_disconnected_at = Time.current
     state.proactive_reconnect_timer&.cancel
 
@@ -245,22 +252,25 @@ class AudioWebSocketMiddleware
       # Track whether the AI's last turn ended with a question — drives wrap-up branching.
       state.last_ai_turn_ends_with_question = text.rstrip.end_with?('?')
 
-      # Safety net: if AI said closing words, set coverage_pending and schedule a 15s fallback
-      # finalizer in case on_model_turn_complete never fires (Gemini sometimes skips turnComplete).
-      if !state.ending_scheduled && ai_closing_detected?(text)
-        unless state.coverage_pending
-          Rails.logger.warn("[AudioWS] AI closed without system signal — forcing coverage_pending (session=#{session.id})")
-          state.coverage_pending = true
-        end
-
-        unless state.ending_scheduled
-          EM.add_timer(15) do
-            next if state.ending_scheduled
-            Rails.logger.warn("[AudioWS] on_model_turn_complete delayed — finalizing via closing-phrase fallback (session=#{session.id})")
-            state.ending_scheduled = true
-            send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
-            poll_for_session_end(browser_ws, state, session, attempts: 0)
+      # Closing-phrase handling:
+      # If AI delivers an explicit concluding phrase:
+      # 1. If coverage complete, wrap-up injected, or time critical -> all_covered closing
+      # 2. If mid-interview (coverage not pending) -> candidate early exit closing (candidate_opt_out)
+      if !state.ending_scheduled && !state.early_exit_in_progress && ai_closing_detected?(text)
+        time_critical = state.sent_time_warnings.include?(:warn_120) || state.sent_time_warnings.include?(:warn_60)
+        if state.coverage_pending || time_critical || state.wrap_up_injected
+          unless state.ending_scheduled
+            EM.add_timer(15) do
+              next if state.ending_scheduled
+              Rails.logger.warn("[AudioWS] on_model_turn_complete delayed — finalizing via closing-phrase fallback (session=#{session.id})")
+              state.ending_scheduled = true
+              send_json(browser_ws, type: 'preparing_to_end', reason: 'all_covered')
+              poll_for_session_end(browser_ws, state, session, attempts: 0)
+            end
           end
+        else
+          Rails.logger.info("[AudioWS] AI delivered closing phrase mid-interview — candidate early exit (session=#{session.id})")
+          state.early_exit_in_progress = true
         end
       end
 
@@ -272,14 +282,18 @@ class AudioWebSocketMiddleware
   def sanitize_output_transcription(text)
     text = text.gsub(/\[COVERAGE[_ ]MAP\][\s\S]*?\[\/COVERAGE[_ ]MAP\]/m, '').strip
     text = text.gsub(/\[COVERAGE[_ ]MAP[^\]]*\]/m, '').strip
-    text = text.sub(/\A\s*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*/m, '').strip
-    # Skip up to the last }] (or }) immediately followed by an uppercase letter — covers partial JSON echoes.
-    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=\p{Lu})/m, '').strip
+    # Match JSON fragments starting with { or , that contain "discovered" key
+    text = text.sub(/\A\s*[, {]*\{.*?"discovered"\s*:\s*\[.*?\].*?\}\s*\]*/m, '').strip
+    # Skip up to the last }] (or }) followed by a letter or em-dash — covers partial JSON echoes.
+    text = text.sub(/\A[\s\S]*?[\}\]]+[\s\}\]]*(?=[A-Za-z—])/m, '').strip
     text = text.gsub(/\[TIME[_ ]CONTROL[^\]]*\][^\n]*/m, '').strip
     text = text.gsub(/pacing=\S+\s*priority_next=\S*/m, '').strip
     text = text.gsub(/\[Start the interview[^\]]*\]/m, '').strip
     text = text.gsub(/\[SESSION RESUME\][^\n]*/m, '').strip
-    text.gsub(/\[SISTEM\][^\n]*/m, '').strip
+    text = text.gsub(/\[SISTEM\][^\n]*/m, '').strip
+    # Final safety: if the text starts with punctuation or JSON-like patterns, discard the whole turn
+    text = '' if text.match?(/\A[\s]*[,{\[\]]/)
+    text
   end
 
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.
@@ -288,6 +302,15 @@ class AudioWebSocketMiddleware
       Rails.logger.info("[AudioWS] Model turn complete — ai_audio_chunks=#{state.ai_audio_chunks || 0} sending speaker_changed:candidate")
       state.model_speaking = false
       state.ai_audio_chunks = 0
+
+      if state.early_exit_in_progress
+        state.early_exit_in_progress = false
+        state.ending_scheduled = true
+        Rails.logger.info("[AudioWS] Finalizing session #{session.id} due to candidate early exit")
+        Sessions::EndHandler.new(session).call(reason: 'manual_candidate')
+        close_session_after_end(browser_ws, state, reason: 'manual_candidate')
+        return
+      end
 
       # Deferred proactive reconnect fires in the gap between AI response and candidate's next speech.
       if state.reconnect_after_turn
@@ -323,6 +346,8 @@ class AudioWebSocketMiddleware
 
   def build_on_ready(browser_ws, state, session)
     lambda {
+      return if state.ending_scheduled || state.early_exit_in_progress
+
       state.logged_not_ready = false
       if state.reconnecting
         Rails.logger.info("[AudioWS] Gemini reconnected for session #{session.id}")
@@ -374,6 +399,7 @@ class AudioWebSocketMiddleware
 
   # Handles unexpected Gemini WebSocket close (not GoAway). Audio is buffered during the gap and replayed.
   def handle_gemini_close(browser_ws, state, code:, reason:)
+    return if state.ending_scheduled || state.early_exit_in_progress
     # Normal close (1000) is intentional unless flagged as inactivity_close (which also uses 1000).
     return if code == 1000 && !state.gemini_client&.inactivity_close
 
@@ -392,6 +418,8 @@ class AudioWebSocketMiddleware
   end
 
   def schedule_gemini_reconnect(browser_ws, state, code)
+    return if state.ending_scheduled || state.early_exit_in_progress
+
     backoff = RECONNECT_BACKOFF[state.reconnect_attempts] || 4
     state.reconnect_attempts += 1
     state.reconnecting = true
@@ -674,6 +702,9 @@ class AudioWebSocketMiddleware
     elsif remaining <= 120 && !state.sent_time_warnings.include?(:warn_120)
       mark_warning_if_delivered(state, :warn_120,
         "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"time_warning\": true }")
+    elsif remaining <= 600 && !state.sent_time_warnings.include?(:warn_600)
+      mark_warning_if_delivered(state, :warn_600,
+        "[TIME CONTROL:#{SYSTEM_SIGNAL_TOKEN}] { \"time_warning\": true, \"minutes_remaining\": 10 }")
     end
   end
 
@@ -696,6 +727,17 @@ class AudioWebSocketMiddleware
         Rails.logger.error("[AudioWS] Thread crashed (time ceiling): #{e.class}: #{e.message}")
       end
     end
+  end
+
+  # The model tried to close before all skills were covered — tell it to keep going.
+  # Injected as hidden context; a short plain instruction is far less likely to be
+  # narrated aloud than the old multi-paragraph signal rules. Bounded so a stuck
+  # model doesn't spam injections forever.
+  def nudge_ai_to_continue(state)
+    state.nudge_count = (state.nudge_count || 0) + 1
+    return if state.nudge_count > MAX_PREMATURE_CLOSE_NUDGES
+
+    state.gemini_client&.inject_context(CONTINUE_SIGNAL)
   end
 
   def mark_warning_if_delivered(state, key, signal)
@@ -722,7 +764,9 @@ class AudioWebSocketMiddleware
     'sampai jumpa',
     'sampai bertemu lagi',
     'sesi wawancara ini telah selesai',
-    'wawancara kita sudah selesai'
+    'sesi wawancara ini kita akhiri',
+    'wawancara kita sudah selesai',
+    'wawancara ini kita akhiri'
   ].freeze
 
   def ai_closing_detected?(text)
@@ -783,7 +827,8 @@ class AudioWebSocketMiddleware
                   :graceful_end_timer, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
-                  :waiting_for_candidate_response
+                  :waiting_for_candidate_response, :nudge_count,
+                  :early_exit_in_progress
 
     def initialize
       @turn_counter = 0
@@ -793,6 +838,8 @@ class AudioWebSocketMiddleware
       @wrap_up_injected = false
       @last_ai_turn_ends_with_question = false
       @waiting_for_candidate_response = false
+      @nudge_count = 0
+      @early_exit_in_progress = false
       @sent_time_warnings = Set.new
     end
 

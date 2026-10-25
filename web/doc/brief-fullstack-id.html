@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brief Studi Kasus: Fullstack Product Engineer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --midnight: #0A0F1E;
+      --navy: #111827;
+      --card: #1a2235;
+      --card-hover: #1e2a40;
+      --border: #2a3a55;
+      --amber: #E8B84B;
+      --amber-dim: rgba(232,184,75,0.12);
+      --amber-mid: rgba(232,184,75,0.25);
+      --blue: #3B82F6;
+      --blue-dim: rgba(59,130,246,0.12);
+      --red: #EF4444;
+      --red-dim: rgba(239,68,68,0.1);
+      --green: #22C55E;
+      --green-dim: rgba(34,197,94,0.1);
+      --warm-white: #F5F0E8;
+      --muted: #94A3B8;
+      --text: #CBD5E1;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--midnight);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,15,30,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      gap: 1rem;
+    }
+    .header-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--amber);
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+    .header-nav {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .header-nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .header-nav a:hover { color: var(--warm-white); background: var(--card); }
+    .deadline-badge {
+      background: var(--amber-dim);
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 2rem 3.5rem;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 1.5rem;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: '';
+      display: block;
+      height: 1px;
+      width: 32px;
+      background: var(--amber);
+      opacity: 0.5;
+    }
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 800;
+      color: var(--warm-white);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 span { color: var(--amber); }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.65;
+    }
+    .hero-meta {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .meta-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .meta-chip .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--amber);
+      flex-shrink: 0;
+    }
+
+    /* ── SECTION WRAPPER ── */
+    .section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+    .section + .section { padding-top: 0; }
+
+    /* ── SECTION HEADER ── */
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--amber);
+      background: var(--amber-dim);
+      border: 1px solid var(--amber);
+      border-radius: 6px;
+      padding: 0.2rem 0.55rem;
+      flex-shrink: 0;
+      margin-top: 0.3rem;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--warm-white);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .section-title small {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      font-family: 'IBM Plex Sans', sans-serif;
+      letter-spacing: 0;
+      margin-top: 0.3rem;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 2rem;
+      max-width: 1100px;
+    }
+
+    /* ── ROLE SECTION ── */
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 700px) { .role-grid { grid-template-columns: 1fr; } }
+
+    .callout {
+      background: var(--amber-dim);
+      border: 1px solid rgba(232,184,75,0.3);
+      border-left: 3px solid var(--amber);
+      border-radius: 0 10px 10px 0;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      color: var(--warm-white);
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    .pillar-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .pillar-card:hover { background: var(--card-hover); border-color: var(--amber); }
+    .pillar-icon {
+      font-size: 1.4rem;
+      margin-bottom: 0.6rem;
+    }
+    .pillar-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--warm-white);
+      margin-bottom: 0.5rem;
+    }
+    .pillar-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
+
+    /* ── TIMELINE ── */
+    .timeline { position: relative; padding-left: 2.5rem; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 14px;
+      top: 24px;
+      bottom: 24px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--amber), var(--blue), var(--amber));
+      opacity: 0.3;
+    }
+    .tl-step {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+    .tl-step:last-child { margin-bottom: 0; }
+    .tl-dot {
+      position: absolute;
+      left: -2.5rem;
+      top: 0.9rem;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 2px solid var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--amber);
+      z-index: 1;
+    }
+    .tl-body {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      transition: border-color 0.2s;
+    }
+    .tl-body:hover { border-color: var(--blue); }
+    .tl-body h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--warm-white);
+      margin-bottom: 0.5rem;
+    }
+    .tl-body p { font-size: 0.875rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .tl-body p:last-child { margin-bottom: 0; }
+
+    .repo-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--blue);
+      text-decoration: none;
+      background: var(--blue-dim);
+      border: 1px solid rgba(59,130,246,0.3);
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      margin-top: 0.5rem;
+      transition: background 0.2s;
+    }
+    .repo-link:hover { background: rgba(59,130,246,0.2); }
+
+    /* ── CHECKLIST ── */
+    .checklist { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--text);
+    }
+    .checklist li::before {
+      content: '→';
+      color: var(--amber);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 0.05rem;
+    }
+
+    .check-done li::before { content: '✓'; color: var(--green); }
+    .check-warn li::before { content: '⚠'; color: var(--amber); }
+
+    /* ── PILLAR GRID (5 pillars) ── */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    /* ── SEVERITY TABLE ── */
+    .severity-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .sev-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+    }
+    .sev-badge {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.2rem 0.6rem;
+      border-radius: 5px;
+      margin-bottom: 0.6rem;
+    }
+    .sev-p0 { background: rgba(239,68,68,0.15); color: #EF4444; border: 1px solid rgba(239,68,68,0.3); }
+    .sev-p1 { background: rgba(249,115,22,0.12); color: #F97316; border: 1px solid rgba(249,115,22,0.3); }
+    .sev-p2 { background: rgba(232,184,75,0.12); color: var(--amber); border: 1px solid rgba(232,184,75,0.3); }
+    .sev-p3 { background: rgba(148,163,184,0.1); color: var(--muted); border: 1px solid var(--border); }
+    .sev-card h4 { font-size: 0.85rem; font-weight: 600; color: var(--warm-white); margin-bottom: 0.35rem; }
+    .sev-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── RUBRIC ── */
+    .rubric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 620px) { .rubric-grid { grid-template-columns: 1fr; } }
+    .rubric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .rubric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .rubric-card.product::before { background: var(--amber); }
+    .rubric-card.engineering::before { background: var(--blue); }
+    .rubric-pct {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+    .rubric-card.product .rubric-pct { color: var(--amber); }
+    .rubric-card.engineering .rubric-pct { color: var(--blue); }
+    .rubric-card h3 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--warm-white); margin-bottom: 0.75rem; }
+    .rubric-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+
+    /* ── DISQUALIFIERS ── */
+    .disq-list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+    .disq-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--text);
+      background: var(--red-dim);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+    }
+    .disq-list li::before {
+      content: '✕';
+      color: var(--red);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── GROUND RULES ── */
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .rule-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .rule-card h3 { font-family: 'Syne', sans-serif; font-size: 0.92rem; font-weight: 700; color: var(--warm-white); margin-bottom: 0.5rem; }
+    .rule-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+
+    /* ── SUBMIT SECTION ── */
+    .submit-box {
+      background: linear-gradient(135deg, var(--amber-dim) 0%, var(--blue-dim) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+    .submit-box h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--warm-white);
+      margin-bottom: 0.5rem;
+    }
+    .submit-box p { color: var(--muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .deadline-big {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: var(--amber);
+      background: var(--amber-dim);
+      border: 1px solid var(--amber);
+      padding: 0.6rem 1.5rem;
+      border-radius: 10px;
+    }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 1.5rem 2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4rem;
+    }
+
+    /* ── TAG ── */
+    .tag {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      background: var(--blue-dim);
+      color: var(--blue);
+      border: 1px solid rgba(59,130,246,0.25);
+    }
+    .tag.amber {
+      background: var(--amber-dim);
+      color: var(--amber);
+      border-color: rgba(232,184,75,0.25);
+    }
+
+    /* ── OPTION TABLE ── */
+    .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .option-grid { grid-template-columns: 1fr; } }
+    .opt-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .opt-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--warm-white);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .opt-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+
+    /* ── ANIMATIONS ── */
+    @media (prefers-reduced-motion: no-preference) {
+      .tl-body, .pillar-card, .sev-card, .rule-card {
+        opacity: 0;
+        transform: translateY(12px);
+        animation: fadeUp 0.4s ease forwards;
+      }
+      .tl-step:nth-child(1) .tl-body { animation-delay: 0.05s; }
+      .tl-step:nth-child(2) .tl-body { animation-delay: 0.1s; }
+      .tl-step:nth-child(3) .tl-body { animation-delay: 0.15s; }
+      .tl-step:nth-child(4) .tl-body { animation-delay: 0.2s; }
+      .tl-step:nth-child(5) .tl-body { animation-delay: 0.25s; }
+      .tl-step:nth-child(6) .tl-body { animation-delay: 0.3s; }
+      @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 500px) {
+      .header-nav { display: none; }
+      .hero { padding: 3rem 1.25rem 2rem; }
+      .section { padding: 2rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <span class="header-logo">Rakamin × Fullstack Case</span>
+      <nav class="header-nav">
+        <a href="#peran">Peran</a>
+        <a href="#langkah">Langkah</a>
+        <a href="#evaluasi">Evaluasi</a>
+        <a href="#submit">Submisi</a>
+      </nav>
+      <span class="deadline-badge">⏰ 19 Agt · 13:00 WIB</span>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">Studi Kasus Seleksi</div>
+    <h1>Fullstack<br /><span>Product Engineer</span></h1>
+    <p class="hero-sub">
+      Dokumen ini — beserta repository platform — berisi semua yang kamu butuhkan untuk menyelesaikan assignment ini. Baca sekali hingga selesai sebelum mulai.
+    </p>
+    <div class="hero-meta">
+      <div class="meta-chip"><span class="dot"></span> Rails + React 18 + TypeScript</div>
+      <div class="meta-chip"><span class="dot"></span> PostgreSQL + Sidekiq + Gemini AI</div>
+      <div class="meta-chip"><span class="dot"></span> Deadline: Rabu 19 Agt 13:00 WIB</div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- SECTION 1: PERAN -->
+  <section class="section" id="peran">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <div>
+        <div class="section-title">
+          Ekspektasi Peran: Kami Merekrut Product Engineer
+          <small>Baca bagian ini dua kali — ini menentukan segalanya.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      "Perubahan yang paling kami minati adalah perubahan yang benar-benar membuat produk ini lebih baik bagi orang-orang yang menyentuhnya — bukan perubahan yang menyentuh baris kode terbanyak."
+    </div>
+
+    <p style="margin-bottom: 1.25rem; color: var(--text);">
+      Software engineer konvensional menunggu spesifikasi, mengimplementasinya, dan dinilai dari apakah kodenya bekerja. Kami tidak merekrut untuk itu. Kami merekrut seseorang yang <strong style="color:var(--warm-white)">bertanggung jawab atas apakah fitur itu layak di-ship</strong>, dan yang akan belajar apa pun yang diperlukan untuk meng-ship-nya dengan baik: framework asing, domain asing, regulasi, model bisnis, dan kondisi kerja nyata dari orang-orang yang menggunakannya.
+    </p>
+
+    <p style="margin-bottom: 1.75rem; color: var(--text);">Kami mengharapkan kamu untuk berpikir dari <em>first principles</em>.</p>
+
+    <div style="margin-bottom: 1rem; font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:700; color:var(--warm-white)">
+      Monozukuri: Keahlian Melampaui Baseline Minimum
+    </div>
+    <p style="margin-bottom: 1.25rem; color: var(--muted); font-size: 0.875rem;">
+      Setiap requirement, panduan, dan poin evaluasi dalam brief ini mewakili <em>baseline minimum</em>. Perlakukan baseline sebagai lantai, bukan langit-langit. Tunjukkan kepada kami seperti apa "kelas tertinggi" di tanganmu.
+    </p>
+
+    <div class="role-grid">
+      <div class="pillar-card">
+        <div class="pillar-icon">🏭</div>
+        <h3>Pride in Making (Monozukuri)</h3>
+        <p>Kepedulian mendalam terhadap produk, perhatian teliti pada detail, dan dorongan untuk membuat software yang terasa lengkap dan andal.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">✦</div>
+        <h3>UI/UX Design Taste</h3>
+        <p>Hierarki layout yang bersih, estetika visual modern, micro-interaction yang intuitif, responsive states, dan detail desain yang membuat penggunaan aplikasi terasa menyenangkan.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">⚙️</div>
+        <h3>System Rigor</h3>
+        <p>Pemikiran arsitektur yang jelas, perencanaan yang kuat, dan penalaran terstruktur dari data model hingga presentasi sisi klien.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- SECTION 2: LANGKAH -->
+  <section class="section" id="langkah">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <div class="section-title">
+        Panduan Eksekusi Step-by-Step
+        <small>Ikuti langkah-langkah ini secara berurutan dari setup hingga submisi.</small>
+      </div>
+    </div>
+
+    <div class="timeline">
+
+      <!-- STEP 1 -->
+      <div class="tl-step">
+        <div class="tl-dot">01</div>
+        <div class="tl-body">
+          <h3>Setup &amp; Eksplorasi Lokal</h3>
+          <p>Turunkan masalah ke apa yang benar-benar nyata. Tanyakan seperti apa produk ini seharusnya jika belum ada yang membuatnya. Putuskan apa yang perlu diubah berdasarkan apa yang ada di codebase.</p>
+          <ol style="padding-left:1.25rem; font-size:0.85rem; color:var(--muted); display:flex; flex-direction:column; gap:0.4rem; margin-top:0.75rem;">
+            <li><strong style="color:var(--text)">Clone &amp; Jalankan:</strong> Clone repository dan jalankan kedua service secara lokal. Jelajahi workflow saat ini di browser.</li>
+            <li><strong style="color:var(--text)">Branch:</strong> Buat feature branch dari <code style="color:var(--amber); background:var(--amber-dim); padding:0 4px; border-radius:3px">main</code>. Jangan commit langsung ke main. Jaga commit tetap kecil dan mudah dibaca.</li>
+            <li><strong style="color:var(--text)">Pahami Baseline:</strong> RSpec belum memiliki spec yang ditulis, web app tidak memiliki test runner, dan tidak ada CI. Membangun harness pengujian yang cukup untuk membuktikan pekerjaan kamu adalah bagian dari tugas ini.</li>
+          </ol>
+          <a class="repo-link" href="https://github.com/rakamindev/ai-interview-platform" target="_blank">
+            ⎔ github.com/rakamindev/ai-interview-platform
+          </a>
+          <div style="margin-top: 0.75rem; font-size: 0.78rem; color: var(--muted);">
+            Repository mencakup kedua service: <span class="tag">api/</span> (Rails + PostgreSQL + Sidekiq + RSpec + Gemini AI) dan <span class="tag">web/</span> (React 18, TypeScript, Vite, Tailwind, Radix UI). Setiap direktori berisi README.md untuk menjalankan secara lokal.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="tl-step">
+        <div class="tl-dot">02</div>
+        <div class="tl-body">
+          <h3>Immerse Diri dalam Konteks &amp; Domain</h3>
+          <p>Sebelum mengusulkan perubahan atau menulis kode, bangun konteks di sekitar 5 pilar inti ini:</p>
+          <div class="pillars-grid" style="margin-top:0.9rem;">
+            <div style="background:var(--midnight); border:1px solid var(--border); border-radius:8px; padding:0.85rem;">
+              <div style="font-size:0.7rem; font-weight:600; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem">01 · Produk</div>
+              <div style="font-size:0.82rem; color:var(--muted)">Gunakan dari ujung ke ujung sebelum menilainya. Baca apa yang dilakukannya, bukan apa yang kodenya implikasikan.</div>
+            </div>
+            <div style="background:var(--midnight); border:1px solid var(--border); border-radius:8px; padding:0.85rem;">
+              <div style="font-size:0.7rem; font-weight:600; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem">02 · Industri</div>
+              <div style="font-size:0.82rem; color:var(--muted)">Rekrutmen dan penilaian talenta di Indonesia. Pahami apa yang membuatnya sulit dan di mana leverage nyata berada.</div>
+            </div>
+            <div style="background:var(--midnight); border:1px solid var(--border); border-radius:8px; padding:0.85rem;">
+              <div style="font-size:0.7rem; font-weight:600; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem">03 · Tujuan</div>
+              <div style="font-size:0.82rem; color:var(--muted)">Outcome yang produk ini ada untuk dihasilkan, dan apa yang harus benar agar tetap berguna.</div>
+            </div>
+            <div style="background:var(--midnight); border:1px solid var(--border); border-radius:8px; padding:0.85rem;">
+              <div style="font-size:0.7rem; font-weight:600; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem">04 · Pengguna</div>
+              <div style="font-size:0.82rem; color:var(--muted)">Assessor, recruiter, dan hiring manager. Pahami seperti apa hari kerja mereka dan apa yang sebenarnya ingin mereka capai.</div>
+            </div>
+            <div style="background:var(--midnight); border:1px solid var(--border); border-radius:8px; padding:0.85rem;">
+              <div style="font-size:0.7rem; font-weight:600; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem">05 · Kandidat</div>
+              <div style="font-size:0.82rem; color:var(--muted)">Dinilai oleh produk ini, tidak memilih, tidak bisa opt-out, dan hasil yang salah mengubah tahun seseorang. Desain untuk mereka juga. Perhatikan <strong style="color:var(--text)">UU PDP</strong>.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="tl-step">
+        <div class="tl-dot">03</div>
+        <div class="tl-body">
+          <h3>Definisikan Masalah &amp; Gap ke Kondisi Ideal</h3>
+          <p>Jelajahi workflow nyata dari ujung ke ujung, inspeksi record database, dan evaluasi API payload untuk mengidentifikasi gap antara implementasi yang cacat saat ini dan kondisi produk yang ideal.</p>
+          <p style="margin-top: 0.6rem; font-size: 0.82rem; color: var(--muted); font-weight: 500;">Selesai ketika:</p>
+          <ul class="checklist" style="margin-top: 0.5rem;">
+            <li>Kamu mengartikulasikan masalah inti dan gap yang mencegah produk ini memberikan nilai nyata kepada pengguna dan kandidat.</li>
+            <li>Temuan dikategorikan berdasarkan keparahan (<strong style="color:var(--text)">P0–P3</strong>) dengan pernyataan dampak satu baris.</li>
+            <li>Kamu memisahkan <em>spesifikasi yang hilang</em> (belum pernah didefinisikan) dari <em>implementasi yang cacat</em> (didefinisikan tapi rusak).</li>
+            <li>Temuan mencakup kedua service (api/ dan web/), termasuk seam komputasi data dan presentasi frontend.</li>
+            <li><strong style="color:var(--amber)">Constraint Signal:</strong> Kamu mengidentifikasi dan mendokumentasikan risiko pemblokiran atau debt arsitektur yang akan kamu eskalasi ke Tech Lead di proyek nyata.</li>
+          </ul>
+
+          <div style="margin-top: 1rem;">
+            <div style="font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 0.6rem;">Kategori Keparahan:</div>
+            <div class="severity-grid">
+              <div class="sev-card">
+                <span class="sev-badge sev-p0">P0 · Kritis</span>
+                <h4>Pemblokir</h4>
+                <p>Merusak fungsionalitas inti atau menyebabkan kerusakan data. Harus diperbaiki segera.</p>
+              </div>
+              <div class="sev-card">
+                <span class="sev-badge sev-p1">P1 · Tinggi</span>
+                <h4>Berdampak Signifikan</h4>
+                <p>Secara serius merusak workflow pengguna atau akurasi penilaian kandidat.</p>
+              </div>
+              <div class="sev-card">
+                <span class="sev-badge sev-p2">P2 · Sedang</span>
+                <h4>Pengalaman Buruk</h4>
+                <p>Mengurangi kualitas produk tapi ada workaround. Perlu ditangani segera.</p>
+              </div>
+              <div class="sev-card">
+                <span class="sev-badge sev-p3">P3 · Rendah</span>
+                <h4>Enhancement</h4>
+                <p>Perbaikan kecil atau optimisasi yang meningkatkan kualitas tapi bukan blocker.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="tl-step">
+        <div class="tl-dot">04</div>
+        <div class="tl-body">
+          <h3>Strategi Revamp, Acceptance Criteria &amp; Trade-offs</h3>
+          <p>Rancang revamp yang secara langsung menjembatani gap ke kondisi produk ideal, mencakup modul backend dan frontend.</p>
+          <ol style="padding-left:1.25rem; font-size:0.85rem; color:var(--muted); display:flex; flex-direction:column; gap:0.6rem; margin-top:0.75rem;">
+            <li><strong style="color:var(--text)">Turunkan Acceptance Criteria Sendiri:</strong> Tuliskan apa arti perilaku yang benar untuk setiap input dan edge case (skill yang belum dinilai, rating yang hilang, kegagalan model call, tipe data edge-case, dan state teks panjang).</li>
+            <li>
+              <strong style="color:var(--text)">Evaluasi Opsi Solusi &amp; Trade-offs:</strong> Bandingkan setidaknya dua atau tiga opsi teknis untuk meng-ship revamp ini:
+              <div class="option-grid" style="margin-top:0.75rem;">
+                <div class="opt-card">
+                  <h3><span class="tag amber">Opsi A</span></h3>
+                  <p>Jelaskan opsi teknis pertama — apa yang dibeli, apa biayanya, dan apa yang ditutup oleh opsi ini.</p>
+                </div>
+                <div class="opt-card">
+                  <h3><span class="tag">Opsi B</span></h3>
+                  <p>Jelaskan opsi teknis alternatif — dampak produk vs cost, maintainability jangka panjang, dan failure modes.</p>
+                </div>
+              </div>
+            </li>
+          </ol>
+          <div style="margin-top: 1rem; background: var(--midnight); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; font-size: 0.82rem; color: var(--muted);">
+            <strong style="color: var(--warm-white);">Yang dievaluasi per opsi:</strong> Dampak Produk vs Cost · Maintainability Jangka Panjang · Failure Modes · Contextual Fit
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5 -->
+      <div class="tl-step">
+        <div class="tl-dot">05</div>
+        <div class="tl-body">
+          <h3>Implementasi Monozukuri &amp; Pull Request</h3>
+          <p>Land perubahanmu di seluruh stack: API, data model di bawahnya, screen frontend, dan automated tests.</p>
+
+          <div style="font-size: 0.83rem; font-weight: 600; color: var(--warm-white); margin: 0.85rem 0 0.5rem;">Standar Baseline Minimum:</div>
+          <ul class="checklist check-done" style="margin-bottom: 1rem;">
+            <li><strong>Proven Correctness:</strong> Test gagal jika behavior regresi, dan kamu telah menyaksikannya gagal.</li>
+            <li><strong>Designed Failure Paths:</strong> Tangani timeout, partial write, model error, dan duplicate job secara eksplisit.</li>
+            <li><strong>Protected Data:</strong> Migrasi harus reversible dan aman terhadap baris yang ada. Endpoint terautorisasi, input tervalidasi, tidak ada data personal sensitif di log atau commit (kepatuhan UU PDP).</li>
+            <li><strong>Polished UI/UX:</strong> Tampilan visual yang bagus, layout yang harmonis, semua interaction state (loading, empty, error, partial, teks panjang, responsive).</li>
+            <li><strong>Seeded Fault Test:</strong> Buktikan test kamu nyata dengan mematahkan logika di scratch branch untuk menunjukkan test menangkapnya, lalu revert.</li>
+            <li><strong>AI Verification Moment:</strong> Dokumentasikan setidaknya satu instance di mana AI code generation salah atau berisiko dan bagaimana kamu memverifikasi/memperbaikinya.</li>
+          </ul>
+
+          <div style="font-size: 0.83rem; font-weight: 600; color: var(--warm-white); margin-bottom: 0.5rem;">Opsi Struktur Pull Request:</div>
+          <div class="option-grid">
+            <div class="opt-card">
+              <h3><span class="tag amber">PR Tunggal</span></h3>
+              <p>Satu Pull Request komprehensif yang berisi perubahan penuh di kedua service.</p>
+            </div>
+            <div class="opt-card">
+              <h3><span class="tag">Umbrella PR</span></h3>
+              <p>PR umbrella yang menetapkan visi keseluruhan dan ditautkan ke beberapa sub-PR yang terfokus.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 6 -->
+      <div class="tl-step">
+        <div class="tl-dot">06</div>
+        <div class="tl-body">
+          <h3>Submisi Final</h3>
+          <p>Upload satu dokumen PDF di portal platform rekrutmen. PDF-mu harus mencakup:</p>
+          <ul class="checklist" style="margin-top: 0.75rem;">
+            <li><strong>Link GitHub PR:</strong> Tautan ke Pull Request terbukamu di github.com/rakamindev/ai-interview-platform.</li>
+            <li><strong>Dokumentasi Tertulis &amp; Narasi Eksekusi:</strong> Analisis konteks produk, gap analysis berperingkat keparahan, matriks trade-off, acceptance criteria, dan bukti test coverage.</li>
+            <li><strong>Screenshot Visual:</strong> Gambar tertanam yang menunjukkan UI flows, edge cases, error states, dan responsive views.</li>
+            <li><strong>Link Video Demo (3–5 menit):</strong> Walkthrough end-to-end yang dihosting di Loom, YouTube Unlisted, Google Drive, atau serupa.</li>
+          </ul>
+          <div style="margin-top: 0.85rem; background: var(--amber-dim); border: 1px solid rgba(232,184,75,0.3); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: var(--amber);">
+            ✦ Format &amp; Gaya Fleksibel: Desain, template, dan format laporan sepenuhnya fleksibel dan terbuka untuk gaya dokumentasi pribadimu.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /timeline -->
+  </section>
+
+  <hr class="divider" />
+
+  <!-- SECTION 3: EVALUASI -->
+  <section class="section" id="evaluasi">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <div class="section-title">
+        Struktur Evaluasi
+        <small>Submisimu dievaluasi oleh dua tim yang berbeda.</small>
+      </div>
+    </div>
+
+    <div class="rubric-grid">
+      <div class="rubric-card product">
+        <div class="rubric-pct">50%</div>
+        <h3>Dampak Produk &amp; Monozukuri Craft</h3>
+        <p>Apa yang benar-benar kamu ship untuk mengubah produk ini menjadi pengalaman yang bermakna dan top-notch. Dievaluasi berdasarkan dampak masalah yang diselesaikan, rigor trade-off, acceptance criteria yang diturunkan sendiri, UI/UX design taste yang luar biasa, dan nilai nyata yang dibawa ke pengguna dan kandidat.</p>
+        <div style="margin-top: 0.85rem; font-size: 0.75rem; color: var(--muted);">Reviewer: <strong style="color: var(--text)">Tim Produk</strong> · laporan, UI/UX, video</div>
+      </div>
+      <div class="rubric-card engineering">
+        <div class="rubric-pct">50%</div>
+        <h3>Engineering Craft &amp; Eksekusi</h3>
+        <p>Kebenaran dari fullstack slice yang di-ship, keandalan test harness, penanganan edge case, keamanan data, arsitektur kode yang bersih, dan kualitas PR.</p>
+        <div style="margin-top: 0.85rem; font-size: 0.75rem; color: var(--muted);">Reviewer: <strong style="color: var(--text)">Tim Engineering</strong> · GitHub PR, kode, test</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+      <div style="font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; color:var(--warm-white); margin-bottom:1rem;">
+        Diskualifikasi Langsung
+      </div>
+      <ul class="disq-list">
+        <li>Melemahkan atau menghapus assertion test untuk membuat check lolos.</li>
+        <li>Meng-commit secrets, API key, atau data personal nyata.</li>
+        <li>Menyerahkan kode yang tidak bisa kamu jelaskan selama technical interview.</li>
+        <li>Menyerahkan perubahan yang hanya diuji pada happy path.</li>
+        <li>Mereproduksi pekerjaan kandidat lain yang terlihat tanpa atribusi.</li>
+        <li>Kualitas UI/UX yang buruk atau terabaikan.</li>
+      </ul>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- SECTION 4: GROUND RULES -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <div class="section-title">
+        Ground Rules &amp; Live Defense
+        <small>Platform ini realistis dan tidak sempurna. Tunjukkan apa yang bisa kamu ship untuk membuatnya bermakna.</small>
+      </div>
+    </div>
+
+    <div class="rules-grid">
+      <div class="rule-card">
+        <h3>📥 Input</h3>
+        <p>Kamu menerima brief ini dan repository. Scope, kriteria, edge case, dan test data diturunkan oleh kamu sendiri.</p>
+      </div>
+      <div class="rule-card">
+        <h3>🤖 AI Tooling</h3>
+        <p>AI dianjurkan. Gunakan sebagai leverage yang kamu verifikasi — bukan oracle yang kamu percaya secara buta.</p>
+      </div>
+      <div class="rule-card">
+        <h3>🔇 Tanpa Live Q&amp;A</h3>
+        <p>Buat asumsi yang masuk akal, dokumentasikan di laporan PDF-mu, dan lanjutkan. Tidak ada sesi tanya jawab langsung.</p>
+      </div>
+      <div class="rule-card">
+        <h3>🎥 Live Technical Defense</h3>
+        <p>Sesi video 45–60 menit dengan CTO dan Technical Lead setelah deadline untuk mendiskusikan trade-off, pilihan arsitektur, dan opsi yang ditolak.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUBMIT CTA -->
+  <section class="section" id="submit">
+    <div class="submit-box">
+      <h2>Siap? Mulai dari Repository.</h2>
+      <p>Baca brief ini sekali lagi. Kerjakan assignment dari first principles. Kirimkan sebelum deadline.</p>
+      <div class="deadline-big">Rabu, 19 Agustus 2025 · 13:00 WIB</div>
+      <div style="margin-top: 1.5rem;">
+        <a class="repo-link" href="https://github.com/rakamindev/ai-interview-platform" target="_blank" style="display:inline-flex;">
+          ⎔ Buka Repository — github.com/rakamindev/ai-interview-platform
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    Studi Kasus Fullstack Product Engineer · Rakamin · Dokumen ini diterjemahkan ke Bahasa Indonesia untuk kejelasan.
+  </footer>
+
+</body>
+</html>

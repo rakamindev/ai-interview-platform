@@ -27,6 +27,7 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        register_fonts(pdf)
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -35,6 +36,19 @@ module Exports
     end
 
     private
+
+    # Register a UTF-8-capable TTF font so text outside Windows-1252 (e.g.
+    # em-dashes, non-Latin characters from candidate quotes) renders correctly.
+    def register_fonts(pdf)
+      fonts_dir = Rails.root.join('app', 'assets', 'fonts')
+      pdf.font_families.update(
+        'DejaVu' => {
+          normal: fonts_dir.join('DejaVuSans.ttf').to_s,
+          bold:   fonts_dir.join('DejaVuSans-Bold.ttf').to_s
+        }
+      )
+      pdf.font 'DejaVu'
+    end
 
     def render_header(pdf)
       pdf.font_size(22) { pdf.text @assessment.name, style: :bold }

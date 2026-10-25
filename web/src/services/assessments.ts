@@ -9,9 +9,14 @@ export interface AssessmentPayload {
 }
 
 export const assessmentsApi = {
-  list: (page = 1) =>
+  list: (
+    page = 1,
+    filters?: { status?: string; role_title?: string; per_page?: number },
+    signal?: AbortSignal
+  ) =>
     api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
-      params: { page },
+      params: { page, ...filters },
+      signal,
     }),
 
   get: (id: number) =>
@@ -33,6 +38,9 @@ export const assessmentsApi = {
 
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
+
+  roleTitles: () =>
+    api.get<{ role_titles: string[] }>("/assessments/role_titles"),
 
   createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
     api.post<{ session: Session; invite_url: string }>(

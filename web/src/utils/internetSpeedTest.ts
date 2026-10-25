@@ -1,5 +1,7 @@
 // Internet Speed Test Utilities — standalone, no backend dependency
 
+import { API_BASE_URL } from "@/config";
+
 export interface InternetSpeedResult {
     download: number;
     upload: number;
@@ -17,10 +19,23 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minDownloadMbps: 2,
+    minUploadMbps: 1,
     maxPingMs: 300,
 };
+
+// Voice interviews need far less than video: 16kHz PCM audio is ~0.25 Mbps
+// each way. Thresholds above reflect real need with headroom.
+
+async function fetchWithTimeout(url: string, timeoutMs = 10000, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...init, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
 const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
@@ -29,7 +44,7 @@ async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {
         try {
             const start = performance.now();
-            await fetch(SPEED_TEST_PING_URL, { cache: "no-cache" });
+            await fetchWithTimeout(SPEED_TEST_PING_URL, 10000, { cache: "no-cache" });
             return performance.now() - start;
         } catch {
             return 999;
@@ -43,7 +58,7 @@ async function measurePing(): Promise<number> {
     for (const url of testUrls) {
         try {
             const start = performance.now();
-            await fetch(url, { mode: "no-cors", cache: "no-cache" });
+            await fetchWithTimeout(url, 10000, { mode: "no-cors", cache: "no-cache" });
             return performance.now() - start;
         } catch {
             continue;
@@ -61,7 +76,7 @@ async function measureDownloadSpeed(): Promise<number> {
     for (const testFile of testFiles) {
         try {
             const start = performance.now();
-            const response = await fetch(testFile.url, { cache: "no-cache" });
+            const response = await fetchWithTimeout(testFile.url, 10000, { cache: "no-cache" });
             if (response.ok) {
                 await response.blob();
                 const seconds = (performance.now() - start) / 1000;
@@ -74,7 +89,7 @@ async function measureDownloadSpeed(): Promise<number> {
     // Rough fallback
     try {
         const start = performance.now();
-        await fetch("https://www.google.com/favicon.ico", { mode: "no-cors", cache: "no-cache" });
+        await fetchWithTimeout("https://www.google.com/favicon.ico", 10000, { mode: "no-cors", cache: "no-cache" });
         const duration = (performance.now() - start) / 1000;
         return duration < 1 ? 2 : duration < 2 ? 1 : 0.5;
     } catch {
@@ -87,15 +102,18 @@ async function measureUploadSpeed(): Promise<number> {
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
+    // Self-hosted endpoint first, then fallback to external services
     const endpoints = SPEED_TEST_UPLOAD_URL
         ? [SPEED_TEST_UPLOAD_URL]
-        : ["https://httpbin.org/post", "https://www.httpbin.org/post", "https://postman-echo.com/post"];
+        : [`${API_BASE_URL}/speed_test`, "https://httpbin.org/post", "https://postman-echo.com/post"];
     for (const endpoint of endpoints) {
         try {
             const formData = new FormData();
             formData.append("test", uploadData);
             const start = performance.now();
-            await fetch(endpoint, { method: "POST", body: formData });
+            const response = await fetchWithTimeout(endpoint, 15000, { method: "POST", body: formData });
+            // Skip non-OK responses (e.g., 503 from httpbin)
+            if (!response.ok) continue;
             const seconds = (performance.now() - start) / 1000;
             return uploadSizeMB / seconds;
         } catch {

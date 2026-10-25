@@ -1,0 +1,159 @@
+[AI]
+Hi, thanks for joining us. Let's jump right in — can you tell me about the most challenging project you've worked on recently, specifically focusing on the technical decisions you had to make?
+
+[Candidate]
+Okay, uh how can I start? Should I uh telling you everything or step by step by uh project? I mean uh project I think and then going to challenging things and then technical or or all in one pitch?
+
+[AI]
+Tell me about any project that stands out to you, and feel free to jump straight to the technical challenges. Whatever works for you.
+
+[Candidate]
+Ah! Okay. All right. Uh the most I think yeah the most uh challenging project that I ever done or that I ever worked is called as fuel management system. I make that system for PT GGP and for the contact fuel management system is real-time full application distribution across multiple location in Indonesia. Specifically uh this fuel management system is used is used in uh Lampung. And for the stack stack I use Laravel and for the front-end I use Blade and the system is uh you know work as monolithic app only. And for the challenging and uh for the challenging the technical challenging is the requirement from the user. The user want to uh fuel distribution is controlled by card. So I have to make a system that can work with uh card using NFC on the card. So I not only make a back-end and web front-end I also make a web oh sorry I also make an Android app for the reading uh reading saldo or balance from the car and then uh for the transaction. Oh yeah this is uh for management so uh the user is better by two which is the first user is uh top staff that uh work in the GGP and then the second is user which is work as cashier in fuel management eh in uh full place or fuel shop.
+
+[AI]
+That sounds like a really distributed system. If the fuel transactions are controlled by those cards, how did you handle potential latency or network issues when trying to read and update balances across all those locations, especially if the connection to the central server was slow?
+
+[Candidate]
+Yeah, yeah. This is a really issue and my that I have a version. The things this network issue is really made me stress out because you know in Indonesia internet is not really good, especially in not in Java. You know like in Lampung the internet is not that good. So, the main problem is not about internet. Not about device, but also about architecture or infrastructure that uh Indonesia have. So, the problem how I fix it is I use uh on uh I mean like on some place and on some place I make a local server so that local server can have more good connection with uh LAN cable and then the local server is provided an API also in local. So, the so my device that use for transaction is connected to local server and then the local server collecting the data and then push the data every every minute or every hour based on the transaction volume. So, that how I uh fixing the network issue on some location that have really, really bad infrastructure. But for the most, I'm not using or I I don't make any local server, but I just using an internet.
+
+[AI]
+fuel_management_system: initiated. Leadership & Ownership: partial. Node.js / Backend Development: not_yet. Product Thinking: not_yet. pacing: on_track. priority_next: Node.js / Backend Development.
+
+Got it. So for those sites with poor connections, you set up local servers to collect the data and then sync it up later. When you were building this, how did you ensure that even with those delayed syncs, the data was consistent across the whole system, like preventing double-spending or other inconsistencies?
+
+[Candidate]
+minus ten thousand you get it and then let's say buddy go to another place again let's say place c but in this time the server should be thinked because the place is not nearby the place is so far from place a to place b it most like uh the closest place uh the closest uh location is about ten kilometers so for the time to uh to go in for place a to place b it take a so much time let's say about twenty minutes but the server is in thinked every one minute so the buddy have no time for going to the place b okay let's say the server is slow so delay let's let's say server is so slow but still twenty minutes is uh not the target if the server on local is not think uh is not thinking ping uh for the let's say five minutes so we have a real problem on the local server we must to fix it we must check it what the problem if the place uh b and sorry if the place are the server is not thinked so uh the decision is on the manager on its place the manager can reporting to the other place let's say the buddy is filled gas on place a so on the other place buddy should not filled gas game okay maybe that what uh solution that i got that i feel but not uh but that not the permanent solution so uh sorry but that not the permanent solution but the solution is okay and the user is fine with that and i keep the solution i know that solution is not best practice the solution is uh too much problem have much problem but the system is already running for three years but i don't uh i never get a real problem after one until three months so i think the system is fit really well with their behavior on the on the environment
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: not_yet. Product Thinking: not_yet. pacing: ahead. priority_next: Node.js / Backend Development.
+
+I see, so the manual manager check was your fail-safe there. Shifting gears a bit, you mentioned building an Android app for this system. Was that built using native Java or Kotlin, or was it something else? And how did that communicate with your Laravel backend?
+
+[Candidate]
+Uh okay, all right. Uh this is really good question from you. And yes, I mentioned the Android app for the system and I use EDC, but this EDC is built for generic app. Uh I use EDC for chaos. So, the EDC was set up for only the one system that I made and the EDC was built with OS Android. And yes, I made it with Kotlin. With native. The reason behind it is because uh in that year, the most popular OS at sorry, the most uh the most uh language or the most framework that have pretty good library about NFT is Android native. So, I take the Kotlin and using Jetpack Compose for building the system. Actually, that not pretty hard because uh we are not focusing on the UI or maybe focusing on the feature. The feature is actually really simple. Can the card got the balance and start the transaction if saldo or if balance is still uh is still available. So, uh for the Android, it's not pretty hard. Also, in the Android, we can see like uh small reporting. So, I can watch the reporting that uh already done in place uh maybe. And then, as a manager, manager also can do cancel that transaction with some reason. Maybe like the transaction is got wrong and then the driver need to cancel. So, the permission to cancel it is on the manager. And the question for uh sorry, and the answer for the question is uh the answer for the question, how did the communicate with your Laravel backend? With my Laravel backend? Uh yeah. What the answer did you expect anything? I mean like of course, we use API using JSON. I think nothing more with that.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: initiated. Product Thinking: not_yet. pacing: ahead. priority_next: Product Thinking.
+
+Right, so you were using standard API calls via JSON. Thinking about those card readers now, and how you used Jetpack Compose — were there any particular challenges with managing the state of the app while interacting with the NFC hardware, especially if a user scanned a card multiple times unexpectedly?
+
+[Candidate]
+Yeah, yeah. I already handle that. If the user tap the NFC card so quick maybe and then tap it multiple times. Yeah, I already handle that. The main challenging is actually not on the state and not on the Jetpack Compose because yeah, we can we we we know this state on Jetpack Compose is really easy. Uh and then controlling the state when an FC on tapping or NFC not on tapping that actually easy as well. The main uh challenging thing is about connecting to server because like before I said that the server have to address from internet and from local. So the problem is how to make the connection is still good when changing from internet and local. I think that for the most challenging on Android because the Android is only for cashier. So and the user don't want Android is complicated because the the cashier is mostly changing. So yeah, I keep it simple on Android.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: partial. Product Thinking: not_yet. pacing: ahead. priority_next: Product Thinking.
+
+That makes sense, trying to optimize for the user's experience of simplicity. When you were designing the flow, how did you work with the product team to decide which features should be available on the Android app versus requiring management with a manager? Were there any features you had to push back on?
+
+[Candidate]
+Yeah, actually this is the thing. I don't work with any team actually. On this project I work it alone, a solo programmer. So, I'm the manager, I'm the programmer, I'm the operational person, operational team, and yeah, I do it all by myself. By myself.
+
+[Candidate]
+Okay, maybe that can we continue or it's all
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: partial. Product Thinking: partial. pacing: on_track. priority_next: Leadership & Ownership.
+
+Oh wow, so you were handling all those roles simultaneously. That really does speak to ownership. When things inevitably went wrong — like perhaps a data sync failed or a user card malfunctioned — since you were the point person for everything, how did you prioritize which issue to fix first, and how did you manage the user's expectations during that downtime?
+
+[Candidate]
+Yeah. Um when I got some problem like uh thing pilot or user card malfunction, first maybe I will talk about user card malfunction. So uh sorry, for handle the user card malfunction, I have a backup card. So when user like uh have one not working card, we have backup about 20 backup data. Sorry, 20 backup. So if one card is error or malfunction, user can quickly switch to the good one and for that we give it we give it for free. 20 card for free because uh the the card malfunction is really it's really often it's pretty often to happen. And the second thing is data sync pilot because uh sorry, the second question is like a data sync pilot. How how I handle handle it? The data sync pilot, yeah. Data sync pilot is not uh not often and and yeah, I actually never not never, yeah. Rare, not rare, yeah.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: partial. Product Thinking: partial. pacing: ahead. priority_next: Node.js / Backend Development.
+
+Got it. So you had a quick fix for hardware failures. Now, focusing on the Node.js side of things, did you write any specific middleware for error handling or validation on your Laravel server, or did you stick mainly to the built-in framework tools? Walk me through how you'd handle a generic API error.
+
+[Candidate]
+Oh oh, okay okay okay. Sorry sorry. Okay, for the Node.js, I actually not use this as mine or as core as core system. On this project, I use Node.js for the payment gateway because this transaction need a saldo or need a balance. So, the user have to top up on the card and for the top up to the card, they have to top up manually from m-banking using virtual account. And the virtual account is got validate in payment gateway and the payment gateway that what I made and I made the payment gateway using Node.js. So, the Laravel is for the uh, tool management and the and Node.js is for the payment gateway. So, this is a different project. I think this is the project different project, I mean.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: initiated. Product Thinking: partial. pacing: ahead. priority_next: Node.js / Backend Development.
+
+Interesting, so you split the logic between Laravel for the management and Node for the payment gateway. Since those are separate systems, how did you ensure secure communication between them, and how did you handle a scenario where, for example, the payment processed on the Node side, but the Laravel side didn't record it correctly? How did you manage that transaction consistency?
+
+[Candidate]
+Yeah, actually that's not pretty hard because we have nodejs and server on the same server. So the connection is actually like a localhost connect to server A and server B so that pretty fast and I'm never have unsynced transaction because yeah. That's like localhost.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: partial. Product Thinking: partial. pacing: ahead. priority_next: Leadership & Ownership.
+
+Right, so since they were on the same machine, you relied on local network speed. Even with that proximity, how did you keep the system secure from malware or potential external attacks targeting the payment gateway specifically? Walk me through your security strategy there.
+
+[Candidate]
+Uh this this concern is not on my on my on my team because for the security thing, especially in the server on the hardware on the machine, that's handled by DevOp team. So, I don't handle it manually. I let the team to handle the malware, to handle the botnet, something like that. But for the secure thing on the coding, of course that me.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: partial. Product Thinking: partial. pacing: ahead. priority_next: Product Thinking.
+
+Understood, so you relied on a DevOps team for server security. Looking at the code itself then, how did you handle data integrity within that gateway logic, like sanitizing inputs or preventing injection attacks coming from the POS devices? Can you give me an example of how you secured specific transaction data?
+
+[Candidate]
+Can we continue?
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: covered. Product Thinking: partial. pacing: on_track. priority_next: Product Thinking.
+
+Sure, we can move on. Thinking about the overall system flow now, including Laravel, Node, and the POS devices — how did you approach designing the API responses, like data structures or error codes, to make sure all those different parts could communicate consistently, especially when dealing with slow updates across different sites? Were there any standards you defined?
+
+[Candidate]
+Okay, put the design in the app response. I have like a contract that have standard on my company and for the response the standard response is like and for the standard response we have status that boolean true or false and then message general message like the data successfully processed or the error on the field eight maybe and then we have data field data field that have that field by the data that
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: covered. Product Thinking: partial. pacing: ahead. priority_next: Product Thinking.
+
+That's a standard way to structure responses — status, message, and the data itself. Focusing on Product Thinking now — you mentioned before that you were the manager as well as the developer. How did you balance making those technical decisions with your understanding of the business and user needs? Was there ever a time when you had to prioritize one over the other?
+
+[Candidate]
+No, actually no. Because the decision the the decision for taking uh technical technical thing that by myself. So, I decided out what technology that I use that by me, what database that I use that by me, and what the user needed is communicated as well by me. Me and the client we talk each other uh direct so no gap, no issue with the understanding. So, just uh uh yeah. Just flowing like a water.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: covered. Product Thinking: covered. pacing: ahead. priority_next: Leadership & Ownership.
+
+I see, so you had that direct line to the client. Still, wearing both of those hats, how did you prevent technical convenience from overshadowing what might have been best for the users, or vice versa? Can you give me an example of trade-offs you had to consider?
+
+[Candidate]
+Uh
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: covered. Product Thinking: covered. pacing: ahead. priority_next: Leadership & Ownership.
+
+Or maybe put another way — was there a specific time when a technical challenge made you rethink how a feature should work for the users? How did you navigate that?
+
+[Candidate]
+The maybe if you ask about that maybe can I give maybe I once I have a problem with the feature that importing data. The user want me to make a feature that they the user can import data using Excel and then processing to the database. Actually that not pretty challenging but the problem is not how data inserted to the system but the problem is how the data is visualized how the data have a visual have a UI and UX on the system that the main problem because the data is not that much because the data is not the data is so raw and the challenge is how to visual the data from the ugly data to the good data. That the main challenging that user have been give me so this far.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: covered. Product Thinking: covered. pacing: ahead. priority_next: Leadership & Ownership.
+
+I see, so the real task was presenting that data in a clear way. Given you were managing all these roles — manager, developer, operations — how did you push back on the client if they requested something that was technically difficult or just wouldn't work well for users? Can you give me an example of a hard call you had to make?
+
+[Candidate]
+Okay, when you sort us about maybe request that technically difficult or just yeah or just maybe like impossible thing I just give an example I can Google do that or YouTube or Instagram or maybe Facebook can they do that if you think they cannot do that so do I?
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: covered. Product Thinking: covered. pacing: ahead. priority_next: Leadership & Ownership.
+
+Comparing to Google is definitely a strategy. When you made those decisions alone, how did you hold yourself accountable if something went wrong? Can you think of a time when a judgment call you made didn't pan out as planned, and how you took responsibility for that?
+
+[Candidate]
+Hello, can we continue?
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: partial. Node.js / Backend Development: covered. Product Thinking: covered. pacing: ahead. priority_next: Leadership & Ownership.
+
+Yes, absolutely. I was just asking about a specific instance where a technical decision didn't work out, and how you handled that situation. Just walking me through a mistake you learned from.
+
+[Candidate]
+My god, you you you are listening. I already explained it actually.
+
+[AI]
+fuel_management_system: partial. Leadership & Ownership: covered. Node.js / Backend Development: covered. Product Thinking: covered. pacing: critical. priority_next: fuel_management_system.
+
+My mistake, I understand. Thanks for walking me through that level of ownership. I've gathered enough information now, and I really appreciate your time today. Thanks for sharing your experiences. Goodbye.
+
+[Candidate]
+Okay, bye. Okay, bye.
+
+[AI]
+Goodbye! Thanks again.

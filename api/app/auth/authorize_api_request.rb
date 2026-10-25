@@ -8,8 +8,8 @@ require 'ostruct'
 # Does NOT hit the database for user lookup — trusts the JWT claims.
 class AuthorizeApiRequest
   # Roles that map to "assessor" permission in the AI interview context.
-  # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
-  ASSESSOR_ROLES = %w[admin assessor].freeze
+  # All internal users (hiring_manager, assessor, recruiter) can manage assessments.
+  ASSESSOR_ROLES = %w[hiring_manager assessor recruiter].freeze
 
   def initialize(headers = {}, required_roles = [])
     @headers = headers

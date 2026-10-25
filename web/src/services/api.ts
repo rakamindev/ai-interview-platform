@@ -1,13 +1,11 @@
 import axios from "axios";
-import { getStoredToken, clearToken } from "@/stores/authAtom";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1";
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
+import { getStoredToken, clearAuth } from "@/stores/authAtom";
+import { API_BASE_URL, WS_BASE_URL } from "@/config";
 
 export const WS_URL = WS_BASE_URL;
 
 export const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -28,8 +26,10 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      clearToken();
-      window.location.href = "/login";
+      clearAuth();
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

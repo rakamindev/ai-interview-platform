@@ -14,7 +14,9 @@ import TranscriptPage from "@/pages/transcript/TranscriptPage";
 import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
+import VacancyDetailPage from "@/pages/vacancies/VacancyDetailPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 export default function App() {
   return (
@@ -48,6 +50,7 @@ export default function App() {
         />
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
+        <Route path="/vacancies/:id" element={<VacancyDetailPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
       </Route>
       </Route>
@@ -56,6 +59,9 @@ export default function App() {
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
       </Route>
+
+      {/* 404 catch-all */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

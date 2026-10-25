@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Study Report — AI Interview Platform | Risna Berti Sundari</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --text: #1a1a1a;
+      --muted: #555;
+      --border: #d8d8d8;
+      --accent: #1e40af;
+      --accent-light: #eff6ff;
+      --warn: #92400e;
+      --warn-bg: #fffbeb;
+      --danger: #991b1b;
+      --danger-bg: #fef2f2;
+      --success: #065f46;
+      --success-bg: #ecfdf5;
+      --code-bg: #f1f5f9;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text);
+      max-width: 840px;
+      margin: 0 auto;
+      padding: 48px 40px 80px;
+    }
+
+    /* COVER */
+    .cover {
+      margin-bottom: 56px;
+      padding-bottom: 32px;
+      border-bottom: 2px solid var(--text);
+    }
+    .cover-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .cover h1 {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+    .cover-sub {
+      font-size: 17px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      font-weight: 400;
+    }
+    .cover-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 32px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 18px;
+    }
+    .cover-meta span { color: var(--text); font-weight: 500; }
+
+    /* SECTION */
+    .section {
+      margin-bottom: 52px;
+    }
+    .section-label {
+      font-size: 10.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 28px 0 8px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 13.5px;
+      font-weight: 600;
+      margin: 20px 0 6px;
+      color: #333;
+    }
+    p {
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    p:last-child { margin-bottom: 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* CALLOUT BOX */
+    .callout {
+      border-left: 3px solid var(--accent);
+      background: var(--accent-light);
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 13.5px;
+      border-radius: 0 6px 6px 0;
+    }
+    .callout.warn {
+      border-left-color: #d97706;
+      background: var(--warn-bg);
+    }
+    .callout.danger {
+      border-left-color: #dc2626;
+      background: var(--danger-bg);
+    }
+    .callout.success {
+      border-left-color: #059669;
+      background: var(--success-bg);
+    }
+
+    /* TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 16px 0;
+    }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      color: #333;
+    }
+    td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #fafafa; }
+
+    /* CODE */
+    code {
+      font-family: 'Fira Mono', 'Courier New', monospace;
+      font-size: 12px;
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 3px;
+      color: #1e293b;
+    }
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+      margin: 14px 0;
+      line-height: 1.6;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; }
+
+    /* BADGE */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .badge-p0 { background: #fef2f2; color: #991b1b; }
+    .badge-p1 { background: #fff7ed; color: #92400e; }
+    .badge-p2 { background: #eff6ff; color: #1e40af; }
+    .badge-p3 { background: #f0fdf4; color: #065f46; }
+    .badge-done { background: #f0fdf4; color: #065f46; }
+    .badge-fixed { background: #eff6ff; color: #1e40af; }
+
+    /* FINDING CARD */
+    .finding {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 12px 0;
+    }
+    .finding-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .finding h4 { margin: 0; font-size: 13.5px; }
+    .finding p { font-size: 13px; color: var(--muted); margin: 0; }
+
+    /* FLOW DIAGRAM */
+    .flow {
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-size: 13px;
+      font-family: 'Fira Mono', monospace;
+      line-height: 2;
+      margin: 14px 0;
+      white-space: pre-wrap;
+    }
+
+    /* PHASE BLOCK */
+    .phase-block {
+      border-left: 3px solid #c7d2fe;
+      padding: 4px 0 4px 16px;
+      margin: 14px 0;
+    }
+    .phase-block h4 { margin-top: 0; }
+
+    /* GRID 2COL */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 14px 0;
+    }
+    .grid-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .grid-card h4 { margin-top: 0; font-size: 13px; color: var(--accent); }
+    .grid-card p { font-size: 13px; color: var(--muted); margin: 0; }
+
+    /* ASSUMPTIONS BLOCK */
+    .assumption-block {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 14px 0;
+      font-size: 13.5px;
+    }
+    .assumption-block ul { padding-left: 20px; }
+    .assumption-block li { margin-bottom: 6px; }
+
+    /* DIVIDER */
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    /* TOC */
+    .toc {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 48px;
+      font-size: 13px;
+    }
+    .toc h3 { margin: 0 0 12px; font-size: 14px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin-bottom: 4px; color: var(--muted); }
+    .toc a { color: var(--text); }
+
+    /* PRINT */
+    @media print {
+      body { padding: 32px 36px; font-size: 13px; }
+      .section { page-break-inside: avoid; }
+      h2 { page-break-after: avoid; }
+      pre { white-space: pre-wrap; }
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-label">Case Study Submission &mdash; Fullstack Product Engineer</div>
+  <h1>AI Interview Platform</h1>
+  <div class="cover-sub">Laporan Pengerjaan &amp; Analisis Produk</div>
+  <div class="cover-meta">
+    <div>Nama<br><span>Risna Berti Sundari</span></div>
+    <div>Repository<br><span><a href="https://github.com/rakamindev/ai-interview-platform">github.com/rakamindev/ai-interview-platform</a></span></div>
+    <div>Branch<br><span>fix/interview-revamp</span></div>
+    <div>Deadline<br><span>Rabu, 19 Agustus 2026 — 13:00 WIB</span></div>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h3>Daftar Isi</h3>
+  <ol>
+    <li><a href="#asumsi">Asumsi Global</a></li>
+    <li><a href="#konteks">Konteks Produk &amp; Domain</a></li>
+    <li><a href="#analisa">Analisa Gap &amp; Temuan (P0–P3)</a></li>
+    <li><a href="#strategi">Strategi Revamp &amp; Trade-off</a></li>
+    <li><a href="#implementasi">Implementasi — Apa yang Dikerjakan</a></li>
+    <li><a href="#arsitektur">Arsitektur Sistem</a></li>
+    <li><a href="#testing">Testing &amp; Validasi</a></li>
+    <li><a href="#backlog">Backlog &amp; Catatan Jujur</a></li>
+  </ol>
+</div>
+
+
+<!-- SECTION 1: ASUMSI -->
+<div class="section" id="asumsi">
+  <div class="section-label">Bagian 1</div>
+  <h2>Asumsi Global</h2>
+
+  <p>Sebelum masuk ke analisa, saya tetapkan beberapa asumsi kerja agar pengerjaan tetap fokus. Kalau ada yang tidak pas dengan konteks bisnis Rakamin, semuanya mudah disesuaikan.</p>
+
+  <div class="assumption-block">
+    <ul>
+      <li><strong>Stack tidak diganti.</strong> Rails + React + PostgreSQL + Sidekiq + Gemini API adalah fondasi yang dipakai. Saya tidak mempermasalahkan pemilihan stack, fokus ke pengerjaan di atas fondasi yang ada.</li>
+      <li><strong>Multi-tenant berbasis isolasi baris (row-level).</strong> Isolasi data antar tenant dilakukan lewat kolom <code>tenant_id</code> di tiap tabel.</li>
+      <li><strong>Isolasi data antar tenant di database.</strong> Data tenant dan data bersama (seperti <code>organizations</code>) diperlakukan terpisah, mengikuti struktur yang sudah ada.</li>
+      <li><strong>Sidekiq + Redis untuk background jobs.</strong> Coverage analysis, portfolio generation, dan fit-gap semuanya async via Sidekiq. Ini diasumsikan selalu berjalan saat demo.</li>
+      <li><strong>Gemini API bisa berubah.</strong> Model yang tersedia di Gemini bisa deprecated tanpa pemberitahuan — sehingga konfigurasi model tidak boleh di-hardcode, harus lewat environment config.</li>
+      <li><strong>Kandidat tidak punya akun.</strong> Akses interview dilakukan via <code>invite_token</code> di URL — bukan sistem register/login terpisah. Ini desain yang disengaja, bukan bolong.</li>
+      <li><strong>Demo environment = localhost.</strong> Subdomain tenant (misal <code>ai-interview.localhost</code>) dipetakan ke 127.0.0.1 lewat edit <code>/etc/hosts</code> manual.</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- SECTION 2: KONTEKS PRODUK -->
+<div class="section" id="konteks">
+  <div class="section-label">Bagian 2</div>
+  <h2>Konteks Produk &amp; Domain</h2>
+
+  <h3>Apa yang Dibangun</h3>
+  <p>AI Interview Platform adalah alat wawancara kandidat berbasis suara real-time yang ditenagai Gemini Live API. Platform ini bukan chatbot biasa — AI berperan sebagai pewawancara yang aktif menilai cakupan skill (coverage) kandidat terhadap rubrik assessment yang sudah ditentukan, lalu menghasilkan portfolio penilaian yang bisa dibandingkan dengan lowongan yang ada (fit-gap report).</p>
+
+  <p>Alur utamanya sederhana tapi teknis cukup dalam:</p>
+
+  <div class="flow">Admin buat assessment (rubrik skill + role title)
+  ↓
+Invite kandidat via link token
+  ↓
+Kandidat interview suara real-time dengan AI
+  ↓ (async, background)
+Coverage analyzer menilai tiap skill dari percakapan
+  ↓
+Portfolio kandidat di-generate otomatis
+  ↓
+Admin bisa bandingkan portfolio vs vacancy (fit-gap report)</div>
+
+  <h3>Siapa Penggunanya</h3>
+
+  <div class="grid-2">
+    <div class="grid-card">
+      <h4>Pengguna Internal</h4>
+      <p>Tim yang bikin assessment, invite kandidat, pantau progres interview live, dan review hasil portfolio. Mereka login dengan akun yang terikat ke tenant masing-masing.</p>
+    </div>
+    <div class="grid-card">
+      <h4>Kandidat</h4>
+      <p>Tidak punya akun — masuk via link invite yang berisi token. Mereka tidak memilih platform ini dan tidak bisa opt-out. Pengalaman mereka sangat menentukan kualitas penilaian.</p>
+    </div>
+  </div>
+
+  <h3>Konteks Industri: Hiring di Indonesia</h3>
+  <p>Interview teknis di Indonesia masih banyak bergantung pada kemampuan manusia pewawancara yang bisa berbeda-beda standarnya. AI Interview Platform mencoba menstandarkan proses penilaian — AI menilai coverage berdasarkan rubrik yang sama untuk semua kandidat, mengurangi bias evaluasi. Ini relevan dengan UU PDP (Perlindungan Data Pribadi) Indonesia: percakapan kandidat, transcript, dan hasil penilaian adalah data pribadi yang sensitif — tidak boleh ada di log, tidak boleh bocor ke tenant lain.</p>
+
+  <div class="callout warn">
+    <strong>Implikasi UU PDP:</strong> Data kandidat (nama, transcript percakapan, hasil penilaian) harus terisolasi per tenant, tidak boleh keluar lewat log server, dan penggunaan API key pihak ketiga (Gemini) perlu diperhatikan karena data kandidat dikirim ke server Google untuk diproses.
+  </div>
+</div>
+
+
+<!-- SECTION 3: ANALISA GAP -->
+<div class="section" id="analisa">
+  <div class="section-label">Bagian 3</div>
+  <h2>Analisa Gap &amp; Temuan (P0–P3)</h2>
+
+  <p>Sebelum menulis satu baris kode, saya baca seluruh codebase: routing config, controller, model, frontend pages, dan mencoba interview end-to-end. Hasilnya saya kategorikan berdasarkan dampak ke kelayakan demo dan kualitas produk.</p>
+
+  <div class="callout">
+    <strong>Definisi prioritas:</strong> P0 = blocker demo tidak bisa jalan | P1 = fitur inti yang dievaluasi | P2 = kualitas dan kejelasan produk | P3 = polesan dan dokumentasi
+  </div>
+
+  <h3>Temuan Kritis (P0 — Demo Tidak Bisa Jalan)</h3>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p0">P0</span>
+      <h4>Model Gemini yang di-hardcode sudah deprecated</h4>
+    </div>
+    <p>Kode memakai <code>gemini-2.0-flash-001</code> dan <code>gemini-2.0-pro-001</code> yang di-hardcode langsung di source — model ini sudah tidak tersedia di Gemini API dan mengembalikan 401/404. Artinya seluruh fitur utama (interview live, coverage analysis, portfolio generation) tidak bisa jalan sama sekali tanpa fix ini.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p0">P0</span>
+      <h4>Kandidat tidak bisa masuk sesi interview</h4>
+    </div>
+    <p>Alur hardware check dan invite link bermasalah — kandidat gagal lolos pemeriksaan perangkat sebelum interview dimulai. Ini blocker langsung untuk alur utama yang menjadi inti penilaian.</p>
+  </div>
+
+  <h3>Temuan Inti Interview (P1 — Kualitas Fitur Utama)</h3>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p1">P1</span>
+      <h4>AI memotong kandidat saat jeda bicara</h4>
+    </div>
+    <p>VAD (Voice Activity Detection) Gemini terlalu agresif dengan silence pump delay 1 detik — jeda berpikir kandidat dianggap selesai bicara, sehingga AI langsung nyela. Ini merusak kenyamanan wawancara secara fundamental.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p1">P1</span>
+      <h4>Teks sinyal internal bocor diucapkan AI</h4>
+    </div>
+    <p>System prompt yang terlalu panjang dan detail soal sinyal tersembunyi justru memancing model untuk mengucapkan teks internal itu. Terbukti dari transcript sesi 2: AI mengucapkan <em>"Wait, input contains valid wrap_up signal..."</em> — padahal itu pesan internal yang tidak boleh didengar kandidat.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p1">P1</span>
+      <h4>Sesi interview berakhir dini tanpa verifikasi backend</h4>
+    </div>
+    <p>AI menutup interview sendiri di turn ke-17 dengan reason <code>all_covered</code> — padahal 2 skill masih belum tercakup dan masih ada jatah 45 menit. Backend langsung percaya pada kata AI tanpa verifikasi coverage yang sesungguhnya. Ini adalah bug arsitektur: keputusan mengakhiri interview seharusnya sepenuhnya milik backend.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p1">P1</span>
+      <h4>Login tidak pakai database — backdoor token via env</h4>
+    </div>
+    <p>Tabel <code>users</code> kosong; akses admin dilakukan via <code>VITE_DEV_TOKEN</code> yang di-inject langsung dari environment variable ke frontend. Ini backdoor yang tidak boleh ada di sistem produksi — siapapun yang tahu token bisa masuk tanpa kredensial.</p>
+  </div>
+
+  <h3>Temuan Kualitas Produk (P2 — Penyempurnaan)</h3>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p2">P2</span>
+      <h4>Pesan error login tidak jujur / tidak membantu</h4>
+    </div>
+    <p>Error login hanya mengembalikan pesan generik — tidak membedakan antara email tidak ditemukan, password salah, atau akun tidak punya akses ke tenant ini. Assessor tidak tahu harus apa.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p2">P2</span>
+      <h4>Role assessor ada di kode tapi belum real</h4>
+    </div>
+    <p>Di <code>AuthorizeApiRequest</code>, ada komentar jujur: <em>"assessor is planned as a future role."</em> Semua fitur sekarang eksklusif untuk admin. Ini temuan arsitektur yang perlu diangkat — role system sudah disiapkan tapi belum diimplementasi.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p2">P2</span>
+      <h4>SignupPage.tsx — halaman yatim piatu</h4>
+    </div>
+    <p>File ada (106 baris, sudah jadi), tapi tidak pernah di-routing di <code>App.tsx</code>, dan backend tidak punya endpoint register sama sekali. Ini dead code yang perlu dibersihkan agar tidak membingungkan.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p2">P2</span>
+      <h4>Frontend reconnect menyerah terlalu cepat vs grace period backend</h4>
+    </div>
+    <p>Frontend hanya mencoba reconnect 3× (7 detik total) lalu menampilkan "Interview Complete" — menyesatkan, karena sesi belum selesai. Backend masih punya grace period 120 detik. Ini mismatch yang merugikan kandidat dengan koneksi tidak stabil.</p>
+  </div>
+
+  <h3>Temuan Bug Setelah Testing Manual (P1–P2)</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Bug</th>
+        <th>Dampak</th>
+        <th>Root Cause</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Filter status "Awaiting" → 500 error</td>
+        <td>Admin tidak bisa filter assessment</td>
+        <td><code>latest.id</code> tidak ada di subquery LATERAL JOIN — kolom yang di-select cuma <code>status</code> dan <code>end_reason</code></td>
+      </tr>
+      <tr>
+        <td>Download PDF portfolio/fit-gap → 500 error</td>
+        <td>Fitur export mati total</td>
+        <td>Font default Prawn (Helvetica/AFM) tidak support UTF-8 — teks AI sering pakai em-dash dan karakter non-latin</td>
+      </tr>
+      <tr>
+        <td>Badge jumlah skill selalu "0"</td>
+        <td>Informasi salah di semua list page</td>
+        <td>Endpoint list tidak mengembalikan <code>skills</code> maupun count; FE baca <code>skills?.length</code> yang selalu undefined</td>
+      </tr>
+      <tr>
+        <td>Search assessment — fokus hilang saat mengetik</td>
+        <td>UX menyakitkan; tidak bisa ketik lancar</td>
+        <td>Search bar berada di dalam ternary loading/empty/list — unmount setiap kali state loading berubah</td>
+      </tr>
+      <tr>
+        <td>AI loop nudge kontradiktif menjelang waktu habis</td>
+        <td>Interview stuck — tidak maju tidak mundur</td>
+        <td>Coverage map bilang "pacing: critical" tapi nudge bilang "lanjut" — dua sinyal berlawanan, loop tak berujung</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- SECTION 4: STRATEGI -->
+<div class="section" id="strategi">
+  <div class="section-label">Bagian 4</div>
+  <h2>Strategi Revamp &amp; Trade-off</h2>
+
+  <h3>Prinsip Pengerjaan</h3>
+  <p>Saya pakai prinsip <strong>KISS (Keep It Simple)</strong> secara konsisten: selesaikan yang paling penting untuk demo lebih dulu, hindari over-engineering, jangan tambah fitur sebelum inti stabil. Urutan pengerjaan mengikuti prioritas P0 → P1 → P2 → P3, bukan semuanya sekaligus.</p>
+
+  <h3>Trade-off Utama yang Diputuskan</h3>
+
+  <h4>1. Multi-tenant: resolusi tenant lewat subdomain</h4>
+  <p>Tenant ditentukan dari <code>request.host</code> di backend — <code>ai-interview.localhost</code> → tenant AI Interview Test, <code>acme.localhost</code> → tenant Acme Corp. Tidak ada input dari client yang dipercaya untuk menentukan tenant. Subdomain adalah carrier identitas tenant yang natural (sama seperti Slack dan Notion: <code>acme.slack.com</code>). Login di subdomain tidak dikenal mengembalikan 401 "Tenant not recognized", bukan fallback diam-diam ke tenant lain.</p>
+
+  <h4>2. User-Tenant: Kolom Tunggal vs Membership Table</h4>
+  <div class="grid-2">
+    <div class="grid-card">
+      <h4>Opsi A — Kolom <code>tenant_id</code> di tabel users (yang dipilih)</h4>
+      <p>Satu user = satu tenant. Sederhana, cukup untuk isolasi demo, dan tidak membutuhkan migrasi besar.</p>
+    </div>
+    <div class="grid-card">
+      <h4>Opsi B — Membership table user↔tenant (many-to-many)</h4>
+      <p>User bisa punya akses ke beberapa tenant. Lebih fleksibel untuk production, tapi over-engineering untuk scope demo ini.</p>
+    </div>
+  </div>
+  <p><strong>Alasan memilih A:</strong> YAGNI (You Aren't Gonna Need It) — untuk membuktikan isolasi tenant dalam demo, satu user satu tenant sudah cukup. Membership table bisa ditambahkan nanti tanpa merusak fondasi yang ada.</p>
+
+  <h4>3. System Prompt: Tetap Detail vs Dipangkas</h4>
+  <div class="grid-2">
+    <div class="grid-card">
+      <h4>Opsi A — Dipangkas, instruksi singkat &amp; imperatif (yang dipilih)</h4>
+      <p>Rule dibuat ringkas dan tegas. "YOU CANNOT CLOSE THE INTERVIEW — Only the system can end it." Bukan kuliah panjang soal bagaimana sinyal bekerja.</p>
+    </div>
+    <div class="grid-card">
+      <h4>Opsi B — Tetap detail, tambah lebih banyak larangan</h4>
+      <p>Menambah lebih banyak instruksi tentang apa yang tidak boleh dilakukan AI. Secara teori lebih komprehensif.</p>
+    </div>
+  </div>
+  <p><strong>Alasan memilih A:</strong> Instruksi panjang yang menjelaskan detail tentang sinyal tersembunyi justru memancing model untuk mengucapkannya — ini "prompt injection oleh diri sendiri." Instruksi singkat dan imperatif lebih efektif. Terbukti dari perbandingan transcript sebelum dan sesudah fix.</p>
+
+  <div class="callout">
+    <strong>Constraint Signal yang saya angkat:</strong> Kebocoran cross-tenant via <code>Portfolio.find(id)</code> yang tidak di-scope (<em>unscoped find</em>) belum saya perbaiki dalam pengerjaan ini — ini debt arsitektur yang harus diselesaikan sebelum production deployment. Tercatat di backlog.
+  </div>
+</div>
+
+
+<!-- SECTION 5: IMPLEMENTASI -->
+<div class="section" id="implementasi">
+  <div class="section-label">Bagian 5</div>
+  <h2>Implementasi — Apa yang Dikerjakan</h2>
+
+  <p>Pengerjaan dibagi dalam 4 phase berurutan. Tiap phase selesai → saya test di browser → konfirmasi → lanjut. Tidak ada yang langsung ditulis sekaligus.</p>
+
+  <h3>Phase 0 — Fondasi &amp; Blocker</h3>
+
+  <div class="phase-block">
+    <h4>Konfigurasi model Gemini via environment</h4>
+    <p>Model tidak lagi di-hardcode. Sekarang baca dari <code>application.yml</code>: <code>GEMINI_LIVE_MODEL</code> untuk interview suara, <code>GEMINI_FLASH_MODEL</code> untuk coverage analysis, <code>GEMINI_PRO_MODEL</code> untuk portfolio generation. Satu titik konfigurasi, mudah diganti tanpa ubah kode.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>Perbaikan alur kandidat masuk sesi</h4>
+    <p>Fix hardware check dan invite link — kandidat bisa lolos pemeriksaan perangkat dan masuk ke sesi interview. Tanpa ini seluruh demo tidak bisa berjalan.</p>
+  </div>
+
+  <h3>Phase 1 — Inti Interview</h3>
+
+  <div class="phase-block">
+    <h4>Silence pump delay: 1s → 2.5s</h4>
+    <p>Di <code>live_client.rb</code>, <code>SILENCE_PUMP_DELAY</code> dinaikkan dari 1 detik ke 2.5 detik. Ini memberi ruang berpikir bagi kandidat sebelum AI merespons. 2.5 detik adalah kompromi setelah observasi langsung — cukup untuk berpikir, tidak terlalu lama sampai wawancara terasa lambat.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>System prompt dipangkas &amp; instruksi dipertegas</h4>
+    <p>Prompt turun dari ±10KB ke ±8.6KB. Rule 7 diubah jadi tegas: AI tidak bisa menutup interview — hanya sistem yang bisa. Rule 9 untuk wrap-up dibuat singkat: maksimal 2 kalimat, hanya kalau sistem memberi sinyal. Prompt di-cache di DB, jadi perlu di-regenerate via <code>rails runner</code> agar langsung efektif.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>End-sesi hanya via backend, bukan via kata AI</h4>
+    <p>Logika closing-phrase fallback diubah: backend hanya memfinalisasi sesi kalau <code>coverage_pending</code> sudah benar (semua skill verified covered). Kalau AI menutup lebih awal, backend kirim <code>CONTINUE_SIGNAL</code> untuk menyuruh lanjut — dibatasi maksimal 3×. Ini prinsip penting: <em>model tidak dipercaya untuk keputusan bisnis seperti mengakhiri interview.</em></p>
+  </div>
+
+  <div class="phase-block">
+    <h4>Graceful exit — AI tutup dengan sopan &amp; transparan</h4>
+    <p>Sebelumnya AI langsung bilang "Terima kasih atas waktunya" tanpa menjelaskan kenapa interview berakhir — kandidat merasa di-ghosting. Sekarang: AI jawab pertanyaan kandidat dulu, jelaskan bahwa semua topik sudah tercakup, baru tutup secara natural. Efisiensi dipertahankan — interview boleh selesai cepat kalau skill sudah covered, yang diperbaiki cara keluarnya.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>Login sungguhan via database</h4>
+    <p>Seed akun demo untuk login, pesan error dibedakan (email tidak ditemukan / password salah / akun tidak punya akses), backdoor <code>VITE_DEV_TOKEN</code> dihapus dari kode FE dan file env. Tabel <code>users</code> yang tadinya kosong sekarang terisi dengan akun yang bisa dipakai demo.</p>
+  </div>
+
+  <h3>Phase 2 &amp; 3 — UI/UX Polish</h3>
+
+  <p>Setelah inti berjalan, saya garap polish visual dan pengalaman pengguna. Ini mencakup:</p>
+
+  <table>
+    <thead>
+      <tr><th>Area</th><th>Sebelum</th><th>Sesudah</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Font</td>
+        <td>Browser default (kadang Times New Roman)</td>
+        <td>Inter — bersih, mudah dibaca di semua ukuran</td>
+      </tr>
+      <tr>
+        <td>Login page</td>
+        <td>Plain white, tidak ada visual</td>
+        <td>Gradient background, card container, branding icon</td>
+      </tr>
+      <tr>
+        <td>Breadcrumb navigasi</td>
+        <td>6+ pola berbeda di tiap halaman</td>
+        <td>Satu shared <code>Breadcrumb</code> component, dipakai di 8 halaman</td>
+      </tr>
+      <tr>
+        <td>Error states</td>
+        <td>5 pola berbeda (banner, card, text, inline, silent)</td>
+        <td>Satu <code>Alert</code> component dengan 5 semantic variants</td>
+      </tr>
+      <tr>
+        <td>Empty states</td>
+        <td>Tiap halaman build sendiri</td>
+        <td>Shared <code>EmptyState</code> component</td>
+      </tr>
+      <tr>
+        <td>Portfolio error</td>
+        <td>"Portfolio generation failed." — tidak jelas</td>
+        <td>Pesan spesifik: rate limit / timeout / no content — actionable</td>
+      </tr>
+      <tr>
+        <td>404 page</td>
+        <td>Blank page</td>
+        <td>"404 — Page not found" + link ke halaman assessment</td>
+      </tr>
+      <tr>
+        <td>Assessment list</td>
+        <td>Monoton, filter client-side</td>
+        <td>Colored status icons, filter pills, filter pindah ke BE, pagination</td>
+      </tr>
+      <tr>
+        <td>Form (assessment/vacancy)</td>
+        <td>Plain, tanpa struktur visual</td>
+        <td>Card wrapper, section titles, role title combobox dengan suggestion</td>
+      </tr>
+      <tr>
+        <td>Dark mode</td>
+        <td>Broken — banyak <code>bg-white</code> hardcoded</td>
+        <td>Semua pakai design token (<code>bg-background</code>, <code>bg-card</code>)</td>
+      </tr>
+      <tr>
+        <td>Mobile responsive</td>
+        <td>Hampir nol breakpoint</td>
+        <td>Semua halaman utama responsive: grid stack, hamburger menu, dialog ada jarak tepi</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Phase 4 — Bug Fixes &amp; Resilience</h3>
+
+  <div class="phase-block">
+    <h4>Auto-end saat kandidat pamitan</h4>
+    <p>Kandidat pamitan (ucapan terima kasih di akhir) harus selalu dihormati, apapun status coverage. Branch C fallback inject <code>WRAP_UP_SIGNAL</code> langsung tanpa menunggu <code>coverage_pending</code>. Backend boleh override keputusan AI (untuk cegah premature end), tapi tidak boleh override keputusan kandidat.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>Fix loop nudge kontradiktif menjelang waktu habis</h4>
+    <p>Ditambah check <code>time_critical</code> — kalau warning waktu sudah terkirim, AI closing langsung difinalisasi, bukan di-nudge untuk lanjut. Dua sinyal berlawanan (coverage map bilang "wrap up", nudge bilang "lanjut") diputuskan tegas: sinyal waktu adalah source of truth tertinggi.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>Reconnect frontend diselaraskan dengan grace period backend</h4>
+    <p><code>RECONNECT_DELAYS</code> diperpanjang dari 3 attempts (7 detik) ke 8 attempts (~247 detik) — sinkron dengan grace period backend 120 detik. Ditambah state <code>"failed"</code> dengan tombol "Retry Interview" yang jelas, bukan langsung tampil "Interview Complete" yang menyesatkan.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>Self-hosted speed test endpoint</h4>
+    <p>Speed test memakai endpoint <code>/api/v1/speed-test</code> di backend sendiri sebagai primary, dengan httpbin sebagai fallback. Alasan memilih self-hosted: httpbin.org sering return 503 atau timeout dan tidak selalu tersedia, sehingga tidak bisa diandalkan. Endpoint sendiri bebas dari masalah itu — dan ketika aplikasi benar-benar di-hosting di server, pengukuran ke endpoint ini akan mencerminkan koneksi ke server secara akurat. Batasannya saat ini: karena demo masih berjalan di localhost, pengukuran ke endpoint self-hosted belum sepenuhnya merepresentasikan kecepatan internet kandidat — ini keterbatasan lingkungan demo, bukan desain solusinya.</p>
+  </div>
+
+  <div class="phase-block">
+    <h4>Time warning 10 menit</h4>
+    <p>Sebelumnya warning baru muncul di 2 menit dan 1 menit — terlalu mendadak. Ditambah tier <code>:warn_600</code> di backend (10 menit sebelum habis) dan banner amber di frontend yang auto-dismiss setelah 5 detik. Kandidat yang tahu waktu tersisa bisa mengatur panjang jawaban.</p>
+  </div>
+
+  <h3>Multi-Tenant (Subdomain-Based)</h3>
+
+  <p>Ini satu modul tersendiri yang cukup dalam. Kondisi sebelumnya: login bisa "pilih tenant seenaknya" via header <code>X-Tenant-Scheme</code> — client bisa kirim header apapun dan backend percaya. Sesudah implementasi:</p>
+
+  <ul style="padding-left: 20px; margin: 12px 0;">
+    <li style="margin-bottom: 6px;">Kolom <code>tenant_id</code> ditambahkan ke tabel <code>users</code> via migration yang aman (nullable, tanpa FK)</li>
+    <li style="margin-bottom: 6px;">Method <code>Organization.find_by_host</code> baru — strict match tanpa fallback ke org default</li>
+    <li style="margin-bottom: 6px;">Login validate: subdomain → cari org → cek <code>user.tenant_id == org.id</code> → baru mint JWT</li>
+    <li style="margin-bottom: 6px;">Frontend derive host dari <code>window.location.hostname</code>, bukan hardcode</li>
+    <li style="margin-bottom: 6px;">Tenant name muncul di header dari DB hasil login, bukan dari env</li>
+    <li style="margin-bottom: 6px;">Seeds: 3 tenant + user terikat per tenant, idempotent via <code>find_or_initialize_by</code></li>
+  </ul>
+
+  <div class="callout success">
+    <strong>Hasil:</strong> Login di <code>acme.localhost</code> dengan akun rakamin → 401 "Account is not authorized for this tenant." Login di subdomain tidak dikenal → 401 "Tenant not recognized."
+  </div>
+</div>
+
+
+<!-- SECTION 6: ARSITEKTUR -->
+<div class="section" id="arsitektur">
+  <div class="section-label">Bagian 6</div>
+  <h2>Arsitektur Sistem</h2>
+
+  <h3>Stack &amp; Topologi</h3>
+
+  <div class="flow">Browser (Vite :5173 / :5174)
+   │  REST API + WebSocket
+   ▼
+Rails API (Puma :3001)
+   ├── PostgreSQL        — data: assessment, session, coverage_map,
+   │                        transcript, portfolio, user, organization
+   ├── Redis + Sidekiq   — background jobs: coverage analysis,
+   │                        portfolio generation, fit-gap report
+   └── Gemini API        — Live WebSocket (interview suara)
+                           HTTP generateContent (coverage + portfolio)</div>
+
+  <h3>Pipeline Audio</h3>
+
+  <p>Alur audio dijabarkan per node:</p>
+
+  <table>
+    <thead>
+      <tr><th>Node</th><th>Komponen</th><th>Fungsi</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>N5</strong></td>
+        <td><code>Sessions::StartHandler</code></td>
+        <td>Aktivasi sesi + buat <code>CoverageMap</code> per skill assessment</td>
+      </tr>
+      <tr>
+        <td><strong>N6</strong></td>
+        <td><code>AudioWebsocketMiddleware</code></td>
+        <td>Jembatan browser ↔ Gemini Live WS; gating closing-phrase; nudge AI; sanitize transcript</td>
+      </tr>
+      <tr>
+        <td><strong>N7</strong></td>
+        <td><code>CoverageAnalyzerWorker</code></td>
+        <td>Analisis N turn terakhir (TURNS_CONTEXT=6) dengan Gemini Flash; update state coverage</td>
+      </tr>
+      <tr>
+        <td><strong>N8</strong></td>
+        <td><code>Coverage::StateEngine</code></td>
+        <td>Transisi state <code>initiated → partial → covered</code> (forward-only, minimal 2 probe per skill)</td>
+      </tr>
+      <tr>
+        <td><strong>N9</strong></td>
+        <td><code>Sessions::EndHandler</code></td>
+        <td>Akhiri sesi dengan reason tertentu → enqueue PortfolioGeneratorWorker</td>
+      </tr>
+      <tr>
+        <td><strong>N10</strong></td>
+        <td><code>PortfolioGeneratorWorker</code></td>
+        <td>Generate portfolio kandidat dari hasil coverage — async via Sidekiq</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>End Reason yang Mungkin</h3>
+  <p>Sesi interview bisa berakhir dengan 4 alasan, masing-masing ditangani berbeda:</p>
+  <table>
+    <thead><tr><th>Reason</th><th>Trigger</th></tr></thead>
+    <tbody>
+      <tr><td><code>all_covered</code></td><td>Coverage analyzer konfirmasi semua skill covered</td></tr>
+      <tr><td><code>time_ceiling</code></td><td>Waktu sesi habis (batas dari assessment config)</td></tr>
+      <tr><td><code>manual_candidate</code></td><td>Kandidat pamitan — Branch C detect ucapan penutup</td></tr>
+      <tr><td><code>error</code></td><td>Koneksi/API error yang tidak bisa dipulihkan</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Auth &amp; Multi-Tenant</h3>
+
+  <div class="flow">Browser: http://ai-interview.localhost:5174/login
+  POST /auth/login   Host: ai-interview.localhost:3001
+  ↓
+TenantResolverMiddleware
+  resolve tenant: JWT (kalau ada) → X-Tenant-Scheme → Host
+  ↓
+AuthenticationController#authenticate
+  Organization.find_by_host("ai-interview.localhost") → org id X
+  user.tenant_id == org.id? → ya → mint JWT (dengan scheme tenant)
+  → return { token, user, tenant }
+  ↓
+FE simpan token + tenant → header tampil nama tenant dari DB
+  ↓
+Request berikutnya (GET /assessments) bawa JWT
+  TenantResolverMiddleware decode scheme → Current.tenant_id
+  ↓
+Model query: TenantScoped → WHERE tenant_id = X</div>
+
+  <h3>Model Data Utama</h3>
+  <table>
+    <thead><tr><th>Model</th><th>Peran</th></tr></thead>
+    <tbody>
+      <tr><td><code>Assessment</code> + <code>AssessmentSkill</code></td><td>Rubrik interview: role title + daftar skill + expected level</td></tr>
+      <tr><td><code>Session</code> + <code>TranscriptTurn</code></td><td>Sesi interview + log percakapan per giliran</td></tr>
+      <tr><td><code>CoverageMap</code></td><td>State cakupan per skill: initiated / partial / covered, probe_count</td></tr>
+      <tr><td><code>Portfolio</code> + <code>PortfolioSkill</code></td><td>Hasil penilaian kandidat dari satu sesi selesai</td></tr>
+      <tr><td><code>Vacancy</code> + <code>VacancySkill</code></td><td>Definisi lowongan + kebutuhan skill per level</td></tr>
+      <tr><td><code>FitGapReport</code></td><td>Perbandingan portfolio vs vacancy — match/gap/exceed per skill</td></tr>
+      <tr><td><code>Organization</code></td><td>Registry tenant yang dibagikan dengan rakamin-api</td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- SECTION 7: TESTING -->
+<div class="section" id="testing">
+  <div class="section-label">Bagian 7</div>
+  <h2>Testing &amp; Validasi</h2>
+
+  <h3>Acceptance Criteria yang Saya Tentukan Sendiri</h3>
+
+  <p>Sebelum menulis kode, saya tentukan dulu apa artinya "benar" untuk tiap perubahan penting:</p>
+
+  <table>
+    <thead>
+      <tr><th>Perubahan</th><th>Acceptance Criteria</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Fix silence pump</td>
+        <td>Kandidat bisa berhenti bicara 2+ detik tanpa AI nyela; wawancara terasa natural</td>
+      </tr>
+      <tr>
+        <td>Fix system prompt</td>
+        <td>Tidak ada teks <code>[SISTEM]</code>, <code>[COVERAGE_MAP]</code>, atau metadata JSON yang muncul di transcript hasil interview</td>
+      </tr>
+      <tr>
+        <td>Fix sesi berakhir dini</td>
+        <td>Sesi tidak berakhir dengan reason <code>all_covered</code> kalau ada skill yang masih <code>initiated</code> atau <code>partial</code></td>
+      </tr>
+      <tr>
+        <td>Login database</td>
+        <td>Email tidak ditemukan → pesan A. Password salah → pesan B. Akun salah tenant → pesan C. Tidak ada backdoor token.</td>
+      </tr>
+      <tr>
+        <td>Multi-tenant isolasi</td>
+        <td>Login dengan akun tenant A di subdomain tenant B → 401. Subdomain tidak dikenal → 401. Data assessment/vacancy tidak bocor antar tenant.</td>
+      </tr>
+      <tr>
+        <td>Filter "Awaiting" assessment</td>
+        <td>Filter status "Awaiting" mengembalikan daftar assessment, bukan 500 error</td>
+      </tr>
+      <tr>
+        <td>Download PDF</td>
+        <td>PDF bisa di-download meski portfolio/fit-gap mengandung tanda em-dash atau karakter non-ASCII</td>
+      </tr>
+      <tr>
+        <td>Kandidat pamitan</td>
+        <td>Ucapan penutup kandidat selalu memicu auto-end, terlepas dari status coverage saat itu</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Metode Verifikasi</h3>
+
+  <p>Karena RSpec belum ada spec yang ditulis dan web app tidak punya test runner, validasi dilakukan dengan pendekatan berlapis:</p>
+
+  <ol style="padding-left: 20px; margin: 12px 0;">
+    <li style="margin-bottom: 8px;"><strong>End-to-end manual</strong> — tiap perubahan ditest di browser: login, buat assessment, invite kandidat, jalankan interview, review portfolio. Sesi dijalankan berulang kali (sesi 6 dan sesi 8 jadi patokan).</li>
+    <li style="margin-bottom: 8px;"><strong>Grep log</strong> — diagnosis via <code>api/log/development.log</code> menggunakan pola node (N5, N7, N9, N10, [AudioWS]) untuk verifikasi alur background job.</li>
+    <li style="margin-bottom: 8px;"><strong>Transcript comparison</strong> — membandingkan transcript sesi 2 (sebelum fix) dengan transcript sesi 6 dan 8 (sesudah fix) untuk membuktikan tiga masalah interview sudah teratasi.</li>
+    <li style="margin-bottom: 8px;"><strong>DB inspection</strong> — verifikasi state via <code>rails runner</code>: cek <code>coverage_map</code> records, status skill, <code>tenant_id</code> di users.</li>
+    <li style="margin-bottom: 8px;"><strong>Syntax check</strong> — <code>ruby -c</code> untuk file Ruby, <code>tsc --noEmit</code> untuk TypeScript sebelum perubahan dijalankan.</li>
+  </ol>
+
+  <h3>Kasus Uji yang Terverifikasi (K-01 s/d K-22)</h3>
+
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Skenario</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>K-01</td><td>Semua service jalan: puma, vite, sidekiq, Redis, PostgreSQL</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-02</td><td>Gemini API valid untuk 3 model (live/flash/pro)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-03</td><td>Kandidat bisa lolos hardware check dan buka link invite</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-04</td><td>Satu sesi interview end-to-end sukses sampai portfolio</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-05</td><td>AI tidak memotong kandidat saat jeda (sesi 6 &amp; 8)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-06</td><td>Tidak ada teks internal bocor di transcript (sesi 6 &amp; 8)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-07</td><td>Sesi berakhir gracefully, AI transparan soal alasan (sesi 8)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-08</td><td>Coverage map akurat: initiated → partial → covered (sesi 6, 2 skills)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-09</td><td>Login database nyata + pesan error dibedakan + backdoor ditutup</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-10</td><td>Portfolio hasil interview + admin bisa override level</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-11</td><td>Fit-gap portfolio vs vacancy berfungsi (field mismatch fixed)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-12</td><td>Live monitor + UX invite (reconnect button, clipboard fallback)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-13–14</td><td>Dokumentasi per phase; dead code SignupPage.tsx dihapus</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-15</td><td>Auto-end saat kandidat pamitan (Branch C)</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-16</td><td>Transcript bersih dari leak JSON/metadata</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-17</td><td>Loop nudge kontradiktif dihentikan saat waktu kritis</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-18–19</td><td>Retry button hard refresh di hardware check dan interview page</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-20</td><td>Self-hosted speed test endpoint berfungsi</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-21</td><td>Rejoin option: 8 reconnect attempts, state "failed", tombol retry</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+      <tr><td>K-22</td><td>Time warning 10 menit muncul di frontend</td><td><span class="badge badge-done">✓ Verified</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 8: BACKLOG -->
+<div class="section" id="backlog">
+  <div class="section-label">Bagian 8</div>
+  <h2>Backlog &amp; Catatan Jujur</h2>
+
+  <p>Ini hal-hal yang saya tahu belum selesai atau perlu diperhatikan. Saya tulis jujur karena lebih berguna daripada berpura-pura semuanya beres.</p>
+
+  <table>
+    <thead>
+      <tr><th>Item</th><th>Keterangan</th><th>Prioritas</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cross-tenant data leak via unscoped find</td>
+        <td><code>Portfolio.find(id)</code> tidak di-scope ke tenant — assessor dari tenant lain bisa akses portfolio kalau tahu ID. Ini security debt yang harus diselesaikan sebelum production.</td>
+        <td><span class="badge badge-p1">P1</span></td>
+      </tr>
+      <tr>
+        <td>Denormalisasi tenant_id ke child tables</td>
+        <td>Portfolio, PortfolioSkill, FitGapReport, dan tabel turunan lainnya tidak punya <code>tenant_id</code> langsung — isolasi bergantung pada parent FK. Butuh migrasi + backfill besar kalau mau di-enforce di level DB.</td>
+        <td><span class="badge badge-p3">P3</span></td>
+      </tr>
+      <tr>
+        <td>Role assessor belum real</td>
+        <td>Role ada di permission list tapi implementasinya masih sama dengan admin. Kalau mau ada tim assessor terpisah, butuh scoping data per-assessor.</td>
+        <td><span class="badge badge-p2">P2</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <p style="color: var(--muted); font-size: 12.5px; margin-top: 0;">
+    Laporan ini mencakup seluruh pengerjaan dari Phase 0 hingga multi-tenant + UI/UX polish (16–18 Agustus 2026).
+    Branch: <code>fix/interview-revamp</code> · Stack: Rails API + React 18 + PostgreSQL + Sidekiq + Gemini Live API.
+  </p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rakamin AI Interview — UI Revamp v2</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal-50:   #E1F5EE;
+      --teal-100:  #9FE1CB;
+      --teal-400:  #1D9E75;
+      --teal-600:  #0F7B6C;
+      --teal-700:  #0a5f54;
+      --teal-800:  #085041;
+      --amber-50:  #FAEEDA;
+      --amber-100: #FAC775;
+      --amber-600: #BA7517;
+      --amber-700: #854F0B;
+      --blue-50:   #E6F1FB;
+      --blue-700:  #185FA5;
+      --purple-50: #EEEDFE;
+      --purple-700:#534AB7;
+      --green-50:  #EAF3DE;
+      --green-700: #3B6D11;
+      --red-50:    #FCEBEB;
+      --red-100:   #F7C1C1;
+      --red-600:   #A32D2D;
+      --gray-50:   #F8F9FA;
+      --gray-100:  #F1F3F5;
+      --gray-200:  #E9ECEF;
+      --gray-300:  #DEE2E6;
+      --gray-400:  #CED4DA;
+      --gray-500:  #ADB5BD;
+      --gray-600:  #868E96;
+      --gray-700:  #495057;
+      --gray-800:  #343A40;
+      --gray-900:  #212529;
+
+      --surface:        #FFFFFF;
+      --surface-subtle: #F8F9FA;
+      --border:         #E9ECEF;
+      --border-strong:  #DEE2E6;
+      --text-primary:   #212529;
+      --text-secondary: #495057;
+      --text-muted:     #868E96;
+      --text-danger:    #A32D2D;
+
+      --radius-sm: 6px;
+      --radius:    8px;
+      --radius-lg: 12px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--surface-subtle);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── NAVBAR ─────────────────────────────────────────── */
+    .navbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; font-weight: 600; color: var(--text-primary);
+      text-decoration: none; margin-right: 28px; flex-shrink: 0; cursor: pointer;
+    }
+    .brand-logo {
+      width: 30px; height: 30px; background: var(--teal-600);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+    .nav-links { display: flex; gap: 2px; flex: 1; }
+    .nav-tab {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      border: none; background: none; cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+    .nav-tab:hover { background: var(--surface-subtle); color: var(--text-primary); }
+    .nav-tab.active { background: var(--teal-50); color: var(--teal-600); }
+    .nav-tab svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .user-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--teal-50); color: var(--teal-600);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--teal-100);
+    }
+    .logout-btn {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-secondary);
+      background: none; border: 1px solid transparent;
+      padding: 5px 10px; border-radius: var(--radius-sm); cursor: pointer;
+      transition: background 0.12s;
+    }
+    .logout-btn:hover { background: var(--surface-subtle); border-color: var(--border-strong); }
+
+    /* ── LAYOUT ─────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 28px; }
+    .container-wide { max-width: 1060px; margin: 0 auto; padding: 32px 28px; }
+
+    /* ── COMMON COMPONENTS ──────────────────────────────── */
+    .page-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 24px; gap: 16px;
+    }
+    .page-title { font-size: 22px; font-weight: 600; color: var(--text-primary); }
+    .page-meta  { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+
+    .breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-muted); margin-bottom: 20px;
+    }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; cursor: pointer; }
+    .breadcrumb a:hover { color: var(--teal-600); text-decoration: underline; }
+    .breadcrumb-sep { font-size: 11px; }
+    .breadcrumb-current { color: var(--text-primary); font-weight: 500; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--teal-600); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 9px 18px; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: background 0.12s; white-space: nowrap; text-decoration: none;
+    }
+    .btn-primary:hover { background: var(--teal-700); }
+    .btn-primary svg { width: 14px; height: 14px; }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--surface); color: var(--text-secondary);
+      border: 1px solid var(--border-strong); border-radius: var(--radius);
+      padding: 8px 14px; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: background 0.12s; white-space: nowrap;
+    }
+    .btn-secondary:hover { background: var(--surface-subtle); color: var(--text-primary); }
+    .btn-secondary svg { width: 14px; height: 14px; }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: none; color: var(--text-secondary);
+      border: none; padding: 8px 12px; border-radius: var(--radius-sm);
+      font-size: 13px; cursor: pointer; transition: background 0.12s;
+    }
+    .btn-ghost:hover { background: var(--surface-subtle); color: var(--text-primary); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .badge-completed { background: var(--teal-50);   color: #0F6E56; }
+    .badge-waiting   { background: var(--amber-50);  color: #854F0B; }
+    .badge-failed    { background: var(--red-50);    color: #A32D2D; }
+    .badge-active    { background: var(--blue-50);   color: #185FA5; }
+    .badge-low       { background: var(--red-50);    color: #A32D2D; }
+    .badge-medium    { background: var(--amber-50);  color: #854F0B; }
+    .badge-high      { background: var(--teal-50);   color: #0F6E56; }
+
+    .section-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 16px;
+    }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+    }
+    .section-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .section-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ── FILTER PILLS ───────────────────────────────────── */
+    .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .filter-pill {
+      font-size: 12px; font-weight: 500; padding: 5px 14px;
+      border-radius: 20px; border: 1px solid var(--border-strong);
+      background: var(--surface); color: var(--text-secondary);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .filter-pill:hover { background: var(--surface-subtle); }
+    .filter-pill.active { background: var(--teal-50); color: var(--teal-600); border-color: var(--teal-100); }
+    .filter-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 17px; height: 17px; border-radius: 50%;
+      background: var(--teal-600); color: #fff;
+      font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle;
+    }
+
+    /* ── ASSESSMENT LIST CARDS ──────────────────────────── */
+    .card-list { display: flex; flex-direction: column; gap: 8px; }
+    .assessment-card {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s;
+      text-decoration: none; color: inherit;
+    }
+    .assessment-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+    .card-icon {
+      width: 40px; height: 40px; border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .card-icon svg { width: 20px; height: 20px; }
+    .card-body { flex: 1; min-width: 0; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .card-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+    .meta-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); }
+    .meta-item svg { width: 13px; height: 13px; }
+    .meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--gray-300); }
+    .cand-chip {
+      font-size: 11px; color: var(--text-muted);
+      background: var(--surface-subtle); border: 1px solid var(--border);
+      padding: 2px 9px; border-radius: 20px;
+    }
+    .card-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .chevron svg { width: 16px; height: 16px; color: var(--text-muted); }
+
+    /* ── ASSESSMENT DETAIL ──────────────────────────────── */
+    .detail-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 18px;
+    }
+    .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-value { font-size: 24px; font-weight: 600; color: var(--text-primary); line-height: 1; }
+    .stat-value span { font-size: 14px; color: var(--text-muted); font-weight: 400; }
+    .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    .link-banner {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--teal-50); border: 1px solid var(--teal-100);
+      border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px;
+    }
+    .link-banner svg { width: 18px; height: 18px; color: var(--teal-400); flex-shrink: 0; }
+    .link-banner-body { flex: 1; min-width: 0; }
+    .link-banner-title { font-size: 13px; font-weight: 600; color: var(--teal-800); }
+    .link-banner-url {
+      font-size: 12px; color: var(--text-muted); margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-family: monospace;
+    }
+    .copy-btn {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 500; color: var(--teal-600);
+      background: #fff; border: 1px solid var(--teal-100);
+      padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer;
+      white-space: nowrap; transition: background 0.1s; flex-shrink: 0;
+    }
+    .copy-btn:hover { background: var(--teal-50); }
+    .copy-btn svg { width: 13px; height: 13px; }
+
+    /* Candidate table */
+    table.cand-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .cand-table th {
+      padding: 9px 18px; text-align: left; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
+      background: var(--surface-subtle); border-bottom: 1px solid var(--border);
+    }
+    .cand-table td {
+      padding: 12px 18px; border-bottom: 1px solid var(--border);
+      color: var(--text-primary); vertical-align: middle;
+    }
+    .cand-table tr:last-child td { border-bottom: none; }
+    .cand-table tr:hover td { background: var(--surface-subtle); }
+    .cand-name { font-weight: 500; display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
+    }
+    .score-wrap { display: flex; align-items: center; gap: 8px; }
+    .score-bar { flex: 1; height: 5px; background: var(--border-strong); border-radius: 3px; overflow: hidden; min-width: 60px; }
+    .score-fill { height: 100%; border-radius: 3px; }
+    .score-text { font-size: 12px; font-weight: 600; color: var(--text-primary); min-width: 28px; text-align: right; }
+
+    /* Candidate number badge */
+    .cand-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--surface-subtle); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: var(--text-muted); flex-shrink: 0;
+    }
+
+    /* Sidebar */
+    .sidebar-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 18px; margin-bottom: 12px;
+    }
+    .sidebar-title {
+      font-size: 13px; font-weight: 600; color: var(--text-primary);
+      margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+    }
+    .sidebar-title svg { width: 15px; height: 15px; color: var(--teal-400); }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-key { color: var(--text-muted); }
+    .info-val { color: var(--text-primary); font-weight: 500; }
+    .skill-breakdown { display: flex; flex-direction: column; gap: 10px; }
+    .skill-item-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .skill-item-name { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+    .skill-item-score { font-size: 12px; color: var(--text-muted); }
+    .skill-bar { height: 5px; background: var(--border-strong); border-radius: 3px; overflow: hidden; }
+    .skill-bar-fill { height: 100%; background: var(--teal-400); border-radius: 3px; }
+
+    /* Skills assessed list */
+    .skills-list-plain { padding: 16px 20px; }
+    .skill-plain-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .skill-plain-row:last-child { border-bottom: none; }
+    .skill-plain-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal-400); flex-shrink: 0; }
+    .skill-plain-name { flex: 1; font-weight: 500; }
+    .skill-plain-level { font-size: 12px; color: var(--text-muted); }
+
+    /* ── PORTFOLIO RESULTS PAGE ─────────────────────────── */
+    .portfolio-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start; }
+
+    .skill-result-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); margin-bottom: 14px; overflow: hidden;
+    }
+    .skill-result-header {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .level-badge {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0;
+      background: var(--blue-50);
+    }
+    .level-badge-num { font-size: 18px; font-weight: 700; color: var(--blue-700); line-height: 1; }
+    .level-badge-label { font-size: 9px; font-weight: 600; color: var(--blue-700); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+    .skill-result-info { flex: 1; min-width: 0; }
+    .skill-result-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .skill-result-conf { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+    .conf-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .conf-low    { background: var(--red-600); }
+    .conf-medium { background: var(--amber-600); }
+    .conf-high   { background: var(--teal-400); }
+    .conf-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+    .override-btn {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 500; color: var(--text-secondary);
+      background: var(--surface); border: 1px solid var(--border-strong);
+      padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer;
+      transition: all 0.12s; flex-shrink: 0;
+    }
+    .override-btn:hover { border-color: var(--teal-400); color: var(--teal-600); }
+    .override-btn svg { width: 12px; height: 12px; }
+
+    /* Low confidence warning */
+    .conf-warning {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--amber-50); border-left: 3px solid var(--amber-100);
+      padding: 10px 20px; font-size: 12px; color: var(--amber-700);
+    }
+    .conf-warning svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+
+    .skill-result-body { padding: 16px 20px; }
+
+    .evidence-section { margin-bottom: 16px; }
+    .evidence-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .evidence-quote {
+      display: flex; gap: 10px; margin-bottom: 8px;
+    }
+    .quote-mark { color: var(--teal-400); font-size: 18px; line-height: 1; margin-top: -2px; flex-shrink: 0; }
+    .quote-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; font-style: italic; }
+
+    .competency-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .competency-text { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+
+    /* Level scale visual */
+    .level-scale { display: flex; gap: 3px; margin-top: 12px; }
+    .level-pip {
+      flex: 1; height: 4px; border-radius: 2px; background: var(--border-strong);
+      transition: background 0.2s;
+    }
+    .level-pip.filled { background: var(--teal-400); }
+    .level-pip.current { background: var(--teal-600); }
+    .level-scale-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+    .level-scale-label { font-size: 10px; color: var(--text-muted); }
+
+    /* Portfolio sidebar */
+    .overall-score-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px; margin-bottom: 12px; text-align: center;
+    }
+    .overall-score-num { font-size: 40px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .overall-score-denom { font-size: 16px; color: var(--text-muted); font-weight: 400; }
+    .overall-score-label { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+    .overall-score-ring {
+      width: 90px; height: 90px; margin: 0 auto 12px;
+      position: relative; display: flex; align-items: center; justify-content: center;
+    }
+    .ring-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring-text { position: relative; z-index: 1; font-size: 22px; font-weight: 700; }
+
+    /* ── FIT/GAP REPORT PAGE ────────────────────────────── */
+    .fitgap-layout { display: grid; grid-template-columns: 1fr 260px; gap: 20px; align-items: start; }
+
+    .fitgap-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .fitgap-table th {
+      padding: 10px 20px; text-align: left;
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted);
+      background: var(--surface-subtle); border-bottom: 1px solid var(--border);
+    }
+    .fitgap-table td { padding: 14px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .fitgap-table tr:last-child td { border-bottom: none; }
+    .fitgap-table tr:hover td { background: var(--surface-subtle); }
+
+    .level-chip {
+      display: inline-flex; align-items: center;
+      font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+      background: var(--blue-50); color: var(--blue-700);
+    }
+    .level-chip-candidate { background: var(--surface-subtle); color: var(--text-primary); border: 1px solid var(--border-strong); }
+
+    .gap-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .gap-negative { background: var(--amber-50); color: var(--amber-700); }
+    .gap-positive { background: var(--teal-50); color: var(--teal-600); }
+    .gap-neutral  { background: var(--gray-100); color: var(--gray-700); }
+    .gap-chip svg { width: 12px; height: 12px; }
+
+    .fitgap-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 20px; background: var(--surface-subtle); font-size: 12px; color: var(--text-muted);
+    }
+
+    /* Gap summary sidebar */
+    .verdict-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px; margin-bottom: 12px;
+    }
+    .verdict-header { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+    .verdict-score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .verdict-score { font-size: 32px; font-weight: 700; color: var(--text-primary); }
+    .verdict-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .verdict-bar { height: 8px; background: var(--border-strong); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+    .verdict-bar-fill { height: 100%; border-radius: 4px; background: var(--amber-600); transition: width 0.4s; }
+
+    .gap-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
+    .gap-summary-row:last-child { border-bottom: none; }
+    .gap-summary-key { color: var(--text-muted); }
+    .gap-summary-val { font-weight: 600; color: var(--text-primary); }
+
+    /* Culture card */
+    .culture-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px; margin-bottom: 14px;
+    }
+    .culture-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+    .culture-text { font-size: 13px; color: var(--text-secondary); line-height: 1.75; }
+
+    /* ── TRANSCRIPT PAGE ────────────────────────────────── */
+    .transcript-layout { max-width: 740px; margin: 0 auto; }
+    .transcript-thread { display: flex; flex-direction: column; gap: 12px; }
+
+    .turn {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px 20px;
+    }
+    .turn-ai { border-left: 3px solid var(--teal-400); }
+    .turn-candidate { border-left: 3px solid var(--blue-700); }
+
+    .turn-speaker {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; margin-bottom: 8px;
+    }
+    .turn-ai .turn-speaker { color: var(--teal-600); }
+    .turn-candidate .turn-speaker { color: var(--blue-700); }
+
+    .turn-text { font-size: 13px; color: var(--text-primary); line-height: 1.75; }
+
+    /* ── ERROR STATE ────────────────────────────────────── */
+    .error-banner {
+      display: flex; align-items: flex-start; gap: 14px;
+      background: var(--amber-50); border: 1px solid var(--amber-100);
+      border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 20px;
+    }
+    .error-banner-icon { flex-shrink: 0; margin-top: 1px; }
+    .error-banner-icon svg { width: 20px; height: 20px; color: var(--amber-700); }
+    .error-banner-body { flex: 1; }
+    .error-banner-title { font-size: 14px; font-weight: 600; color: var(--amber-700); margin-bottom: 4px; }
+    .error-banner-detail { font-size: 12px; color: var(--amber-600); }
+    .error-retry-btn {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500; color: var(--amber-700);
+      background: #fff; border: 1px solid var(--amber-100);
+      padding: 7px 14px; border-radius: var(--radius-sm); cursor: pointer;
+      white-space: nowrap; flex-shrink: 0; transition: background 0.1s;
+    }
+    .error-retry-btn:hover { background: var(--amber-50); }
+    .error-retry-btn svg { width: 14px; height: 14px; }
+
+    .empty-state-full {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 80px 20px; text-align: center;
+    }
+    .empty-icon {
+      width: 52px; height: 52px; border-radius: var(--radius-lg);
+      background: var(--surface-subtle); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+    }
+    .empty-icon svg { width: 24px; height: 24px; color: var(--text-muted); }
+    .empty-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .empty-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 18px; }
+
+    /* ── FORM ───────────────────────────────────────────── */
+    .form-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 28px; max-width: 680px;
+    }
+    .form-section-eyebrow {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 16px;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 6px; }
+    .form-req { color: var(--text-danger); }
+    .form-hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+    .form-input {
+      display: block; width: 100%; padding: 9px 12px;
+      font-size: 13px; color: var(--text-primary); background: var(--surface);
+      border: 1px solid var(--border-strong); border-radius: var(--radius);
+      outline: none; transition: border-color 0.12s, box-shadow 0.12s; font-family: inherit;
+    }
+    .form-input:focus { border-color: var(--teal-600); box-shadow: 0 0 0 3px rgba(15,123,108,0.1); }
+    .form-input::placeholder { color: var(--text-muted); }
+    textarea.form-input { resize: vertical; min-height: 96px; line-height: 1.6; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+    .skills-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .skills-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .skills-req { font-size: 12px; color: var(--text-muted); }
+    .skills-empty-box { border: 1px dashed var(--border-strong); border-radius: var(--radius); padding: 28px 20px; text-align: center; }
+    .skills-empty-box svg { width: 28px; height: 28px; color: var(--text-muted); margin-bottom: 8px; }
+    .skills-populated { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .skill-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    .skill-row:last-child { border-bottom: none; }
+    .skill-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .skill-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; border-radius: 4px; display: flex; align-items: center; }
+    .skill-remove:hover { color: var(--text-danger); }
+    .skill-remove svg { width: 14px; height: 14px; }
+    .skill-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 20px; border-top: 1px solid var(--border); margin-top: 24px; }
+
+    /* ── VACANCIES ───────────────────────────────────────── */
+    .page-meta-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+
+    /* ── TOAST ───────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--gray-900); color: #fff;
+      font-size: 13px; font-weight: 500; padding: 10px 18px;
+      border-radius: var(--radius); display: flex; align-items: center; gap: 8px;
+      z-index: 999; opacity: 0; transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+    }
+    .toast.visible { opacity: 1; transform: translateY(0); }
+    .toast svg { width: 15px; height: 15px; color: var(--teal-100); }
+
+    /* ── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 720px) {
+      .detail-layout, .portfolio-layout, .fitgap-layout { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .form-row-2 { grid-template-columns: 1fr; }
+      .container, .container-wide { padding: 20px 16px; }
+      .navbar { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══════════════════════════════════════════ -->
+<nav class="navbar">
+  <div class="brand" onclick="showPage('assessments')">
+    <div class="brand-logo">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="white" opacity="0.9"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="white" opacity="0.6"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="white" opacity="0.6"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="white" opacity="0.9"/>
+      </svg>
+    </div>
+    Rakamin AI Interview
+  </div>
+  <div class="nav-links">
+    <button class="nav-tab active" id="nav-assessments" onclick="showPage('assessments')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+      Assessments
+    </button>
+    <button class="nav-tab" id="nav-vacancies" onclick="showPage('vacancies')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg>
+      Vacancies
+    </button>
+  </div>
+  <div class="nav-right">
+    <div class="user-avatar" title="Logged in as Admin">AD</div>
+    <button class="logout-btn" onclick="showToast('Logged out')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Logout
+    </button>
+  </div>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 1: ASSESSMENTS LIST
+═══════════════════════════════════════════════════════ -->
+<div class="page active" id="page-assessments">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Assessments</h1>
+        <p class="page-meta">7 templates · last session today</p>
+      </div>
+      <button class="btn-primary" onclick="showPage('new-assessment')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New assessment
+      </button>
+    </div>
+
+    <div class="filter-bar">
+      <button class="filter-pill active" onclick="setFilter(this)">All <span class="filter-count">7</span></button>
+      <button class="filter-pill" onclick="setFilter(this)">Completed</button>
+      <button class="filter-pill" onclick="setFilter(this)">Awaiting</button>
+      <button class="filter-pill" onclick="setFilter(this)">Failed</button>
+    </div>
+
+    <div class="card-list">
+      <div class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#E1F5EE;"><svg viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+        <div class="card-body">
+          <div class="card-title">Senior BE IND</div>
+          <div class="card-meta">
+            <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>45 min</span>
+            <span class="meta-dot"></span>
+            <span class="cand-chip">3 candidates</span>
+            <span class="meta-dot"></span>
+            <span class="meta-item">3 skills</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </div>
+
+      <div class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#E6F1FB;"><svg viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+        <div class="card-body">
+          <div class="card-title">Front End Developer</div>
+          <div class="card-meta">
+            <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>45 min</span>
+            <span class="meta-dot"></span>
+            <span class="cand-chip">1 candidate</span>
+            <span class="meta-dot"></span>
+            <span class="meta-item">4 skills</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-waiting"><span class="badge-dot"></span>Awaiting candidate</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </div>
+
+      <div class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#EEEDFE;"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="card-body">
+          <div class="card-title">Team Lead Back End</div>
+          <div class="card-meta">
+            <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>45 min</span>
+            <span class="meta-dot"></span>
+            <span class="cand-chip">2 candidates</span>
+            <span class="meta-dot"></span>
+            <span class="meta-item">3 skills</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-waiting"><span class="badge-dot"></span>Awaiting candidate</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </div>
+
+      <div class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#E1F5EE;"><svg viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <div class="card-body">
+          <div class="card-title">Senior Back End</div>
+          <div class="card-meta">
+            <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>60 min</span>
+            <span class="meta-dot"></span>
+            <span class="cand-chip">5 candidates</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </div>
+
+      <div class="assessment-card" onclick="showPage('detail')">
+        <div class="card-icon" style="background:#FCEBEB;"><svg viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <div class="card-body">
+          <div class="card-title">Tes</div>
+          <div class="card-meta">
+            <span class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>45 min</span>
+            <span class="meta-dot"></span>
+            <span class="cand-chip">0 candidates</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="badge badge-failed"><span class="badge-dot"></span>Failed</span>
+          <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 2: NEW ASSESSMENT FORM
+═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-new-assessment">
+  <div class="container">
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">New assessment</span>
+    </div>
+    <div class="form-card">
+      <div class="form-section-eyebrow">Role details</div>
+      <div class="form-group">
+        <label class="form-label">Role title <span class="form-req">*</span></label>
+        <input class="form-input" type="text" placeholder="e.g. Senior Frontend Engineer" />
+        <p class="form-hint">Used to generate AI interview questions tailored to this role.</p>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="form-label">Session time limit <span class="form-req">*</span></label>
+          <select class="form-input"><option>30 min</option><option selected>45 min</option><option>60 min</option><option>90 min</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Interview language</label>
+          <select class="form-input"><option selected>English</option><option>Bahasa Indonesia</option></select>
+        </div>
+      </div>
+      <hr class="form-divider" />
+      <div class="skills-header">
+        <span class="skills-label">Skills to assess</span>
+        <span class="skills-req">At least 1 required</span>
+      </div>
+      <div class="skills-populated" id="skills-list">
+        <div class="skill-row">
+          <div class="skill-name">Node.js / Backend Development</div>
+          <span class="badge badge-active" style="font-size:10px;padding:2px 8px;">Expected L5</span>
+          <button class="skill-remove" onclick="removeSkill(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">Leadership & Ownership</div>
+          <span class="badge badge-active" style="font-size:10px;padding:2px 8px;">Expected L5</span>
+          <button class="skill-remove" onclick="removeSkill(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">Product Thinking</div>
+          <span class="badge badge-active" style="font-size:10px;padding:2px 8px;">Expected L5</span>
+          <button class="skill-remove" onclick="removeSkill(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>
+      <div class="skills-empty-box" id="skills-empty" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+        <p style="font-size:13px;color:var(--text-muted);">No skills added yet. Add at least one to continue.</p>
+      </div>
+      <div class="skill-actions">
+        <button class="btn-secondary" onclick="showToast('Skill taxonomy modal — coming soon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add from taxonomy
+        </button>
+        <button class="btn-secondary" onclick="showToast('Custom skill modal — coming soon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add custom skill
+        </button>
+      </div>
+      <div class="form-actions">
+        <button class="btn-ghost" onclick="showPage('assessments')">Cancel</button>
+        <button class="btn-primary" onclick="showToast('Assessment saved')">
+          Save and create session
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 3: ASSESSMENT DETAIL
+═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-detail">
+  <div class="container">
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Senior BE IND</span>
+    </div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Senior BE IND</h1>
+        <p class="page-meta">45 min &nbsp;·&nbsp; 3 skills &nbsp;·&nbsp; English &nbsp;·&nbsp; Created 12 Aug 2026</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="showPage('new-assessment')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="btn-primary" onclick="showToast('Invite link copied!')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Invite candidate
+        </button>
+      </div>
+    </div>
+
+    <!-- Session link banner -->
+    <div class="link-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <div class="link-banner-body">
+        <div class="link-banner-title">Link for ANDI ready — share with your candidate</div>
+        <div class="link-banner-url">http://localhost:5174/interview/7781830794813ef4589660a92892e9adbc804f9ec88a68…</div>
+      </div>
+      <button class="copy-btn" onclick="showToast('Link copied to clipboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy link
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Candidates</div>
+        <div class="stat-value">3 <span>total</span></div>
+        <div class="stat-sub">2 completed · 1 awaiting</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg. fit score</div>
+        <div class="stat-value">74 <span>/ 100</span></div>
+        <div class="stat-sub">across 2 sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Completion rate</div>
+        <div class="stat-value">67 <span>%</span></div>
+        <div class="stat-sub">2 of 3 finished</div>
+      </div>
+    </div>
+
+    <div class="detail-layout">
+      <div>
+        <!-- Candidates -->
+        <div class="section-card">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Candidates <span style="color:var(--text-muted);font-weight:400;">(3)</span></div>
+            </div>
+            <button class="btn-ghost" style="font-size:12px;">Export CSV</button>
+          </div>
+          <table class="cand-table">
+            <thead>
+              <tr><th>#</th><th>Name</th><th>Submitted</th><th>Fit score</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="cand-num">3</span></td>
+                <td><div class="cand-name"><div class="avatar" style="background:#E1F5EE;color:#0F6E56;">AN</div>ANDI</div></td>
+                <td style="color:var(--text-muted);font-size:12px;">—</td>
+                <td style="color:var(--text-muted);font-size:12px;">—</td>
+                <td><span class="badge badge-waiting"><span class="badge-dot"></span>Awaiting</span></td>
+                <td><button class="copy-btn" onclick="showToast('Link copied')" style="font-size:11px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copy link
+                </button></td>
+              </tr>
+              <tr>
+                <td><span class="cand-num">2</span></td>
+                <td><div class="cand-name"><div class="avatar" style="background:#E6F1FB;color:#185FA5;">B8</div>BUDI 8</div></td>
+                <td style="color:var(--text-muted);font-size:12px;">17/08/2026</td>
+                <td>
+                  <div class="score-wrap">
+                    <div class="score-bar"><div class="score-fill" style="width:38%;background:#EF9F27;"></div></div>
+                    <span class="score-text" style="color:#854F0B;">38</span>
+                  </div>
+                </td>
+                <td><span class="badge badge-completed"><span class="badge-dot"></span>Completed</span></td>
+                <td><button class="btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="showPage('portfolio')">Results</button></td>
+              </tr>
+              <tr>
+                <td><span class="cand-num">1</span></td>
+                <td><div class="cand-name"><div class="avatar" style="background:#FAEEDA;color:#854F0B;">B9</div>BUDI 9</div></td>
+                <td style="color:var(--text-muted);font-size:12px;">17/08/2026</td>
+                <td>
+                  <div class="score-wrap">
+                    <div class="score-bar"><div class="score-fill" style="width:82%;background:#1D9E75;"></div></div>
+                    <span class="score-text">82</span>
+                  </div>
+                </td>
+                <td><span class="badge badge-completed"><span class="badge-dot"></span>Completed</span></td>
+                <td><button class="btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="showPage('portfolio')">Results</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Skills assessed -->
+        <div class="section-card">
+          <div class="section-header"><div class="section-title">Skills assessed</div></div>
+          <div class="skills-list-plain">
+            <div class="skill-plain-row"><span class="skill-plain-dot"></span><span class="skill-plain-name">Node.js / Backend Development</span><span class="skill-plain-level">Expected L5</span></div>
+            <div class="skill-plain-row"><span class="skill-plain-dot"></span><span class="skill-plain-name">Leadership &amp; Ownership</span><span class="skill-plain-level">Expected L5</span></div>
+            <div class="skill-plain-row"><span class="skill-plain-dot"></span><span class="skill-plain-name">Product Thinking</span><span class="skill-plain-level">Expected L5</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div>
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Avg. skill scores
+          </div>
+          <div class="skill-breakdown">
+            <div><div class="skill-item-header"><span class="skill-item-name">Node.js / BE Dev</span><span class="skill-item-score">L2 avg</span></div><div class="skill-bar"><div class="skill-bar-fill" style="width:40%;background:#EF9F27;"></div></div></div>
+            <div><div class="skill-item-header"><span class="skill-item-name">Leadership &amp; Ownership</span><span class="skill-item-score">L2 avg</span></div><div class="skill-bar"><div class="skill-bar-fill" style="width:40%;background:#EF9F27;"></div></div></div>
+            <div><div class="skill-item-header"><span class="skill-item-name">Product Thinking</span><span class="skill-item-score">L1 avg</span></div><div class="skill-bar"><div class="skill-bar-fill" style="width:20%;background:#E24B4A;"></div></div></div>
+          </div>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Assessment info
+          </div>
+          <div class="info-row"><span class="info-key">Duration</span><span class="info-val">45 min</span></div>
+          <div class="info-row"><span class="info-key">Language</span><span class="info-val">English</span></div>
+          <div class="info-row"><span class="info-key">Skills</span><span class="info-val">3 configured</span></div>
+          <div class="info-row"><span class="info-key">Created</span><span class="info-val">12 Aug 2026</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 4: PORTFOLIO RESULTS
+═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-portfolio">
+  <div class="container-wide">
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <a onclick="showPage('detail')">Senior BE IND</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Portfolio Results</span>
+    </div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Portfolio Results</h1>
+        <p class="page-meta">Pamungkas Andono &nbsp;·&nbsp; Session #9 &nbsp;·&nbsp; 17 Aug 2026</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="showPage('transcript')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Transcript
+        </button>
+        <button class="btn-secondary" onclick="showToast('Downloading PDF...')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PDF
+        </button>
+        <button class="btn-secondary" onclick="showToast('Downloading JSON...')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          JSON
+        </button>
+        <button class="btn-primary" onclick="showPage('fitgap')">View Fit/Gap →</button>
+      </div>
+    </div>
+
+    <div class="portfolio-layout">
+      <div>
+        <!-- Skill 1: Leadership -->
+        <div class="skill-result-card">
+          <div class="skill-result-header">
+            <div class="level-badge"><div class="level-badge-num">L2</div><div class="level-badge-label">Functional</div></div>
+            <div class="skill-result-info">
+              <div class="skill-result-name">Leadership &amp; Ownership</div>
+              <div class="skill-result-conf">
+                <span class="conf-dot conf-low"></span>
+                <span class="conf-label">Confidence: LOW</span>
+              </div>
+              <!-- Level scale -->
+              <div class="level-scale" style="margin-top:10px;">
+                <div class="level-pip filled"></div>
+                <div class="level-pip current"></div>
+                <div class="level-pip"></div>
+                <div class="level-pip"></div>
+                <div class="level-pip"></div>
+              </div>
+              <div class="level-scale-labels"><span class="level-scale-label">L1</span><span class="level-scale-label">L2 ← candidate</span><span class="level-scale-label" style="color:var(--blue-700);font-weight:600;">L5 expected</span></div>
+            </div>
+            <button class="override-btn" onclick="showToast('Override panel — coming soon')">
+              Override rating
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="conf-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+          </div>
+          <div class="skill-result-body">
+            <div class="evidence-section">
+              <div class="evidence-label">Evidence from interview</div>
+              <div class="evidence-quote">
+                <span class="quote-mark">"</span>
+                <span class="quote-text">Mostly I just like make it to know like the RD product requirement development. I just make the document so when I get so when I finish the template I ask for it team like operational team or marketing team for correction or revision if it have any problem with the document.</span>
+              </div>
+              <div class="evidence-quote">
+                <span class="quote-mark">"</span>
+                <span class="quote-text">So the problem is maybe for me how to keep the project moving forward is just keep the conversation still on realistic thing. Not out from context.</span>
+              </div>
+            </div>
+            <div class="competency-label">Competency summary</div>
+            <div class="competency-text">The candidate demonstrates basic ownership of their tasks and attempts to align cross-functional teams by creating shared PRD documents. However, they struggle to articulate complex leadership scenarios, conflict resolution, or strategic decision-making. Their leadership style is highly execution-focused and reactive rather than proactive or influential.</div>
+          </div>
+        </div>
+
+        <!-- Skill 2: Node.js -->
+        <div class="skill-result-card">
+          <div class="skill-result-header">
+            <div class="level-badge"><div class="level-badge-num">L2</div><div class="level-badge-label">Functional</div></div>
+            <div class="skill-result-info">
+              <div class="skill-result-name">Node.js / Backend Development</div>
+              <div class="skill-result-conf">
+                <span class="conf-dot conf-low"></span>
+                <span class="conf-label">Confidence: LOW</span>
+              </div>
+              <div class="level-scale" style="margin-top:10px;">
+                <div class="level-pip filled"></div>
+                <div class="level-pip current"></div>
+                <div class="level-pip"></div>
+                <div class="level-pip"></div>
+                <div class="level-pip"></div>
+              </div>
+              <div class="level-scale-labels"><span class="level-scale-label">L1</span><span class="level-scale-label">L2 ← candidate</span><span class="level-scale-label" style="color:var(--blue-700);font-weight:600;">L5 expected</span></div>
+            </div>
+            <button class="override-btn" onclick="showToast('Override panel — coming soon')">
+              Override rating
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="conf-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Technical depth not fully explored — candidate pivoted to project narrative.
+          </div>
+          <div class="skill-result-body">
+            <div class="evidence-section">
+              <div class="evidence-label">Evidence from interview</div>
+              <div class="evidence-quote">
+                <span class="quote-mark">"</span>
+                <span class="quote-text">For the stack I use Laravel and for the front-end I use Blade and the system is uh you know work as monolithic app only.</span>
+              </div>
+            </div>
+            <div class="competency-label">Competency summary</div>
+            <div class="competency-text">Candidate shows familiarity with monolithic backend architecture using Laravel. Limited evidence of Node.js-specific experience, async patterns, or distributed systems knowledge expected at L5 for this role.</div>
+          </div>
+        </div>
+
+        <!-- Skill 3: Product Thinking -->
+        <div class="skill-result-card">
+          <div class="skill-result-header">
+            <div class="level-badge" style="background:#FCEBEB;"><div class="level-badge-num" style="color:#A32D2D;">L1</div><div class="level-badge-label" style="color:#A32D2D;">Awareness</div></div>
+            <div class="skill-result-info">
+              <div class="skill-result-name">Product Thinking</div>
+              <div class="skill-result-conf">
+                <span class="conf-dot conf-low"></span>
+                <span class="conf-label">Confidence: LOW</span>
+              </div>
+              <div class="level-scale" style="margin-top:10px;">
+                <div class="level-pip current" style="background:#E24B4A;"></div>
+                <div class="level-pip"></div>
+                <div class="level-pip"></div>
+                <div class="level-pip"></div>
+                <div class="level-pip"></div>
+              </div>
+              <div class="level-scale-labels"><span class="level-scale-label" style="color:#A32D2D;font-weight:600;">L1 ← candidate</span><span class="level-scale-label"></span><span class="level-scale-label" style="color:var(--blue-700);font-weight:600;">L5 expected</span></div>
+            </div>
+            <button class="override-btn" onclick="showToast('Override panel — coming soon')">
+              Override rating
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="skill-result-body">
+            <div class="competency-label">Competency summary</div>
+            <div class="competency-text">Minimal evidence of product-level thinking. Candidate operates in a feature execution mode without evidence of understanding user problems, prioritization trade-offs, or business outcomes. Gap to L5 is significant.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div>
+        <div class="overall-score-card">
+          <div class="overall-score-ring">
+            <svg class="ring-svg" viewBox="0 0 90 90">
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#E9ECEF" stroke-width="7"/>
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#EF9F27" stroke-width="7"
+                stroke-dasharray="239" stroke-dashoffset="155" stroke-linecap="round"/>
+            </svg>
+            <div class="ring-text" style="color:#854F0B;">35%</div>
+          </div>
+          <div class="overall-score-label">Overall fit score</div>
+          <div style="margin-top:12px;">
+            <span class="badge badge-failed" style="font-size:12px;">Significant gaps detected</span>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Skill summary
+          </div>
+          <div class="skill-breakdown">
+            <div><div class="skill-item-header"><span class="skill-item-name">Leadership &amp; Ownership</span><span class="skill-item-score" style="color:#854F0B;">L2</span></div><div class="skill-bar"><div class="skill-bar-fill" style="width:40%;background:#EF9F27;"></div></div></div>
+            <div><div class="skill-item-header"><span class="skill-item-name">Node.js / BE Dev</span><span class="skill-item-score" style="color:#854F0B;">L2</span></div><div class="skill-bar"><div class="skill-bar-fill" style="width:40%;background:#EF9F27;"></div></div></div>
+            <div><div class="skill-item-header"><span class="skill-item-name">Product Thinking</span><span class="skill-item-score" style="color:#A32D2D;">L1</span></div><div class="skill-bar"><div class="skill-bar-fill" style="width:20%;background:#E24B4A;"></div></div></div>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Session info
+          </div>
+          <div class="info-row"><span class="info-key">Candidate</span><span class="info-val">Pamungkas Andono</span></div>
+          <div class="info-row"><span class="info-key">Duration</span><span class="info-val">38 min</span></div>
+          <div class="info-row"><span class="info-key">Submitted</span><span class="info-val">17 Aug 2026</span></div>
+          <div class="info-row"><span class="info-key">Human override</span><span class="info-val">None</span></div>
+        </div>
+
+        <button class="btn-primary" style="width:100%;justify-content:center;" onclick="showPage('fitgap')">
+          View Fit/Gap Report →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 5: FIT/GAP REPORT
+═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-fitgap">
+  <div class="container-wide">
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <a onclick="showPage('detail')">Senior BE IND</a>
+      <span class="breadcrumb-sep">›</span>
+      <a onclick="showPage('portfolio')">Portfolio Results</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Fit/Gap Report</span>
+    </div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Fit/Gap Report</h1>
+        <p class="page-meta">Pamungkas Andono &nbsp;·&nbsp; Session #9 &nbsp;·&nbsp; Senior BE IND</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="showToast('Regenerating report...')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Regenerate
+        </button>
+        <button class="btn-secondary" onclick="showToast('Downloading PDF...')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PDF
+        </button>
+        <button class="btn-secondary" onclick="showToast('Downloading JSON...')">JSON</button>
+      </div>
+    </div>
+
+    <div class="fitgap-layout">
+      <div>
+        <!-- Skill comparison table -->
+        <div class="section-card">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Skill comparison</div>
+              <div class="section-sub">Required vs candidate level per skill</div>
+            </div>
+          </div>
+          <table class="fitgap-table">
+            <thead>
+              <tr>
+                <th>Skill</th>
+                <th>Required</th>
+                <th>Candidate</th>
+                <th>Gap</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:500;">Node.js / Backend Development</td>
+                <td><span class="level-chip">L5</span></td>
+                <td><span class="level-chip level-chip-candidate">L2</span></td>
+                <td>
+                  <span class="gap-chip gap-negative">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    Gap −3
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight:500;">Product Thinking</td>
+                <td><span class="level-chip">L5</span></td>
+                <td><span class="level-chip level-chip-candidate">L1</span></td>
+                <td>
+                  <span class="gap-chip gap-negative">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    Gap −4
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight:500;">Leadership &amp; Ownership</td>
+                <td><span class="level-chip">L5</span></td>
+                <td><span class="level-chip level-chip-candidate">L2</span></td>
+                <td>
+                  <span class="gap-chip gap-negative">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    Gap −3
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="fitgap-footer">
+            <span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+              Gap: 3 skills with shortfall
+            </span>
+            <span>— = human override applied</span>
+          </div>
+        </div>
+
+        <!-- Culture & Competency -->
+        <div class="culture-card">
+          <div class="culture-title">Culture &amp; Competency Fit</div>
+          <div class="culture-text">The candidate exhibits significant competency gaps for a leadership role, particularly in ownership and product thinking, where they currently perform at an entry-to-mid level compared to the expected principal standard. This lack of senior-level product perspective and leadership maturity suggests they are not yet equipped to drive team culture or mentor others. Consequently, there is a substantial mismatch with the cultural and competency expectations required for a Team Lead.</div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div>
+        <div class="verdict-card">
+          <div class="verdict-header">Overall fit verdict</div>
+          <div class="verdict-score-row">
+            <div>
+              <div class="verdict-score" style="color:#854F0B;">35%</div>
+              <div class="verdict-label">fit score</div>
+            </div>
+            <span class="badge badge-failed" style="font-size:12px;">Not a fit</span>
+          </div>
+          <div class="verdict-bar"><div class="verdict-bar-fill" style="width:35%;"></div></div>
+          <div class="gap-summary-row"><span class="gap-summary-key">Skills assessed</span><span class="gap-summary-val">3</span></div>
+          <div class="gap-summary-row"><span class="gap-summary-key">Skills with gap</span><span class="gap-summary-val" style="color:#A32D2D;">3</span></div>
+          <div class="gap-summary-row"><span class="gap-summary-key">Skills met</span><span class="gap-summary-val" style="color:#0F6E56;">0</span></div>
+          <div class="gap-summary-row"><span class="gap-summary-key">Avg. gap</span><span class="gap-summary-val" style="color:#854F0B;">−3.3 levels</span></div>
+          <div class="gap-summary-row"><span class="gap-summary-key">Human override</span><span class="gap-summary-val">None</span></div>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Recommendation
+          </div>
+          <p style="font-size:13px;color:var(--text-secondary);line-height:1.7;">Candidate does not meet the minimum bar for this role at this time. Consider for a more junior position or revisit after targeted mentorship.</p>
+        </div>
+
+        <button class="btn-secondary" style="width:100%;justify-content:center;" onclick="showPage('portfolio')">← Back to portfolio</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 6: PORTFOLIO ERROR STATE
+═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-portfolio-error">
+  <div class="container">
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <a onclick="showPage('detail')">Senior BE IND</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Portfolio Results</span>
+    </div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Portfolio Results</h1>
+        <p class="page-meta">ANDI 2 &nbsp;·&nbsp; Session #14</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="showPage('transcript')">Transcript</button>
+        <button class="btn-secondary" onclick="showToast('Downloading PDF...')">PDF</button>
+        <button class="btn-secondary" onclick="showToast('Downloading JSON...')">JSON</button>
+      </div>
+    </div>
+
+    <div class="error-banner">
+      <div class="error-banner-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </div>
+      <div class="error-banner-body">
+        <div class="error-banner-title">Busy right now — retrying automatically. Please wait a moment.</div>
+        <div class="error-banner-detail">Technical detail: Failed after 3 retries: Rate limited</div>
+      </div>
+      <button class="error-retry-btn" onclick="showToast('Retrying...')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Retry
+      </button>
+    </div>
+
+    <div class="empty-state-full">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <h2 class="empty-title">Analysis not ready yet</h2>
+      <p class="empty-desc">The AI is still processing this session's results. This usually takes under 30 seconds. You can also view the raw transcript while you wait.</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button class="btn-secondary" onclick="showPage('transcript')">View transcript</button>
+        <button class="btn-primary" onclick="showToast('Retrying...')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Retry now
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 7: TRANSCRIPT
+═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-transcript">
+  <div class="container">
+    <div class="breadcrumb">
+      <a onclick="showPage('assessments')">Assessments</a>
+      <span class="breadcrumb-sep">›</span>
+      <a onclick="showPage('detail')">Senior BE IND</a>
+      <span class="breadcrumb-sep">›</span>
+      <a onclick="showPage('portfolio')">Portfolio</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Transcript</span>
+    </div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Interview Transcript</h1>
+        <p class="page-meta">ANDI 2 &nbsp;·&nbsp; Session #14 &nbsp;·&nbsp; 17 Aug 2026</p>
+      </div>
+      <button class="btn-secondary" onclick="showToast('Downloading transcript...')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download .txt
+      </button>
+    </div>
+
+    <div class="transcript-layout">
+      <div class="transcript-thread">
+
+        <div class="turn turn-ai">
+          <div class="turn-speaker">AI Interviewer</div>
+          <div class="turn-text">Hi, thanks for joining us. Let's jump right in — can you tell me about the most challenging project you've worked on recently, specifically focusing on the technical decisions you had to make?</div>
+        </div>
+
+        <div class="turn turn-candidate">
+          <div class="turn-speaker">Candidate</div>
+          <div class="turn-text">Okay, uh how can I start? Should I uh telling you everything or step by step uh project? I mean uh project I think and then going to challenging things and then technical or or all in one pitch?</div>
+        </div>
+
+        <div class="turn turn-ai">
+          <div class="turn-speaker">AI Interviewer</div>
+          <div class="turn-text">Tell me about any project that stands out to you, and feel free to jump straight to the technical challenges. Whatever works for you.</div>
+        </div>
+
+        <div class="turn turn-candidate">
+          <div class="turn-speaker">Candidate</div>
+          <div class="turn-text">Ah! Okay. All right. Uh the most I think yeah the most uh challenging project that I ever done or that I ever worked is called as fuel management system. I make that system for PT GGP and for the contact fuel management system is real-time full application distribution across multiple location in Indonesia. Specifically uh this fuel management system is used is used in uh Lampung. And for the stack stack I use Laravel and for the front-end I use Blade and the system is uh you know work as monolithic app only. And for the challenging and uh for the challenging the technical challenging is the requirement from the user. The user want to uh fuel distribution is controlled by card. So I have to make a system that can work with uh card using NFC on the card.</div>
+        </div>
+
+        <div class="turn turn-ai">
+          <div class="turn-speaker">AI Interviewer</div>
+          <div class="turn-text">Interesting — how did you handle the NFC integration technically? What were the key decisions you made around the hardware-software boundary?</div>
+        </div>
+
+        <div class="turn turn-candidate">
+          <div class="turn-speaker">Candidate</div>
+          <div class="turn-text">So we uh we use a third party uh card reader device and uh the device can uh can communicate with the server using HTTP request. So every time the card is tapped, the device will send uh like a POST request to our backend with the card ID and then our backend will validate whether this card is authorized to get fuel or not.</div>
+        </div>
+
+        <div class="turn turn-ai">
+          <div class="turn-speaker">AI Interviewer</div>
+          <div class="turn-text">And how did you handle connectivity issues? Given this is across multiple remote locations in Lampung, what happens when the device can't reach your backend?</div>
+        </div>
+
+        <div class="turn turn-candidate">
+          <div class="turn-speaker">Candidate</div>
+          <div class="turn-text">Uh for that case uh we uh we don't have a solution for that case actually. Because uh the internet in that location is quite stable so we just uh trust the internet connection. If the internet is down then uh the device just cannot dispense fuel.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 8: VACANCIES
+═══════════════════════════════════════════════════════ -->
+<div class="page" id="page-vacancies">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Vacancies</h1>
+        <p class="page-meta">Link assessments to open roles</p>
+      </div>
+      <button class="btn-primary" onclick="showToast('New vacancy — coming soon')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New vacancy
+      </button>
+    </div>
+    <div class="empty-state-full">
+      <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg></div>
+      <h2 class="empty-title">No vacancies yet</h2>
+      <p class="empty-desc">Create a vacancy to track multiple candidates for the same open role.</p>
+      <button class="btn-secondary" onclick="showToast('New vacancy — coming soon')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Create your first vacancy
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+
+<script>
+  const navMap = {
+    'assessments':      'nav-assessments',
+    'new-assessment':   'nav-assessments',
+    'detail':           'nav-assessments',
+    'portfolio':        'nav-assessments',
+    'portfolio-error':  'nav-assessments',
+    'fitgap':           'nav-assessments',
+    'transcript':       'nav-assessments',
+    'vacancies':        'nav-vacancies',
+  };
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    const pg = document.getElementById('page-' + name);
+    const nv = document.getElementById(navMap[name]);
+    if (pg) pg.classList.add('active');
+    if (nv) nv.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setFilter(el) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function removeSkill(btn) {
+    const row = btn.closest('.skill-row');
+    const list = document.getElementById('skills-list');
+    row.remove();
+    if (!list.querySelectorAll('.skill-row').length) {
+      list.style.display = 'none';
+      document.getElementById('skills-empty').style.display = 'block';
+    }
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = msg;
+    t.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('visible'), 2400);
+  }
+</script>
+</body>
+</html>

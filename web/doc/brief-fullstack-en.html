@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Study: Fullstack Product Engineer</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 820px; margin: 40px auto; padding: 0 24px; color: #222; line-height: 1.7; font-size: 15px; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.15rem; margin-top: 2rem; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.25rem; }
+    h3 { font-size: 1rem; margin-top: 1.25rem; margin-bottom: 0.25rem; }
+    p { margin: 0.6rem 0; }
+    ul, ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+    li { margin-bottom: 0.3rem; }
+    blockquote { border-left: 3px solid #888; margin: 1rem 0; padding: 0.5rem 1rem; color: #555; font-style: italic; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 0.9em; }
+    .meta { color: #666; font-size: 0.88rem; margin-bottom: 1.5rem; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; }
+    a { color: #1a0dab; }
+    .disq { color: #b00; }
+  </style>
+</head>
+<body>
+
+  <h1>Case Study: Fullstack Product Engineer</h1>
+  <div class="meta">
+    Repository: <a href="https://github.com/rakamindev/ai-interview-platform" target="_blank">github.com/rakamindev/ai-interview-platform</a> &nbsp;·&nbsp;
+    Deadline: Wednesday 19 August, 13:00 WIB
+  </div>
+
+  <p>Welcome, and thank you for taking the time to join our selection process. This document and the platform repository contain everything you need to complete the assignment. There is no separate back-and-forth required. Read this document once fully before starting. If something is ambiguous, treat that as part of the exercise: make a reasonable assumption, write it down in your report, and proceed.</p>
+
+  <hr />
+
+  <h2>1. Role Expectation: We Are Hiring a Product Engineer</h2>
+
+  <p><em>This is the section to read twice, because it decides everything else in this brief.</em></p>
+
+  <p>A conventional software engineer waits for a specification, implements it, and is judged on whether the code works. We are not hiring for that. We are hiring someone accountable for whether the feature is worth shipping at all, and who will learn whatever is needed to ship it well: an unfamiliar framework, an unfamiliar domain, a regulation, a business model, and the real working conditions of the people who use it.</p>
+
+  <p>We expect you to think from first principles:</p>
+
+  <blockquote>The change we are most interested in is the one that makes this product genuinely better for the people it touches, not the one that touches the most lines of code.</blockquote>
+
+  <h3>Monozukuri: Craftsmanship Beyond the Minimum Baseline</h3>
+
+  <p>Every requirement, guideline, and evaluation point stated in this brief represents the minimum baseline. We do not view this exercise as a mere take-home test, but as your canvas to show off your highest standards of engineering and product craftsmanship (Monozukuri).</p>
+
+  <p>We expect you to bring:</p>
+  <ul>
+    <li><strong>Pride in Making (Monozukuri):</strong> Deep care for the product, meticulous attention to detail, and a drive to craft software that feels complete and reliable.</li>
+    <li><strong>Great UI/UX Design Taste:</strong> Clean layout hierarchy, modern visual aesthetics, intuitive micro-interactions, responsive states, and thoughtful design details that make using the application a delight.</li>
+    <li><strong>Uncompromised System Rigor:</strong> Clear architectural thinking, robust planning, and structured reasoning from data models to client-side presentation.</li>
+  </ul>
+
+  <p>Treat the baseline as your starting floor, not your ceiling. Show us what "top-notch" looks like in your hands.</p>
+
+  <hr />
+
+  <h2>2. Step-by-Step Execution Guide</h2>
+
+  <p>To make your journey smooth and structured, follow these steps sequentially from setup to submission:</p>
+
+  <p>Step 1: Setup &amp; Local Exploration → Step 2: Deep Context &amp; Domain Immersion → Step 3: Defining Problem &amp; Gap to Ideal Condition → Step 4: Revamp Strategy, Acceptance Criteria &amp; Trade-offs → Step 5: Monozukuri Implementation &amp; Pull Request → Step 6: Final Submission (Single PDF &amp; Artifacts)</p>
+
+  <h3>Step 1: Setup &amp; Local Exploration</h3>
+
+  <p>Take the problem down to what is genuinely true. Ask what this product should be if nobody had built it yet. Decide what to change given what exists in the codebase. Decompose and rank your reasoning so reviewers can follow it and evaluate your choices.</p>
+
+  <ol>
+    <li><strong>Clone &amp; Run:</strong> Clone the repository and run both services locally. Explore the current workflow in your browser and test it in your own way.</li>
+    <li><strong>Branch:</strong> Create a feature branch off <code>main</code>. Do not commit directly to main. Keep commits small and readable.</li>
+    <li><strong>Understand the Baseline:</strong> RSpec currently has no specs written, the web app has no test runner, and there is no continuous integration. Transferring fast into an unfamiliar stack and building enough testing harness to prove your work is part of owning the change.</li>
+  </ol>
+
+  <p>The repository holds both services: <code>api/</code> (Rails on PostgreSQL with Sidekiq, RSpec, and Gemini AI) and <code>web/</code> (React 18, TypeScript, Vite, Tailwind, and Radix UI). Each directory contains a README.md for running it locally.</p>
+
+  <h3>Step 2: Deep Context &amp; Domain Immersion</h3>
+
+  <p>Before proposing changes or writing code, build context around these 5 core pillars:</p>
+
+  <ol>
+    <li><strong>The Product:</strong> Use it end to end before you judge it. Read what it does, not what the code implies it does.</li>
+    <li><strong>The Industry:</strong> Hiring and talent assessment in Indonesia. Understand what makes that hard, what is already commoditized, and where the real leverage sits.</li>
+    <li><strong>What It Is For:</strong> The outcome this product exists to produce, what has to be true for it to keep being useful, and what would make it matter to more people than it reaches today.</li>
+    <li><strong>The Users:</strong> Assessors, recruiters, and hiring managers. Understand what their day looks like and what they are actually trying to get done.</li>
+    <li><strong>The People Affected Who Never Chose It:</strong> Candidates are assessed by this product. They do not pick it, they cannot opt out of it, and a wrong result changes a real person's year. Design for them too, keeping Indonesia's Personal Data Protection Law (UU PDP) in mind.</li>
+  </ol>
+
+  <h3>Step 3: Defining Problem &amp; Gap to Ideal Condition</h3>
+
+  <p>Walk the real workflows end to end, inspect the database records, and evaluate the API payloads to identify the gap between the current flawed implementation and an ideal, top-notch product condition.</p>
+
+  <p>Done when:</p>
+  <ul>
+    <li>You clearly articulate the core problem and the gap preventing this product from delivering tangible value to users (assessors, recruiters, hiring managers) and candidates.</li>
+    <li>Findings are categorized by severity (P0 to P3) with a one-line impact statement showing how the current flaw harms the real user workflow or candidate evaluation.</li>
+    <li>You separate missing specification (never defined) from defective implementation (defined but broken).</li>
+    <li>Findings span both services (<code>api/</code> and <code>web/</code>), including the data computation and frontend presentation seam.</li>
+    <li><strong>Constraint Signal:</strong> You identify and document early any blocking risk, ambiguity, or architectural debt that you would escalate to a Technical Lead on a live project.</li>
+  </ul>
+
+  <h3>Step 4: Revamp Strategy, Acceptance Criteria &amp; Trade-offs</h3>
+
+  <p>Design the revamp or enhancement that directly bridges the gap to the ideal product condition, covering both a backend module and a frontend module. Depth on one side is expected, but complete absence on the other is not.</p>
+
+  <ol>
+    <li><strong>Derive Self-Defined Acceptance Criteria:</strong> Write down what correct behavior means for every input and edge case before writing code (handling unassessed skills, missing ratings, model call failures, edge-case data types, and long text states).</li>
+    <li>
+      <strong>Evaluate Solution Options &amp; Trade-offs:</strong> Compare at least two or three technical options (Option A vs Option B) to ship this revamp:
+      <ul>
+        <li><strong>Product Impact vs Cost:</strong> What each option buys to transform the user experience into a top-notch product, what it costs, and what it forecloses.</li>
+        <li><strong>Long-term Maintainability:</strong> Who maintains it, how easily it can be evolved, and whether it can be walked back cheaply.</li>
+        <li><strong>Failure Modes:</strong> What conditions break it under stress or bad inputs.</li>
+        <li><strong>Contextual Fit:</strong> Why your chosen option is the best way to deliver tangible, high-impact value under this codebase and this deadline.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h3>Step 5: Monozukuri Implementation &amp; Pull Request</h3>
+
+  <p>Land your changes across the full stack: the API, the data model underneath, the frontend screen, and automated tests.</p>
+
+  <p><strong>Minimum Baseline Standards:</strong></p>
+  <ul>
+    <li><strong>Proven Correctness:</strong> A test fails if the behavior regresses, and you have watched it fail.</li>
+    <li><strong>Designed Failure Paths:</strong> Handle timeouts, partial writes, model errors, and duplicate jobs explicitly.</li>
+    <li><strong>Protected Data:</strong> Migrations must be reversible and safe against existing rows. Endpoints authorized, inputs validated, and no sensitive personal data in logs or commits (UU PDP compliance).</li>
+    <li><strong>Polished UI/UX Interface:</strong> Great visual taste, harmonious layout, handling all interaction states (loading, empty, error, partial, long text, and responsive views) using or extending the design system.</li>
+    <li><strong>Seeded Fault Test:</strong> Prove your tests are real by breaking your logic on a scratch branch to show the test catch it, then reverting with history visible.</li>
+    <li><strong>AI Verification Moment:</strong> Document at least one instance where AI code generation was wrong or risky and how you verified/corrected it.</li>
+  </ul>
+
+  <p><strong>Pull Request Options:</strong></p>
+  <ul>
+    <li><strong>Option A:</strong> A single, comprehensive Pull Request containing the full change across both services.</li>
+    <li><strong>Option B:</strong> An Umbrella PR setting out the overall vision and linked to a few focused sub-PRs.</li>
+  </ul>
+
+  <h3>Step 6: Final Submission (Single PDF &amp; Artifacts)</h3>
+
+  <p>You have until <strong>Wednesday 19 August, 13:00 WIB</strong> to submit your work.</p>
+
+  <p>Upload a single PDF document in the hiring platform portal. Your PDF report must include:</p>
+
+  <ol>
+    <li><strong>GitHub Pull Request Link:</strong> Link to your open Pull Request(s) on github.com/rakamindev/ai-interview-platform.</li>
+    <li>
+      <strong>Written Documentation &amp; Execution Narrative:</strong>
+      <ul>
+        <li>Product context analysis (users, candidates, UU PDP implications).</li>
+        <li>Severity-ranked problem &amp; gap analysis, plus your constraint signal.</li>
+        <li>Option evaluation &amp; trade-off matrix (Option A vs Option B rationale).</li>
+        <li>Your self-derived acceptance criteria and edge cases handled.</li>
+        <li>Test coverage evidence, seeded fault test proof, and AI verification notes.</li>
+        <li>Claimed engineering depth (backend-heavy vs frontend-heavy).</li>
+      </ul>
+    </li>
+    <li><strong>Visual Screenshots:</strong> Embedded images showing UI flows, edge cases, error states, and responsive views.</li>
+    <li><strong>Video Demonstration Link:</strong> A link to a 3 to 5 minute video walkthrough hosted on an external platform (Loom, YouTube Unlisted, Google Drive, or similar) demonstrating the end-to-end user flow, problem clarity, and feature enhancements.</li>
+  </ol>
+
+  <p><em>Flexible Format &amp; Style: The design, template, and formatting of your report are completely flexible and open to your personal documentation style. A step-by-step narrative of your execution journey is required.</em></p>
+
+  <hr />
+
+  <h2>3. Dual Evaluation Structure</h2>
+
+  <p>Your submission is evaluated by two distinct teams:</p>
+
+  <ul>
+    <li><strong>Product Team:</strong> Reviews what you ship in your report (problem clarity, user flow empathy, documentation, screenshots, UI/UX design taste, and video demonstration).</li>
+    <li><strong>Engineering Team:</strong> Reviews what you ship in code (GitHub Pull Request(s), code architecture, test suite, data migration safety, and trade-off reasoning).</li>
+  </ul>
+
+  <h2>4. Evaluation Rubric</h2>
+
+  <ul>
+    <li><strong>Product Impact &amp; Monozukuri Craft (50%):</strong> What you actually ship to transform this product into a meaningful, top-notch experience. Evaluated by the impact of the problem solved, trade-off rigor, self-derived acceptance criteria, exceptional UI/UX design taste, and tangible value brought to users and candidates.</li>
+    <li><strong>Engineering Craft &amp; Execution (50%):</strong> The correctness of the shipped fullstack slice, test harness reliability, edge case handling, data safety, clean code architecture, and PR quality.</li>
+  </ul>
+
+  <h2>5. Non-Negotiable Disqualifiers</h2>
+
+  <p>Any of the following results in an immediate decline:</p>
+
+  <ul>
+    <li class="disq">Weakening or removing a test assertion to make a check pass.</li>
+    <li class="disq">Committing secrets, API keys, or real personal data.</li>
+    <li class="disq">Submitting code you cannot explain during the technical interview.</li>
+    <li class="disq">Submitting a change that was only tested on the happy path.</li>
+    <li class="disq">Reproducing another candidate's visible work without attribution.</li>
+    <li class="disq">Poor or neglected UI/UX design quality.</li>
+  </ul>
+
+  <hr />
+
+  <h2>6. Ground Rules &amp; Live Defense</h2>
+
+  <ul>
+    <li><strong>Inputs:</strong> You receive this brief and the repository. Scope, criteria, edge cases, and test data are derived by you.</li>
+    <li><strong>AI Tooling:</strong> AI is encouraged. Use it as leverage you verify, not an oracle you trust blindly.</li>
+    <li><strong>No Live Q&amp;A:</strong> Make reasonable assumptions, document them in your PDF report, and proceed.</li>
+    <li><strong>Live Technical Defense:</strong> A 45 to 60 minute video session with the CTO and Technical Lead after the deadline to discuss your trade-offs, architectural choices, and rejected options.</li>
+  </ul>
+
+  <p><em>The platform is realistic and imperfect. Show us what you can ship to make it meaningful. Good luck!</em></p>
+
+</body>
+</html>

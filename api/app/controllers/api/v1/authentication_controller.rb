@@ -9,23 +9,31 @@ module Api
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
-        return json_error('Invalid email or password', :unauthorized) unless user&.authenticate(params[:password])
+        # ponytail: user&.authenticate susceptible to timing probing; use authenticate_by when on Rails 7.1+
+        unless user&.authenticate(params[:password])
+          return json_error('Invalid email or password.', :unauthorized)
+        end
+        return json_error('Your account does not have access.', :unauthorized) unless User::ROLES.include?(user.role)
 
-        return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
+        organization = resolve_organization_by_host
+        return json_error('Invalid workspace URL. Check your link and try again.', :unauthorized) unless organization
+        unless user.tenant_id == organization.id
+          return json_error('Your account is not registered here.', :unauthorized)
+        end
 
-        scheme = resolve_scheme
-        token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })
+        token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: organization.scheme })
 
-        json_response({ token:, user: { id: user.id, email: user.email, role: user.role } })
+        json_response({
+          token:,
+          user: { id: user.id, email: user.email, role: user.role },
+          tenant: { id: organization.id, name: organization.name }
+        })
       end
 
       private
 
-      def resolve_scheme
-        request.headers['X-Tenant-Scheme'].presence ||
-          ActiveRecord::Base.connection.select_value(
-            'SELECT scheme FROM organizations LIMIT 1'
-          ) || 'test-corp'
+      def resolve_organization_by_host
+        Organization.find_by_host(request.host)
       end
     end
   end

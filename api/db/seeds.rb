@@ -8,7 +8,7 @@
 #
 # After seeding, use the Rails console to mint a JWT for testing:
 #   bundle exec rails console
-#   > token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: 'test-corp' })
+#   > token = JsonWebToken.encode({ user_id: 1, role: 'hiring_manager', scheme: 'test-corp' })
 #   > puts token
 
 puts "== Seeding AI Interview development data =="
@@ -29,12 +29,29 @@ puts "== Seeding AI Interview development data =="
 #
 # id = 0 is reserved in rakamin-api as the "default" org — do not use it here.
 
-TEST_ORG = {
-  name:       "Test Corp",
-  scheme:     "test-corp",
-  identifier: "test-corp",
-  host:       "localhost"
-}.freeze
+ORGS = [
+  {
+    name:       "AI Interview Test",
+    scheme:     "ai_interview",
+    identifier: "ai-interview",
+    host:       "ai-interview.localhost",
+    alias_hosts: ["ai-interview.lvh.me"]
+  },
+  {
+    name:       "Test Corp",
+    scheme:     "test-corp",
+    identifier: "test-corp",
+    host:       "test-corp.localhost",
+    alias_hosts: ["test-corp.lvh.me"]
+  },
+  {
+    name:       "Acme Corp",
+    scheme:     "acme",
+    identifier: "acme",
+    host:       "acme.localhost",
+    alias_hosts: ["acme.lvh.me"]
+  }
+].freeze
 
 ActiveRecord::Base.connection.execute(<<~SQL)
   CREATE TABLE IF NOT EXISTS public.organizations (
@@ -50,31 +67,39 @@ ActiveRecord::Base.connection.execute(<<~SQL)
   );
 SQL
 
-existing = ActiveRecord::Base.connection.select_one(
-  "SELECT id, name, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
+ORG_IDS = {}
 
-if existing
-  puts "  Organization already exists: id=#{existing['id']} scheme=#{existing['scheme']} (skipped)"
-else
-  result = ActiveRecord::Base.connection.select_one(<<~SQL)
-    INSERT INTO public.organizations
-      (name, scheme, identifier, host, alias_hosts, config, created_at, updated_at)
-    VALUES
-      (
-        '#{TEST_ORG[:name]}',
-        '#{TEST_ORG[:scheme]}',
-        '#{TEST_ORG[:identifier]}',
-        '#{TEST_ORG[:host]}',
-        '{}',
-        '{}',
-        NOW(),
-        NOW()
-      )
-    RETURNING id, name, scheme;
-  SQL
+ORGS.each do |org|
+  existing = ActiveRecord::Base.connection.select_one(
+    "SELECT id, name, scheme FROM public.organizations WHERE scheme = '#{org[:scheme]}' LIMIT 1"
+  )
 
-  puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+  if existing
+    ORG_IDS[org[:scheme]] = existing['id']
+    puts "  Organization already exists: id=#{existing['id']} scheme=#{existing['scheme']} (skipped)"
+  else
+    alias_hosts = org[:alias_hosts].map { |h| "'#{h}'" }.join(',')
+
+    result = ActiveRecord::Base.connection.select_one(<<~SQL)
+      INSERT INTO public.organizations
+        (name, scheme, identifier, host, alias_hosts, config, created_at, updated_at)
+      VALUES
+        (
+          '#{org[:name]}',
+          '#{org[:scheme]}',
+          '#{org[:identifier]}',
+          '#{org[:host]}',
+          ARRAY[#{alias_hosts}]::varchar[],
+          '{}',
+          NOW(),
+          NOW()
+        )
+      RETURNING id, name, scheme;
+    SQL
+
+    ORG_IDS[org[:scheme]] = result['id']
+    puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+  end
 end
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
@@ -369,18 +394,71 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
-# ── Print usage instructions ──────────────────────────────────────────────────
+# ── Users (internal login) ────────────────────────────────────────────────────
+#
+# The assessment dashboard requires authenticated internal users. There is no
+# registration flow on the backend (POST /signup is not routed), so we seed
+# three accounts here (hiring_manager, assessor, recruiter). Idempotent — safe
+# to re-run.
 
-org = ActiveRecord::Base.connection.select_one(
-  "SELECT id, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
+puts ""
+puts "== Seeding users =="
+
+SEED_USERS = [
+  { email: "hiring_manager@rakamin.com",    password: "admin123",    role: "hiring_manager", tenant: "ai_interview" },
+  { email: "assessor@rakamin.com",          password: "assessor123", role: "assessor",       tenant: "ai_interview" },
+  { email: "recruiter@rakamin.com",         password: "recruiter123", role: "recruiter",      tenant: "ai_interview" },
+  { email: "hiring_manager@test-corp.com", password: "admin123",    role: "hiring_manager", tenant: "test-corp" },
+  { email: "assessor@test-corp.com",       password: "assessor123", role: "assessor",       tenant: "test-corp" },
+  { email: "recruiter@test-corp.com",      password: "recruiter123", role: "recruiter",      tenant: "test-corp" },
+  { email: "hiring_manager@acme.com",      password: "admin123",    role: "hiring_manager", tenant: "acme" },
+  { email: "assessor@acme.com",            password: "assessor123", role: "assessor",       tenant: "acme" },
+  { email: "recruiter@acme.com",           password: "recruiter123", role: "recruiter",      tenant: "acme" }
+].freeze
+
+SEED_USERS.each do |attrs|
+  user = User.find_or_initialize_by(email: attrs[:email])
+  user.password  = attrs[:password]
+  user.role      = attrs[:role]
+  user.tenant_id = ORG_IDS[attrs[:tenant]]
+
+  if user.save
+    action = user.previously_new_record? ? "Created" : "Updated"
+    puts "  #{action}: #{user.email} (#{user.role}, tenant=#{attrs[:tenant]})"
+  else
+    puts "  ERROR: #{user.errors.full_messages.join(', ')}"
+  end
+end
+
+# ── Print usage instructions ──────────────────────────────────────────────────
 
 puts ""
 puts "== Done! =="
 puts ""
-puts "Your test organization:"
-puts "  id     : #{org['id']}"
-puts "  scheme : #{org['scheme']}"
+puts "Organizations (access via subdomain):"
+puts ""
+ORGS.each do |org|
+  puts "  #{org[:name]}"
+  puts "    id     : #{ORG_IDS[org[:scheme]]}"
+  puts "    scheme : #{org[:scheme]}"
+  puts "    host   : #{org[:host]}"
+  puts ""
+end
+puts "Login accounts (assessment dashboard):"
+puts "  hiring_manager@rakamin.com    / admin123    (role: hiring_manager, tenant: ai_interview)"
+puts "  assessor@rakamin.com          / assessor123  (role: assessor,       tenant: ai_interview)"
+puts "  recruiter@rakamin.com         / recruiter123 (role: recruiter,      tenant: ai_interview)"
+puts "  hiring_manager@test-corp.com / admin123    (role: hiring_manager, tenant: test-corp)"
+puts "  assessor@test-corp.com       / assessor123  (role: assessor,       tenant: test-corp)"
+puts "  recruiter@test-corp.com      / recruiter123 (role: recruiter,      tenant: test-corp)"
+puts "  hiring_manager@acme.com      / admin123    (role: hiring_manager, tenant: acme)"
+puts "  assessor@acme.com            / assessor123  (role: assessor,       tenant: acme)"
+puts "  recruiter@acme.com           / recruiter123 (role: recruiter,      tenant: acme)"
+puts ""
+puts "Open the dashboard via subdomain:"
+puts "  http://ai-interview.localhost:5173"
+puts "  http://test-corp.localhost:5173"
+puts "  http://acme.localhost:5173"
 puts ""
 puts "To mint a JWT for testing, open the Rails console:"
 puts ""
@@ -388,12 +466,12 @@ puts "  bundle exec rails console"
 puts ""
 puts "Then run:"
 puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
+puts "  # Internal user token (hiring_manager / assessor / recruiter)"
+puts "  token = JsonWebToken.encode({ user_id: 1, role: 'hiring_manager', scheme: 'test-corp' })"
 puts "  puts token"
 puts ""
 puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
+puts "  token = JsonWebToken.encode({ user_id: 2, role: 'candidate', scheme: 'test-corp' })"
 puts "  puts token"
 puts ""
 puts "Then hit the API:"

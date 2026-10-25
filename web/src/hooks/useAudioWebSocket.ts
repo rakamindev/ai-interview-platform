@@ -12,7 +12,7 @@ interface UseAudioWebSocketOptions {
   onReconnected?: () => void;
 }
 
-const RECONNECT_DELAYS = [1000, 2000, 4000];
+const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 120000];
 
 export function useAudioWebSocket({
   sessionId,
@@ -127,7 +127,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("failed");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);

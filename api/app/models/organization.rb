@@ -26,6 +26,16 @@ class Organization < ApplicationRecord
     where(id: 0).first
   end
 
+  # Strict host lookup (no fallback to default org).
+  # Used at login to resolve the tenant from the request subdomain/host.
+  def self.find_by_host(host)
+    return if host.blank?
+
+    where(host: host)
+      .or(where("alias_hosts && ARRAY[?]::varchar[]", host))
+      .first
+  end
+
   # Convenience: is this the system default org?
   def default?
     id.zero?

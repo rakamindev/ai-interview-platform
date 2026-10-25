@@ -6,7 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
 
@@ -15,9 +16,17 @@ interface SkillPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (skill: Partial<AssessmentSkill>) => void;
+  selectedSkillIds?: string[];
+  selectedSkillLabels?: string[];
 }
 
-export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
+export default function SkillPicker({
+  open,
+  onOpenChange,
+  onSelect,
+  selectedSkillIds = [],
+  selectedSkillLabels = [],
+}: SkillPickerProps) {
   const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -36,9 +45,14 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     s.skill_label.toLowerCase().includes(query.toLowerCase())
   );
 
+  const isAlreadySelected = (s: SkillTaxonomy) =>
+    selectedSkillIds.includes(s.skill_id) ||
+    selectedSkillLabels.some((label) => label.toLowerCase() === s.skill_label.toLowerCase());
+
   const handleSelect = (s: SkillTaxonomy) => {
+    if (isAlreadySelected(s)) return;
     onSelect({
-      skill_id: undefined,
+      skill_id: s.skill_id,
       skill_label: s.skill_label,
       is_custom: false,
       expected_level: 3,
@@ -57,7 +71,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add from B7 taxonomy</DialogTitle>
+          <DialogTitle>Add from Skill Taxonomy</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
@@ -79,16 +93,28 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
           ) : (
-            filtered.map((s) => (
-              <button
-                key={s.skill_id}
-                type="button"
-                onClick={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
-              >
-                {s.skill_label}
-              </button>
-            ))
+            filtered.map((s) => {
+              const selected = isAlreadySelected(s);
+              return (
+                <button
+                  key={s.skill_id}
+                  type="button"
+                  onClick={() => handleSelect(s)}
+                  disabled={selected}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-md transition-colors text-sm",
+                    selected
+                      ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <span className="flex items-center justify-between">
+                    {s.skill_label}
+                    {selected && <Check className="h-4 w-4 shrink-0" />}
+                  </span>
+                </button>
+              );
+            })
           )}
         </div>
       </DialogContent>

@@ -9,9 +9,10 @@ export interface VacancyPayload {
 }
 
 export const vacanciesApi = {
-  list: (page = 1) =>
+  list: (page = 1, perPage = 20, signal?: AbortSignal) =>
     api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
+      params: { page, per_page: perPage },
+      signal,
     }),
 
   get: (id: number) =>
@@ -24,4 +25,7 @@ export const vacanciesApi = {
     api.put<{ vacancy: Vacancy }>(`/vacancies/${id}`, { vacancy: data }),
 
   delete: (id: number) => api.delete(`/vacancies/${id}`),
+
+  roleTitles: () =>
+    api.get<{ role_titles: string[] }>("/vacancies/role_titles"),
 };

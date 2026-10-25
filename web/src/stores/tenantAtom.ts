@@ -1,12 +1,27 @@
 import { atom } from "jotai";
 
 export interface TenantState {
-  id: string | null;
+  id: number | null;
   name: string | null;
 }
 
-// Dev: seed from env; replace with platform context later
-export const tenantAtom = atom<TenantState>({
-  id: import.meta.env.VITE_DEV_TENANT_ID ?? null,
-  name: import.meta.env.VITE_DEV_TENANT_NAME ?? "Demo Tenant",
-});
+const TENANT_KEY = "auth_tenant";
+
+function getStoredTenant(): TenantState {
+  try {
+    const raw = localStorage.getItem(TENANT_KEY);
+    return raw ? JSON.parse(raw) : { id: null, name: null };
+  } catch {
+    return { id: null, name: null };
+  }
+}
+
+export function saveTenant(tenant: TenantState) {
+  localStorage.setItem(TENANT_KEY, JSON.stringify(tenant));
+}
+
+export function clearTenant() {
+  localStorage.removeItem(TENANT_KEY);
+}
+
+export const tenantAtom = atom<TenantState>(getStoredTenant());

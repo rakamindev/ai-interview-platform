@@ -1,0 +1,95 @@
+[AI]
+Halo, terima kasih sudah meluangkan waktu. Kita langsung mulai saja ya. Bisa ceritakan tentang proyek teknis terbaru yang paling menantang buat kamu? Apa tantangannya dan bagaimana kamu menyelesaikannya?
+
+[Candidate]
+Kalau yang paling terbaru itu yang menantang itu nggak ada, tapi yang paling menantang sejauh ini yang saya kerjakan itu ada. Apakah ada kriteria khusus project apa yang perlu saya jelaskan atau project apapun bisa saya jelaskan dengan teknologi apapun?
+
+[AI]
+Bebas saja, proyek mana yang menurutmu paling menunjukkan kemampuan terbaikmu, terutama dalam hal backend, kepemimpinan, atau bagaimana kamu berpikir tentang produknya. Silakan dipilih saja.
+
+[Candidate]
+Oke baik. Beberapa project yang sudah pernah saya kerjakan sebetulnya tidak jauh dari sistem keuangan dan juga integrasi dengan perbankan. Tapi aplikasi yang pernah saya kerjakan atau project yang pernah saya kerjakan yang tidak integrasi langsung dengan perbankan yaitu aplikasi dengan nama atau sistem atau project dengan nama full manajemen sistem. Sedikit konteks aplikasinya adalah aplikasi untuk distribusi bahan bakar atau BBM. Di multi lokasi di seluruh Indonesia dengan transaksi real time, dashboard real time dan manajemen yang dilakukan secara real time di seluruh perangkat di seluruh Indonesia. Tapi utamanya aplikasi ini tuh paling banyak berjalan di daerah Lampung.
+
+[AI]
+Menarik sekali, sistem manajemen BBM real-time di banyak lokasi. Bisa ceritakan lebih detail tentang desain API yang kamu gunakan untuk menangani transaksi real-time tersebut? Pakai REST, Websocket, atau pendekatan lain? Dan bagaimana kamu menangani potensi lonjakan traffic?
+
+[Candidate]
+Ah, pertama terkait dengan lonjakan traffic dulu. Sebetulnya untuk lonjakan traffic tidak terlalu unexpected ya. Artinya semua transaksi itu sebetulnya sudah diperhitungkan dengan matang, sudah diperkirakan dengan matang. Berapa jumlah transaksi paling tinggi, berapa jumlah transaksi paling rendah atau jumlah transaksi yang paling ee stabil. Atau average atau rata-rata setiap hari nya, setiap jam. nya. Jadi sebetulnya tidak ada transaksi yang benar-benar terlonjak besar. Karena memang jumlah karyawannya pun atau jumlah pegawai yang akan menggunakan sistem ini untuk bertransaksi itu sudah diketahui. Jadi secara jumlah transaksi itu sudah terprediksi dan sejauh sistem berjalan tidak pernah terjadi server down gara-gara lonjakan transaksi. Kemudian untuk ee pertanyaan yang berikutnya terkait dengan desain API ya tentu saja saya menggunakan RESTful REST API di sini. Untuk fokusnya adalah REST API. Untuk web socket belum ada keperluan karena memang pada dasarnya aplikasi ini itu bukan aplikasi yang ee perlu real time dengan soket begitu. Atau dengan ee konektivitas sori dengan arsitektur seperti SSE ataupun ee sejenisnya. Jadi memang untuk real time dan real time pun saya masih menggunakan polling ee long polling begitu. Jadi memang memanggil API berkali-kali. Tidak efisien tapi itu cukup karena memang kita juga mengikuti permintaan user. User tidak ingin aplikasi ini lama dibuat, artinya mereka ingin cepat ee on production, cepat ee langsung ongoing, cepat bisa langsung rilis gitu loh. Jadi memang kita tidak memfokuskan ke sesuatu-sesuatu yang tidak esensial atau ee hanya nice to have gitu. Untuk struktur REST API saya menggunakan arsitektur REST biasa. RESTful dengan method get, post, put, delete. Lalu untuk standarisasi API nya juga kita ada. Untuk kontrak API nya itu standar yang kita pakai itu adalah ada ee payload. Pada payload nya ya, pada payload nya ada field untuk status itu boolean. Kemudian message ini general, bisa success process, success delete dan sebagainya. Kalau ada error pun error yang lebih general. Kemudian ada field data, ini yang menjadi utama. Lalu yang terakhir ada field ee sori ada satu lagi, ada field data tadi sudah. Ada field errors, errors ini itu berisi ee array. Jadi ee nested array ya. Sori mungkin bisa lebih tepat dibilang kalau ee list of object gitu loh. Jadi key value, key nya adalah field nya, value nya adalah error nya. Jadi bisa di mapping dengan mudah apa ee field nya itu apa, error nya itu apa. Dan juga satu lagi adalah meta. Meta ini biasanya informasi yang ee tidak utama tapi diperlukan. Contohnya semisal seperti data table itu perlu meta berupa pagination, filter yang available, kemudian ee jumlah halaman, jumlah data dan sejenisnya.
+
+[AI]
+Baik, berarti pendekatan polling sudah cukup untuk kebutuhan saat ini ya. Nah, terkait struktur respon API tadi, kamu menyebutkan ada field 'data' dan 'errors'. Kalau ada situasi di mana satu transaksi menyebabkan beberapa masalah sekaligus, bagaimana kamu menstruktur detail errornya di dalam field 'errors' itu? Bisa kasih contoh payloadnya?
+
+[Candidate]
+maksudnya beberapa sori maksudnya ee satu transaksi menyebabkan beberapa masalah sekaligus. Oke ee pada dasarnya setiap transaksi itu atomic ya. Jadi jika ada gagal ada misal satu proses gagal maka semua data itu akan di-roll. Jadi tidak ada error parsial.
+
+[AI]
+Paham, jadi transaksinya atomic ya. Nah, dalam hal kolaborasi tim, bagaimana kamu memastikan developer lain bisa paham dan menggunakan standar API yang sudah kamu tetapkan tadi? Ada dokumentasi yang khusus atau cara lain untuk menjaga konsistensi?
+
+[Candidate]
+Ja. Für Konsistenz, natürlich, ich habe ein paar äh was Name ja? Utile, ein bisschen Utile, die mir man äh API ist so die Standardisierung und Framework und so das habe ich set up, aber Output der jeder Response, die gegeben oder Controller, oder äh Handler, die du oder Service, die du so passiv an die äh outputten in dem Format, die du sammelst. Ja? Die jeder Developer leihen, wie soll aber Team Baro ja? Onboarding, die hat nicht per nur Pushing, die mir kann kann so alle halbe ja? Halbe nicht essential, so wie du kannst von der S-Bahn und so weiter. Ja? Die per nur mehr kapieren, aber Businessflow. Die mir man die Kaderprogrammierer leihen oder Team leihen, Fokus ja die du ziemlich äh ringen ja? Äh, oben kognitiv nicht so dann nicht so alle banale, nicht so alle beides, dann mir muss nicht so lange geflohen bist. Die hat per nur mehr per du liehen, so was ja? Äh, nicht wenn die Flohbis nicht so lange. So was du nicht ja? Äh, wie man so eine Form der Respondiert? Die hat nicht der Dokumentation nicht ja? Was du nicht der Dokumentation ja? Kann ich leider aber die mir man bei System, ich du so dokumentiert.
+
+[AI]
+Menarik, kamu membuat framework internal untuk menjaga konsistensi dan mengurangi beban kognitif tim. Nah, dari sisi produk nih, sistem fuel management real-time ini kan pasti punya tujuan untuk efisiensi bisnis. Ada fitur spesifik yang kamu desain berdasarkan masukan langsung dari pengguna atau clients, yang mungkin sebelumnya nggak ada di spesifikasi awal? Apa dampaknya ke mereka?
+
+[Candidate]
+gimana uang realnya? Uang realnya itu sudah dipotong dari saldo masing-masing karyawan. Jadi memang hal ini untuk mensentralisasi supaya tidak ada manual dari setiap orangnya.
+
+[AI]
+Oh, jadi ada fitur pemotongan saldo otomatis dari karyawan untuk sentralisasi pembayaran. Menarik. Bagaimana kamu memastikan keandalan sistem pemotongan saldo itu? Maksudnya, apa yang terjadi kalau transaksi gagal di tengah jalan tapi saldonya sudah terpotong? Ada mekanisme rollback atau rekonsiliasi?
+
+[Candidate]
+Oke, sebentar. Sepertinya Anda tidak mendengarkan keseluruhan jawaban saya, ya?
+
+[AI]
+Maaf kalau saya salah paham. Bisa tolong diperjelas bagian mana yang mungkin saya lewatkan? Saya ingin memastikan saya mengerti sepenuhnya Pendekatan kamu.
+
+[Candidate]
+Ya, saya jelaskan ulang dari awal. Salah satu sistem, eh sori, salah satu fitur yang diberikan masukan langsung dari pengguna atau klien yang mungkin enggak ada di spesifikasi itu adalah cara saldo ini diisi. Jadi, eh sebelumnya saldo itu di top up manual. Jadi, setiap karyawan itu melakukan top up langsung ke virtual account-nya masing-masing. Tapi, pendekatan ini itu sangat riskan dan sangat lambat. Sehingga, karena prosesnya itu manual dan sendiri-sendiri, friksi antara karyawan dengan sistem itu sangat tinggi. Sehingga, dari klien itu meminta untuk ada fitur top up saldo secara massal dengan menggunakan upload Excel. Nah, itu paling solusi yang dari mereka dan saya realisasikan juga dan untuk uang aslinya itu sudah langsung dipotong dari eh masing-masing kuota karyawan. Jadi, memang nantinya yang langsung mentransferkan atau mengisi virtual account-nya secara eh serentak itu adalah dari managernya atau dari kliennya. Begitu yang berusaha saya jelaskan tadi.
+
+[AI]
+Terima kasih atas penjelasannya, sekarang saya lebih paham. Jadi solusinya adalah fitur top up saldo massal via upload Excel untuk mengurangi friksi manual. Nah, terkait proses transfer uang aslinya yang dilakukan oleh manajer, apakah sistem kamu juga terintegrasi dengan sistem perbankan untuk memantau status transfer tersebut, atau hanya mencatat transaksinya saja?
+
+[Candidate]
+Oke, ee sebetulnya untuk transaksi ini itu sudah di luar ya. Jadi, untuk top up-nya itu sudah di luar, di luar sistem. Jadi memang ee sistem ini tidak melebar sampai ke arah sana. Jadi, untuk bagaimana ee saldo ini diproses. Sebelumnya memang ada integrasi dalam payment gateway, tapi karena sudah di lakukan top up manual, sori top up massal. Dan sistem itu dirasa lebih efisien, sehingga integrasi dengan payment gateway sudah tidak ada.
+
+[AI]
+Baik, berarti sistem kamu fokus pada pencatatan dan manajemen saldonya saja, ya. Saya sudah punya gambaran yang cukup tentang proyek ini. Terima kasih atas waktunya dan sudah berbagi cerita. Semoga sukses!
+
+[AI]
+, "discovered": [{"label": "Financial Systems", "state": "initiated", "probe_count": 1}], "time_remaining_minutes": 1, "pacing": "critical"}]
+
+—manajemen saldo karyawannya ya, sementara aliran uang aslinya dikelola di luar sistem. Nah, dalam proses pengembangan fitur top up massal tadi, apakah kamu yang menginisiasi ide penggunaan Excel sebagai solusi, atau itu murni datang dari klien? Dan bagaimana kamu mempertimbangkan pro kontranya dari sisi teknis?
+
+[Candidate]
+Oke, sepertinya saya sudah menyampaikan ini ya. Untuk fitur top up massal itu bukan saya yang menginisialisasi, tapi memang dari permintaan klien sendiri. Mereka meminta untuk adanya fitur top up yang ee bisa secara batch atau secara massal sehingga proses top up nya itu menjadi lebih mudah gitu. Secara pro kontra tidak ada. Saya selama fitur ini sangat berguna untuk klien, maka saya buat.
+
+[AI]
+Baik, berarti fitur tersebut direalisasikan murni karena permintaan klien dan kamu melihat nilai gunanya bagi mereka. Saya rasa saya sudah mendapatkan gambaran yang cukup jelas. Terima kasih banyak atas waktunya dan sudah bersedia berbagi ya. Sukses selalu!
+
+[AI]
+, "discovered": [{"label": "Financial Systems", "state": "initiated", "probe_count": 1}], "time_remaining_minutes": 1, "pacing": "critical"}]
+
+—dan kamu melihatnya sebagai solusi yang berguna. Nah, dalam mengelola proyek ini, ada saatnya kamu harus mendelegasikan tugas ke anggota tim lain. Bagaimana kamu memonitor kemajuan tugas mereka dan memastikan semuanya selesai sesuai dengan standar kualitas yang kamu inginkan, terutama jika ada kendala?
+
+[Candidate]
+Oke, bukannya kita harusnya sudah selesai diskusi ya?
+
+[AI]
+Betul, kita sudah di akhir diskusi. Saya rasa informasi yang saya dapatkan sudah cukup untuk penilaian hari ini. Terima kasih atas waktunya dan sudah berbagi cerita tentang pengalamanmu. Sukses selalu!
+
+[AI]
+, "discovered": [{"label": "Financial Systems", "state": "initiated", "probe_count": 1}], "time_remaining_minutes": 0, "pacing": "critical"}]
+
+—Walaupun begitu, ada satu pertanyaan terakhir yang ingin saya ajukan. Untuk mengukur kesuksesan fitur top up massal tadi, metrik apa yang kamu perhatikan? Apakah sekadar jumlah transaksi yang berhasil, atau ada yang lain seperti pengurangan waktu proses atau kepuasan pengguna?
+
+[Candidate]
+Oke, mungkin untuk yang terakhir ya. Ee metrik yang saya perhatikan untuk ee mengetahui sistem ini berhasil atau tidak itu secara proses transaksi, kemudian kepuasan. Sebenarnya hampir semua aspek dan semua aspek itu sudah saya tahu jawabannya. Yang pertama untuk kecepatan transaksi, transaksi ini jauh lebih cepat, rekapnya itu bukan hitungan jam, bukan hitungan hari, tapi sudah hitungan detik karena memang real time. Kemudian seperti pengurangan proses jauh, waktu proses itu jauh lebih gampang, data lebih reliable, data lebih aktual karena tidak bisa diakali lagi karena sudah by system. Kemudian juga untuk fitur top up tadi itu sangat memang mempermudah, mereka sendiri pun bilang mempermudah, sangat memangkas waktu. Jadi memang overall fitur yang saya implementasikan, sistem yang saya buat ini memang ee sudah terlihat indikatornya dari saya tanyakan ke kliennya langsung ataupun saya lihat dari setiap data transaksinya karena saya memiliki akses super admin. Pada saat itu saya masih bisa mengecek kecepatan setiap transaksinya. Jadi memang ee kalau dilihat dari laporan tahun-tahun sebelumnya, kecepatan transaksi mereka itu cukup lambat ya. Sehari itu hanya 100 sampai 200 data yang tercatat. Tapi sejak sistem ini dibuat, sehari itu sudah sampai 7.000. Rata-rata di 7.000 sampai 10.000 data per hari.
+
+[AI]
+Terima kasih atas detail metriknya. Peningkatan kecepatan transaksi dan data yang lebih reliable memang indikator kuat keberhasilan produk. Saya rasa saya sudah punya gambaran yang cukup tentang pengalaman kamu. Terima kasih sudah meluangkan waktu untuk interview hari ini. Semoga hari kamu menyenangkan!
+
+[Candidate]
+Oke, terima kasih. Goodbye.
+
+[AI]
+Sama-sama! Selamat beraktivitas kembali.

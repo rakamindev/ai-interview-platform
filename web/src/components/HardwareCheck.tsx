@@ -177,15 +177,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
     const retryAll = () => {
         videoStream?.getTracks().forEach((t) => t.stop());
-        setVideoStream(null);
-        setInternetResult(null);
-        setProgress({
-            osAndBrowser: ProctoringState.LOADING,
-            internet: ProctoringState.WAITING,
-            camera: ProctoringState.WAITING,
-            audio: ProctoringState.WAITING,
-            microphone: ProctoringState.WAITING,
-        });
+        window.location.reload();
     };
 
     const thresholds = DEFAULT_THRESHOLDS;

@@ -3,7 +3,7 @@
 class CoverageAnalyzerWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :coverage, retry: 0  # non-critical — no retry
+  sidekiq_options queue: :coverage, retry: 2  # retry twice for transient API errors (503, timeout)
 
   def perform(session_id, turn_number)
     session = Session.find(session_id)

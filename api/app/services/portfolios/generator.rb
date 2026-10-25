@@ -20,6 +20,13 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      turns = @session.transcript_turns.ordered
+      if turns.empty?
+        portfolio.update!(generation_status: 'failed', generation_error: 'No transcript turns found')
+        Rails.logger.warn("[N10] Portfolio generation skipped for session #{@session.id}: empty transcript")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt

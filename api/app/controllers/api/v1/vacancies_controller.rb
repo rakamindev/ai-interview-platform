@@ -7,9 +7,21 @@ module Api
 
       before_action :set_vacancy, only: %i[show update destroy]
 
+      # GET /api/v1/vacancies/role_titles
+      def role_titles
+        titles = Vacancy
+          .select(:role_title)
+          .distinct
+          .order(:role_title)
+          .limit(50)
+          .pluck(:role_title)
+
+        json_response(role_titles: titles)
+      end
+
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.includes(:vacancy_skills).order(created_at: :desc))
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
@@ -76,7 +88,8 @@ module Api
           competency_expectations:  vacancy.competency_expectations,
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
+          updated_at:               vacancy.updated_at,
+          skills_count:             vacancy.vacancy_skills.size
         }
       end
 

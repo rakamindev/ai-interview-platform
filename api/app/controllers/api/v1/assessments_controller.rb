@@ -7,11 +7,25 @@ module Api
 
       before_action :set_assessment, only: %i[show update destroy]
 
+      # GET /api/v1/assessments/role_titles
+      def role_titles
+        titles = Assessment
+          .select(:name)
+          .distinct
+          .order(:name)
+          .limit(50)
+          .pluck(:name)
+
+        json_response(role_titles: titles)
+      end
+
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.includes(:sessions, :assessment_skills).order(created_at: :desc)
+        scope = filter_by_status(scope) if query_params[:status].present?
+        scope = scope.where("name ILIKE ?", "%#{query_params[:role_title]}%") if query_params[:role_title].present?
+
+        assessments = paginate(scope)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -87,6 +101,7 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          skills_count:   assessment.assessment_skills.size,
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,
@@ -124,6 +139,35 @@ module Api
           total_count:  collection.total_count,
           per_page:     collection.limit_value
         }
+      end
+
+      def filter_by_status(scope)
+        status = query_params[:status].to_s.downcase
+        return scope unless %w[completed awaiting failed].include?(status)
+
+        # ponytail: lateral join raw SQL; uses Session.table_name with tenant_id matching instead of hardcoded schema
+        scope.joins(<<-SQL.squish)
+          LEFT JOIN LATERAL (
+            SELECT s.status, s.end_reason
+            FROM #{Session.table_name} s
+            WHERE s.assessment_id = assessments.id
+              AND s.tenant_id = assessments.tenant_id
+            ORDER BY s.created_at DESC
+            LIMIT 1
+          ) latest ON TRUE
+        SQL
+        .where(status_sql(status))
+      end
+
+      def status_sql(status)
+        case status
+        when "completed"
+          "latest.status = 'ended' AND latest.end_reason != 'error'"
+        when "failed"
+          "latest.status = 'ended' AND latest.end_reason = 'error'"
+        when "awaiting"
+          "(latest.status IS NULL OR latest.status IN ('active', 'pending'))"
+        end
       end
     end
   end

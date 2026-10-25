@@ -21,7 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, AlertTriangle, Clock } from "lucide-react";
+import { Alert, AlertIcon, AlertContent } from "@/components/ui/alert";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -38,6 +39,7 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [timeWarningMessage, setTimeWarningMessage] = useState<string | null>(null);
 
   // Fetch candidate info
   useEffect(() => {
@@ -88,6 +90,16 @@ export default function InterviewPage() {
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
     setReconnectedPrompt(true);
     reconnectedPromptTimerRef.current = setTimeout(() => setReconnectedPrompt(false), 10_000);
+  }, []);
+
+  const handleTimeWarning = useCallback((minutesRemaining: number) => {
+    if (minutesRemaining <= 5) {
+      setTimeWarningMessage(`Sisa waktu ${minutesRemaining} menit. Wawancara akan segera berakhir.`);
+    } else if (minutesRemaining <= 10) {
+      setTimeWarningMessage(`Sisa waktu ${minutesRemaining} menit.`);
+    }
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => setTimeWarningMessage(null), 5000);
   }, []);
 
   const handleTranscript = useCallback((turn: Pick<TranscriptTurn, "speaker" | "text">) => {
@@ -230,13 +242,34 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
+        <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
         </p>
+      </div>
+    );
+  }
+
+  // ── State G: Failed (connection lost) ────────────────────────────────────
+  if (interviewState === "failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
+        <h2 className="text-xl font-semibold">Connection Lost</h2>
+        <p className="text-sm text-muted-foreground">
+          The connection to the interview server was lost.
+          <br />
+          Please check your internet connection and try again.
+        </p>
+        <Button
+          onClick={() => window.location.reload()}
+          className="mt-4"
+        >
+          Retry Interview
+        </Button>
       </div>
     );
   }
@@ -248,13 +281,14 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
             running={interviewState === "active"}
             onExpired={endInterview}
+            onTimeWarning={handleTimeWarning}
           />
         )}
       </div>
@@ -262,24 +296,44 @@ export default function InterviewPage() {
       {/* Reconnecting banner */}
       {interviewState === "reconnecting" && (
         connectionLostLong ? (
-          <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
-          </div>
+          <Alert variant="danger" className="mt-2">
+            <AlertIcon><span className="animate-pulse">●</span></AlertIcon>
+            <AlertContent className="flex items-center justify-between">
+              <span>Connection lost. Click the button to refresh and rejoin.</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => window.location.reload()}
+                className="ml-2 shrink-0"
+              >
+                Refresh Page
+              </Button>
+            </AlertContent>
+          </Alert>
         ) : (
-          <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
-          </div>
+          <Alert variant="warning" className="mt-2">
+            <AlertIcon><span className="animate-pulse">●</span></AlertIcon>
+            <AlertContent>Briefly reconnecting — please wait a moment.</AlertContent>
+          </Alert>
         )
+      )}
+
+      {/* Time warning banner */}
+      {timeWarningMessage && (
+        <Alert variant="warning" className="mt-2">
+          <AlertIcon><Clock className="h-4 w-4" /></AlertIcon>
+          <AlertContent>{timeWarningMessage}</AlertContent>
+        </Alert>
       )}
 
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
-        <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
-        </div>
+        <Alert variant="info" className="mt-2">
+          <AlertContent className="flex items-center justify-between">
+            <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
+            <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+          </AlertContent>
+        </Alert>
       )}
 
       {/* Voice indicator */}
@@ -320,7 +374,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-4 flex-wrap sticky bottom-0 bg-background">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">

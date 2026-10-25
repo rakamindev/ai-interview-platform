@@ -10,6 +10,7 @@ interface UseCoverageWebSocketResult {
   sessionEnded: boolean;
   sessionEndReason: string | null;
   isConnected: boolean;
+  reconnect: () => void;
 }
 
 export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketResult {
@@ -81,5 +82,12 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     };
   }, [connect]);
 
-  return { coverageMap, sessionEnded, sessionEndReason, isConnected };
+  const reconnect = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    reconnectAttemptsRef.current = 0;
+    activeRef.current = true;
+    connect();
+  }, [connect]);
+
+  return { coverageMap, sessionEnded, sessionEndReason, isConnected, reconnect };
 }
