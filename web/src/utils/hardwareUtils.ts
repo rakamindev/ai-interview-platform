@@ -5,6 +5,7 @@ export enum ProctoringState {
     LOADING = "loading",
     PASSED = "passed",
     ERROR = "error",
+    SKIPPED = "skipped",
 }
 
 export type HardwareCheckingProgress = {

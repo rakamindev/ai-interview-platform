@@ -1,30 +1,52 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
 import { ArrowLeft, Download } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
+import { sessionKeys } from "@/lib/queryKeys";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
-  const [turns, setTurns] = useState<TranscriptTurn[]>([]);
-  const [candidateName, setCandidateName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const numericSessionId = Number(sessionId);
+  const [searchParams] = useSearchParams();
+  const targetTurn = Number(searchParams.get("turn"));
+  const [targetMissing, setTargetMissing] = useState(false);
+  const turnRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const transcriptQuery = useQuery({
+    queryKey: sessionKeys.transcript(numericSessionId),
+    queryFn: async () => (await sessionsApi.getTranscript(numericSessionId)).data.turns,
+  });
+  const sessionQuery = useQuery({
+    queryKey: sessionKeys.detail(numericSessionId),
+    queryFn: async () => (await sessionsApi.get(numericSessionId)).data,
+  });
+  const turns: TranscriptTurn[] = transcriptQuery.data ?? [];
+  const candidateName = sessionQuery.data?.session.candidate_name ?? null;
+  const loading = transcriptQuery.isPending || sessionQuery.isPending;
+  const error = transcriptQuery.isError || sessionQuery.isError;
 
   useEffect(() => {
-    Promise.all([
-      sessionsApi.getTranscript(Number(sessionId)),
-      sessionsApi.get(Number(sessionId)),
-    ])
-      .then(([tRes, sRes]) => {
-        setTurns(tRes.data.turns);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+    if (loading || error || !searchParams.has("turn")) return;
+
+    if (!Number.isInteger(targetTurn) || targetTurn <= 0) {
+      setTargetMissing(true);
+      return;
+    }
+
+    const target = turns.find((turn) => turn.turn_number === targetTurn);
+    if (!target) {
+      setTargetMissing(true);
+      return;
+    }
+
+    setTargetMissing(false);
+    const element = turnRefs.current[target.id];
+    element?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    element?.focus();
+  }, [error, loading, searchParams, targetTurn, turns]);
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -42,7 +64,7 @@ export default function TranscriptPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
@@ -85,25 +107,36 @@ export default function TranscriptPage() {
         </div>
       )}
 
+      {!loading && !error && targetMissing && (
+        <div role="status" className="border border-amber-300 bg-amber-50 rounded-lg p-3 text-sm text-amber-900">
+          The requested transcript turn is unavailable. The rest of the transcript is still shown below.
+        </div>
+      )}
+
       {!loading && !error && turns.length > 0 && (
         <div className="space-y-3">
           {turns.map((turn) => {
             const isAI = turn.speaker === "ai";
+            const isTarget = turn.turn_number === targetTurn;
             return (
               <div
                 key={turn.id}
+                id={`turn-${turn.turn_number}`}
+                ref={(element) => { turnRefs.current[turn.id] = element; }}
+                tabIndex={-1}
+                aria-label={`${isAI ? "AI interviewer" : "Candidate"}, turn ${turn.turn_number}`}
                 className={`rounded-lg p-4 ${
                   isAI
                     ? "bg-muted border"
                     : "bg-background border border-primary/20"
-                }`}
+                } ${isTarget ? "ring-2 ring-primary ring-offset-2" : ""}`}
               >
                 <p
                   className={`text-xs font-semibold mb-1 ${
                     isAI ? "text-muted-foreground" : "text-primary"
                   }`}
                 >
-                  {isAI ? "AI Interviewer" : "Candidate"}
+                  {isAI ? "AI Interviewer" : "Candidate"} · Turn {turn.turn_number}
                 </p>
                 <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
               </div>

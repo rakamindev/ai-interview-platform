@@ -18,20 +18,20 @@ module ExceptionHandler
     end
 
     rescue_from ActiveRecord::RecordNotFound do |e|
-      render json: { errors: [{ status: 404, message: e.message }] }, status: :not_found
+      render_error_envelope(message: e.message, status: :not_found)
     end
 
     rescue_from ExceptionHandler::Unauthorized do |e|
-      render json: { errors: [{ status: 403, message: e.message }] }, status: :forbidden
+      render_error_envelope(message: e.message, status: :forbidden)
     end
 
     rescue_from ExceptionHandler::MissingToken,
                 ExceptionHandler::InvalidToken do |e|
-      render json: { errors: [{ status: 401, message: e.message }] }, status: :unauthorized
+      render_error_envelope(message: e.message, status: :unauthorized)
     end
 
     rescue_from ExceptionHandler::TenantNotFound do |e|
-      render json: { errors: [{ status: 403, message: e.message }] }, status: :forbidden
+      render_error_envelope(message: e.message, status: :forbidden, code: 'tenant_not_found')
     end
   end
 
@@ -40,14 +40,13 @@ module ExceptionHandler
   def render_exception(e)
     status = exception_status(e)
     message = Rails.env.production? ? human_message(e) : e.message
+    details = Rails.env.development? ? { backtrace: e.backtrace&.first(10) } : nil
 
-    render json: {
-      errors: [{
-        status:,
-        message:,
-        backtrace: (Rails.env.development? ? e.backtrace&.first(10) : nil)
-      }.compact]
-    }, status: status
+    render_error_envelope(message:, status:, details:)
+  end
+
+  def render_error_envelope(message:, status:, code: nil, details: nil)
+    render json: ErrorEnvelope.payload(message:, status:, code:, details:), status:
   end
 
   def exception_status(e)

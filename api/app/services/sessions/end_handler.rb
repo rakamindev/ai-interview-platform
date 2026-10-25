@@ -55,13 +55,18 @@ module Sessions
     end
 
     def create_portfolio
-      # Idempotent — only create if one doesn't exist yet
+      # Idempotent — only create if one doesn't exist yet.
+      # EndHandler is invoked from REST (tenant set by middleware) and WebSocket
+      # (no tenant context) — always derive tenant from the session so that
+      # TenantScoped portfolios get a valid tenant_id.
       return if @session.portfolio.present?
 
-      @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
-      )
+      Current.using(tenant_id: @session.tenant_id) do
+        @session.create_portfolio!(
+          candidate_id:      @session.candidate_id,
+          generation_status: 'pending'
+        )
+      end
     end
 
     def enqueue_portfolio_generation

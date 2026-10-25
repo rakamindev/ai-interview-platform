@@ -17,7 +17,12 @@ class PortfolioGeneratorWorker
 
   def perform(session_id)
     session = Session.find(session_id)
-    Portfolios::Generator.new(session: session).call
+
+    # Background jobs run outside the request cycle; TenantScoped models need
+    # an explicit tenant context to assign tenant_id on create.
+    Current.using(tenant_id: session.tenant_id) do
+      Portfolios::Generator.new(session: session).call
+    end
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn("[N10] Session #{session_id} not found — skipping")
   end

@@ -29,6 +29,8 @@ module Api
         assessment = Assessment.new(assessment_params)
         assessment.created_by = current_user.id
 
+        return missing_skills_response if assessment_without_skills?(assessment)
+
         if assessment.save
           SystemPromptGeneratorWorker.perform_async(assessment.id)
           json_response({ assessment:, system_prompt_generated: true }, :created)
@@ -39,7 +41,11 @@ module Api
 
       # PUT /api/v1/assessments/:id
       def update
-        if @assessment.update(assessment_params)
+        @assessment.assign_attributes(assessment_params)
+
+        return missing_skills_response if assessment_without_skills?(@assessment)
+
+        if @assessment.save
           SystemPromptGeneratorWorker.perform_async(@assessment.id)
           json_response({ assessment: assessment_with_skills_json(@assessment), system_prompt_generated: true })
         else
@@ -73,6 +79,14 @@ module Api
             expected_level display_order _destroy
           ]
         )
+      end
+
+      def assessment_without_skills?(assessment)
+        assessment.assessment_skills.reject(&:marked_for_destruction?).empty?
+      end
+
+      def missing_skills_response
+        json_error("Assessment must include at least one skill", :unprocessable_entity)
       end
 
       def assessment_json(assessment)

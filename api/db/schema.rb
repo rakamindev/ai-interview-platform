@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_24_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -21,9 +21,26 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_enum "coverage_state", ["not_yet", "initiated", "partial", "covered"]
   create_enum "end_reason", ["manual_candidate", "manual_assessor", "all_covered", "time_ceiling", "error"]
   create_enum "fit_result", ["match", "gap", "exceed", "not_assessed"]
-  create_enum "generation_status", ["pending", "generating", "complete", "failed"]
+  create_enum "generation_status", ["pending", "generating", "complete", "failed", "partial"]
   create_enum "session_status", ["pending", "active", "ended", "failed"]
   create_enum "speaker_type", ["ai", "candidate"]
+
+  create_table "administrator_invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "tenant_id", null: false
+    t.bigint "inviter_id", null: false
+    t.string "recipient_email", limit: 255, null: false
+    t.string "token_digest", limit: 64, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "accepted_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "created_at"], name: "idx_admin_invitations_tenant_created"
+    t.index ["tenant_id", "expires_at"], name: "idx_admin_invitations_tenant_expiry"
+    t.index ["tenant_id", "recipient_email"], name: "idx_admin_invitations_tenant_email"
+    t.index ["token_digest"], name: "index_administrator_invitations_on_token_digest", unique: true
+    t.check_constraint "accepted_at IS NULL OR revoked_at IS NULL", name: "chk_admin_invitations_terminal_state"
+  end
 
   create_table "assessment_skills", force: :cascade do |t|
     t.bigint "assessment_id", null: false
@@ -89,9 +106,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.bigint "tenant_id", null: false
+    t.string "source_fingerprint", limit: 64
+    t.string "requested_fingerprint", limit: 64
+    t.string "generation_status", default: "complete", null: false
+    t.text "generation_error"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
+    t.index ["tenant_id"], name: "index_fit_gap_reports_on_tenant_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.check_constraint "generation_status::text = ANY (ARRAY['complete'::character varying, 'generating'::character varying, 'failed'::character varying]::text[])", name: "chk_fit_gap_reports_generation_status"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -116,7 +140,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.bigint "tenant_id", null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
+    t.index ["tenant_id"], name: "index_portfolio_skills_on_tenant_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
 
@@ -126,8 +152,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.bigint "tenant_id", null: false
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+    t.index ["tenant_id"], name: "index_portfolios_on_tenant_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -143,6 +171,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.datetime "preparing_to_end_at"
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
@@ -182,7 +211,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "role", limit: 20, default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "tenant_id", null: false
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
+    t.index ["tenant_id"], name: "index_users_on_tenant_id"
   end
 
   create_table "vacancies", force: :cascade do |t|
@@ -205,14 +236,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "expected_level >= 1 AND expected_level <= 5", name: "chk_vacancy_skills_expected_level"
   end
 
+  add_foreign_key "administrator_invitations", "organizations", column: "tenant_id"
+  add_foreign_key "administrator_invitations", "users", column: "inviter_id"
   add_foreign_key "assessment_skills", "assessments"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
+  add_foreign_key "fit_gap_reports", "organizations", column: "tenant_id"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "portfolio_skills", "organizations", column: "tenant_id"
   add_foreign_key "portfolio_skills", "portfolios"
+  add_foreign_key "portfolios", "organizations", column: "tenant_id"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
+  add_foreign_key "users", "organizations", column: "tenant_id"
   add_foreign_key "vacancy_skills", "vacancies"
 end

@@ -13,7 +13,6 @@ module Api
 
         if existing
           if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
-            regenerate_stale_fitgap_reports
             json_response(override: override_json(existing))
           else
             json_error(existing.errors.full_messages.first, :unprocessable_entity)
@@ -28,7 +27,6 @@ module Api
           )
 
           if new_override.save
-            regenerate_stale_fitgap_reports
             json_response({ override: override_json(new_override) }, :created)
           else
             json_error(new_override.errors.full_messages.first, :unprocessable_entity)
@@ -37,15 +35,6 @@ module Api
       end
 
       private
-
-      def regenerate_stale_fitgap_reports
-        portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
-        end
-      end
 
       def set_portfolio_skill
         @portfolio_skill = PortfolioSkill.joins(:portfolio)

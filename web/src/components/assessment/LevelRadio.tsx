@@ -16,7 +16,7 @@ export default function LevelRadio({ value, onChange, disabled, className }: Lev
       value={String(value)}
       onValueChange={(v) => onChange(Number(v))}
       disabled={disabled}
-      className={cn("flex items-center gap-3", className)}
+      className={cn("flex flex-wrap items-center gap-x-3 gap-y-1.5", className)}
     >
       {[1, 2, 3, 4, 5].map((level) => (
         <div key={level} className="flex items-center gap-1">

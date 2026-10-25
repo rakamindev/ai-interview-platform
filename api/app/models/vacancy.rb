@@ -11,4 +11,12 @@ class Vacancy < ApplicationRecord
   accepts_nested_attributes_for :vacancy_skills,
                                  allow_destroy: true,
                                  reject_if: :all_blank
+
+  after_commit :invalidate_fit_gap_reports, on: :update
+
+  private
+
+  def invalidate_fit_gap_reports
+    FitGap::RegenerationCoordinator.invalidate_vacancy!(vacancy_id: id, tenant_id: tenant_id)
+  end
 end

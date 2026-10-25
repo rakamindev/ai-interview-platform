@@ -22,6 +22,10 @@ module Api
       def create
         assessment = Assessment.find(params[:assessment_id])
 
+        if assessment.assessment_skills.empty?
+          return json_error("Assessment must include at least one skill before inviting a candidate", :unprocessable_entity)
+        end
+
         session = assessment.sessions.new(
           candidate_id:   params.dig(:session, :candidate_id),
           candidate_name: params.dig(:session, :candidate_name).presence,
@@ -121,9 +125,16 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
-        # No coverage re-check here. The backend WS already verified all_covered
-        # before sending preparing_to_end. Re-checking here caused false negatives
-        # (timing gap between WS detection and HTTP call) that stalled auto-end.
+        # F-06 guard: only end when the WebSocket layer persisted a fresh
+        # preparing_to_end proof (see Session#mark_preparing_to_end!).
+        # Previously the endpoint trusted any caller holding the invite token —
+        # a leaked token (referrer, history, proxy logs) could force-end an
+        # active session and generate a portfolio from a partial transcript.
+        unless session.preparing_to_end?
+          Rails.logger.warn("[audio_complete] Rejected end for session #{session.id}: no valid preparing_to_end flag")
+          return json_error("Session is not ready to end", :conflict)
+        end
+
         Sessions::EndHandler.new(session).call(reason: 'all_covered')
         json_response(ended: true, message: "Session ended")
       end
@@ -145,11 +156,34 @@ module Api
           return json_error("Assessment not found", :not_found)
         end
 
+        deadline = if session.started_at
+                     session.started_at + assessment.time_limit_min.minutes
+                   end
+        recent_turns = if session.active?
+                         session.transcript_turns.order(turn_number: :desc).limit(20).to_a.reverse
+                       else
+                         []
+                       end
+        resume_available = !session.active? || session.gemini_resumption_token.present?
+
         json_response(
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          deadline_at:     deadline&.iso8601,
+          remaining_seconds: deadline ? [(deadline - Time.current).ceil, 0].max : nil,
+          resume_available: resume_available,
+          recovery_message: resume_available ? nil : 'The prior AI conversation context is unavailable.',
+          recent_transcript: recent_turns.map do |turn|
+            {
+              id: turn.id,
+              turn_number: turn.turn_number,
+              speaker: turn.speaker,
+              text: turn.text,
+              created_at: turn.created_at
+            }
+          end
         )
       end
 

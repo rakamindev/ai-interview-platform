@@ -5,6 +5,8 @@ require 'faye/websocket'
 # Rack middleware for assessor live coverage monitoring at /ws/sessions/:id/coverage.
 # Server-push only: subscribes to Redis pub/sub and forwards coverage updates to the assessor.
 class CoverageWebSocketMiddleware
+  include WebSocketAuth
+
   COVERAGE_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/coverage\z}
 
   def initialize(app)
@@ -113,27 +115,6 @@ class CoverageWebSocketMiddleware
     end
 
     redis
-  end
-
-  def authenticate_assessor(env, session_id)
-    auth_header = env['HTTP_AUTHORIZATION']
-    return [nil, 'Missing authorization'] unless auth_header.present?
-
-    authenticate_assessor_by_token(auth_header.split(' ').last, session_id)
-  end
-
-  def authenticate_assessor_by_token(token, session_id)
-    payload = JsonWebToken.decode(token)
-
-    org = Organization.find_by(scheme: payload[:scheme])
-    return [nil, 'Invalid tenant'] unless org
-
-    session = Session.unscoped.where(tenant_id: org.id).find_by(id: session_id)
-    return [nil, 'Session not found'] unless session
-
-    [session, nil]
-  rescue => e
-    [nil, "Authentication failed: #{e.message}"]
   end
 
   def coverage_json(map)

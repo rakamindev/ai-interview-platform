@@ -18,4 +18,5 @@ data:
   GEMINI_PRO_MODEL: gemini-2.5-pro
   PROACTIVE_RECONNECT_AFTER: "510"
   APP_BASE_URL: https://ai-interview-api.rakamin.com
+  FRONTEND_BASE_URL: https://ai-interview.rakamin.com
   ALLOWED_ORIGINS: "https://<your-frontend-domain>"

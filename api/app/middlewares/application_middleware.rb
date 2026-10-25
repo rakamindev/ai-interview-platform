@@ -13,7 +13,7 @@ class ApplicationMiddleware
   private
 
   def error(status, message)
-    json = { errors: [{ status: status, message: message }] }.to_json
+    json = ErrorEnvelope.payload(message:, status:).to_json
 
     charset = ActionDispatch::Response.default_charset
     headers = {

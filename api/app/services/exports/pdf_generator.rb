@@ -16,12 +16,13 @@ module Exports
       'not_assessed' => 'Not Assessed'
     }.freeze
 
-    def initialize(portfolio:, vacancy: nil)
+    def initialize(portfolio:, vacancy: nil, fit_gap_report: nil, stale: false)
       @portfolio   = portfolio
       @vacancy     = vacancy
       @session     = portfolio.session
       @assessment  = @session.assessment
-      @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
+      @fit_gap     = fit_gap_report || (vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil)
+      @stale       = stale
     end
 
     # Returns PDF binary string.
@@ -46,6 +47,13 @@ module Exports
         pdf.text "Session: #{@session.id}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
         pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
+      end
+
+      if @stale
+        pdf.move_down 6
+        pdf.fill_color 'B91C1C'
+        pdf.text 'STALE FIT/GAP REPORT - regeneration failed; use for reference only.', style: :bold
+        pdf.fill_color '000000'
       end
 
       pdf.stroke_horizontal_rule
@@ -82,7 +90,7 @@ module Exports
         pdf.text "#{skill.skill_label}", style: :bold
 
         level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} -> Override: #{LEVEL_LABELS[override.override_level]})" if override
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
         pdf.text level_text
       end
@@ -93,12 +101,21 @@ module Exports
         pdf.font_size(10) { pdf.text skill.competency_summary }
       end
 
-      if skill.evidence.any?
+      if skill.evidence_items.any?
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence_items.each do |citation|
+            if citation['verification_status'] == 'verified'
+              pdf.text "  - \"#{citation['quote']}\" (Verified transcript turn #{citation['turn_number']})"
+            else
+              pdf.text "  - Legacy evidence - transcript link unavailable: #{citation['quote']}"
+            end
+          end
         end
+      elsif skill.evidence_status == 'insufficient'
+        pdf.move_down 4
+        pdf.font_size(10) { pdf.text 'Evidence: Insufficient verified transcript evidence' }
       end
 
       if override&.assessor_notes.present?
@@ -116,8 +133,15 @@ module Exports
     def render_fit_gap_section(pdf)
       pdf.start_new_page
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
+      pdf.font_size(16) { pdf.text "Fit/Gap Analysis - #{@vacancy.role_title}", style: :bold }
       pdf.move_down 8
+
+      if @stale
+        pdf.fill_color 'B91C1C'
+        pdf.text 'STALE - This analysis does not reflect the latest inputs.', style: :bold
+        pdf.fill_color '000000'
+        pdf.move_down 8
+      end
 
       comparisons = @fit_gap.skill_comparisons
 
@@ -125,10 +149,10 @@ module Exports
       comparisons.each do |c|
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
+          c['expected_level'] ? "L#{c['expected_level']}" : '-',
+          candidate_level_text(c),
           RESULT_LABELS[c['result']] || c['result'],
-          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
+          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '-'
         ]
       end
 
@@ -168,6 +192,17 @@ module Exports
       mins = seconds / 60
       secs = seconds % 60
       "#{mins}m #{secs}s"
+    end
+
+    def candidate_level_text(comparison)
+      return '-' unless comparison['candidate_level']
+
+      level = "L#{comparison['candidate_level']}"
+      if comparison['rating_source'] == 'assessor_override'
+        "#{level} (Assessor-adjusted from L#{comparison['ai_level']})"
+      else
+        "#{level} (AI rating)"
+      end
     end
   end
 end

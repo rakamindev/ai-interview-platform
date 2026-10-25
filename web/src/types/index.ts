@@ -78,9 +78,10 @@ export interface Portfolio {
   id: number;
   session_id: number;
   candidate_id?: number;
-  generation_status: "pending" | "generating" | "complete" | "failed";
+  generation_status: "pending" | "generating" | "complete" | "failed" | "partial";
   generated_at?: string;
   generation_error?: string;
+  failure_reason?: "missing_assessment_skills" | "missing_coverage" | "generation_failed";
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }
@@ -92,8 +93,16 @@ export interface PortfolioSkill {
   is_discovered: boolean;
   ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
   ai_confidence: string;  // "high" | "medium" | "low"
-  evidence: string[];
+  evidence: PortfolioEvidence[];
+  evidence_status: "verified" | "legacy" | "insufficient";
   competency_summary: string;
+}
+
+export interface PortfolioEvidence {
+  turn_id: number | null;
+  turn_number: number | null;
+  quote: string;
+  verification_status: "verified" | "legacy";
 }
 
 export interface AssessorOverride {
@@ -128,22 +137,33 @@ export interface VacancySkill {
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
+  skill_id?: string | null;
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
-  result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  expected_level?: number;
+  candidate_level?: number | null;
+  ai_level?: number | null;
+  rating_source?: "ai" | "assessor_override" | null;
+  result?: SkillComparisonResult;
+  fit_result?: SkillComparisonResult;
+  delta?: number | null;
+  confidence?: "high" | "medium" | "low" | null;
+  note?: string | null;
 }
+
+export type FitGapFreshness = "current" | "updating" | "outdated" | "failed";
 
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
-  generated_at: string;
+  culture_narrative?: string | null;
+  overall_narrative?: string | null;
+  generated_at?: string | null;
+  generation_status: "complete" | "generating" | "failed";
+  generation_error?: string | null;
+  freshness: FitGapFreshness;
+  has_completed_report: boolean;
 }
 
 export interface SkillTaxonomy {
@@ -164,6 +184,11 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  deadline_at?: string | null;
+  remaining_seconds?: number | null;
+  resume_available?: boolean;
+  recovery_message?: string | null;
+  recent_transcript?: TranscriptTurn[];
 }
 
 export interface PaginationMeta {
@@ -173,16 +198,55 @@ export interface PaginationMeta {
   per_page: number;
 }
 
+// ── Unified error envelope (F-26) ──────────────────────────────────────
+// Backend contract: every HTTP error is { error: { code, message, details? } }.
+// The legacy envelopes ({ errors: [...] } and { error: "string" }) are still
+// parsed by the interceptor for backward compatibility — see lib/apiErrors.
+export interface ApiErrorEnvelope {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+export interface NormalizedApiError {
+  /** HTTP status when the server responded; undefined for network failures. */
+  status?: number;
+  /** Machine-readable code (e.g. "not_found", "rate_limited", "network_error"). */
+  code: string;
+  /** Human-readable message safe to show to the user. */
+  message: string;
+}
+
 // WebSocket message types
 export type InterviewState =
   | "idle"
-  | "hardware_check"
+  | "resume"
   | "connecting"
   | "active"
+  | "in_use"
+  | "taken_over"
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "error";
+
+export type InterviewErrorKind =
+  | "load_failed"
+  | "auth_failed"
+  | "resume_unavailable"
+  | "microphone_unavailable"
+  | "ws_unrecoverable"
+  | "ws_connection_lost";
+
+export interface InterviewErrorInfo {
+  kind: InterviewErrorKind;
+  /** Raw error code from the backend WS message, when available. */
+  code?: string;
+  message?: string;
+  /** Whether retrying the session is expected to help. */
+  recoverable: boolean;
+}
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -196,6 +260,8 @@ export interface WsControlMessage {
     | "reconnected"
     | "speaker_changed"
     | "preparing_to_end"
+    | "session_in_use"
+    | "session_taken_over"
     | "error";
   speaker?: "candidate" | "ai";
   role?: "candidate" | "ai";
@@ -204,4 +270,9 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+  session_id?: number;
+  turn_id?: number;
+  turn_number?: number;
+  deadline_at?: string;
+  remaining_seconds?: number;
 }

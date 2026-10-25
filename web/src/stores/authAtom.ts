@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import { queryClient } from "@/lib/queryClient";
 
 export interface AuthState {
   token: string | null;
@@ -11,10 +12,12 @@ export function getStoredToken(): string | null {
 }
 
 export function saveToken(token: string) {
+  queryClient.clear();
   localStorage.setItem(STORAGE_KEY, token);
 }
 
 export function clearToken() {
+  queryClient.clear();
   localStorage.removeItem(STORAGE_KEY);
 }
 

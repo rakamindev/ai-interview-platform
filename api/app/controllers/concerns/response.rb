@@ -9,9 +9,7 @@ module Response
   end
 
   def json_error(message, status = :unprocessable_entity, details: nil)
-    payload = { errors: [{ status: Rack::Utils.status_code(status), message: }] }
-    payload[:errors][0][:detail] = details if details
-    render json: payload, status:
+    render json: ErrorEnvelope.payload(message:, status:, details:), status:
   end
 
   def paginated_response(collection, serializer: nil, **extra)

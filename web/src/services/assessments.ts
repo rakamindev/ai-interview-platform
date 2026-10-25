@@ -8,8 +8,12 @@ export interface AssessmentPayload {
   assessment_skills_attributes: Partial<AssessmentSkill>[];
 }
 
+interface AssessmentListOptions {
+  page?: number;
+}
+
 export const assessmentsApi = {
-  list: (page = 1) =>
+  list: ({ page = 1 }: AssessmentListOptions = {}) =>
     api.get<{ assessments: Assessment[]; meta: PaginationMeta }>("/assessments", {
       params: { page },
     }),

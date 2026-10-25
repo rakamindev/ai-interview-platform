@@ -3,6 +3,7 @@ import AssessorLayout from "@/components/layout/AssessorLayout";
 import CandidateLayout from "@/components/layout/CandidateLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/auth/LoginPage";
+import SignUpPage from "@/pages/auth/SignupPage";
 import AssessmentListPage from "@/pages/assessments/AssessmentListPage";
 import AssessmentNewPage from "@/pages/assessments/AssessmentNewPage";
 import AssessmentEditPage from "@/pages/assessments/AssessmentEditPage";
@@ -15,12 +16,16 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import AdminInvitationsPage from "@/pages/admin/AdminInvitationsPage";
+import { ToastViewport } from "@/components/ui/toast";
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
 
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>
@@ -49,6 +54,7 @@ export default function App() {
         <Route path="/vacancies" element={<VacancyListPage />} />
         <Route path="/vacancies/new" element={<VacancyNewPage />} />
         <Route path="/vacancies/:id/edit" element={<VacancyEditPage />} />
+        <Route path="/admin-invitations" element={<AdminInvitationsPage />} />
       </Route>
       </Route>
 
@@ -56,6 +62,8 @@ export default function App() {
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
       </Route>
-    </Routes>
+      </Routes>
+      <ToastViewport />
+    </>
   );
 }

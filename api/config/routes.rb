@@ -7,14 +7,28 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Auth
       post 'auth/login', to: 'authentication#authenticate'
+      post 'auth/signup', to: 'authentication#signup'
+      post 'auth/admin_invitations/validate', to: 'admin_invitation_validations#create'
+
+      resources :admin_invitations, only: %i[index create] do
+        post :revoke, on: :member
+      end
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
-      post 'speed_test', to: proc { |env|
-        bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
-      }
+      # Speed test (self-hosted only — no third-party traffic, UU PDP data minimization)
+      # POST: accepts any payload, discards it, returns bytes received (upload measurement).
+      # GET:  returns a fixed-size payload (?bytes=N, capped at 5 MB) for download measurement.
+      match 'speed_test', to: proc { |env|
+        request = Rack::Request.new(env)
+        if request.get?
+          bytes = [[request.params['bytes'].to_i, 5 * 1024 * 1024].min, 0].max
+          [200, { 'Content-Type' => 'application/octet-stream', 'Content-Length' => bytes.to_s }, ['x' * bytes]]
+        else
+          bytes = env['CONTENT_LENGTH'].to_i
+          [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
+        end
+      }, via: %i[get post]
 
       # Assessments
       resources :assessments do

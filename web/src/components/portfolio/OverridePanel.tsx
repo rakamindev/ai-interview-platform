@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -19,26 +20,25 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [open, setOpen] = useState(false);
   const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      portfoliosApi.getOverride(skill.id, {
+        override_level: overrideLevel,
+        assessor_notes: notes,
+      }),
+    onSuccess: (response) => {
+      onSaved(response.data.override);
+      setOpen(false);
+    },
+    onError: () => setSaveError(true),
+  });
 
   const hasOverride = !!existingOverride;
 
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSave = () => {
     setSaveError(false);
-    try {
-      const res = await portfoliosApi.getOverride(skill.id, {
-        override_level: overrideLevel,
-        assessor_notes: notes,
-      });
-      onSaved(res.data.override);
-      setOpen(false);
-    } catch {
-      setSaveError(true);
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate();
   };
 
   if (!open) {
@@ -67,7 +67,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   }
 
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+    <div className="w-full border rounded-lg p-4 space-y-3 bg-muted/30">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Override
       </div>
@@ -94,8 +94,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-        <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+        <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
+          {saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
           Save override
         </Button>
       </div>

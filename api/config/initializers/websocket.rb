@@ -8,6 +8,7 @@
 #   /ws/sessions/:id/audio    → AudioWebSocketMiddleware  (binary audio proxy)
 #   /ws/sessions/:id/coverage → CoverageWebSocketMiddleware (assessor live monitor)
 
+require_relative '../../app/channels/websocket_auth'
 require_relative '../../app/channels/audio_websocket_middleware'
 require_relative '../../app/channels/coverage_websocket_middleware'
 

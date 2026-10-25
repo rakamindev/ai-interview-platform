@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
+import { skillTaxonomyKeys } from "@/lib/queryKeys";
 
 
 interface SkillPickerProps {
@@ -18,19 +20,14 @@ interface SkillPickerProps {
 }
 
 export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPickerProps) {
-  const [skills, setSkills] = useState<SkillTaxonomy[]>([]);
-  const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
 
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    skillTaxonomiesApi
-      .list()
-      .then((res) => setSkills(res.data.skill_taxonomies ?? []))
-      .catch((err) => { console.error("skill_taxonomies fetch failed:", err); setSkills([]); })
-      .finally(() => setLoading(false));
-  }, [open]);
+  const { data: skills = [], isPending, isError } = useQuery({
+    queryKey: skillTaxonomyKeys.list(),
+    queryFn: async () => (await skillTaxonomiesApi.list()).data.skill_taxonomies ?? [],
+    enabled: open,
+    staleTime: 5 * 60_000,
+  });
 
   const filtered = skills.filter((s) =>
     s.skill_label.toLowerCase().includes(query.toLowerCase())
@@ -72,10 +69,14 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
         </div>
 
         <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
-          {loading ? (
+          {isPending ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          ) : isError ? (
+            <p className="text-sm text-destructive text-center py-6">
+              Failed to load skills. Close and reopen this dialog to retry.
+            </p>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
           ) : (

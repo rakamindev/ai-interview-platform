@@ -1,20 +1,22 @@
 import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
 import { cn } from "@/lib/utils";
-import type { SkillComparison } from "@/types";
+import { getComparisonResult } from "@/utils/fitGap";
+import type { SkillComparison, SkillComparisonResult } from "@/types";
 
 interface ComparisonTableProps {
   comparisons: SkillComparison[];
 }
 
 function ResultBadge({ comparison }: { comparison: SkillComparison }) {
-  const label = FIT_GAP_RESULT_LABELS[comparison.result];
-  const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
+  const result = getComparisonResult(comparison);
+  const label = FIT_GAP_RESULT_LABELS[result];
+  const classes = FIT_GAP_RESULT_CLASSES[result];
 
   let icon = "";
   let suffix = "";
-  if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
+  if (result === "match") icon = "✅";
+  else if (result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
+  else if (result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
   else icon = "—";
 
   return (
@@ -24,57 +26,100 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   );
 }
 
-export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
-  const matchCount = comparisons.filter((c) => c.result === "match").length;
-  const gapCount = comparisons.filter((c) => c.result === "gap").length;
-  const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+function ConfidenceLabel({ confidence }: { confidence: SkillComparison["confidence"] }) {
+  if (!confidence) return null;
+
+  const classes = {
+    high: "text-emerald-700",
+    medium: "text-amber-700",
+    low: "text-red-700",
+  }[confidence];
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
+    <span className={cn("text-xs capitalize", classes)}>
+      {confidence} confidence
+    </span>
+  );
+}
+
+export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
+  // Empty state — a report with zero skill comparisons must not render a bare
+  // table with no explanation (UI enhancement, Pilar 3).
+  if (comparisons.length === 0) {
+    return (
+      <div className="py-8 text-center space-y-1">
+        <p className="text-sm font-medium">No matching skills for this vacancy</p>
+        <p className="text-xs text-muted-foreground">
+          None of the assessed skills overlap with this vacancy's requirements.
+        </p>
+      </div>
+    );
+  }
+
+  const resultPriority: Record<SkillComparisonResult, number> = {
+    gap: 0,
+    not_assessed: 1,
+    match: 2,
+    exceed: 3,
+  };
+  const prioritizedComparisons = [...comparisons].sort(
+    (a, b) => resultPriority[getComparisonResult(a)] - resultPriority[getComparisonResult(b)]
+  );
+
+  return (
+    <div className="rounded-lg sm:overflow-hidden sm:border">
+      <table className="block w-full text-sm sm:table">
+        <thead className="hidden sm:table-header-group">
             <tr className="border-b bg-muted/50">
               <th className="text-left px-4 py-2.5 font-medium">Skill</th>
               <th className="text-center px-4 py-2.5 font-medium">Required</th>
               <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
               <th className="text-center px-4 py-2.5 font-medium">Result</th>
             </tr>
-          </thead>
-          <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+        </thead>
+        <tbody className="block space-y-3 sm:table-row-group sm:space-y-0">
+            {prioritizedComparisons.map((c) => (
+              <tr
+                key={c.skill_id ?? c.skill_label}
+                className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border p-3.5 sm:table-row sm:rounded-none sm:border-0 sm:p-0 [&:not(:last-child)]:sm:border-b"
+              >
+                <td className="col-span-2 break-words font-semibold sm:table-cell sm:px-4 sm:py-2.5 sm:font-normal">
+                  {c.skill_label}
                 </td>
-                <td className="px-4 py-2.5 text-center">
+                <td className="sm:table-cell sm:px-4 sm:py-2.5 sm:text-center sm:text-muted-foreground">
+                  <span className="block text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:hidden">
+                    Required
+                  </span>
+                  <span>{c.expected_level ? LEVEL_LABELS[c.expected_level] : "—"}</span>
+                </td>
+                <td className="sm:table-cell sm:px-4 sm:py-2.5 sm:text-center">
+                  <span className="block text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:hidden">
+                    Candidate
+                  </span>
                   {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                    <span className="inline-flex flex-col sm:items-center">
+                      <span>{LEVEL_LABELS[c.candidate_level]}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {c.rating_source === "assessor_override" && c.ai_level != null
+                          ? `Assessor-adjusted from ${LEVEL_LABELS[c.ai_level]}`
+                          : "AI rating"}
+                      </span>
+                      <ConfidenceLabel confidence={c.confidence} />
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-center">
+                <td className="col-span-2 flex items-center justify-between gap-3 border-t pt-3 sm:table-cell sm:border-0 sm:px-4 sm:py-2.5 sm:text-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:hidden">
+                    Result
+                  </span>
                   <ResultBadge comparison={c} />
                 </td>
               </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
-      </div>
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -1,15 +1,25 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
-import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker } from "@/types";
+import type {
+  WsControlMessage,
+  TranscriptTurn,
+  InterviewState,
+  InterviewSpeaker,
+  InterviewErrorInfo,
+} from "@/types";
 
 interface UseAudioWebSocketOptions {
   sessionId: number;
   token?: string;
   onAudioChunk: (buffer: ArrayBuffer) => void;
-  onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text">) => void;
+  onTranscript: (turn: TranscriptTurn) => void;
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  onTiming?: (timing: { deadlineAt: string; remainingSeconds: number }) => void;
+  onTakenOver?: () => void;
+  /** Called when the session fails permanently (unrecoverable WS error or exhausted reconnect). */
+  onFatalError?: (error: InterviewErrorInfo) => void;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -22,6 +32,9 @@ export function useAudioWebSocket({
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onTiming,
+  onTakenOver,
+  onFatalError,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -32,7 +45,10 @@ export function useAudioWebSocket({
   );
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (
+      wsRef.current?.readyState === WebSocket.OPEN ||
+      wsRef.current?.readyState === WebSocket.CONNECTING
+    ) return;
 
     sessionEndedRef.current = false;
     setConnectionState("connecting");
@@ -65,13 +81,34 @@ export function useAudioWebSocket({
           const msg = JSON.parse(event.data) as WsControlMessage;
           switch (msg.type) {
             case "session_started":
+              if (msg.deadline_at && msg.remaining_seconds !== undefined) {
+                onTiming?.({
+                  deadlineAt: msg.deadline_at,
+                  remainingSeconds: msg.remaining_seconds,
+                });
+              }
               onStateChange("active");
               break;
             case "transcription":
             case "transcript":
               if (msg.speaker && msg.text) {
-                onTranscript({ speaker: msg.speaker === "candidate" ? "candidate" : "assessor", text: msg.text });
+                onTranscript({
+                  id: msg.turn_id ?? msg.turn_number ?? 0,
+                  turn_number: msg.turn_number ?? 0,
+                  speaker: msg.speaker === "candidate" ? "candidate" : "ai",
+                  text: msg.text,
+                  created_at: new Date().toISOString(),
+                });
               }
+              break;
+            case "session_in_use":
+              onStateChange("in_use");
+              break;
+            case "session_taken_over":
+              sessionEndedRef.current = true;
+              reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+              onTakenOver?.();
+              onStateChange("taken_over");
               break;
             case "speaker_changed":
               // Backend sends speaker_changed:candidate 800ms after AI finishes
@@ -103,7 +140,15 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                onFatalError?.({
+                  kind: "ws_unrecoverable",
+                  code: msg.code,
+                  message: msg.message,
+                  recoverable: false,
+                });
+                onStateChange("error");
+              }
               break;
           }
         } catch {
@@ -127,10 +172,26 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onFatalError?.({
+          kind: "ws_connection_lost",
+          message: "The connection to the interview was lost and could not be restored.",
+          recoverable: true,
+        });
+        onStateChange("error");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [
+    sessionId,
+    token,
+    onAudioChunk,
+    onTranscript,
+    onStateChange,
+    onSpeakerChange,
+    onReconnected,
+    onTiming,
+    onTakenOver,
+    onFatalError,
+  ]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -147,6 +208,11 @@ export function useAudioWebSocket({
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
+    // Intentional close (candidate ended the interview). The backend replies
+    // with session_ended, but we close immediately after sending end_session,
+    // so that reply never arrives — mark the session ended ourselves so the
+    // async onclose doesn't surface a spurious "connection lost" fatal error.
+    sessionEndedRef.current = true;
     wsRef.current?.close();
   }, []);
 

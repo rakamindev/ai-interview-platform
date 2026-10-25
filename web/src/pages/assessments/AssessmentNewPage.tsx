@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -21,12 +22,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Alert } from "@/components/ui/alert";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { extractApiError } from "@/lib/apiErrors";
+import { cn } from "@/lib/utils";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
+import { assessmentKeys } from "@/lib/queryKeys";
 
 export interface AssessmentFormValues {
   name: string;
@@ -37,9 +42,14 @@ export interface AssessmentFormValues {
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [skillsError, setSkillsError] = useState<string | null>(null);
+  const createMutation = useMutation({
+    mutationFn: assessmentsApi.create,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: assessmentKeys.lists() }),
+  });
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
@@ -68,6 +78,7 @@ export default function AssessmentNewPage() {
   };
 
   const addCustomSkill = () => {
+    setSkillsError(null);
     append({
       skill_label: "",
       is_custom: true,
@@ -77,16 +88,17 @@ export default function AssessmentNewPage() {
   };
 
   const addB7Skill = (skill: Partial<AssessmentSkill>) => {
+    setSkillsError(null);
     append({ ...skill, display_order: fields.length });
   };
 
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) {
-      setError("Add at least one skill to continue.");
+      setSkillsError("Add at least one skill before creating the assessment.");
       return;
     }
+    setSkillsError(null);
     setError(null);
-    setSubmitting(true);
     try {
       const payload = {
         name: data.name,
@@ -97,12 +109,16 @@ export default function AssessmentNewPage() {
           display_order: i,
         })),
       };
-      const res = await assessmentsApi.create(payload);
+      const res = await createMutation.mutateAsync(payload);
       navigate(`/assessments/${res.data.assessment.id}/invite`);
-    } catch (e: any) {
-      setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
-    } finally {
-      setSubmitting(false);
+    } catch (e) {
+      setError(extractApiError(e).message);
+    }
+  };
+
+  const onInvalidSubmit = () => {
+    if (fields.length === 0) {
+      setSkillsError("Add at least one skill before creating the assessment.");
     }
   };
 
@@ -118,7 +134,7 @@ export default function AssessmentNewPage() {
         <span className="text-sm font-medium">New Assessment</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)} className="space-y-6">
         {/* Role title */}
         <div className="space-y-1.5">
           <Label htmlFor="name">
@@ -143,7 +159,7 @@ export default function AssessmentNewPage() {
             defaultValue="45"
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full md:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -163,7 +179,7 @@ export default function AssessmentNewPage() {
             defaultValue="en"
             onValueChange={(v) => setValue("language", v as "en" | "id")}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full md:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -176,13 +192,26 @@ export default function AssessmentNewPage() {
         <Separator />
 
         {/* Skills section */}
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
+        <div
+          className="space-y-3"
+          role="group"
+          aria-labelledby="skills-label"
+          aria-describedby={skillsError ? "skills-error" : undefined}
+          aria-invalid={skillsError ? true : undefined}
+        >
+          <Label id="skills-label">
+            Skills to assess <span className="text-destructive">*</span>
+          </Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div
+              className={cn(
+                "rounded-lg border p-6 text-center text-sm text-muted-foreground transition-colors",
+                skillsError && "border-destructive bg-destructive/5"
+              )}
+            >
               <p className="mb-1">No skills added yet.</p>
-              <p>Add at least one skill to continue.</p>
+              <p>Choose a skill from the taxonomy or add a custom skill.</p>
             </div>
           ) : (
             <DndContext
@@ -209,7 +238,7 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-row gap-2">
             <Button
               type="button"
               variant="outline"
@@ -217,7 +246,7 @@ export default function AssessmentNewPage() {
               onClick={() => setPickerOpen(true)}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Add from Skill Taxonomy
+              Add from B7 taxonomy
             </Button>
             <Button
               type="button"
@@ -229,6 +258,12 @@ export default function AssessmentNewPage() {
               Add custom skill
             </Button>
           </div>
+
+          {skillsError && (
+            <Alert id="skills-error" className="py-2.5">
+              <p>{skillsError}</p>
+            </Alert>
+          )}
         </div>
 
         <Separator />
@@ -238,7 +273,7 @@ export default function AssessmentNewPage() {
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -246,8 +281,8 @@ export default function AssessmentNewPage() {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save &amp; Create Session →
           </Button>
         </div>
