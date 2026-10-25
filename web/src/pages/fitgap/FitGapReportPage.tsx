@@ -204,6 +204,13 @@ export default function FitGapReportPage() {
           )}
         </>
       )}
+
+      {/* Error */}
+      {!generating && !report && (
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+          Failed to load fit/gap. Please refresh the page.
+        </div>
+      )}
     </div>
   );
 }

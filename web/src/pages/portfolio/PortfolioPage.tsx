@@ -23,6 +23,8 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [endReason, setEndReason] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -46,8 +48,9 @@ export default function PortfolioPage() {
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setEndReason(sRes.data.session.end_reason ?? null);
       })
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -113,7 +116,15 @@ export default function PortfolioPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold">Portfolio Results</h1>
+              {endReason && endReason !== "all_covered" && (
+                <span className="flex items-center gap-1 text-xs text-amber-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  Ended early
+                </span>
+              )}
+            </div>
             {candidateName && (
               <p className="text-sm text-muted-foreground">{candidateName}</p>
             )}
@@ -153,6 +164,12 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+          Failed to load portfolio. Please refresh the page.
+        </div>
+      )}
+
       {/* Generating state */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
@@ -189,16 +206,22 @@ export default function PortfolioPage() {
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
-              ))}
+            {portfolio.skills.filter((s) => !s.is_discovered).length === 0 ? (
+              <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
+                <p>No configured skills were assessed in this interview.</p>
+              </div>
+            ) : (
+              portfolio.skills
+                .filter((s) => !s.is_discovered)
+                .map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))
+            )}
           </div>
 
           {/* Discovered skills */}

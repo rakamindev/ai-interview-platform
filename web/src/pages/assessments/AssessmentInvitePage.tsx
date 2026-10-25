@@ -126,7 +126,10 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
@@ -145,7 +148,10 @@ export default function AssessmentInvitePage() {
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch((e: any) => {
+      if (e?.response?.status === 404) setNotFound(true);
+      else setLoadError(true);
+    }).finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -165,11 +171,14 @@ export default function AssessmentInvitePage() {
     setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
+    setInviteError(null);
     try {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+    } catch {
+      setInviteError("Failed to create invite link. Please try again.");
     } finally {
       setCreatingSession(false);
     }
@@ -194,6 +203,30 @@ export default function AssessmentInvitePage() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-16 space-y-3">
+        <p className="text-lg font-medium">Assessment not found</p>
+        <p className="text-sm text-muted-foreground">
+          This assessment doesn't exist, or it has been deleted.
+        </p>
+        <Button variant="outline" onClick={() => navigate("/assessments")}>
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to assessments
+        </Button>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+          Failed to load assessment. Please refresh the page.
+        </div>
       </div>
     );
   }
@@ -225,6 +258,12 @@ export default function AssessmentInvitePage() {
           </Button>
         </div>
       </div>
+
+      {inviteError && (
+        <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
+          {inviteError}
+        </div>
+      )}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>

@@ -1,0 +1,57 @@
+{
+    "name": "ai-interview-platform (api + web)",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "runServices": [
+        "app",
+        "db",
+        "redis"
+    ],
+    "workspaceFolder": "/workspace",
+    "shutdownAction": "stopCompose",
+    "features": {
+        "ghcr.io/devcontainers-extra/features/claude-code:2": {}
+    },
+    "mounts": [
+        "source=${localEnv:HOME}/.claude,target=/var/claude-config,type=bind"
+    ],
+    "containerEnv": {
+        "CLAUDE_CONFIG_DIR": "/var/claude-config"
+    },
+    "forwardPorts": [
+        3001,
+        5173,
+        5432,
+        6379
+    ],
+    "portsAttributes": {
+        "3001": {
+            "label": "Rails API",
+            "onAutoForward": "notify"
+        },
+        "5173": {
+            "label": "Vite web app",
+            "onAutoForward": "openPreview"
+        },
+        "5432": {
+            "label": "PostgreSQL",
+            "onAutoForward": "silent"
+        },
+        "6379": {
+            "label": "Redis",
+            "onAutoForward": "silent"
+        }
+    },
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "Shopify.ruby-lsp",
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "bradlc.vscode-tailwindcss",
+                "mikestead.dotenv"
+            ]
+        }
+    }
+}

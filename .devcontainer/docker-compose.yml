@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sleep infinity
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace:cached
+      - bundle-gems:/usr/local/bundle
+      - web-node-modules:/workspace/web/node_modules
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "3001:3001" # Rails API
+      - "5173:5173" # Vite dev server
+    environment:
+      RAILS_ENV: development
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: rakamin_development
+      REDIS_URL: redis://redis:6379/1
+      ALLOWED_ORIGINS: http://localhost:5173
+      APP_BASE_URL: http://localhost:5173
+      # Dev-only signing secret. Never reuse this value outside local dev.
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-devcontainer-insecure-dev-secret-do-not-use-in-prod}
+      TOKEN_EXPIRATION_TIME: "259200"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL:-gemini-2.0-flash-live-001}
+      GEMINI_FLASH_MODEL: ${GEMINI_FLASH_MODEL:-gemini-2.0-flash-001}
+      GEMINI_PRO_MODEL: ${GEMINI_PRO_MODEL:-gemini-2.0-pro-001}
+      # Consumed by Vite (npm run dev) for the browser-facing API/WS URLs.
+      VITE_API_BASE_URL: http://localhost:3001/api/v1
+      VITE_WS_BASE_URL: ws://localhost:3001
+      VITE_DEV_TENANT_ID: "1"
+      VITE_DEV_TENANT_NAME: Demo Tenant
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rakamin_development
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  db-data:
+  redis-data:
+  bundle-gems:
+  web-node-modules:

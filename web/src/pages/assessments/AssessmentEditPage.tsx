@@ -33,6 +33,8 @@ export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,10 @@ export default function AssessmentEditPage() {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
       })
-      .catch(() => {})
+      .catch((e: any) => {
+        if (e?.response?.status === 404) setNotFound(true);
+        else setLoadError(true);
+      })
       .finally(() => setLoading(false));
   }, [id, reset]);
 
@@ -94,6 +99,30 @@ export default function AssessmentEditPage() {
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
         <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-16 space-y-3">
+        <p className="text-lg font-medium">Assessment not found</p>
+        <p className="text-sm text-muted-foreground">
+          This assessment doesn't exist, or it has been deleted.
+        </p>
+        <Button variant="outline" onClick={() => navigate("/assessments")}>
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to assessments
+        </Button>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+          Failed to load assessment. Please refresh the page.
+        </div>
       </div>
     );
   }

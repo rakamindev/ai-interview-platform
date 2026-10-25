@@ -150,32 +150,48 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Wrapped in a transaction so a mid-loop validation failure rolls back
+      # the destroy_all too — otherwise a single malformed skill in the AI
+      # response destroys the previous, good skills without replacing them.
+      # requires_new: true forces a real savepoint even when this is called
+      # from within another transaction, so the rollback here is isolated.
+      ActiveRecord::Base.transaction(requires_new: true) do
+        # Destroy existing skills (idempotent regeneration)
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+        (data['configured_skills'] || []).each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      false,
+            ai_level:           skill_data['level'].to_i.clamp(1, 5),
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        (data['discovered_skills'] || []).each do |skill_data|
+          portfolio.portfolio_skills.create!(
+            skill_id:           nil,
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      true,
+            ai_level:           skill_data['level'].to_i.clamp(1, 5),
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
       end
+    ensure
+      # If the transaction above rolled back, the created-then-undone
+      # records are still sitting in this loaded association's in-memory
+      # target array with new_record? correctly reset to true by Rails —
+      # but still attached to `portfolio`. Left alone, the next unrelated
+      # `portfolio.update!` (the failure-path one in #call) would silently
+      # re-INSERT them via has_many's default autosave-new-records
+      # behavior. Resetting drops the stale cache so it's reloaded fresh.
+      portfolio.portfolio_skills.reset
     end
   end
 end

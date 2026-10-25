@@ -30,6 +30,11 @@ Rails.application.configure do
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
 
+  # Request specs hit the app with the default test host (www.example.com),
+  # which Rails' HostAuthorization middleware blocks by default. There is no
+  # untrusted traffic in the test environment, so allow any host.
+  config.hosts.clear
+
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 

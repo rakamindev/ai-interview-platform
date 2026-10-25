@@ -24,6 +24,8 @@ export default function VacancyEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -36,7 +38,10 @@ export default function VacancyEditPage() {
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
       reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch((e: any) => {
+      if (e?.response?.status === 404) setNotFound(true);
+      else setLoadError(true);
+    }).finally(() => setLoading(false));
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
@@ -55,6 +60,30 @@ export default function VacancyEditPage() {
   };
 
   if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
+
+  if (notFound) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-16 space-y-3">
+        <p className="text-lg font-medium">Vacancy not found</p>
+        <p className="text-sm text-muted-foreground">
+          Looks like the vacancy not found or has been deleted. You can go back to the vacancies list.
+        </p>
+        <Button variant="outline" onClick={() => navigate("/vacancies")}>
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to vacancies
+        </Button>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+          Failed to load vacancy. Please refresh the page.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">

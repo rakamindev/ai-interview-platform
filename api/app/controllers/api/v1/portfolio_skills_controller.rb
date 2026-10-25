@@ -3,6 +3,8 @@
 module Api
   module V1
     class PortfolioSkillsController < ApiController
+      include PortfolioOwnership
+
       authorize_auth_token! :assessor
 
       before_action :set_portfolio_skill
@@ -50,6 +52,7 @@ module Api
       def set_portfolio_skill
         @portfolio_skill = PortfolioSkill.joins(:portfolio)
                                          .find(params[:id])
+        authorize_portfolio!(@portfolio_skill.portfolio)
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end
