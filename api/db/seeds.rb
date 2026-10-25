@@ -369,6 +369,32 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Local demo admin ──────────────────────────────────────────────────────────
+#
+# Credentials are supplied at seed time and never stored in the repository.
+# Example:
+#   DEMO_ADMIN_PASSWORD='choose-a-local-password' bundle exec rails db:seed
+#
+DEMO_ADMIN_EMAIL = ENV.fetch('DEMO_ADMIN_EMAIL', 'demo-admin@example.test').downcase
+DEMO_ADMIN_PASSWORD = ENV['DEMO_ADMIN_PASSWORD']
+
+if DEMO_ADMIN_PASSWORD.to_s.length < 12
+  puts "  Demo admin skipped: set DEMO_ADMIN_PASSWORD (minimum 12 characters) to create/update it."
+else
+  demo_admin = User.find_or_initialize_by(email: DEMO_ADMIN_EMAIL)
+  demo_admin.role = 'admin'
+  demo_admin.password = DEMO_ADMIN_PASSWORD
+  demo_admin.password_confirmation = DEMO_ADMIN_PASSWORD
+
+  if demo_admin.save
+    puts "  Demo admin ready: #{demo_admin.email} (password supplied via environment; not printed)"
+  else
+    puts "  ERROR demo admin: #{demo_admin.errors.full_messages.join(', ')}"
+  end
+end
+
+puts ""
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(
