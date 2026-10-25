@@ -2,6 +2,10 @@
 
 Rails.application.routes.draw do
   get '/health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
+  get '/interview/:token', to: redirect { |params, _req|
+    base = ENV.fetch('APP_BASE_URL', 'http://localhost:5173')
+    "#{base}/interview/#{params[:token]}"
+  }
 
   namespace :api do
     namespace :v1 do

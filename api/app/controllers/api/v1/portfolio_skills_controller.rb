@@ -43,12 +43,16 @@ module Api
         FitGapReport.where(portfolio_id: portfolio.id).each do |report|
           vacancy_id = report.vacancy_id
           report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          begin
+            FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          rescue StandardError => e
+            Rails.logger.warn("[Sidekiq] Failed to enqueue FitGapGeneratorWorker: #{e.message}")
+          end
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        @portfolio_skill = PortfolioSkill.joins(portfolio: :session)
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

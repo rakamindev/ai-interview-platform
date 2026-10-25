@@ -7,9 +7,12 @@ class FitGapGeneratorWorker
 
   def perform(portfolio_id, vacancy_id)
     portfolio = Portfolio.find(portfolio_id)
-    vacancy   = Vacancy.unscoped.find(vacancy_id)
+    session = Session.unscoped.find(portfolio.session_id)
 
-    FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+    Current.using(tenant_id: session.tenant_id) do
+      vacancy = Vacancy.find(vacancy_id)
+      FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+    end
   rescue ActiveRecord::RecordNotFound => e
     Rails.logger.warn("[N13] Record not found: #{e.message}")
   rescue StandardError => e

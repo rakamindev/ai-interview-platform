@@ -1,10 +1,16 @@
-# Local Development Setup
+# Frontend Application (`web/`)
+
+A modern, responsive React 18 Single Page Application (SPA) built with TypeScript, Vite, Tailwind CSS, Radix UI, and TanStack Query.
+
+---
 
 ## Prerequisites
 
-- **Node.js** (v18+ recommended)
-- **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
+- **Node.js:** `v18+` (LTS recommended)
+- **npm:** `v9+`
+- A running backend API service (default: `http://localhost:3001/api/v1`)
+
+---
 
 ## Quick Start
 
@@ -12,88 +18,65 @@
 # 1. Install dependencies
 npm install
 
-# 2. Set up environment variables
+# 2. Configure environment variables
 cp .env.example .env
-```
 
-Edit `.env` with your local values:
-
-```env
-# Backend API base URL
-VITE_API_BASE_URL=http://localhost:3001/api/v1
-
-# WebSocket base URL (no /api/v1)
-VITE_WS_BASE_URL=ws://localhost:3001
-
-# Dev auth token — replace with a real JWT from Rakamin platform
-VITE_DEV_TOKEN=<your-jwt-here>
-
-# Dev tenant context
-VITE_DEV_TENANT_ID=1
-VITE_DEV_TENANT_NAME=Demo Tenant
-```
-
-```bash
-# 3. Start the dev server
+# 3. Start development server
 npm run dev
 ```
 
-The app will be available at **http://localhost:5173**.
+The application runs on **`http://localhost:5173`**.
+
+---
 
 ## Available Scripts
 
-| Command             | Description                          |
-| ------------------- | ------------------------------------ |
-| `npm run dev`       | Start Vite dev server with HMR       |
-| `npm run build`     | Type-check with `tsc` then build     |
-| `npm run preview`   | Preview the production build locally |
+| Command | Description |
+|---|---|
+| `npm run dev` | Starts the Vite development server with Hot Module Replacement (HMR). |
+| `npm test` | Runs the **Vitest** unit & component test suite (28 tests across 9 suites). |
+| `npm run build` | Runs TypeScript compilation (`tsc`) and bundles optimized production assets with Vite. |
+| `npm run preview` | Serves the production build locally for verification. |
+| `npx playwright test` | Executes the end-to-end browser test suite (6 browser flows). |
 
-## Environment Variables
+---
 
-| Variable                    | Required | Description                                         |
-| --------------------------- | -------- | --------------------------------------------------- |
-| `VITE_API_BASE_URL`        | Yes      | Backend REST API base URL                           |
-| `VITE_WS_BASE_URL`         | Yes      | WebSocket server URL (used for live audio streaming)|
-| `VITE_DEV_TOKEN`           | Yes      | JWT for authenticating in local development         |
-| `VITE_DEV_TENANT_ID`       | Yes      | Tenant ID for multi-tenant context                  |
-| `VITE_DEV_TENANT_NAME`     | Yes      | Tenant display name                                 |
-| `VITE_SPEED_TEST_PING_URL` | No       | Custom ping endpoint for hardware check speed test  |
-| `VITE_SPEED_TEST_UPLOAD_URL`| No      | Custom upload endpoint for speed test               |
-| `VITE_REQUIRE_CAMERA`      | No       | Set to `"true"` to enforce camera check (default: `"false"`) |
+## Multi-Tenant Demo Authentication
 
-## Tech Stack
+The login page at `/login` provides **1-Click Quick-Fill Demo Buttons** for testing multi-tenant isolation:
 
-- **React 18** with TypeScript
-- **Vite 5** (build tool)
-- **Tailwind CSS 3** (styling)
-- **Radix UI** (accessible UI primitives)
-- **Jotai** (state management)
-- **React Hook Form + Zod** (form validation)
-- **Axios** (HTTP client)
-- **React Router DOM 7** (routing)
+- **Test Corp:** `admin@example.com` / `password123` (Engineering assessments & vacancies)
+- **Acme Corp:** `admin@acme.com` / `password123` (Product Management assessments & vacancies)
 
-## Project Structure
+> **In-Memory Cache Purge:** When switching accounts or logging out, `queryClient.clear()` is executed automatically to guarantee 0% data bleeding between tenants in the browser.
+
+---
+
+## Project Architecture (Feature-Sliced Modular Design)
+
+The codebase is organized into **5 vertical feature slices** for high cohesion and maintainability:
 
 ```
 src/
-├── components/         # Reusable UI components
-│   ├── ui/             # Base UI primitives (shadcn/ui style)
-│   ├── interview/      # Interview session components
-│   ├── assessment/     # Assessment management components
-│   ├── portfolio/      # Candidate portfolio/results
-│   └── layout/         # Layout wrappers
-├── hooks/              # Custom React hooks (audio capture, playback, WebSocket)
-├── pages/              # Route-level page components
-├── services/           # API clients (Axios instance, endpoints)
-├── stores/             # Jotai atoms (auth, tenant)
-├── types/              # TypeScript type definitions
-└── utils/              # Utility functions
-public/
-└── audio-worklet-processor.js  # Audio worklet for real-time PCM processing
+├── components/           # Shared presentation primitives & application layouts
+│   ├── layout/private/   # Private shell (navbar, sidebar, breadcrumb, bottom tab bar)
+│   └── ui/               # Radix UI + Tailwind design system components
+├── features/             # Vertical domain slices
+│   ├── assessments/      # Assessment management, invite link generator, custom skills
+│   ├── auth/             # Login page, multi-tenant quick-fill, auth API services
+│   ├── evaluation/       # Skill portfolios, human overrides, Fit/Gap comparison tables
+│   ├── interview/        # Live WebAudio 16kHz PCM capture, emerald voice bars, timer
+│   └── vacancies/        # Vacancy rubric definitions and target level sliders
+├── lib/                  # Singletons (Axios client, queryClient, queryKeys, utils)
+├── stores/               # Global state (authAtom, persistent tenantAtom)
+├── types/                # Canonical TypeScript domain types
+└── test/                 # Vitest & Testing Library setup utilities
 ```
 
-## Notes
+---
 
-- The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
-- Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
-- The backend must be running for authentication, session management, and real-time audio streaming to work.
+## Data Layer & State Management
+
+- **TanStack Query (v5):** Handles server data caching, automatic 3-second background polling while evaluations are generating, and **optimistic updates** for instant assessor score calibration.
+- **Jotai:** Manages lightweight atomic state (`authAtom` for JWT tokens, `tenantAtom` synchronized with `localStorage` for responsive navbar badges).
+- **WebAudio API & AudioWorklet:** Processes 16kHz PCM audio frames in real time with Int16 Root-Mean-Square (RMS) calculations driving live voice visualizers.

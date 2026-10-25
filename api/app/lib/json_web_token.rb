@@ -29,7 +29,10 @@ class JsonWebToken
   end
 
   def self.hmac_secret
-    ENV.fetch('SECRET_KEY_BASE')
+    secret = ENV.fetch('SECRET_KEY_BASE')
+    raise KeyError, 'SECRET_KEY_BASE cannot be blank' if secret.strip.empty?
+
+    secret
   end
   private_class_method :hmac_secret
 end

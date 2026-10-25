@@ -1,9 +1,10 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
 /** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
+export function parseLevel(level?: string | number | null): number {
   if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
+  if (!level) return 1;
+  const n = parseInt(String(level).replace(/\D/g, ""), 10);
   return isNaN(n) ? 1 : n;
 }
 

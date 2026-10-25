@@ -14,6 +14,15 @@ module Api
           return render json: { status: "generating" }, status: :accepted
         end
 
+        if @portfolio.generation_status == "pending" && @portfolio.portfolio_skills.empty?
+          begin
+            @portfolio = Portfolios::Generator.new(session: @session).call
+          rescue StandardError => e
+            Rails.logger.error("[PortfoliosController] On-demand portfolio synthesis failed for session #{@session.id}: #{e.message}")
+            @portfolio.reload
+          end
+        end
+
         if @portfolio.failed?
           return json_response(
             portfolio: portfolio_json(@portfolio),
@@ -37,7 +46,12 @@ module Api
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
-        PortfolioGeneratorWorker.perform_async(@session.id)
+        begin
+          PortfolioGeneratorWorker.perform_async(@session.id)
+        rescue StandardError => e
+          Rails.logger.warn("[Sidekiq] Failed to enqueue PortfolioGeneratorWorker for session #{@session.id} (#{e.message}) — synthesizing synchronously")
+          portfolio = Portfolios::Generator.new(session: @session).call
+        end
 
         json_response(
           message:   "Portfolio generation queued",
@@ -79,7 +93,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = find_tenant_portfolio(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -92,16 +106,16 @@ module Api
         end
 
         FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
 
-        render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+        json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = find_tenant_portfolio(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -113,25 +127,32 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
+        # Return cached report if it exists
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+        json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        portfolio = find_tenant_portfolio(params[:id])
+        vacancy   = Vacancy.find_by(id: params[:vacancy_id])
+        return json_error("Vacancy not found", :not_found) unless vacancy
+
+        report = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
 
         if report.nil?
-          return json_error("Fit/gap report not found", :not_found)
+          if portfolio.complete?
+            report = FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+          else
+            return json_error("Fit/gap report not found", :not_found)
+          end
         end
 
         json_response(report: fit_gap_json(report))
@@ -140,6 +161,10 @@ module Api
       end
 
       private
+
+      def find_tenant_portfolio(id)
+        Portfolio.joins(:session).find(id)
+      end
 
       def set_session
         @session = Session.find(params[:id])
@@ -153,7 +178,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = find_tenant_portfolio(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -167,21 +192,22 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          skills:            portfolio.portfolio_skills.includes(:assessor_override).map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
       end
 
       def portfolio_skill_json(skill)
         {
-          id:                skill.id,
-          skill_id:          skill.skill_id,
-          skill_label:       skill.skill_label,
-          is_discovered:     skill.is_discovered,
-          ai_level:          skill.ai_level,
-          ai_confidence:     skill.ai_confidence,
-          evidence:          skill.evidence_quotes,
-          competency_summary: skill.competency_summary
+          id:                 skill.id,
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          is_discovered:      skill.is_discovered,
+          ai_level:           skill.ai_level,
+          ai_confidence:      skill.ai_confidence,
+          evidence:           skill.evidence_quotes,
+          competency_summary: skill.competency_summary,
+          assessor_override:  skill.assessor_override ? override_json(skill.assessor_override) : nil
         }
       end
 

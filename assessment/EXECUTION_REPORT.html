@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fullstack Product Engineer Case Study – Execution Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --fg: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --emerald: #059669;
+    --emerald-bg: #ecfdf5;
+    --amber: #d97706;
+    --amber-bg: #fffbeb;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --purple: #7c3aed;
+    --purple-bg: #f5f3ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    font-size: 10.5pt;
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  @media print {
+    body { padding: 0; }
+    .page-break { page-break-before: always; }
+    .no-print { display: none; }
+  }
+
+  @page {
+    margin: 18mm 16mm 18mm 16mm;
+    size: A4;
+  }
+
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 36px 28px;
+  }
+
+  /* Cover Header */
+  .cover {
+    text-align: center;
+    padding: 36px 0 26px;
+    border-bottom: 3px solid var(--accent);
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-size: 21pt;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--fg);
+    margin-bottom: 6px;
+  }
+  .cover .subtitle {
+    font-size: 12pt;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .cover-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 24px;
+    text-align: left;
+    max-width: 580px;
+    margin: 0 auto;
+    font-size: 9.5pt;
+  }
+  .cover-meta dt { font-weight: 600; color: var(--muted); }
+  .cover-meta dd { color: var(--fg); margin-bottom: 4px; }
+  .cover-meta a { color: var(--accent); text-decoration: none; word-break: break-all; }
+  .cover-meta a:hover { text-decoration: underline; }
+
+  /* Sections */
+  h2 {
+    font-size: 13.5pt;
+    font-weight: 700;
+    color: var(--fg);
+    margin-top: 30px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: -0.3px;
+  }
+  h3 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: var(--fg);
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+  h4 {
+    font-size: 10pt;
+    font-weight: 600;
+    color: var(--fg);
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+  p { margin-bottom: 9px; }
+  ul, ol { margin-left: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 4px; }
+  strong { font-weight: 600; }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9pt;
+  }
+  pre {
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 8.5pt;
+    line-height: 1.45;
+    overflow-x: auto;
+    margin: 10px 0;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 16px;
+    font-size: 9pt;
+    line-height: 1.45;
+  }
+  th {
+    background: #f9fafb;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+  }
+  td {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) { background: #fafafa; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    font-size: 8pt;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 8px;
+    letter-spacing: 0.2px;
+  }
+  .badge-p1 { background: var(--red-bg); color: var(--red); border: 1px solid #fecaca; }
+  .badge-p2 { background: var(--amber-bg); color: var(--amber); border: 1px solid #fde68a; }
+  .badge-pass { background: var(--emerald-bg); color: var(--emerald); border: 1px solid #a7f3d0; }
+  .badge-accent { background: var(--accent-light); color: var(--accent); border: 1px solid #bfdbfe; }
+
+  /* Callout boxes */
+  .callout {
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+    border-left: 4px solid;
+  }
+  .callout-info { background: var(--accent-light); border-left-color: var(--accent); }
+  .callout-warn { background: var(--amber-bg); border-left-color: var(--amber); }
+  .callout-success { background: var(--emerald-bg); border-left-color: var(--emerald); }
+
+  /* Depth Chart */
+  .depth-chart {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 14px 0;
+  }
+  .depth-col { padding: 14px 18px; }
+  .depth-col:first-child { border-right: 1px solid var(--border); }
+  .depth-col h4 {
+    font-size: 9.5pt;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  .depth-col ul { margin-left: 16px; margin-bottom: 0; }
+  .depth-col li { font-size: 9pt; margin-bottom: 3px; }
+
+  /* Test results summary */
+  .test-results {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .test-card {
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fafafa;
+  }
+  .test-card .number {
+    font-size: 18pt;
+    font-weight: 800;
+    color: var(--emerald);
+  }
+  .test-card .label {
+    font-size: 8pt;
+    color: var(--muted);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* TOC */
+  .toc {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+  }
+  .toc h3 { margin-top: 0; font-size: 10.5pt; color: var(--fg); margin-bottom: 6px; }
+  .toc ol { margin-left: 18px; margin-bottom: 0; }
+  .toc li { font-size: 9pt; margin-bottom: 3px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ========== COVER ========== -->
+<div class="cover">
+  <h1>Fullstack Product Engineer Case Study</h1>
+  <div class="subtitle">Execution Report & Monozukuri Submission</div>
+  <dl class="cover-meta">
+    <dt>Platform:</dt>
+    <dd><a href="https://github.com/ferdianqbl/ai-interview-platform">AI Interview Platform (<code>api/</code> + <code>web/</code>)</a></dd>
+    <dt>Pull Request Link:</dt>
+    <dd><a href="https://github.com/rakamindev/ai-interview-platform/pull/152">https://github.com/rakamindev/ai-interview-platform/pull/152</a></dd>
+    <dt>Video Walkthrough:</dt>
+    <dd><a href="https://drive.google.com/file/d/1hQM03O0VKbjRz3jmsYzrxuwTa7q60gPQ/view?usp=sharing">Live Demo Video Walkthrough (Google Drive)</a></dd>
+    <dt>Submission Date:</dt>
+    <dd>August 2026 <em>(Revised October 2026 with Section 9: Technical Reviewer Revision Responses)</em></dd>
+  </dl>
+</div>
+
+<!-- ========== TABLE OF CONTENTS ========== -->
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li><a href="#s1">1. Executive Summary & Step-by-Step Execution Journey Narrative</a></li>
+    <li><a href="#s2">2. Product Context Analysis (Users, Candidates & UU PDP Implications)</a></li>
+    <li><a href="#s3">3. Severity-Ranked Problem & Gap Analysis (P0–P3) + Constraint Signals</a></li>
+    <li><a href="#s4">4. Option Evaluation & Trade-Off Matrix (Option A vs Option B Rationale)</a></li>
+    <li><a href="#s5">5. Self-Derived Acceptance Criteria & Edge Cases Handled</a></li>
+    <li><a href="#s6">6. Visual Screenshots (UI Flows, Edge Cases, Error States & Responsive Views)</a></li>
+    <li><a href="#s7">7. Test Coverage Evidence, Seeded Fault Test Proof & AI Verification Notes</a></li>
+    <li><a href="#s8">8. Claimed Engineering Depth (Backend-Heavy vs. Frontend-Heavy)</a></li>
+    <li><a href="#s9"><strong>9. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)</strong></a></li>
+    <li><a href="#s10">10. Conclusion & Final Submission Checklist</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<!-- ========== §1 ========== -->
+<h2 id="s1">1. Executive Summary & Step-by-Step Execution Journey Narrative</h2>
+
+<p>This project represents a comprehensive, production-grade revamp of the <strong>AI Interview Platform</strong>, focusing on the critical high-leverage seam between automated conversational assessment, structured competency synthesis, human assessor calibration, and vacancy Fit/Gap evaluation.</p>
+
+<h3>First-Principles Framing</h3>
+<ul>
+  <li><strong>What is genuinely true?</strong> Traditional resume screening and unstructured interviewing are subjective, noisy, and unscalable. An AI interview system is only viable if its evaluations are <strong>verifiable</strong> (anchored to verbatim candidate speech quotes), <strong>auditable</strong> (supporting human calibration without erasing baseline AI ratings), and <strong>safe</strong> (strictly adhering to data privacy, cryptographic authentication, and multi-tenant isolation).</li>
+  <li><strong>The Monozukuri Standard:</strong> We treated the brief's baseline requirements not as a ceiling, but as a starting floor. Delivered uncompromised system rigor (<strong>41 backend RSpec specs</strong>, <strong>28 frontend Vitest specs across 9 suites</strong>, <strong>6 Playwright E2E flows</strong>, <strong>0 build errors</strong>) and high visual taste across all 6 interaction states.</li>
+</ul>
+
+<h3>Step-by-Step Execution Journey</h3>
+<p>In accordance with <strong>Step 6: Final Submission</strong> of <code>brief-fullstack.pdf</code>, below is our chronological execution narrative from discovery to verification:</p>
+<ol>
+  <li><strong>Stage 1 — Discovery & Local Exploration:</strong> Cloned <code>api/</code> (Rails 7, PostgreSQL, Sidekiq, Gemini AI) and <code>web/</code> (React 18, TypeScript, Vite, Tailwind, Radix UI). Audited the baseline repository—which started with <strong>0 RSpec specs</strong>, <strong>no frontend test runner</strong>, and <strong>no CI</strong>—and walked every candidate and assessor workflow end-to-end in the browser while inspecting raw PostgreSQL records and JSON payloads.</li>
+  <li><strong>Stage 2 — Deep Context & Domain Immersion:</strong> Analyzed the 5 core domain pillars: the product's core value loop, Indonesia's high-volume hiring market, recruiter/assessor daily workflows, and the legal/ethical obligations owed to unrepresented candidates under Indonesia's Personal Data Protection Law (<strong>UU PDP No. 27/2022</strong>).</li>
+  <li><strong>Stage 3 — Problem Definition & Fullstack Seam Audit:</strong> Identified and ranked critical defects from <strong>P0 to P3</strong> spanning authentication (<code>JsonWebToken</code> secret handling), multi-tenant data isolation (<code>TenantScoped</code>), backend-to-frontend serializer contract seams, stale Fit/Gap caches, unassessed skill crashes, live interview audio capture conflicts, and missing UI interaction states.</li>
+  <li><strong>Stage 4 — Revamp Strategy, Acceptance Criteria & Trade-Off Evaluation:</strong> Derived explicit acceptance criteria for all inputs and edge cases before writing code, and evaluated <strong>Option A (Structured Dynamic Compute-on-Read Engine)</strong> vs. <strong>Option B (Event-Driven Materialized Reports with Read-Through Synthesis)</strong>.</li>
+  <li><strong>Stage 5 — Monozukuri Fullstack Implementation:</strong> Built the backend rule engine (<code>FitGap::Engine</code>), non-destructive override model (<code>AssessorOverride</code>), multi-source cache invalidation, reversible migration, fail-fast JWT security, and WebAudio 16kHz PCM voice pipeline, paired with a modular React vertical feature slice architecture (<code>src/features/</code>) with optimistic TanStack Query mutations.</li>
+  <li><strong>Stage 6 — Verification, Seeded Fault Proof & Final Packaging:</strong> Built a 41-spec RSpec suite, 28-test Vitest suite, and 6-flow Playwright E2E suite from scratch; proved test effectiveness by injecting a regression on scratch branch <code>fault/seeded-delta-bug</code>; documented AI verification moments; and recorded the end-to-end video demonstration.</li>
+</ol>
+
+<hr>
+
+<!-- ========== §2 ========== -->
+<h2 id="s2">2. Product Context Analysis (Users, Candidates & UU PDP Implications)</h2>
+
+<h3>The 5 Domain Pillars</h3>
+<ol>
+  <li><strong>The Product:</strong> A fullstack AI talent assessment platform (<code>api/</code> Rails 7 + PostgreSQL + Sidekiq + Gemini AI; <code>web/</code> React 18 + TypeScript + Tailwind SPA) that conducts conversational voice interviews, synthesizes competency portfolios (<code>Portfolio</code> & <code>PortfolioSkill</code>) anchored to verbatim transcript quotes, enables human score calibration (<code>AssessorOverride</code>), and generates role-specific Fit/Gap evaluations (<code>FitGapReport</code>).</li>
+  <li><strong>The Industry (Talent Assessment in Indonesia):</strong> Indonesian enterprises and high-growth technology companies face thousands of applicants per opening. Manual screening creates recruiter burnout, while keyword-based CV filters miss strong candidates and reward resume stuffing. The real leverage sits in structured, evidence-backed competency evaluation that scales without sacrificing human judgment.</li>
+  <li><strong>What It Is For:</strong> Producing transparent, objective, reproducible candidate evaluations that give hiring managers instant hiring signal (<code>Match</code>, <code>Exceeds</code>, <code>Gap</code>, <code>Not Assessed</code>) while cutting screening turnaround time from weeks to minutes.</li>
+  <li><strong>The Users (Assessors, Recruiters, Hiring Managers):</strong>
+    <ul>
+      <li><strong>Assessors:</strong> Audit candidate interview transcripts, inspect verbatim evidence quotes, and calibrate AI ratings when contextual nuance requires human correction.</li>
+      <li><strong>Recruiters & Hiring Managers:</strong> Configure target role rubrics (<code>Vacancy</code> & <code>VacancySkill</code>) and review side-by-side Fit/Gap matrices and executive narratives to make fast, defensible shortlist decisions.</li>
+    </ul>
+  </li>
+  <li><strong>The Unrepresented Candidates & UU PDP No. 27/2022:</strong>
+    <ul>
+      <li>Candidates do not choose this platform and cannot opt out of it, yet an inaccurate score can change a real person's career trajectory.</li>
+      <li><strong>Human Oversight & Non-Destructive Auditing (UU PDP Art. 16):</strong> Automated profiling must never be the sole unreviewable determinant. Our <code>AssessorOverride</code> architecture preserves the original <code>ai_level</code> immutably while recording <code>override_level</code>, <code>overridden_by</code>, <code>overridden_at</code>, and mandatory <code>assessor_notes</code>.</li>
+      <li><strong>Data Minimization & PII Protection:</strong> Configured <code>config/initializers/filter_parameter_logging.rb</code> to scrub <code>:password</code>, <code>:token</code>, <code>:auth_token</code>, <code>:secret</code>, <code>:transcript</code>, <code>:audio_data</code>, <code>:candidate_name</code>, and <code>:email</code> from server logs.</li>
+      <li><strong>Evidence Verifiability:</strong> Every AI skill score is anchored to verbatim candidate transcript quotes with turn offsets, preventing hallucinated evaluations.</li>
+    </ul>
+  </li>
+</ol>
+
+<hr>
+
+<!-- ========== §3 ========== -->
+<h2 id="s3">3. Severity-Ranked Problem & Gap Analysis (P0–P3) + Constraint Signals</h2>
+
+<p>We walked the real workflows end-to-end, inspected database records, and evaluated API payloads across <code>api/</code> and <code>web/</code> to rank the following flaws from <strong>P0 to P3</strong>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Severity</th>
+      <th>Category</th>
+      <th>Flaw / Problem Description</th>
+      <th>Real-World User / Candidate Impact</th>
+      <th>Classification</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge badge-p1">P0</span></td>
+      <td>Security / Multi-Tenancy</td>
+      <td>Login endpoint chose the token's tenant from the client-supplied <code>X-Tenant-Scheme</code> header, falling back to the first organization and then a hardcoded <code>'test-corp'</code> <em>(found in the post-review re-audit, see &sect;9.4)</em></td>
+      <td>A user of Tenant A could obtain a validly signed token for Tenant B, bypassing all tenant scoping</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P0</span></td>
+      <td>Security / Auth</td>
+      <td><code>SECRET_KEY_BASE</code> accepted a blank value in <code>JsonWebToken</code>; during our local setup we also added a hardcoded dev fallback (<code>e5fe606</code>), flagged in &sect;9.3</td>
+      <td>A blank or known secret allows <code>HS256</code> token forgery and complete authentication bypass across tenants</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P0</span></td>
+      <td>Security / Multi-Tenancy</td>
+      <td><code>Vacancy.unscoped</code> in <code>FitGapGeneratorWorker</code> (baseline) and Fit/Gap controller lookups (<code>7dd8083</code>), bypassing <code>TenantScoped</code> (<code>Current.tenant_id</code>)</td>
+      <td>Enables cross-tenant data leakage of confidential job vacancies and candidate portfolios</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P1</span></td>
+      <td>Fullstack Seam</td>
+      <td>Serializer vs. React contract mismatch (<code>expected_level</code> vs <code>required_level</code>, <code>ai_level</code> int vs string)</td>
+      <td>Vacancy required levels rendered as <code>undefined</code> in the React Fit/Gap comparison table</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P1</span></td>
+      <td>Backend / FitGap</td>
+      <td>Stale <code>FitGapReport</code> snapshots when assessor overrides or vacancy rubrics are updated</td>
+      <td>Recruiters evaluated candidates on outdated AI scores rather than calibrated human ratings</td>
+      <td>Missing Spec</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P1</span></td>
+      <td>Backend / FitGap</td>
+      <td>Unassessed vacancy skills caused <code>nil</code> delta exceptions and broken LLM prompt formatting</td>
+      <td>Crashed Fit/Gap generation (HTTP 500) whenever a vacancy required unprobed skills</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P1</span></td>
+      <td>Fullstack / Audio</td>
+      <td>Browser Web Speech API conflicted with WebAudio capture (macOS "duk duk" chime & dead mic)</td>
+      <td>Candidates could not speak during the AI interview; sessions abruptly completed with failed portfolios</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P1</span></td>
+      <td>Database / Schema</td>
+      <td>Schema drift (<code>portfolio_assessment_state</code>, <code>fit_gap_narrative_status</code>) without a reversible migration</td>
+      <td>Fresh environment setups (<code>db:migrate</code>) failed to match <code>schema.rb</code> or roll back cleanly</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p2">P2</span></td>
+      <td>Frontend / UX</td>
+      <td>Missing interaction states (Loading skeletons, empty states, error retry banners, degraded LLM badges)</td>
+      <td>Flash of unstyled content and confusing blank screens during async generation or LLM timeout</td>
+      <td>Missing Spec</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p2">P2</span></td>
+      <td>Frontend / UI</td>
+      <td>Long verbatim evidence quotes overflowed card containers on mobile/tablet viewports (375px / 768px)</td>
+      <td>Broke responsive layout hierarchy and made mobile reviewing frustrating for hiring managers</td>
+      <td>Defective Impl</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Constraint Signals (Tech Lead Escalations)</h3>
+<ul>
+  <li><strong>Signal 1 (Upstream LLM Latency, Rate Limits & Model Retirement):</strong> Gemini API calls can take 1.5s–60s under peak load, and legacy model identifiers (<code>gemini-1.5-flash</code>) return HTTP 404 on <code>v1beta</code>. Escalated and mitigated via a prioritized model fallback chain (<code>gemini-2.5-flash</code> &rarr; <code>gemini-2.0-flash</code>) and deterministic rule-based fallback narratives in <code>FitGap::Engine</code> and <code>Portfolios::Generator</code> so users are never blocked by upstream AI outages.</li>
+  <li><strong>Signal 2 (Fail-Fast Cryptographic & Multi-Tenant Context Propagation):</strong> <code>JsonWebToken</code> enforces a non-blank <code>ENV.fetch('SECRET_KEY_BASE')</code> with zero fallback strings, and asynchronous Sidekiq workers explicitly propagate tenant context via <code>Current.using(tenant_id: session.tenant_id)</code> before querying tenant-scoped models.</li>
+</ul>
+
+<hr>
+
+<!-- ========== §4 ========== -->
+<div class="page-break"></div>
+<h2 id="s4">4. Option Evaluation & Trade-Off Matrix (Option A vs Option B Rationale)</h2>
+
+<p>To bridge candidate portfolios, human assessor overrides, and vacancy Fit/Gap reports, we evaluated two well-structured architectural approaches. Crucially, <strong>both options assume clean, modular domain encapsulation</strong> within a cohesive service boundary (<code>FitGap::Engine</code>), isolating business rules from controllers and serializers.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Evaluation Dimension</th>
+      <th>Option A: Structured Dynamic On-The-Fly Engine (Stateless Compute-on-Read)</th>
+      <th>Option B: Event-Driven Materialized Reports (Compute-on-Write + Read-Through Cache) <span class="badge badge-pass">CHOSEN</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Architectural Design (Clean Implementation Assumption)</strong></td>
+      <td>Encapsulates all skill delta math and Gemini narrative synthesis inside a stateless, modular <code>FitGap::Engine</code> service object invoked directly on <code>GET /fitgap</code> and <code>/export</code> requests—without persisting a <code>fit_gap_reports</code> table or coordinating background workers.</td>
+      <td>Encapsulates calculation inside <code>FitGap::Engine</code>, persists the resulting <code>FitGapReport</code> snapshot in PostgreSQL (<code>jsonb</code> comparisons + narratives), and invalidates/regenerates reports when upstream dependencies mutate.</td>
+    </tr>
+    <tr>
+      <td><strong>1. Product Impact vs. Operational & Compute Cost</strong></td>
+      <td><strong>Pros:</strong> Zero idle database storage and zero wasted compute on unviewed <code>(Portfolio, Vacancy)</code> pairs; only runs when a recruiter actively opens a comparison.<br><strong>Cons:</strong> Every page view or PDF export triggers a synchronous Gemini Flash API call (1.5s–15s P95 latency) and bills LLM tokens per <em>read</em> (<em>O(R)</em> reads). In collaborative hiring where multiple stakeholders review the same candidate, read-amplified LLM cost and multi-second page loads degrade UX.</td>
+      <td><strong>Pros:</strong> Delivers &lt;50ms dashboard reads after initial synthesis and bounds LLM token spend to <em>state mutations</em> (<em>O(W)</em> writes) rather than page views.<br><strong>Costs & Risks:</strong> Requires provisioning and operating <strong>Redis + Sidekiq workers</strong>, increases PostgreSQL storage for <code>jsonb</code> snapshots, and risks <strong>write-amplification</strong> if eager background regeneration runs across many vacancies whenever an override is saved (mitigated via lazy invalidation on vacancy edits and read-through synthesis).</td>
+    </tr>
+    <tr>
+      <td><strong>2. Long-Term Maintainability & Implementation Complexity</strong></td>
+      <td><strong>Pros (High Simplicity):</strong> <strong>100% strong read consistency by construction</strong>—always reflects the latest <code>AssessorOverride</code> and <code>VacancySkill</code> changes with zero cache-invalidation plumbing. Formula or schema changes to <code>FitGap::Engine</code> take effect immediately across all candidates with zero database backfill migrations.<br><strong>Cons:</strong> Couples read-path availability and response time directly to upstream LLM latency.</td>
+      <td><strong>Pros:</strong> Clean separation between heavy async LLM synthesis and fast synchronous HTTP reads; preserves a point-in-time audit snapshot (<code>generated_at</code>).<br><strong>Complexity & Risks:</strong> Introduces significant <strong>multi-entity cache invalidation complexity</strong>. <code>FitGapReport</code> depends on 3 mutable aggregates (<code>AssessorOverride</code>, <code>Vacancy</code>/<code>VacancySkill</code>, and <code>Portfolio</code>). Every mutation path must reliably invalidate stale reports. Furthermore, masking async regeneration lag on the frontend requires optimistic client-side delta calculation (<code>usePortfolioQuery</code>), creating a <strong>dual-maintenance synchronization tax</strong> between Ruby and TypeScript delta logic, plus JSONB schema versioning overhead.</td>
+    </tr>
+    <tr>
+      <td><strong>3. Failure Modes & Consistency Risks</strong></td>
+      <td><strong>Failure Modes:</strong> Upstream Gemini latency spikes or rate-limit exhaustion during bulk recruiter screening hold Puma worker threads (which share capacity with live WebSocket interviews). Additionally, LLM stochasticity (<code>temperature: 0.4</code>) means two reviewers opening the report at different times may see slightly different executive narratives.</td>
+      <td><strong>Failure Modes:</strong> <strong>Eventual consistency window</strong> (2s–15s) while Sidekiq regenerates a report after an override; risk of serving <strong>stale data</strong> if any mutation path omits cache invalidation; Redis/Sidekiq queue downtime or dead-letter job exhaustion requiring fallback to synchronous read-through synthesis and deterministic narrative fallbacks.</td>
+    </tr>
+    <tr>
+      <td><strong>4. Contextual Fit & Final Decision Rationale</strong></td>
+      <td>Ideal for pure rule-based math (&lt;5ms) or low-read-frequency internal tools, but synchronous LLM narrative generation on every view creates unacceptable read latency and non-deterministic narratives for hiring committees.</td>
+      <td><strong>Chosen Trade-Off:</strong> Despite higher implementation complexity (multi-source cache invalidation across overrides and vacancy edits) and Redis/Sidekiq operational overhead, sub-50ms deterministic reads and reproducible point-in-time narratives are essential for high-volume enterprise hiring.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ========== §5 ========== -->
+<h2 id="s5">5. Self-Derived Acceptance Criteria & Edge Cases Handled</h2>
+
+<ol>
+  <li><strong>Unassessed Vacancy Skills (<code>not_assessed</code>):</strong> When a vacancy requires a skill that was not evaluated during the candidate's interview, <code>FitGap::Engine</code> assigns <code>candidate_level: nil</code>, <code>delta: nil</code>, and <code>result: "not_assessed"</code>, rendered with a neutral "— Not Assessed" badge and excluded from match averages.</li>
+  <li><strong>Assessor Override Priority & Non-Destructive Audit Trail:</strong> When an <code>AssessorOverride</code> exists for a <code>PortfolioSkill</code>, <code>effective_level</code> resolves to <code>override_level</code> while preserving the original <code>ai_level</code> immutably. Saving an override requires non-empty <code>assessor_notes</code> and immediately invalidates stale <code>FitGapReport</code> records.</li>
+  <li><strong>LLM Outage, Timeout & Model Fallback Resilience:</strong> If Gemini Flash fails or times out, <code>FitGap::Engine</code> and <code>Portfolios::Generator</code> catch the exception, log a sanitized warning, set status to <code>fallback</code>, and synthesize deterministic, evidence-backed summaries so the API returns HTTP 200/202 with zero 500 errors.</li>
+  <li><strong>Strict Level Clamping & Edge-Case Data Types:</strong> Database check constraints and ActiveRecord validations strictly enforce integer bounds 1 &le; level &le; 5. Substance-aware scoring in <code>Portfolios::Generator</code> distinguishes concise vs. multi-sentence technical candidate answers (L2–L4).</li>
+  <li><strong>Long Text States & Multi-Viewport Responsiveness:</strong> Long candidate transcript quotes are clamped via expandable accordions (<code>Read full quote</code>), maintaining clean card geometry across 375px (Mobile), 768px (Tablet), and 1440px (Desktop).</li>
+  <li><strong>All 6 UI Interaction States:</strong> Every view explicitly handles <strong>Loading</strong> (shimmer skeletons), <strong>Empty</strong> (actionable guidance), <strong>Error</strong> (non-destructive retry banner), <strong>Partial/Degraded</strong> (deterministic fallback narrative indicator), <strong>Long Text</strong> (expandable accordions), and <strong>Responsive</strong> layouts.</li>
+  <li><strong>Fail-Fast Security & Multi-Tenancy:</strong> <code>JsonWebToken</code> raises <code>KeyError</code> on missing or whitespace <code>SECRET_KEY_BASE</code>; all <code>Vacancy</code>, <code>Session</code>, and <code>Portfolio</code> lookups enforce <code>Current.tenant_id</code> scoping and return HTTP 404 on cross-tenant access attempts.</li>
+</ol>
+
+<hr>
+
+<!-- ========== §6 ========== -->
+<div class="page-break"></div>
+<h2 id="s6">6. Visual Screenshots (UI Flows, Edge Cases, Error States & Responsive Views)</h2>
+<p>Below are high-fidelity captures of the shipped interface illustrating candidate skill portfolios, human assessor override calibration, role fit/gap analysis, transcript evidence, and vacancy rubric configuration:</p>
+
+<div style="display: flex; flex-direction: column; gap: 20px; margin: 16px 0;">
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+    <img src="screenshoot/candidate_portfolio.png" alt="Candidate Skill Portfolio" style="width: 100%; display: block; border-bottom: 1px solid #e2e8f0;">
+    <div style="padding: 10px 14px; font-size: 8.5pt; color: #334155; background: #f8fafc;">
+      <strong style="color: #0f766e;">Figure 6.1 — Candidate Skill Portfolio:</strong> Multi-dimensional competency cards displaying proficiency badges (L1–L5), confidence indicators, expandable verbatim transcript quote accordions, and human assessor calibration banners.
+    </div>
+  </div>
+
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+    <img src="screenshoot/fitgap_analysis.png" alt="Role Fit & Gap Analysis Matrix" style="width: 100%; display: block; border-bottom: 1px solid #e2e8f0;">
+    <div style="padding: 10px 14px; font-size: 8.5pt; color: #334155; background: #f8fafc;">
+      <strong style="color: #0f766e;">Figure 6.2 — Role Fit & Gap Analysis:</strong> Automated delta calculation matrix (Match / Exceeds +1 / Gap -1 / Not Assessed), summary counters, executive culture alignment narrative, and additive discovered competencies.
+    </div>
+  </div>
+
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+    <img src="screenshoot/assessment_invite.png" alt="Assessment Candidates & Invite Dashboard" style="width: 100%; display: block; border-bottom: 1px solid #e2e8f0;">
+    <div style="padding: 10px 14px; font-size: 8.5pt; color: #334155; background: #f8fafc;">
+      <strong style="color: #0f766e;">Figure 6.3 — Candidates & Invite Tracking:</strong> Live candidate session monitoring with one-click invite link copying, status badges, and direct links to portfolio results.
+    </div>
+  </div>
+
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+    <img src="screenshoot/session_transcript.png" alt="Interview Transcript" style="width: 100%; display: block; border-bottom: 1px solid #e2e8f0;">
+    <div style="padding: 10px 14px; font-size: 8.5pt; color: #334155; background: #f8fafc;">
+      <strong style="color: #0f766e;">Figure 6.4 — Verifiable Interview Transcript:</strong> Complete turn-by-turn conversational transcript anchoring all AI competency synthesis to verifiable candidate utterances.
+    </div>
+  </div>
+
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+    <img src="screenshoot/vacancy_edit.png" alt="Vacancy Rubric Configuration" style="width: 100%; display: block; border-bottom: 1px solid #e2e8f0;">
+    <div style="padding: 10px 14px; font-size: 8.5pt; color: #334155; background: #f8fafc;">
+      <strong style="color: #0f766e;">Figure 6.5 — Vacancy Rubric Configuration:</strong> Granular skill expectation editor (L1–L5 radio selectors), company culture criteria, and role competency guidelines.
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ========== §7 ========== -->
+<div class="page-break"></div>
+<h2 id="s7">7. Test Coverage Evidence, Seeded Fault Test Proof & AI Verification Notes</h2>
+
+<h3>7.1 Test Suite Summary</h3>
+
+<div class="test-results">
+  <div class="test-card">
+    <div class="number">41</div>
+    <div class="label">Backend RSpec Specs<br>0 failures</div>
+  </div>
+  <div class="test-card">
+    <div class="number">28</div>
+    <div class="label">Frontend Vitest Tests<br>9 suites · 0 failures</div>
+  </div>
+  <div class="test-card">
+    <div class="number">6</div>
+    <div class="label">Playwright E2E Flows<br>0 failures</div>
+  </div>
+  <div class="test-card">
+    <div class="number">0</div>
+    <div class="label">TypeScript Build Errors<br>Clean production build</div>
+  </div>
+</div>
+
+<ul>
+  <li><strong>Backend (<code>api/</code> RSpec Suite):</strong> <strong>41 examples, 0 failures</strong> (<code>JsonWebToken</code> fail-fast security specs, login tenant-binding specs, <code>PortfolioSkill</code>, <code>AssessorOverride</code>, <code>FitGapReport</code>, <code>FitGap::Engine</code>, <code>FitGapGeneratorWorker</code> tenant isolation, <code>PortfoliosController</code>, and <code>PortfolioSkillsController</code> cross-tenant specs).</li>
+  <li><strong>Frontend Unit & Component (<code>web/</code> Vitest Suite):</strong> <strong>28 tests, 0 failures</strong> across 9 test suites (<code>LoginPage</code>, <code>AssessmentListPage</code>, <code>SkillPortfolioCard</code>, <code>ComparisonTable</code>, <code>navbar</code>, <code>api</code>, <code>internetSpeedTest</code>, <code>usePortfolioQuery</code>, and <code>useFitGapQuery</code> testing optimistic mutations, cache rollback, cross-tenant 404 propagation, quick-fill demo account interactions, and real-time cross-feature in-memory recalculation).</li>
+  <li><strong>Frontend End-to-End (<code>web/</code> Playwright Suite):</strong> <strong>6 browser flows, 0 failures</strong> (Auth, Candidate Invites, Portfolio, Vacancies, Fit/Gap Synthesis, Candidate Interview).</li>
+  <li><strong>Continuous Integration:</strong> <code>.github/workflows/ci.yml</code> runs RSpec (fresh PostgreSQL via <code>db:schema:load</code>, ephemeral per-run <code>SECRET_KEY_BASE</code>), Vitest, and <code>tsc &amp;&amp; vite build</code> on every push and pull request.</li>
+</ul>
+
+<h3>7.2 Seeded Fault Test Proof</h3>
+<p>To prove the tests are real, the fault was committed and reverted on a dedicated branch so the history is visible (<a href="https://github.com/ferdianqbl/ai-interview-platform/commits/fault/seeded-delta-bug"><code>fault/seeded-delta-bug</code></a>):</p>
+<ul>
+  <li><strong>Base:</strong> Branched from <code>390d661</code> &rarr; <code>41 examples, 0 failures</code></li>
+  <li><strong>Step 1 (Inject Fault — commit <code>e9879be</code>):</strong> Inverted delta arithmetic in <code>api/app/services/fit_gap/engine.rb</code>:</li>
+</ul>
+<pre><code>- delta = candidate_level - expected_level
++ delta = expected_level - candidate_level # SEEDED FAULT: inverted delta</code></pre>
+<p><strong>Step 2 (Actual RSpec Failure Log):</strong></p>
+<pre><code>FitGap::Engine#call correctly calculates match, exceed, gap, and not_assessed (FAILED - 1)
+Failures:
+  1) FitGap::Engine#call correctly calculates match, exceed, gap, and not_assessed
+     Failure/Error: expect(react_comp['result']).to eq('exceed')
+       expected: "exceed"
+            got: "gap"
+     # ./spec/services/fit_gap/engine_spec.rb:71
+3 examples, 1 failure</code></pre>
+<p><strong>Step 3 (Revert &amp; Green Proof — commit <code>ea205b7</code>):</strong> Reverted via <code>git revert</code> on the same branch (history preserved) and verified all <strong>41/41 specs passing green</strong>.</p>
+
+<h3>7.3 AI Verification Moment Case Studies</h3>
+<ul>
+  <li><strong>Case Study 1 — Preventing Destructive Overwrites of Baseline AI Scores (UU PDP Governance):</strong>
+    <ul>
+      <li><em>Flawed AI Generation:</em> During initial scaffolding, AI code generation proposed updating the <code>ai_level</code> column directly on <code>portfolio_skills</code> when an assessor saved a score override.</li>
+      <li><em>Risk Identified:</em> Destructively overwriting <code>ai_level</code> permanently erased the baseline AI score, making algorithmic auditing impossible and violating <strong>UU PDP human oversight governance</strong>.</li>
+      <li><em>Engineered Fix:</em> Implemented a dedicated <code>AssessorOverride</code> model preserving immutable <code>ai_level</code>, tracking <code>overridden_by</code>, <code>overridden_at</code>, and mandatory <code>assessor_notes</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Case Study 2 — Catching Retired Gemini Model Identifiers & SDK Keyword Mismatches:</strong>
+    <ul>
+      <li><em>Flawed AI Generation:</em> AI-suggested Gemini integration defaulted to <code>gemini-1.5-flash</code> and passed <code>api_key:</code> directly to <code>Gemini.new</code> in <code>gemini-ai</code> v4.3.0 (which raises <code>ArgumentError</code> or HTTP 404 on <code>v1beta</code>).</li>
+      <li><em>Engineered Fix:</em> Verified against the actual <code>gemini-ai</code> gem source and Google's live <code>v1beta</code> endpoint, implementing a prioritized fallback loop (<code>gemini-2.5-flash</code> &rarr; <code>gemini-2.0-flash</code>) with proper <code>credentials: { service: 'generative-language-api', api_key: ... }</code> initialization.</li>
+    </ul>
+  </li>
+</ul>
+
+<hr>
+
+<!-- ========== §8 ========== -->
+<h2 id="s8">8. Claimed Engineering Depth (Backend-Heavy vs. Frontend-Heavy)</h2>
+
+<div class="depth-chart">
+  <div class="depth-col">
+    <h4>Backend Depth (50%)</h4>
+    <ul>
+      <li>FitGap Rule Engine with delta arithmetic</li>
+      <li>Override & Vacancy Event Cache Invalidation</li>
+      <li>Strict Multi-Tenant Isolation (<code>TenantScoped</code>)</li>
+      <li>Fail-Fast JWT Signing & Verification</li>
+      <li>Complete RSpec Harness (41 specs · 0 failures)</li>
+      <li>UU PDP Safe Logging & Data Minimization</li>
+    </ul>
+  </div>
+  <div class="depth-col">
+    <h4>Frontend Depth (50%)</h4>
+    <ul>
+      <li>Vertical Feature Slices Architecture (src/features/)</li>
+      <li>In-Memory Real-Time Cross-Feature Cache Sync</li>
+      <li>Optimistic UI Mutations with Auto-Rollback</li>
+      <li>6-State Interaction UI (all states covered)</li>
+      <li>Vitest Component & Hook Suite (28 tests · 9 suites)</li>
+      <li>Collapsible Shell Layout & Breadcrumbs</li>
+    </ul>
+  </div>
+</div>
+
+<hr>
+
+<!-- ========== §9: DEDICATED REVIEWER REVISION SECTION ========== -->
+<div class="page-break"></div>
+<h2 id="s9">9. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)</h2>
+
+<p>Following the initial submission review, we audited and resolved all four technical feedback items raised by the reviewer, alongside a fullstack hardening of the live AI voice interview pipeline. Below is our point-by-point architectural and code resolution.</p>
+
+<h3>9.1 Review #1: Evaluasi Dynamic Option (Structured & Maintainable Implementation Assumption)</h3>
+
+<div class="callout callout-info">
+  <strong>Reviewer Feedback:</strong> <em>"Alasan penolakan opsi dynamic saat ini berfokus pada logika yang tersebar di berbagai controller dan serializer. Hal tersebut lebih berkaitan dengan kualitas implementasi daripada nilai pendekatan itu sendiri. Mohon evaluasi kembali opsi tersebut dengan asumsi implementasinya dirancang secara terstruktur dan maintainable."</em>
+</div>
+
+<p><strong>Architectural Re-Evaluation:</strong> We completely agree with the reviewer's observation: scattering calculation logic across controllers and serializers is an implementation anti-pattern, not an intrinsic property of dynamic computation. To evaluate <strong>Option A (Dynamic Compute-on-Read)</strong> fairly, we assume it is architected to the same clean standard as Option B—encapsulated inside a single, cohesive, well-tested domain service (<code>FitGap::Engine</code>) and invoked statelessly on read requests (<code>GET /api/v1/portfolios/:id/fitgap/:vacancy_id</code> and <code>GET /export</code>).</p>
+
+<h4>True Strengths of a Cleanly Structured Dynamic Option (Option A)</h4>
+<ol>
+  <li><strong>100% Strong Read Consistency by Construction:</strong> Because deltas and summaries are computed at read time from the latest <code>PortfolioSkill</code>, <code>AssessorOverride</code>, and <code>VacancySkill</code> records, it is impossible to serve stale Fit/Gap data. Every assessor override or vacancy rubric edit is reflected instantaneously on the very next read.</li>
+  <li><strong>Zero Cache-Invalidation Complexity:</strong> Eliminates all cross-aggregate invalidation hooks across <code>PortfolioSkillsController</code>, <code>VacanciesController</code>, and <code>Portfolios::Generator</code>, and removes the need for a persisted <code>fit_gap_reports</code> table.</li>
+  <li><strong>Zero-Migration Formula Evolution:</strong> Any update to the delta calculation formula, weighting rules, or JSON response contract in <code>FitGap::Engine</code> applies immediately to all historical candidates without running database backfill migrations or purging cached JSONB rows.</li>
+  <li><strong>Lower Infrastructure Footprint:</strong> Does not require Redis or Sidekiq worker queues for Fit/Gap synthesis, nor does it consume idle PostgreSQL storage for <code>(Portfolio, Vacancy)</code> pairs that are never viewed.</li>
+</ol>
+
+<h4>Why Option A Was Still Rejected in Favor of Option B (True Trade-Offs)</h4>
+<p>Even with a clean, modular service implementation, Option A exhibits fundamental system bottlenecks because Fit/Gap evaluation combines <strong>deterministic skill math (&lt;2ms)</strong> with <strong>generative LLM narrative synthesis (<code>culture_narrative</code> & <code>overall_narrative</code> via Gemini Flash, 1.5s–15s P95 latency)</strong>:</p>
+<ol>
+  <li><strong>Read-Amplified Latency & Token Spend (<em>O(R)</em> Reads vs. <em>O(W)</em> Writes):</strong> In enterprise hiring, a single candidate's Fit/Gap report is opened repeatedly by recruiters, hiring managers, and interview panelists—and re-fetched on PDF exports. Computing dynamically on read triggers an external LLM call and bills tokens on <em>every view</em> (<em>O(R)</em>), whereas materializing bounds LLM calls strictly to <em>state mutations</em> (<em>O(W)</em>, where <em>W &ll; R</em>).</li>
+  <li><strong>Puma Thread Contention with Live Interviews:</strong> Holding synchronous Rails Puma worker threads open for 1.5s–15s waiting on Gemini HTTP responses during bulk recruiter screening risks starving thread capacity needed by concurrent candidate interview sessions.</li>
+  <li><strong>Narrative Non-Determinism Across Reviewers:</strong> Because LLM generation is stochastic (<code>temperature: 0.4</code>), two hiring committee members viewing a dynamic report at different times would see slightly different executive narratives and lack a reproducible point-in-time <code>generated_at</code> audit record.</li>
+</ol>
+
+<h4>Honest Conclusion: The Dynamic Option Wins for the Deterministic Part</h4>
+<p>Evaluated fairly, the dynamic approach is the <strong>better</strong> design for the deterministic skill math. Deltas cost &lt;2ms, always reflect the latest overrides, and need no invalidation. Only the LLM narrative actually needs materializing. The natural next step is therefore a <strong>hybrid</strong>: compute deltas dynamically on read, and cache only the narrative keyed on a hash of its inputs (effective skill levels + vacancy rubric), so a narrative is regenerated only when its inputs really change. The frontend already computes deltas this way in memory (<code>usePortfolioQuery</code>). We shipped full materialization for this iteration because one immutable snapshot per <code>generated_at</code> gives a simpler audit trail for hiring decisions, and we would revisit that choice once write amplification (&sect;9.2) shows up in production metrics.</p>
+
+<hr>
+
+<h3>9.2 Review #2: Cost, Implementation Complexity & Operational Risk pada Opsi Terpilih (Materialized Option)</h3>
+
+<div class="callout callout-info">
+  <strong>Reviewer Feedback:</strong> <em>"Evaluasi pendekatan materialized saat ini lebih banyak menyoroti kelebihan dan mitigasinya. Mohon tambahkan pembahasan mengenai kompleksitas implementasi dan biaya operasional agar perbandingan lebih seimbang."</em>
+</div>
+
+<p><strong>Balanced Analysis of Option B's Engineering Costs & Risks:</strong> Choosing <strong>Option B (Event-Driven Materialized Reports)</strong> is not free. While it achieves &lt;50ms read latency and bounded LLM token costs, it introduces substantial implementation complexity and operational overhead that must be explicitly accounted for:</p>
+
+<ol>
+  <li><strong>Multi-Entity Cache Invalidation Complexity (3 Mutable Upstream Aggregates):</strong>
+    <ul>
+      <li>A materialized <code>FitGapReport</code> is a derived projection of <strong>three separate mutable aggregates</strong>: (1) <code>Portfolio</code> & <code>PortfolioSkill</code>, (2) <code>AssessorOverride</code>, and (3) <code>Vacancy</code> & <code>VacancySkill</code>.</li>
+      <li><strong>Risk of Stale Reads:</strong> Every single mutation path across all three aggregates must reliably invalidate or regenerate affected <code>FitGapReport</code> rows. Omitting invalidation on even one code path silently serves outdated hiring recommendations.</li>
+    </ul>
+  </li>
+  <li><strong>Dual-Maintenance Synchronization Tax (Ruby vs. TypeScript):</strong>
+    <ul>
+      <li>Because asynchronous Sidekiq regeneration takes 2s–15s, masking this eventual consistency window in the UI required implementing an optimistic in-memory delta calculator in <code>web/src/features/evaluation/hooks/usePortfolioQuery.ts</code>.</li>
+      <li><strong>Engineering Tax:</strong> Core delta rules (<code>match</code>, <code>exceed</code>, <code>gap</code>, <code>not_assessed</code>) are maintained in <strong>two languages</strong> (Ruby <code>FitGap::Engine</code> and TypeScript <code>usePortfolioQuery</code>). Any future rubric rule change must be synchronized across both codebases and verified by both RSpec and Vitest suites to prevent UI-to-backend drift.</li>
+    </ul>
+  </li>
+  <li><strong>JSONB Schema Versioning & Migration Overhead:</strong> Storing <code>skill_comparisons</code> as a materialized <code>jsonb</code> array in PostgreSQL means that adding new fields to comparison items requires either defensive backward-compatible readers in the frontend or a background backfill migration across existing <code>fit_gap_reports</code> rows.</li>
+  <li><strong>Operational Infrastructure Cost & Write-Amplification Risk:</strong>
+    <ul>
+      <li><strong>Redis & Sidekiq Provisioning:</strong> Requires operating, monitoring, and paying for persistent Redis memory and Sidekiq worker processes, dead-letter queue alerting, and connection pool tuning.</li>
+      <li><strong>PostgreSQL Storage Growth:</strong> Storage scales at <em>O(P &times; V)</em> across portfolios and vacancies.</li>
+      <li><strong>Write-Amplification:</strong> If an assessor saves 5 rapid skill overrides in 30 seconds across 4 active vacancies, eager background regeneration enqueues 5 &times; 4 = 20 LLM worker jobs. Similarly, editing a popular <code>Vacancy</code> with 500 candidates would trigger a 500-job LLM storm if regenerated eagerly (which is why <code>VacanciesController#update</code> uses lazy <code>destroy_all</code> invalidation paired with on-demand read-through synthesis).</li>
+    </ul>
+  </li>
+</ol>
+
+<hr>
+
+<div class="page-break"></div>
+<h3>9.3 Review #3: Fallback Secret JWT Elimination (<code>JsonWebToken</code> Fail-Fast Enforcement)</h3>
+
+<div class="callout callout-info">
+  <strong>Reviewer Feedback:</strong> <em>"Implementasi signing JWT masih menggunakan secret yang di-hardcode ketika environment secret tidak tersedia. Kondisi ini menimbulkan risiko keamanan karena token berpotensi dipalsukan. Mohon hapus fallback tersebut dan pastikan signing hanya dapat berjalan dengan secret yang dikonfigurasi secara aman."</em>
+</div>
+
+<p><strong>Security Root Cause &amp; Resolution:</strong> In commit <code>e5fe606</code>, while unblocking local setup, we changed <code>JsonWebToken</code> to fall back to <code>Rails.application.secret_key_base</code> and then a hardcoded string when <code>ENV['SECRET_KEY_BASE']</code> was unset (the baseline used <code>ENV.fetch</code> with no fallback, though it accepted a blank value). If a container booted with a missing or blank <code>SECRET_KEY_BASE</code>, an attacker could sign arbitrary payloads using the known fallback string and forge valid <code>HS256</code> tokens. The reviewer was right: a dev convenience in the signing path is a production vulnerability.</p>
+
+<p>We completely removed the hardcoded fallback in <code>api/app/lib/json_web_token.rb</code> and enforced a private <code>hmac_secret</code> validator that fails fast with <code>KeyError</code> if <code>SECRET_KEY_BASE</code> is missing or whitespace-only:</p>
+
+<pre><code># api/app/lib/json_web_token.rb
+class JsonWebToken
+  TOKEN_EXPIRATION_TIME = ENV['TOKEN_EXPIRATION_TIME'].presence
+
+  def self.encode(payload, expire_time = nil)
+    if payload[:exp].blank?
+      expire_time ||= TOKEN_EXPIRATION_TIME || 3.days
+      payload[:exp] = Time.zone.now.to_i + expire_time.to_i
+    end
+
+    JWT.encode(payload, hmac_secret, 'HS256')
+  end
+
+  def self.decode(token, options = {})
+    body = JWT.decode(token, hmac_secret, true, options.merge(algorithms: ['HS256']))[0]
+    HashWithIndifferentAccess.new(body)
+  rescue JWT::DecodeError =&gt; e
+    raise ExceptionHandler::InvalidToken, e.message
+  end
+
+  def self.hmac_secret
+    secret = ENV.fetch('SECRET_KEY_BASE')
+    raise KeyError, 'SECRET_KEY_BASE cannot be blank' if secret.strip.empty?
+
+    secret
+  end
+  private_class_method :hmac_secret
+end</code></pre>
+
+<p><strong>Automated RSpec Verification (<code>api/spec/lib/json_web_token_spec.rb</code>):</strong> Added 3 dedicated security specs verifying that (1) encoding/decoding succeeds when <code>SECRET_KEY_BASE</code> is configured, (2) <code>.encode</code> and <code>.decode</code> immediately raise <code>KeyError</code> when <code>SECRET_KEY_BASE</code> is unset (<code>nil</code>), and (3) <code>.encode</code> and <code>.decode</code> immediately raise <code>KeyError</code> when <code>SECRET_KEY_BASE</code> is blank or whitespace (<code>"   "</code>).</p>
+
+<hr>
+
+<h3>9.4 Review #4: Penggunaan <code>Vacancy.unscoped</code> Elimination & Strict Multi-Tenant Isolation</h3>
+
+<div class="callout callout-info">
+  <strong>Reviewer Feedback:</strong> <em>"Query vacancy menggunakan Vacancy.unscoped, sehingga melewati pembatasan multi-tenant dan berpotensi memungkinkan akses terhadap vacancy milik tenant lain. Mohon pastikan query tetap menerapkan scoping tenant yang sesuai."</em>
+</div>
+
+<p><strong>Security Root Cause & Resolution:</strong> <code>Vacancy</code> and <code>Session</code> include the <code>TenantScoped</code> concern (<code>default_scope { where(tenant_id: Current.tenant_id) if Current.tenant_id.present? }</code>). Using <code>Vacancy.unscoped</code> bypassed this tenant boundary and allowed an authenticated assessor in Tenant A to generate Fit/Gap reports or exports against confidential vacancies owned by Tenant B.</p>
+
+<p>We eliminated all uses of <code>Vacancy.unscoped</code> across the codebase and enforced strict multi-tenant scoping across three layers:</p>
+<ol>
+  <li><strong>Controller Vacancy & Portfolio Lookups (<code>api/app/controllers/api/v1/portfolios_controller.rb</code>):</strong>
+    <ul>
+      <li>Replaced <code>Vacancy.unscoped.find_by</code> with tenant-scoped <code>Vacancy.find_by(id: vacancy_id)</code> across <code>export</code>, <code>regenerate_fitgap</code>, <code>fitgap</code>, and <code>show_fitgap</code>.</li>
+      <li>Scoped direct <code>Portfolio</code> lookups through their parent <code>Session</code>'s <code>TenantScoped</code> default scope:</li>
+    </ul>
+    <pre><code>def find_tenant_portfolio(id)
+  Portfolio.joins(:session).find(id)
+end</code></pre>
+  </li>
+  <li><strong>Skill Override Controller Scoping (<code>api/app/controllers/api/v1/portfolio_skills_controller.rb</code>):</strong> Scoped <code>PortfolioSkill</code> lookups via <code>PortfolioSkill.joins(portfolio: :session).find(params[:id])</code> so an assessor from Tenant A cannot override a skill belonging to Tenant B.</li>
+  <li><strong>Sidekiq Background Worker Tenant Context (<code>api/app/workers/fit_gap_generator_worker.rb</code>):</strong> Because Sidekiq workers execute outside the HTTP request lifecycle (<code>Current.tenant_id</code> is <code>nil</code> by default), <code>FitGapGeneratorWorker</code> resolves the owning session's <code>tenant_id</code> and wraps <code>Vacancy.find(vacancy_id)</code> inside <code>Current.using(tenant_id: session.tenant_id)</code>:
+    <pre><code>def perform(portfolio_id, vacancy_id)
+  portfolio = Portfolio.find(portfolio_id)
+  session = Session.unscoped.find(portfolio.session_id)
+
+  Current.using(tenant_id: session.tenant_id) do
+    vacancy = Vacancy.find(vacancy_id)
+    FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+  end
+end</code></pre>
+  </li>
+</ol>
+
+<p><strong>Automated RSpec Verification:</strong> Verified in <code>spec/requests/api/v1/portfolios_spec.rb</code>, <code>spec/requests/api/v1/portfolio_skills_spec.rb</code>, and <code>spec/workers/fit_gap_generator_worker_spec.rb</code> that cross-tenant access attempts return <strong>HTTP 404 Not Found</strong> and background workers strictly isolate tenant context.</p>
+
+<h4>Additional Finding From the Re-Audit: Login Could Mint Tokens for Another Tenant</h4>
+<p>While re-auditing every <code>unscoped</code> call and tenant entry point for this review, we found a more fundamental hole in the baseline <code>AuthenticationController</code>. The <code>scheme</code> claim (which <code>TenantResolverMiddleware</code> uses to set <code>Current.tenant_id</code>) was taken from the client-supplied <code>X-Tenant-Scheme</code> header, falling back to the first organization and then a hardcoded <code>'test-corp'</code>. Any admin could log in with <code>X-Tenant-Scheme: &lt;other-tenant&gt;</code> and receive a <strong>validly signed</strong> token for that tenant.</p>
+<ul>
+  <li><strong>Fix:</strong> Bound each user to one organization (<code>users.scheme</code>, reversible migration <code>20260815000002</code>, nullable with no default tenant). The token's tenant now comes <strong>only</strong> from the authenticated user's membership via exact <code>Organization.find_by(scheme:)</code>. Client params and headers are ignored, and login fails closed (<strong>HTTP 403</strong>) if the user has no valid organization.</li>
+  <li><strong>Proof (<code>spec/requests/api/v1/authentication_spec.rb</code> — 6 specs):</strong> Verifies that the token carries the user's own tenant, spoofed <code>scheme</code> params and <code>X-Tenant-Scheme</code> headers are ignored, users with nil or unknown schemes receive HTTP 403, and invalid credentials receive HTTP 401.</li>
+  <li><strong>Multi-Tenant Seed Reset:</strong> The seeds now provision two fully isolated tenants (<code>test-corp</code>, <code>acme-corp</code>), each with distinct assessments, vacancies, candidate sessions, and portfolios, paired with 1-click Quick-Fill buttons in the login UI.</li>
+  <li><strong>Known Residual Risk (Documented):</strong> Baseline <code>TenantScoped</code> fails open when no tenant is set in <code>RequestStore</code>. Contained today via <code>require_tenant!</code> on HTTP endpoints and <code>Current.using</code> in workers; a stricter follow-up would raise when queried without a tenant outside an explicit bypass block.</li>
+</ul>
+
+<hr>
+
+<h3>9.5 Post-Submission Hardening: Real-Time AI Voice Interview Pipeline & Hardware Preflight</h3>
+<ul>
+  <li><strong>Eliminated OS Dictation Conflict ("duk duk" Chime):</strong> Removed the browser <code>SpeechRecognition</code> API from <code>InterviewPage.tsx</code>, which previously competed with the WebAudio <code>AudioWorklet</code> stream on macOS and caused hardware lockups.</li>
+  <li><strong>Real-Time PCM Volume Visualizer:</strong> Added Int16 PCM Root-Mean-Square (RMS) calculation in <code>useAudioCapture.ts</code> driving an emerald-green animated waveform in <code>VoiceBars.tsx</code> when the candidate speaks.</li>
+  <li><strong>Timer-Based Silence Detection & Multimodal Transcription:</strong> Replaced fragile speech-count heuristics in <code>MockLiveClient</code> with an asynchronous <code>1.7s</code> silence timer (<code>EM.add_timer</code>) and WAV wrapping of raw 16kHz PCM audio for Gemini multimodal transcription.</li>
+</ul>
+
+<hr>
+
+<h3>9.6 Client-Side Multi-Tenant Isolation & In-Memory Query Cache Purge</h3>
+<ul>
+  <li><strong>QueryClient Cache Purge:</strong> TanStack Query defaults to <code>staleTime: 5 mins</code>. When switching between <code>admin@example.com</code> and <code>admin@acme.com</code>, queries were previously reused from RAM. Calling <code>queryClient.clear()</code> upon login, logout, and 401/403 session expiration completely eliminates in-memory data bleeding across tenants.</li>
+  <li><strong>Dynamic Tenant Synchronization:</strong> Bound the navbar tenant badge to a reactive <code>tenantAtom</code> backed by <code>localStorage</code>, dynamically reflecting the authenticated tenant name and scheme.</li>
+</ul>
+
+<hr>
+
+<!-- ========== §10 ========== -->
+<h2 id="s10">10. Conclusion & Final Submission Checklist</h2>
+
+<p>This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions, fulfilling every requirement of <code>brief-fullstack.pdf</code> (Step 6: Final Submission) and resolving all four technical reviewer revisions.</p>
+
+<div class="callout callout-success">
+  <strong>&check; Final Submission &amp; Reviewer Audit Complete:</strong> 41 backend RSpec specs passing, 28 frontend Vitest tests passing across 9 suites, 6 Playwright browser flows passing, 0 TypeScript errors, CI workflow active, seeded fault proven and reverted on branch <code>fault/seeded-delta-bug</code>, AI verification moments documented, all 6 Monozukuri interaction states implemented, and all 4 technical reviewer revisions resolved and verified.
+</div>
+
+</div>
+</body>
+</html>

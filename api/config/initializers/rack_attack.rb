@@ -1,10 +1,36 @@
-# frozen_string_literal: true
-
 class Rack::Attack
-  # Use Redis for distributed throttle state across pods.
-  Rack::Attack.cache.store = ActiveSupport::Cache::RedisCacheStore.new(
-    url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/1')
-  )
+  # Use Redis for distributed throttle state when available;
+  # fall back to MemoryStore gracefully so login never crashes with TCP reset when Redis is offline.
+  Rack::Attack.cache.store = begin
+    redis_url = ENV.fetch('REDIS_URL', 'redis://localhost:6379/1')
+    if (Rails.env.production? || Rails.env.staging?) && ENV['REDIS_URL'].present?
+      ActiveSupport::Cache::RedisCacheStore.new(
+        url: redis_url,
+        error_handler: ->(method:, returning:, exception:) {
+          Rails.logger.warn("[Rack::Attack] Redis cache error: #{exception.message}")
+        }
+      )
+    else
+      # In development/test, probe Redis; if unreachable, fall back to in-memory store
+      begin
+        store = ActiveSupport::Cache::RedisCacheStore.new(
+          url: redis_url,
+          error_handler: ->(method:, returning:, exception:) {
+            Rails.logger.warn("[Rack::Attack] Redis cache error: #{exception.message}")
+          }
+        )
+        # Fast non-blocking check
+        store.write('rack_attack:ping', '1', expires_in: 1.second)
+        store
+      rescue StandardError => e
+        Rails.logger.info("[Rack::Attack] Redis offline (#{e.message}) — using in-memory store for development")
+        ActiveSupport::Cache::MemoryStore.new
+      end
+    end
+  rescue StandardError => e
+    Rails.logger.warn("[Rack::Attack] Redis initialization error (#{e.message}) — using in-memory store")
+    ActiveSupport::Cache::MemoryStore.new
+  end
 
   # Throttle login attempts: 5 per minute per IP.
   throttle('auth/login', limit: 5, period: 1.minute) do |req|
