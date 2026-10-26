@@ -49,8 +49,13 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
+        @assessment.destroy!
         json_response({ message: "Assessment deleted" })
+      rescue ActiveRecord::DeleteRestrictionError, ActiveRecord::RecordNotDestroyed
+        json_error(
+          "Assessment cannot be deleted because it has associated sessions",
+          :conflict
+        )
       end
 
       private
