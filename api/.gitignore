@@ -23,6 +23,7 @@
 *.env
 config/application.yml
 vertex_ai_credentials.json
+aplication.yml
 
 
 # Ignore Public Docs

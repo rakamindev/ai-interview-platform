@@ -46,4 +46,11 @@ Rails.application.configure do
   # Use an evented file watcher to asynchronously detect changes in source code,
   # routes, locales, etc. This feature depends on the listen gem.
   config.file_watcher = ActiveSupport::EventedFileUpdateChecker
+
+  # Fast BCrypt password hashing in development (cost 4 instead of default 12)
+  # Accelerates login response from ~200-300ms down to <1ms
+  config.after_initialize do
+    require 'bcrypt'
+    BCrypt::Engine.cost = BCrypt::Engine::MIN_COST
+  end
 end

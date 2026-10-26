@@ -24,8 +24,12 @@ export default function PortfolioPage() {
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
 
+  const numericSessionId = Number(sessionId);
+  const isValidSession = sessionId != null && !isNaN(numericSessionId);
+
   const fetchPortfolio = useCallback(async () => {
-    const res = await sessionsApi.getPortfolio(Number(sessionId));
+    if (!isValidSession) return;
+    const res = await sessionsApi.getPortfolio(numericSessionId);
     const data = res.data as any;
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
@@ -39,17 +43,21 @@ export default function PortfolioPage() {
       });
       setOverrides(overrideMap);
     }
-  }, [sessionId]);
+  }, [sessionId, isValidSession, numericSessionId]);
 
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
+    if (!isValidSession) {
+      setLoading(false);
+      return;
+    }
+    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(numericSessionId)])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [fetchPortfolio, sessionId]);
+  }, [fetchPortfolio, sessionId, isValidSession, numericSessionId]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
@@ -94,6 +102,18 @@ export default function PortfolioPage() {
     }
   };
 
+  if (!isValidSession) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Invalid Session</h2>
+        <p className="text-sm text-muted-foreground">
+          The session ID is missing or invalid. Please use a valid link to view portfolio results.
+        </p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
@@ -109,9 +129,11 @@ export default function PortfolioPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+          {id ? (
+            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          ) : null}
           <div>
             <h1 className="text-lg font-semibold">Portfolio Results</h1>
             {candidateName && (
@@ -121,13 +143,15 @@ export default function PortfolioPage() {
         </div>
 
         <div className="flex gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            Transcript
-          </Link>
+          {id && (
+            <Link
+              to={`/assessments/${id}/sessions/${sessionId}/transcript`}
+              className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Transcript
+            </Link>
+          )}
           {!generating && portfolio && (
             <>
               <Button
@@ -229,26 +253,30 @@ export default function PortfolioPage() {
             </>
           )}
 
-          <Separator />
+          {id && (
+            <>
+              <Separator />
 
-          {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
-          </div>
+              {/* Fit/Gap */}
+              <div className="flex items-center gap-3">
+                <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Choose vacancy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vacancies.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.role_title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+                  Run Fit/Gap Analysis →
+                </Button>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

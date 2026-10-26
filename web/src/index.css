@@ -77,3 +77,15 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Fix browser autofill overriding dark/transparent inputs with bright opaque color */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #09132b inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff !important;
+    border-color: rgba(96, 165, 250, 0.4) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}

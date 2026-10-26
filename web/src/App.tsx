@@ -15,12 +15,15 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import SignupPage from "./pages/auth/SignupPage";
+
 
 export default function App() {
   return (
     <Routes>
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
 
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>
@@ -55,6 +58,7 @@ export default function App() {
       {/* Candidate route (public) */}
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
+        <Route path="/portfolio/:sessionId" element={<PortfolioPage/>} />
       </Route>
     </Routes>
   );

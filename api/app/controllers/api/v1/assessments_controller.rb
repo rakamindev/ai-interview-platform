@@ -10,11 +10,11 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(:sessions, :assessment_skills).order(created_at: :desc)
         )
 
         json_response(
-          assessments: assessments.map(&method(:assessment_json)),
+          assessments: assessments.map(&method(:assessment_with_skills_json)),
           meta: pagination_meta(assessments)
         )
       end
@@ -78,16 +78,26 @@ module Api
       def assessment_json(assessment)
         latest = assessment.sessions.max_by(&:created_at)
 
+        completed_count = assessment.sessions.count { |s| s.status == 'ended' }
+        live_count      = assessment.sessions.count { |s| s.status == 'active' }
+        waiting_count   = assessment.sessions.count { |s| s.status == 'pending' }
+
         {
-          id:             assessment.id,
-          name:           assessment.name,
-          time_limit_min: assessment.time_limit_min,
-          language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
-          created_by:     assessment.created_by,
-          created_at:     assessment.created_at,
-          updated_at:     assessment.updated_at,
-          latest_session: latest && {
+          id:              assessment.id,
+          name:            assessment.name,
+          time_limit_min:  assessment.time_limit_min,
+          language:        assessment.language || 'en',
+          system_prompt:   assessment.system_prompt,
+          created_by:      assessment.created_by,
+          created_at:      assessment.created_at,
+          updated_at:      assessment.updated_at,
+          candidate_stats: {
+            completed: completed_count,
+            live:      live_count,
+            waiting:   waiting_count,
+            total:     assessment.sessions.size
+          },
+          latest_session:  latest && {
             id:         latest.id,
             status:     latest.status,
             end_reason: latest.end_reason

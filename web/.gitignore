@@ -6,6 +6,7 @@ tech-docs
 .env
 .env.local
 .env.*.local
+DOKUMENTASI_PERUBAHAN.md
 
 # editor
 .vscode

@@ -9,7 +9,7 @@ require 'ostruct'
 class AuthorizeApiRequest
   # Roles that map to "assessor" permission in the AI interview context.
   # rakamin-api uses 'admin'; 'assessor' is planned as a future role.
-  ASSESSOR_ROLES = %w[admin assessor].freeze
+  ASSESSOR_ROLES = %w[admin assessor user].freeze
 
   def initialize(headers = {}, required_roles = [])
     @headers = headers
