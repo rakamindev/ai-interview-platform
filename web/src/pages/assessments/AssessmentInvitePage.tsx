@@ -331,7 +331,7 @@ export default function AssessmentInvitePage() {
                 <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>•</span>
                   <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                  <span className="text-xs">(expected {`L${s.expected_level}`})</span>
                 </li>
               ))}
             </ul>

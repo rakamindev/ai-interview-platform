@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_26_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -193,7 +193,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "competency_expectations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "location", limit: 255
+    t.string "work_arrangement", limit: 20
+    t.string "employment_type", limit: 20
+    t.string "minimum_education", limit: 100
+    t.integer "salary_min"
+    t.integer "salary_max"
+    t.string "experience_level", limit: 20
+    t.integer "experience_years_min"
+    t.integer "experience_years_max"
     t.index ["tenant_id"], name: "index_vacancies_on_tenant_id"
+    t.check_constraint "employment_type IS NULL OR (employment_type::text = ANY (ARRAY['full_time'::character varying, 'contract'::character varying, 'internship'::character varying]::text[]))", name: "chk_vacancies_employment_type"
+    t.check_constraint "experience_level IS NULL OR (experience_level::text = ANY (ARRAY['intern'::character varying, 'associate'::character varying, 'mid'::character varying, 'senior'::character varying, 'lead'::character varying]::text[]))", name: "chk_vacancies_experience_level"
+    t.check_constraint "experience_years_min IS NULL OR experience_years_max IS NULL OR experience_years_min <= experience_years_max", name: "chk_vacancies_experience_years_range"
+    t.check_constraint "salary_min IS NULL OR salary_max IS NULL OR salary_min <= salary_max", name: "chk_vacancies_salary_range"
+    t.check_constraint "work_arrangement IS NULL OR (work_arrangement::text = ANY (ARRAY['onsite'::character varying, 'hybrid'::character varying, 'remote'::character varying]::text[]))", name: "chk_vacancies_work_arrangement"
   end
 
   create_table "vacancy_skills", force: :cascade do |t|

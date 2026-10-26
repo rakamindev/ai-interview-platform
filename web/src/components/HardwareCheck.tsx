@@ -32,7 +32,13 @@ function stateLabel(state: ProctoringState) {
     return "Waiting";
 }
 
-const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
+function formatDuration(milliseconds: number) {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(totalSeconds % 60).padStart(2, "0")}`;
+}
+
+// Camera is a hard requirement, like the microphone; only a deployment-level env flag may disable it.
+const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA !== "false";
 
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
@@ -46,7 +52,21 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
+    const [trialPassed, setTrialPassed] = useState(false);
+    const [trialRecording, setTrialRecording] = useState(false);
+    const [trialElapsedMs, setTrialElapsedMs] = useState(0);
+    const [trialError, setTrialError] = useState<string | null>(null);
+    const [trialUrl, setTrialUrl] = useState<string | null>(null);
+    const [trialUnsupported, setTrialUnsupported] = useState(false);
+    const recorderRef = useRef<MediaRecorder | null>(null);
+    const trialTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const trialIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const trialOwnsStreamRef = useRef(false);
+    const trialStartedAtRef = useRef<number | null>(null);
+    const chunksRef = useRef<BlobPart[]>([]);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const cameraRequired = REQUIRE_CAMERA;
+
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -63,9 +83,19 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
     }, [videoStream]);
 
+
     useEffect(() => {
         return () => { videoStream?.getTracks().forEach((t) => t.stop()); };
     }, [videoStream]);
+
+    useEffect(() => {
+        return () => {
+            if (trialUrl) URL.revokeObjectURL(trialUrl);
+            if (trialTimerRef.current) clearTimeout(trialTimerRef.current);
+            if (trialIntervalRef.current) clearInterval(trialIntervalRef.current);
+            if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+        };
+    }, [trialUrl]);
 
     const checkAudioPlayback = async (): Promise<boolean> => {
         try {
@@ -82,6 +112,91 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             osc.stop(ctx.currentTime + 0.1);
             return true;
         } catch { return false; }
+    };
+
+    const stopTrialRecording = () => {
+        if (trialTimerRef.current) {
+            clearTimeout(trialTimerRef.current);
+            trialTimerRef.current = null;
+        }
+        if (trialIntervalRef.current) {
+            clearInterval(trialIntervalRef.current);
+            trialIntervalRef.current = null;
+        }
+        if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    };
+
+    // F-21: Record up to one minute; candidate can stop early.
+    const startTrialRecording = async () => {
+        setTrialError(null);
+        setTrialUrl(null);
+        setTrialElapsedMs(0);
+        trialStartedAtRef.current = null;
+        chunksRef.current = [];
+        try {
+            const stream = videoStream ?? await navigator.mediaDevices.getUserMedia({ audio: true });
+            trialOwnsStreamRef.current = !videoStream;
+            if (typeof MediaRecorder === "undefined") throw new Error("MediaRecorder is unavailable");
+            const recorder = new MediaRecorder(stream);
+            recorderRef.current = recorder;
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+            recorder.onstop = () => {
+                if (trialStartedAtRef.current !== null) setTrialElapsedMs(Date.now() - trialStartedAtRef.current);
+                if (trialIntervalRef.current) clearInterval(trialIntervalRef.current);
+                trialIntervalRef.current = null;
+                if (trialOwnsStreamRef.current) stream.getTracks().forEach((track) => track.stop());
+                trialOwnsStreamRef.current = false;
+                const blob = new Blob(chunksRef.current, { type: recorder.mimeType || (cameraRequired ? "video/webm" : "audio/webm") });
+                if (blob.size < 100) {
+                    setTrialError("Recording was empty. Please check your microphone and try again.");
+                    setTrialRecording(false);
+                    return;
+                }
+                setTrialUrl(URL.createObjectURL(blob));
+                setTrialRecording(false);
+            };
+            recorder.onerror = () => {
+                if (trialIntervalRef.current) clearInterval(trialIntervalRef.current);
+                trialIntervalRef.current = null;
+                if (trialOwnsStreamRef.current) stream.getTracks().forEach((track) => track.stop());
+                trialOwnsStreamRef.current = false;
+                setTrialError("Recording failed. Your browser may not support MediaRecorder. Please try again.");
+                setTrialRecording(false);
+            };
+            trialStartedAtRef.current = Date.now();
+            setTrialElapsedMs(0);
+            recorder.start();
+            setTrialRecording(true);
+            trialIntervalRef.current = setInterval(() => {
+                if (trialStartedAtRef.current !== null) setTrialElapsedMs(Date.now() - trialStartedAtRef.current);
+            }, 250);
+            trialTimerRef.current = setTimeout(stopTrialRecording, 60_000);
+        } catch {
+            if (typeof MediaRecorder === "undefined") {
+                setTrialUnsupported(true);
+                setTrialError("This browser cannot record, so the trial recording is skipped. Your microphone and camera checks above are still required.");
+            } else {
+                setTrialError("Could not access microphone for trial recording. Please check permissions and try again.");
+            }
+            setTrialRecording(false);
+        }
+    };
+
+    const retryTrial = () => {
+        if (trialUrl) { URL.revokeObjectURL(trialUrl); }
+        setTrialUrl(null);
+        setTrialPassed(false);
+        setTrialError(null);
+        setTrialUnsupported(false);
+    };
+
+    const confirmTrial = () => {
+        setTrialPassed(true);
+        if (trialUrl) { URL.revokeObjectURL(trialUrl); setTrialUrl(null); }
+    };
+
+    const skipTrial = () => {
+        setTrialPassed(true);
     };
 
     const startAudioLevelMonitoring = (stream: MediaStream) => {
@@ -126,7 +241,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
                 ...(result.passed
-                    ? REQUIRE_CAMERA
+                    ? cameraRequired
                         ? { camera: ProctoringState.LOADING }
                         : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
                     : {}),
@@ -137,32 +252,32 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     // Step 3: Camera + microphone (or microphone-only when camera disabled)
     useEffect(() => {
         const cameraLoading = progress.camera === ProctoringState.LOADING;
-        const micLoading = !REQUIRE_CAMERA && progress.microphone === ProctoringState.LOADING;
+        const micLoading = !cameraRequired && progress.microphone === ProctoringState.LOADING;
         if (!cameraLoading && !micLoading) return;
 
-        const getStream = REQUIRE_CAMERA
+        const getStream = cameraRequired
             ? checkCamera()
             : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
 
         getStream.then((stream) => {
             if (stream) {
-                if (REQUIRE_CAMERA) setVideoStream(stream);
+                if (cameraRequired) setVideoStream(stream);
                 startAudioLevelMonitoring(stream);
                 setProgress((p) => ({
                     ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.PASSED } : {}),
+                    ...(cameraRequired ? { camera: ProctoringState.PASSED } : {}),
                     microphone: ProctoringState.PASSED,
                     audio: ProctoringState.LOADING,
                 }));
             } else {
                 setProgress((p) => ({
                     ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.ERROR } : {}),
+                    ...(cameraRequired ? { camera: ProctoringState.ERROR } : {}),
                     microphone: ProctoringState.ERROR,
                 }));
             }
         });
-    }, [progress.camera, progress.microphone]);
+    }, [progress.camera, progress.microphone, cameraRequired]);
 
     // Step 4: Audio output
     useEffect(() => {
@@ -178,6 +293,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const retryAll = () => {
         videoStream?.getTracks().forEach((t) => t.stop());
         setVideoStream(null);
+        if (trialUrl) URL.revokeObjectURL(trialUrl);
+        setTrialUrl(null);
+        setTrialPassed(false);
+        setTrialError(null);
+        setTrialUnsupported(false);
         setInternetResult(null);
         setProgress({
             osAndBrowser: ProctoringState.LOADING,
@@ -193,7 +313,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const rows: { key: keyof HardwareCheckingProgress; label: string }[] = [
         { key: "osAndBrowser", label: "OS & browser" },
         { key: "internet", label: "Internet" },
-        ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: "Camera" }] : []),
+        ...(cameraRequired ? [{ key: "camera" as const, label: "Camera" }] : []),
         { key: "microphone", label: "Microphone" },
         { key: "audio", label: "Audio output" },
     ];
@@ -203,7 +323,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
             {/* Camera preview */}
-            {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
+            {cameraRequired && <div className="relative bg-black aspect-video">
                 {videoStream ? (
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 ) : (
@@ -270,7 +390,67 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 ))}
             </div>
 
-            {/* Footer */}
+            {/* Camera is a hard requirement: no interview without an active camera. */}
+            {progress.camera === ProctoringState.ERROR && (
+                <div className="px-4 py-3 bg-amber-50 border-t">
+                    <p className="text-sm text-amber-800">
+                        Camera is required. The interview cannot start without an active camera. Please allow camera access or use a device with a camera.
+                    </p>
+                </div>
+            )}
+
+            {/* F-21: Trial recording section */}
+            {allPassed && !trialPassed && (
+                <div className="px-4 py-3 border-t space-y-3">
+                    <p className="text-sm font-medium">Trial Recording</p>
+                    <p className="text-xs text-muted-foreground">
+                        Record up to 1 minute, then play it back to check your camera and microphone. You can stop the recording anytime. It stays on your device and is not uploaded.
+                    </p>
+                    {trialError && (
+                        <p className="text-xs text-destructive">{trialError}</p>
+                    )}
+                    {!trialUrl && !trialRecording && !trialUnsupported && (
+                        <Button size="sm" onClick={startTrialRecording}>
+                            🎙 Record Trial
+                        </Button>
+                    )}
+                    {trialUnsupported && !trialPassed && !trialRecording && (
+                        <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                                Trial skipped: this browser cannot record. Your microphone and camera checks above still apply.
+                            </p>
+                            <Button size="sm" onClick={skipTrial}>
+                                Continue without trial recording
+                            </Button>
+                        </div>
+                    )}
+                    {trialRecording && (
+                        <div className="flex items-center gap-3">
+                            <p className="text-sm font-mono tabular-nums" aria-live="off">
+                                Recording {formatDuration(trialElapsedMs)} / 01:00
+                            </p>
+                            <Button size="sm" variant="outline" onClick={stopTrialRecording}>Stop recording</Button>
+                        </div>
+                    )}
+                    {trialUrl && (
+                        <div className="space-y-2">
+                            {cameraRequired ? (
+                                <video controls src={trialUrl} className="w-full aspect-video rounded-md bg-black" />
+                            ) : (
+                                <audio controls src={trialUrl} className="w-full" />
+                            )}
+                            <div className="flex gap-2">
+                                <Button size="sm" variant="outline" onClick={retryTrial}>
+                                    Try again
+                                </Button>
+                                <Button size="sm" onClick={confirmTrial}>
+                                    Sounds good — continue
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
             <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
                 {hasError && (
                     <Button variant="outline" size="sm" onClick={retryAll}>
@@ -281,7 +461,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!allPassed || !trialPassed}
                     onClick={onStart}
                 >
                     Start Interview

@@ -9,7 +9,7 @@ module Api
 
       # GET /api/v1/vacancies
       def index
-        vacancies = paginate(Vacancy.order(created_at: :desc))
+        vacancies = paginate(Vacancy.includes(:vacancy_skills).order(created_at: :desc))
 
         json_response(
           vacancies: vacancies.map(&method(:vacancy_json)),
@@ -62,6 +62,15 @@ module Api
           :role_title,
           :culture_dimensions,
           :competency_expectations,
+          :location,
+          :experience_level,
+          :experience_years_min,
+          :experience_years_max,
+          :work_arrangement,
+          :employment_type,
+          :minimum_education,
+          :salary_min,
+          :salary_max,
           vacancy_skills_attributes: %i[
             id skill_id skill_label expected_level _destroy
           ]
@@ -74,6 +83,17 @@ module Api
           role_title:               vacancy.role_title,
           culture_dimensions:       vacancy.culture_dimensions,
           competency_expectations:  vacancy.competency_expectations,
+          location:                 vacancy.location,
+          experience_level:         vacancy.experience_level,
+          experience_years_min:     vacancy.experience_years_min,
+          experience_years_max:     vacancy.experience_years_max,
+          work_arrangement:         vacancy.work_arrangement,
+          employment_type:          vacancy.employment_type,
+          minimum_education:        vacancy.minimum_education,
+          salary_min:               vacancy.salary_min,
+          salary_max:               vacancy.salary_max,
+          skill_count:               vacancy.vacancy_skills.size,
+          skill_labels:              vacancy.vacancy_skills.map(&:skill_label),
           created_by:               vacancy.created_by,
           created_at:               vacancy.created_at,
           updated_at:               vacancy.updated_at

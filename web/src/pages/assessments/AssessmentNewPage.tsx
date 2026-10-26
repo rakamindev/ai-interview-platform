@@ -23,13 +23,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import RoleTitleField from "@/components/vacancies/RoleTitleField";
+import { CUSTOM_ROLE_VALUE } from "@/utils/roleTitles";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
 export interface AssessmentFormValues {
-  name: string;
+  role_title: string;
+  role_title_custom?: string;
   time_limit_min: number;
   language: "en" | "id";
   skills: Partial<AssessmentSkill>[];
@@ -43,7 +46,8 @@ export default function AssessmentNewPage() {
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
-      name: "",
+      role_title: "",
+      role_title_custom: "",
       time_limit_min: 45,
       language: "en",
       skills: [],
@@ -88,8 +92,10 @@ export default function AssessmentNewPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const roleTitle = data.role_title === CUSTOM_ROLE_VALUE ? data.role_title_custom?.trim() : data.role_title;
+      if (!roleTitle) { setError("Enter a role title."); setSubmitting(false); return; }
       const payload = {
-        name: data.name,
+        name: roleTitle,
         time_limit_min: data.time_limit_min,
         language: data.language,
         assessment_skills_attributes: data.skills.map((s, i) => ({
@@ -119,20 +125,8 @@ export default function AssessmentNewPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Role title */}
-        <div className="space-y-1.5">
-          <Label htmlFor="name">
-            Role title <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="name"
-            placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
-          />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
-          )}
-        </div>
+        <RoleTitleField register={register as any} setValue={setValue as any} watch={watch as any} />
+        {errors.role_title && <p className="text-xs text-destructive">{errors.role_title.message}</p>}
 
         {/* Time limit */}
         <div className="space-y-1.5">

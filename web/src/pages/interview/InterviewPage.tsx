@@ -203,10 +203,10 @@ export default function InterviewPage() {
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
+              <p>• This is a camera-on interview. Keep your camera on and make sure you're in a quiet place.</p>
               <p>• The AI will ask follow-up questions — there are no scripts.</p>
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
+              <p>• Your mic and camera will be active throughout. You can end anytime.</p>
             </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>

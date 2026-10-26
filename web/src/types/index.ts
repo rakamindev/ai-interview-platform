@@ -7,6 +7,8 @@ export interface Assessment {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
+  skill_count?: number;
+  session_count?: number;
   skills?: AssessmentSkill[];
   latest_session?: {
     status: "pending" | "active" | "ended";
@@ -111,6 +113,17 @@ export interface Vacancy {
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  location?: string | null;
+  experience_level?: "intern" | "associate" | "mid" | "senior" | "lead" | null;
+  experience_years_min?: number | null;
+  experience_years_max?: number | null;
+  work_arrangement?: "onsite" | "hybrid" | "remote" | null;
+  employment_type?: "full_time" | "contract" | "internship" | null;
+  minimum_education?: string | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  skill_count?: number;
+  skill_labels?: string[];
   created_by?: number;
   created_at?: string;
   updated_at?: string;

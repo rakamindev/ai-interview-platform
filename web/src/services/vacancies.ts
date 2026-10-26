@@ -5,6 +5,15 @@ export interface VacancyPayload {
   role_title: string;
   culture_dimensions: string;
   competency_expectations: string;
+  location?: string;
+  experience_level?: "intern" | "associate" | "mid" | "senior" | "lead";
+  experience_years_min?: number;
+  experience_years_max?: number;
+  work_arrangement?: "onsite" | "hybrid" | "remote";
+  employment_type?: "full_time" | "contract" | "internship";
+  minimum_education?: string;
+  salary_min?: number;
+  salary_max?: number;
   vacancy_skills_attributes: Partial<VacancySkill>[];
 }
 

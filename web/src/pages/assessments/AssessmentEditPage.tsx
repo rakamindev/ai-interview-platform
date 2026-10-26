@@ -23,6 +23,8 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
+import RoleTitleField from "@/components/vacancies/RoleTitleField";
+import { CUSTOM_ROLE_VALUE } from "@/utils/roleTitles";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
@@ -38,10 +40,10 @@ export default function AssessmentEditPage() {
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<AssessmentFormValues>({
-    defaultValues: { name: "", time_limit_min: 45, skills: [] },
+    defaultValues: { role_title: "", role_title_custom: "", time_limit_min: 45, language: "en", skills: [] },
   });
 
-  const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
+  const { register, handleSubmit, control, setValue, watch, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({ role_title: a.name ?? "", time_limit_min: a.time_limit_min, language: a.language ?? "en", skills: a.skills });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -74,8 +76,10 @@ export default function AssessmentEditPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const roleTitle = data.role_title === CUSTOM_ROLE_VALUE ? data.role_title_custom?.trim() : data.role_title;
+      if (!roleTitle) { setError("Enter a role title."); setSubmitting(false); return; }
       await assessmentsApi.update(Number(id), {
-        name: data.name,
+        name: roleTitle,
         time_limit_min: data.time_limit_min,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
       });
@@ -110,10 +114,8 @@ export default function AssessmentEditPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
-        </div>
+        <RoleTitleField register={register as any} setValue={setValue as any} watch={watch as any} />
+        {errors.role_title && <p className="text-xs text-destructive">{errors.role_title.message}</p>}
 
         <div className="space-y-1.5">
           <Label>Session time limit <span className="text-destructive">*</span></Label>
