@@ -127,13 +127,41 @@ export interface VacancySkill {
 
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+// Mirrors FitGap::Engine#build_skill_comparisons (api). Reports stored before the
+// revamp lack ai_level / is_override / low_confidence, hence optional.
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  expected_level: number;
+  candidate_level: number | null;
+  ai_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta: number | null;
+  confidence?: string | null;
   is_override?: boolean;
+  low_confidence?: boolean;
+}
+
+export type FitGapStatus = "generating" | "ready" | "failed";
+
+// Mirrors FitGapReport#summary (api).
+export interface FitGapSummary {
+  total: number;
+  assessed: number;
+  not_assessed: number;
+  coverage_pct: number;
+  match: number;
+  gap: number;
+  exceed: number;
+  low_confidence: number;
+}
+
+// Mirrors PortfoliosController#vacancy_matches (api), already ranked.
+export interface VacancyMatch {
+  vacancy_id: number;
+  role_title: string;
+  summary: FitGapSummary;
+  shortfall: number;
 }
 
 export interface FitGapReport {
@@ -141,9 +169,13 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
   generated_at: string;
+  status: FitGapStatus;
+  narrative_source: "ai" | "fallback" | null;
+  error_message: string | null;
+  summary: FitGapSummary;
 }
 
 export interface SkillTaxonomy {
@@ -164,6 +196,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  remaining_seconds?: number;
 }
 
 export interface PaginationMeta {
@@ -182,7 +216,10 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  // F13: failures must not be shown as a finished interview.
+  | "connection_lost" // reconnects exhausted; the server keeps the session for a grace period
+  | "failed"; // the session could not start or the server ended it because of an error
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

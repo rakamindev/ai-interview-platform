@@ -112,6 +112,7 @@ class AudioWebSocketMiddleware
     end
 
     Sessions::StartHandler.new(session).call unless session.active?
+    Sessions::ConnectionTracker.connected!(session.id)
 
     state.turn_counter = session.transcript_turns.maximum(:turn_number).to_i
 
@@ -504,11 +505,14 @@ class AudioWebSocketMiddleware
     state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
+          # This socket's Gemini connection is stale either way; a rejoin opened its own.
+          EM.schedule { state.gemini_client&.close }
           next if state.session.reload.ended?
+          # F17: the candidate refreshed and rejoined in time — don't end their live interview.
+          next if Sessions::ConnectionTracker.reconnected_after?(state.session.id, state.browser_disconnected_at)
 
           Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
           Sessions::EndHandler.new(state.session).call(reason: 'error')
-          EM.schedule { state.gemini_client&.close }
         end
       rescue StandardError => e
         Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")

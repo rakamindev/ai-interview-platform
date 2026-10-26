@@ -149,11 +149,22 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason,
+          # F20: same clock as the server's time ceiling (started_at + limit), so a rejoining
+          # candidate sees the time actually left instead of a fresh full countdown.
+          remaining_seconds: remaining_seconds(session, assessment)
         )
       end
 
       private
+
+      def remaining_seconds(session, assessment)
+        limit = assessment.time_limit_min * 60
+        return limit unless session.started_at
+
+        [limit - (Time.current - session.started_at).to_i, 0].max
+      end
 
       def set_session
         @session = Session.find(params[:id])

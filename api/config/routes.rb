@@ -57,6 +57,7 @@ Rails.application.routes.draw do
           post :regenerate_fitgap
           get  'fitgap/:vacancy_id', to: 'portfolios#show_fitgap', as: :fitgap_vacancy
           get  :export
+          get  :vacancy_matches
         end
       end
     end

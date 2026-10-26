@@ -7,16 +7,17 @@ module FitGap
     def initialize(portfolio:, vacancy:, gemini_client: nil)
       @portfolio = portfolio
       @vacancy   = vacancy
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
-        timeout: 30
-      )
+      @gemini_client = gemini_client
+    end
+
+    # Rule-based comparison only (no model call); also used to rank vacancies for a portfolio.
+    def skill_comparisons
+      @skill_comparisons ||= build_skill_comparisons
     end
 
     # Returns the FitGapReport record.
     def call
-      skill_comparisons = build_skill_comparisons
-      narratives        = generate_narratives(skill_comparisons)
+      narratives = generate_narratives(skill_comparisons)
 
       report = FitGapReport.find_or_initialize_by(
         portfolio_id: @portfolio.id,
@@ -27,6 +28,9 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
+        narrative_source:  narratives[:source],
+        status:            'ready',
+        error_message:     nil,
         generated_at:      Time.current
       )
 
@@ -35,6 +39,14 @@ module FitGap
     end
 
     private
+
+    # Built lazily so comparison-only callers never need a Gemini key.
+    def gemini_client
+      @gemini_client ||= Gemini::HttpClient.new(
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-flash-latest'),
+        timeout: 30
+      )
+    end
 
     def build_skill_comparisons
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
@@ -45,6 +57,7 @@ module FitGap
 
         if portfolio_skill
           candidate_level  = portfolio_skill[:effective_level]
+          low_confidence   = portfolio_skill[:confidence] == 'low' && !portfolio_skill[:overridden]
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
           result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
@@ -53,6 +66,7 @@ module FitGap
           expected_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
+          low_confidence  = false
         end
 
         {
@@ -62,7 +76,10 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          ai_level:        portfolio_skill&.dig(:ai_level),
+          is_override:     portfolio_skill ? portfolio_skill[:overridden] : false,
+          low_confidence:  low_confidence
         }
       end
 
@@ -99,12 +116,16 @@ module FitGap
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
 
       begin
-        response = @gemini_client.generate_content(prompt, temperature: 0.4)
-        data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        response = gemini_client.generate_content(prompt, temperature: 0.4)
+        data = response.is_a?(Hash) ? response : JSON.parse(response.to_s)
+        # Model output is untrusted: a non-object or a missing overall narrative is a failure, not a blank.
+        raise ArgumentError, 'narrative response missing overall_narrative' unless data.is_a?(Hash) && data['overall_narrative'].present?
+
+        { culture: data['culture_narrative'].presence, overall: data['overall_narrative'], source: 'ai' }
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        # Log the error class only: the message may echo model output about the candidate (UU PDP).
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}")
+        { culture: nil, overall: generate_fallback_narrative(skill_comparisons), source: 'fallback' }
       end
     end
 
@@ -142,8 +163,10 @@ module FitGap
       gaps    = comparisons.count { |c| c[:result] == 'gap' }
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      "Automatic summary (AI narrative unavailable): #{matches} match, #{exceeds} exceed, #{gaps} gap " \
+        "and #{not_assessed} not assessed out of #{comparisons.size} required skills."
     end
   end
 end

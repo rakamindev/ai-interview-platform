@@ -16,6 +16,25 @@ module Exports
       'not_assessed' => 'Not Assessed'
     }.freeze
 
+    # Prawn's built-in fonts only encode Windows-1252; any other character (model output, candidate
+    # names, emoji, arrows) raised and turned the export into a 500. Common symbols are mapped to
+    # ASCII, anything else becomes "?". shortcut: lossy for non-Latin scripts — embed a UTF-8 TTF font
+    # if candidates' names or answers in those scripts must print exactly.
+    REPLACEMENTS = { '→' => '->', '←' => '<-', '✓' => 'v', '✔' => 'v', '•' => '-' }.freeze
+
+    def self.win1252_safe(value)
+      value.to_s.gsub(Regexp.union(REPLACEMENTS.keys), REPLACEMENTS)
+           .encode('Windows-1252', invalid: :replace, undef: :replace, replace: '?')
+           .encode('UTF-8')
+    end
+
+    # Every pdf.text call goes through win1252_safe.
+    class SafeDocument < Prawn::Document
+      def text(string, options = {})
+        super(PdfGenerator.win1252_safe(string), options)
+      end
+    end
+
     def initialize(portfolio:, vacancy: nil)
       @portfolio   = portfolio
       @vacancy     = vacancy
@@ -26,7 +45,7 @@ module Exports
 
     # Returns PDF binary string.
     def call
-      Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+      SafeDocument.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -132,6 +151,7 @@ module Exports
         ]
       end
 
+      table_data = table_data.map { |row| row.map { |cell| self.class.win1252_safe(cell) } }
       pdf.table(table_data, header: true, width: pdf.bounds.width) do |t|
         t.row(0).font_style = :bold
         t.row(0).background_color = 'E5E7EB'

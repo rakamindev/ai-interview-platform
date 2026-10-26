@@ -40,16 +40,15 @@ module Api
 
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+        # Keep the old report visible while it regenerates instead of deleting it.
+        FitGapReport.where(portfolio_id: portfolio.id).includes(:vacancy).find_each do |report|
+          FitGapReport.request_generation!(portfolio: portfolio, vacancy: report.vacancy, force: true)
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        # F1: only skills of portfolios owned by the caller's company.
+        @portfolio_skill = PortfolioSkill.owned_by_tenant(current_tenant_id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

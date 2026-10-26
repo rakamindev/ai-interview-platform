@@ -37,6 +37,10 @@ export default function InterviewPage() {
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
+  const [failureMessage, setFailureMessage] = useState<string | null>(null);
+  // F20: wall-clock deadline of a session already in progress (rejoin), so the timer keeps
+  // counting while the candidate re-does the device check, just like the server does.
+  const [deadline, setDeadline] = useState<number | null>(null);
   const micMutedRef = useRef(false);
 
   // Fetch candidate info
@@ -46,9 +50,21 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "active" && res.data.remaining_seconds != null) {
+          setDeadline(Date.now() + res.data.remaining_seconds * 1000);
+        }
+        if (res.data.session_status === "ended") {
+          // F19: an interview cut short by an error is not a completed one.
+          setInterviewState(res.data.end_reason === "error" ? "failed" : "complete");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((e) => {
+        const status = e?.response?.status;
+        setFailureMessage(status === 404
+          ? "This interview link is invalid or has expired. Please ask the hiring team for a new link."
+          : "We couldn't open your interview. Check your connection and try again.");
+        setInterviewState("failed");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -226,6 +242,33 @@ export default function InterviewPage() {
     );
   }
 
+  // ── F13: failure states — never shown as a completed interview ──────────
+  if (interviewState === "connection_lost") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4" role="alert">
+        <div className="text-4xl" aria-hidden>📡</div>
+        <h2 className="text-xl font-semibold">Connection lost</h2>
+        <p className="text-sm text-muted-foreground">
+          Your answers so far are saved. Rejoin within 2 minutes to continue where you left off.
+        </p>
+        <Button onClick={() => window.location.reload()}>Rejoin interview</Button>
+      </div>
+    );
+  }
+
+  if (interviewState === "failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4" role="alert">
+        <div className="text-4xl" aria-hidden>⚠️</div>
+        <h2 className="text-xl font-semibold">The interview could not continue</h2>
+        <p className="text-sm text-muted-foreground">
+          {failureMessage ?? "Something went wrong on our side. This is not your fault — please contact the hiring team so they can arrange a new attempt."}
+        </p>
+        <Button variant="outline" onClick={() => window.location.reload()}>Try again</Button>
+      </div>
+    );
+  }
+
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
@@ -253,6 +296,7 @@ export default function InterviewPage() {
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
+            remainingSeconds={deadline != null ? Math.max(0, Math.round((deadline - Date.now()) / 1000)) : undefined}
             running={interviewState === "active"}
             onExpired={endInterview}
           />

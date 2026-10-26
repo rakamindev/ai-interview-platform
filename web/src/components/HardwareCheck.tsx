@@ -36,7 +36,7 @@ const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
 const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
-        osAndBrowser: ProctoringState.WAITING,
+        osAndBrowser: ProctoringState.LOADING,
         internet: ProctoringState.WAITING,
         camera: ProctoringState.WAITING,
         audio: ProctoringState.WAITING,
@@ -102,10 +102,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         } catch { /* silent */ }
     };
 
-    // Step 1: OS & browser
+    // Step 1: OS & browser — keyed on its state (not mount only) so "Retry" re-runs the chain.
     useEffect(() => {
-        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        if (progress.osAndBrowser !== ProctoringState.LOADING) return;
+        const timer = setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -115,7 +115,8 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
-    }, []);
+        return () => clearTimeout(timer);
+    }, [progress.osAndBrowser]);
 
     // Step 2: Internet
     useEffect(() => {

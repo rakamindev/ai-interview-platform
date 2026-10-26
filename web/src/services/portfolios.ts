@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Portfolio, AssessorOverride, FitGapReport } from "@/types";
+import type { Portfolio, AssessorOverride, FitGapReport, VacancyMatch } from "@/types";
 
 export const portfoliosApi = {
   getOverride: (portfolioSkillId: number, data: { override_level: number; assessor_notes: string }) =>
@@ -8,15 +8,18 @@ export const portfoliosApi = {
     }),
 
   triggerFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ report: FitGapReport } | { status: string; message: string }>(`/portfolios/${portfolioId}/fitgap`, {
+    api.post<{ report: FitGapReport; status?: string; message?: string }>(`/portfolios/${portfolioId}/fitgap`, {
       fitgap: { vacancy_id: vacancyId },
     }),
+
+  vacancyMatches: (portfolioId: number) =>
+    api.get<{ matches: VacancyMatch[] }>(`/portfolios/${portfolioId}/vacancy_matches`),
 
   getFitGap: (portfolioId: number, vacancyId: number) =>
     api.get<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
 
   regenerateFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ status: string; message: string }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {
+    api.post<{ status: string; message: string; report: FitGapReport }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {
       vacancy_id: vacancyId,
     }),
 

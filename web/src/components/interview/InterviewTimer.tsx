@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 
 interface InterviewTimerProps {
   totalSeconds: number;
+  // Time left on the server's clock (rejoined session). Takes precedence over totalSeconds.
+  remainingSeconds?: number;
   onExpired?: () => void;
   running: boolean;
 }
@@ -13,12 +15,13 @@ function formatTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
-  const [remaining, setRemaining] = useState(totalSeconds);
+export default function InterviewTimer({ totalSeconds, remainingSeconds, onExpired, running }: InterviewTimerProps) {
+  const start = remainingSeconds ?? totalSeconds;
+  const [remaining, setRemaining] = useState(start);
 
   useEffect(() => {
-    setRemaining(totalSeconds);
-  }, [totalSeconds]);
+    setRemaining(start);
+  }, [start]);
 
   useEffect(() => {
     if (!running) return;
