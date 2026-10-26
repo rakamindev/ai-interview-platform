@@ -21,6 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import ConsentNotice from "@/components/interview/ConsentNotice";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -31,6 +32,8 @@ export default function InterviewPage() {
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
@@ -46,10 +49,25 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        if (res.data.consent_given_at) setConsentGiven(true);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
+
+  const handleGiveConsent = async () => {
+    if (!token) return;
+    setSavingConsent(true);
+    try {
+      await sessionsApi.recordConsent(token);
+      setConsentGiven(true);
+    } catch (err) {
+      console.warn("Could not record consent to backend, proceeding with local consent", err);
+      setConsentGiven(true);
+    } finally {
+      setSavingConsent(false);
+    }
+  };
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -200,7 +218,14 @@ export default function InterviewPage() {
           )}
         </div>
 
-        {!hardwareCheckDone ? (
+        {!consentGiven ? (
+          <ConsentNotice
+            roleTitle={candidateInfo?.role_title ?? "Position"}
+            candidateName={candidateInfo?.candidate_name}
+            onConsentGiven={handleGiveConsent}
+            isLoading={savingConsent}
+          />
+        ) : !hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>

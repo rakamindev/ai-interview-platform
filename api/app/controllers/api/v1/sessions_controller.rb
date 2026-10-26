@@ -3,10 +3,10 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete record_consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete record_consent]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show update destroy end_session coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -54,6 +54,26 @@ module Api
             }
           )
         )
+      end
+
+      # PATCH/PUT /api/v1/sessions/:id
+      def update
+        name = params.dig(:session, :candidate_name)
+        if @session.update(candidate_name: name.presence)
+          json_response(session: session_json(@session))
+        else
+          json_error(@session.errors.full_messages.first, :unprocessable_entity)
+        end
+      end
+
+      # DELETE /api/v1/sessions/:id
+      def destroy
+        if @session.active?
+          return json_error("Cannot revoke an active in-progress session", :unprocessable_entity)
+        end
+
+        @session.destroy
+        json_response(message: "Session successfully deleted")
       end
 
       # POST /api/v1/sessions/:id/end
@@ -146,11 +166,26 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:       session.id,
+          role_title:       assessment.name,
+          time_limit_min:   assessment.time_limit_min,
+          session_status:   session.status,
+          candidate_name:   session.candidate_name,
+          consent_given_at: session.consent_given_at
         )
+      end
+
+      # POST /sessions/:token/consent — candidate explicit consent under UU PDP
+      def record_consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        session.update!(
+          consent_given_at: Time.current,
+          consent_version:  params[:consent_version] || 'uu_pdp_v1'
+        )
+
+        json_response(success: true, consent_given_at: session.consent_given_at)
       end
 
       private

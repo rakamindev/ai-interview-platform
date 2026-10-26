@@ -125,11 +125,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             setProgress((p) => ({
                 ...p,
                 internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
+                ...(REQUIRE_CAMERA
+                    ? { camera: ProctoringState.LOADING }
+                    : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
             }));
         });
     }, [progress.internet]);
@@ -198,7 +196,15 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         { key: "audio", label: "Audio output" },
     ];
 
+    const [forceProceedInternet, setForceProceedInternet] = useState(false);
+
     const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
+    const isInternetOnlyFailure =
+        progress.internet === ProctoringState.ERROR &&
+        progress.microphone === ProctoringState.PASSED &&
+        progress.audio === ProctoringState.PASSED &&
+        progress.osAndBrowser === ProctoringState.PASSED;
+    const canStart = allPassed || (isInternetOnlyFailure && forceProceedInternet);
 
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
@@ -270,6 +276,23 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 ))}
             </div>
 
+            {/* Internet Tolerance Alert for Candidates */}
+            {isInternetOnlyFailure && (
+                <div className="mx-4 my-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 space-y-2">
+                    <p className="font-medium text-amber-900">⚠️ Internet connection speed is below recommended threshold</p>
+                    <p className="text-amber-700">Your microphone and audio output are working normally. You may still proceed with the interview, though you might experience minor response latency from the AI.</p>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-amber-900 select-none">
+                        <input
+                            type="checkbox"
+                            checked={forceProceedInternet}
+                            onChange={(e) => setForceProceedInternet(e.target.checked)}
+                            className="rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                        />
+                        <span>I understand the potential latency and wish to proceed with the interview</span>
+                    </label>
+                </div>
+            )}
+
             {/* Footer */}
             <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
                 {hasError && (
@@ -281,7 +304,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!canStart}
                     onClick={onStart}
                 >
                     Start Interview

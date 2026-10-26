@@ -15,10 +15,10 @@ class Organization < ApplicationRecord
 
     sql_string = <<~SQL.squish
       (? IN (identifier, name, scheme, host)) OR
-      (alias_hosts && ARRAY[?]::varchar[])
+      (? = ANY(alias_hosts))
     SQL
 
-    where(sql_string, identifier, Array(identifier)).first ||
+    where(sql_string, identifier, identifier).first ||
       default_organization
   end
 

@@ -7,7 +7,8 @@ max_threads_count = ENV.fetch('RAILS_MAX_THREADS', 16)
 min_threads_count = ENV.fetch('RAILS_MIN_THREADS') { max_threads_count }
 threads min_threads_count, max_threads_count
 
-workers ENV.fetch('WEB_CONCURRENCY', 2)
+workers_count = ENV.fetch('WEB_CONCURRENCY', (ENV.fetch('RAILS_ENV', 'development') == 'production' ? 2 : 0)).to_i
+workers workers_count
 
 worker_timeout 3600 if ENV.fetch('RAILS_ENV', 'development') == 'development'
 
@@ -22,18 +23,20 @@ environment ENV.fetch('RAILS_ENV', 'development')
 
 pidfile ENV.fetch('PIDFILE', 'tmp/pids/server.pid')
 
-preload_app!
+if workers_count > 0
+  preload_app!
 
-on_worker_boot do
-  ActiveRecord::Base.establish_connection if defined?(ActiveRecord)
+  on_worker_boot do
+    ActiveRecord::Base.establish_connection if defined?(ActiveRecord)
 
-  # Restart the EventMachine reactor in each forked worker — preload_app! forks
-  # after EM starts in the master, killing the reactor thread in child processes.
-  # Without this, all WebSocket connections silently fail in production workers.
-  unless EventMachine.reactor_running?
-    ready = Queue.new
-    Thread.new { EventMachine.run { ready.push(:ok) } }
-    ready.pop
+    # Restart the EventMachine reactor in each forked worker — preload_app! forks
+    # after EM starts in the master, killing the reactor thread in child processes.
+    # Without this, all WebSocket connections silently fail in production workers.
+    unless EventMachine.reactor_running?
+      ready = Queue.new
+      Thread.new { EventMachine.run { ready.push(:ok) } }
+      ready.pop
+    end
   end
 end
 

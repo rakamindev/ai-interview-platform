@@ -7,6 +7,14 @@ export const sessionsApi = {
       `/sessions/${id}`
     ),
 
+  update: (id: number, candidateName: string) =>
+    api.patch<{ session: Session }>(`/sessions/${id}`, {
+      session: { candidate_name: candidateName },
+    }),
+
+  delete: (id: number) =>
+    api.delete<{ message: string }>(`/sessions/${id}`),
+
   endSession: (id: number, reason = "manual_assessor") =>
     api.post<{ session: Session }>(`/sessions/${id}/end_session`, {
       session: { reason },
@@ -28,6 +36,11 @@ export const sessionsApi = {
 
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+
+  recordConsent: (token: string, consentVersion = "uu_pdp_v1") =>
+    api.post<{ success: boolean; consent_given_at: string }>(`/sessions/${token}/consent`, {
+      consent_version: consentVersion,
+    }),
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),

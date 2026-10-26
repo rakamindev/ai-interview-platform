@@ -129,7 +129,7 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -164,6 +164,8 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  candidate_name?: string;
+  consent_given_at?: string;
 }
 
 export interface PaginationMeta {

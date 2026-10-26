@@ -11,11 +11,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, Trash2, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -24,12 +35,16 @@ function SessionRow({
   assessmentId,
   onCopy,
   copiedId,
+  onEdit,
+  onDelete,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
   copiedId: number | null;
+  onEdit: (session: Session) => void;
+  onDelete: (session: Session) => void;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
@@ -114,6 +129,28 @@ function SessionRow({
               Results
             </Button>
           )}
+          {!isLive && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                title="Edit candidate name"
+                onClick={() => onEdit(session)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                title={isPending ? "Revoke candidate invite" : "Delete session record"}
+                onClick={() => onDelete(session)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -132,6 +169,58 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [editNameInput, setEditNameInput] = useState("");
+  const [updatingSession, setUpdatingSession] = useState(false);
+
+  const [deletingSession, setDeletingSession] = useState<Session | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
+
+  const handleOpenEdit = (session: Session) => {
+    setEditingSession(session);
+    setEditNameInput(session.candidate_name || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingSession) return;
+    setUpdatingSession(true);
+    try {
+      const res = await sessionsApi.update(editingSession.id, editNameInput.trim());
+      setSessions((prev) =>
+        prev.map((s) => (s.id === editingSession.id ? res.data.session : s))
+      );
+      if (newSession?.id === editingSession.id) {
+        setNewSession(res.data.session);
+      }
+      setEditingSession(null);
+    } catch (err) {
+      console.error("Failed to update candidate name", err);
+    } finally {
+      setUpdatingSession(false);
+    }
+  };
+
+  const handleOpenDelete = (session: Session) => {
+    setDeletingSession(session);
+  };
+
+  const handleRevokeSession = async () => {
+    if (!deletingSession) return;
+    setIsRevoking(true);
+    try {
+      await sessionsApi.delete(deletingSession.id);
+      setSessions((prev) => prev.filter((s) => s.id !== deletingSession.id));
+      if (newSession?.id === deletingSession.id) {
+        setNewSession(null);
+      }
+      setDeletingSession(null);
+    } catch (err) {
+      console.error("Failed to revoke session", err);
+    } finally {
+      setIsRevoking(false);
+    }
+  };
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -313,12 +402,68 @@ export default function AssessmentInvitePage() {
                     if (s) copyLink(s, sid);
                   }}
                   copiedId={copiedId}
+                  onEdit={handleOpenEdit}
+                  onDelete={handleOpenDelete}
                 />
               ))}
             </CardContent>
           </Card>
         )}
       </div>
+
+      {/* Edit Candidate Name Dialog */}
+      <Dialog open={!!editingSession} onOpenChange={(open) => !open && setEditingSession(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Candidate Name</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="edit-candidate-name">Candidate name</Label>
+            <Input
+              id="edit-candidate-name"
+              placeholder="e.g. Joko Santoso"
+              value={editNameInput}
+              onChange={(e) => setEditNameInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingSession(null)} disabled={updatingSession}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={updatingSession}>
+              {updatingSession ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke / Delete Session Confirmation Dialog */}
+      <AlertDialog open={!!deletingSession} onOpenChange={(open) => !open && setDeletingSession(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deletingSession?.status === "pending" ? "Revoke candidate invite?" : "Delete session record?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingSession?.status === "pending"
+                ? `This will revoke the invite link for ${deletingSession?.candidate_name || "this candidate"}. They will no longer be able to start the interview.`
+                : `Are you sure you want to permanently delete the session record for ${deletingSession?.candidate_name || "this candidate"}? This action cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRevoking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRevokeSession}
+              disabled={isRevoking}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isRevoking ? "Revoking..." : deletingSession?.status === "pending" ? "Revoke Invite" : "Delete Record"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Assessment skills detail */}
       {assessment?.skills && assessment.skills.length > 0 && (
