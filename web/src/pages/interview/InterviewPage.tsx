@@ -46,7 +46,7 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") setInterviewState(res.data.end_reason === "error" ? "failed" : "complete");
       })
       .catch(() => setInterviewState("complete"));
   }, [token]);
@@ -236,6 +236,21 @@ export default function InterviewPage() {
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State G: Failed ─────────────────────────────────────────────────────
+  if (interviewState === "failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">Interview Could Not Be Completed</h2>
+        <p className="text-sm text-muted-foreground">
+          The interview was interrupted by a technical problem before it could finish.
+          <br />
+          Please contact the hiring team who invited you about next steps.
         </p>
       </div>
     );

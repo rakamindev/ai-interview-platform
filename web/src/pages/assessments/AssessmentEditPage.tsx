@@ -36,6 +36,7 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedSkillIds, setLoadedSkillIds] = useState<number[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -50,6 +51,7 @@ export default function AssessmentEditPage() {
       .then((res) => {
         const a = res.data.assessment;
         reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        setLoadedSkillIds((a.skills ?? []).flatMap((s) => (s.id ? [s.id] : [])));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -73,11 +75,14 @@ export default function AssessmentEditPage() {
     if (data.skills.length === 0) { setError("Add at least one skill."); return; }
     setError(null);
     setSubmitting(true);
+    // Rails keeps any skill the payload leaves out, so skills removed with ✕ must be sent as _destroy.
+    const keptIds = data.skills.map((s) => s.id);
+    const removed = loadedSkillIds.filter((sid) => !keptIds.includes(sid)).map((sid) => ({ id: sid, _destroy: true }));
     try {
       await assessmentsApi.update(Number(id), {
         name: data.name,
         time_limit_min: data.time_limit_min,
-        assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
+        assessment_skills_attributes: [...data.skills.map((s, i) => ({ ...s, display_order: i })), ...removed],
       });
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {

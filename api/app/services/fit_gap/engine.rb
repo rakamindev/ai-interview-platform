@@ -86,8 +86,8 @@ module FitGap
     end
 
     def find_portfolio_skill(portfolio_skills, label, skill_id)
-      portfolio_skills.find { |s| s[:skill_id] == skill_id && skill_id.present? } ||
-        portfolio_skills.find { |s| s[:skill_label].downcase == label.downcase }
+      portfolio_skills.find { |s| skill_id.present? && s[:skill_id].to_s.casecmp?(skill_id) } ||
+        portfolio_skills.find { |s| (s[:skill_id].blank? || skill_id.blank?) && s[:skill_label].downcase == label.downcase }
     end
 
     def generate_narratives(skill_comparisons)

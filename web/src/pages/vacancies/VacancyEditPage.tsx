@@ -26,6 +26,7 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [loadedSkillIds, setLoadedSkillIds] = useState<number[]>([]);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -36,17 +37,21 @@ export default function VacancyEditPage() {
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
       reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
+      setLoadedSkillIds((v.skills ?? []).flatMap((s) => (s.id ? [s.id] : [])));
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
     setSubmitting(true);
+    // Rails keeps any skill the payload leaves out, so skills removed with ✕ must be sent as _destroy.
+    const keptIds = data.skills.map((s) => s.id);
+    const removed = loadedSkillIds.filter((sid) => !keptIds.includes(sid)).map((sid) => ({ id: sid, _destroy: true }));
     try {
       await vacanciesApi.update(Number(id), {
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
+        vacancy_skills_attributes: [...data.skills, ...removed],
       });
       navigate("/vacancies");
     } finally {
