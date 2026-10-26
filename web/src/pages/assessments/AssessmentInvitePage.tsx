@@ -11,11 +11,21 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Trash2 } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -132,6 +142,8 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -159,6 +171,16 @@ export default function AssessmentInvitePage() {
   const openInviteDialog = () => {
     setCandidateNameInput("");
     setShowInviteDialog(true);
+  };
+
+  const handleDeleteAssessment = async () => {
+    setDeleting(true);
+    try {
+      await assessmentsApi.delete(Number(id));
+      navigate("/assessments", { replace: true });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleInviteCandidate = async () => {
@@ -219,12 +241,37 @@ export default function AssessmentInvitePage() {
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
+          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setShowDeleteDialog(true)}>
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
+          </Button>
           <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
         </div>
       </div>
+
+      {/* Delete assessment confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete assessment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{assessment?.name}</strong> and all its sessions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>No, keep it</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteAssessment}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Yes, delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -233,20 +280,20 @@ export default function AssessmentInvitePage() {
             <DialogTitle>Invite Candidate</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label htmlFor="candidate-name">Candidate name</Label>
+            <Label htmlFor="candidate-name">Candidate name <span className="text-destructive">*</span></Label>
             <Input
               id="candidate-name"
               placeholder="e.g. Budi Santoso"
               value={candidateNameInput}
               onChange={(e) => setCandidateNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
+              onKeyDown={(e) => e.key === "Enter" && candidateNameInput.trim() && handleInviteCandidate()}
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-xs text-muted-foreground">Required — used to identify this candidate's session.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
-            <Button onClick={handleInviteCandidate}>Create Link</Button>
+            <Button onClick={handleInviteCandidate} disabled={!candidateNameInput.trim()}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
