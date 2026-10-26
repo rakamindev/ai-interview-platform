@@ -121,6 +121,10 @@ module Api
 
         return json_response(ended: true, message: "Session already ended") if session.ended?
 
+        # Only a session that actually ran may be finished here. A pending (never started)
+        # or failed session must not turn into a "completed" interview with a portfolio.
+        return json_error("Session is not active", :conflict) unless session.active?
+
         # No coverage re-check here. The backend WS already verified all_covered
         # before sending preparing_to_end. Re-checking here caused false negatives
         # (timing gap between WS detection and HTTP call) that stalled auto-end.
