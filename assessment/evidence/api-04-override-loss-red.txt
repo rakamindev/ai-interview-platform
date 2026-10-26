@@ -1,0 +1,60 @@
+
+Randomized with seed 60293
+FFFF
+
+Failures:
+
+  1) Portfolios::Generator re-attaches by normalised label when the model drops the skill_id
+     Failure/Error: expect(portfolio.reload.assessor_overrides.map(&:override_level)).to eq([3])
+
+       expected: [3]
+            got: []
+
+       (compared using ==)
+     # ./spec/services/portfolios_generator_spec.rb:43:in `block (2 levels) in <top (required)>'
+
+  2) Portfolios::Generator leaves the previous skills and overrides intact when the write fails midway (no partial portfolio)
+     Failure/Error: expect(AssessorOverride.exists?(override.id)).to be(true)
+
+       expected true
+            got false
+     # ./spec/services/portfolios_generator_spec.rb:59:in `block (2 levels) in <top (required)>'
+
+  3) Portfolios::Generator normalises model confidence casing instead of failing the enum insert
+     Failure/Error:
+       portfolio.portfolio_skills.create!(
+         skill_id:           skill_data['skill_id'],
+         skill_label:        skill_data['skill_label'],
+         is_discovered:      false,
+         ai_level:           skill_data['level'].to_i.clamp(1, 5),
+         ai_confidence:      skill_data['confidence'],
+         evidence:           Array(skill_data['evidence']).first(3),
+         competency_summary: skill_data['competency_summary']
+       )
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:157:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:156:in `each'
+     # ./app/services/portfolios/generator.rb:156:in `save_skills'
+     # ./app/services/portfolios/generator.rb:28:in `call'
+     # ./spec/services/portfolios_generator_spec.rb:28:in `regenerate'
+     # ./spec/services/portfolios_generator_spec.rb:47:in `block (2 levels) in <top (required)>'
+
+  4) Portfolios::Generator keeps assessor overrides when the portfolio is regenerated (F8)
+     Failure/Error: expect(skill.assessor_override).to have_attributes(override_level: 3, assessor_notes: 'Verified in follow-up')
+       expected nil to respond to :override_level, :assessor_notes with 0 arguments
+     # ./spec/services/portfolios_generator_spec.rb:35:in `block (2 levels) in <top (required)>'
+
+Finished in 0.35842 seconds (files took 1.06 seconds to load)
+4 examples, 4 failures
+
+Failed examples:
+
+rspec ./spec/services/portfolios_generator_spec.rb:38 # Portfolios::Generator re-attaches by normalised label when the model drops the skill_id
+rspec ./spec/services/portfolios_generator_spec.rb:52 # Portfolios::Generator leaves the previous skills and overrides intact when the write fails midway (no partial portfolio)
+rspec ./spec/services/portfolios_generator_spec.rb:46 # Portfolios::Generator normalises model confidence casing instead of failing the enum insert
+rspec ./spec/services/portfolios_generator_spec.rb:31 # Portfolios::Generator keeps assessor overrides when the portfolio is regenerated (F8)
+
+Randomized with seed 60293
+

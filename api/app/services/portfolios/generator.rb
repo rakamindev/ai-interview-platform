@@ -31,7 +31,9 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # Reload first: after a rolled-back save_skills the association still
+      # holds the unsaved skills, and autosave would re-insert them here.
+      portfolio&.reload&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -147,35 +149,67 @@ module Portfolios
       }
     end
 
+    # Replaces the portfolio's skills atomically. Assessor overrides are human
+    # corrections and must survive regeneration: they are captured before the
+    # old skills are destroyed and re-attached to the matching new skill (by
+    # skill_id, else by normalised label). Any failure rolls everything back.
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      PortfolioSkill.transaction(requires_new: true) do
+        preserved = preserved_overrides(portfolio)
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        new_skills = Array(data['configured_skills']).map { |s| create_skill(portfolio, s, discovered: false) } +
+                     Array(data['discovered_skills']).map { |s| create_skill(portfolio, s, discovered: true) }
+
+        reattach_overrides(new_skills, preserved)
+      end
+    end
+
+    def create_skill(portfolio, skill_data, discovered:)
+      portfolio.portfolio_skills.create!(
+        skill_id:           discovered ? nil : skill_data['skill_id'],
+        skill_label:        skill_data['skill_label'],
+        is_discovered:      discovered,
+        ai_level:           skill_data['level'].to_i.clamp(1, 5),
+        ai_confidence:      normalize_confidence(skill_data['confidence']),
+        evidence:           Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary']
+      )
+    end
+
+    # Unknown confidence is treated as the most cautious value.
+    def normalize_confidence(value)
+      normalized = value.to_s.strip.downcase
+      PortfolioSkill::CONFIDENCE_LEVELS.include?(normalized) ? normalized : 'low'
+    end
+
+    def preserved_overrides(portfolio)
+      portfolio.portfolio_skills.includes(:assessor_override).filter_map do |skill|
+        override = skill.assessor_override
+        next unless override
+
+        { skill_id: skill.skill_id, label_key: FitGap::Comparator.normalize_label(skill.skill_label),
+          attributes: override.attributes.slice('ai_level', 'override_level', 'assessor_notes',
+                                                'overridden_by', 'overridden_at') }
+      end
+    end
+
+    def reattach_overrides(new_skills, preserved)
+      new_skills.each do |skill|
+        match = preserved.find { |p| p[:skill_id].present? && p[:skill_id] == skill.skill_id } ||
+                preserved.find { |p| p[:label_key] == FitGap::Comparator.normalize_label(skill.skill_label) }
+        next unless match
+
+        preserved.delete(match)
+        skill.create_assessor_override!(match[:attributes])
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      return if preserved.empty?
+
+      Rails.logger.warn("[N10] #{preserved.size} assessor override(s) had no matching skill after " \
+                        "regeneration for session #{@session.id}")
     end
   end
 end

@@ -1,0 +1,15 @@
+# Production boot (RAILS_ENV=production, eager_load = true), dummy env values
+
+## main @ b836d02
+1) config/environments/production.rb:34 config.active_job.queue_adapter = :sidekiq
+   -> NoMethodError: undefined method `active_job' for Rails::Application::Configuration
+      (Active Job railtie is never required in config/application.rb)
+2) after removing (1): Zeitwerk eager load
+   -> NameError: uninitialized constant AudioWebsocketMiddleware
+      (file audio_websocket_middleware.rb defines AudioWebSocketMiddleware)
+   `bin/rails zeitwerk:check` on main: "NameError: uninitialized constant AudioWebsocketMiddleware"
+
+## this branch
+`bin/rails zeitwerk:check`            -> All is good!
+`RAILS_ENV=production rails runner`   -> production boot ok
+`CI=true` (eager load) full RSpec      -> 106 examples, 0 failures

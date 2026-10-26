@@ -1,0 +1,8 @@
+# Migration safety on existing rows (dev DB, 2 pre-existing reports)
+## status after migrate
+2|complete|
+3|complete|
+## rollback then re-migrate
+== 20261023000000 AddLifecycleToFitGapReports: reverted (0.0213s) =============
+id, portfolio_id, vacancy_id, skill_comparisons, culture_narrative, overall_narrative, generated_at
+== 20261023000000 AddLifecycleToFitGapReports: migrated (0.0122s) =============

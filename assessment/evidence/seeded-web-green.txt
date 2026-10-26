@@ -1,0 +1,39 @@
+
+ RUN  v3.2.7 <repo>/web
+
+ ✓ src/components/fitgap/__tests__/FitGapSummary.test.tsx (3 tests) 62ms
+ ✓ src/components/fitgap/__tests__/ComparisonTable.baseline.test.tsx (1 test) 73ms
+ ✓ src/components/fitgap/__tests__/NarrativeCard.test.tsx (5 tests) 126ms
+ ✓ src/components/fitgap/__tests__/ComparisonTable.test.tsx (9 tests) 243ms
+(node:22687) PromiseRejectionHandledWarning: Promise rejection was handled asynchronously (rejection id: 1)
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ src/pages/fitgap/__tests__/FitGapReportPage.test.tsx (12 tests) 763ms
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+{
+  response: { status: 502, data: { errors: [Array] } },
+  VITEST_TEST_NAME: 'tolerates a transient polling error',
+  VITEST_TEST_PATH: '<repo>/web/src/pages/fitgap/__tests__/FitGapReportPage.test.tsx',
+  VITEST_AFTER_ENV_TEARDOWN: undefined,
+  type: 'Unhandled Rejection',
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { response: { status: 502, data: { errors: [ { status: 502, message: 'Bad gateway' } ] } } }
+This error originated in "src/pages/fitgap/__tests__/FitGapReportPage.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "tolerates a transient polling error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  5 passed (5)
+      Tests  30 passed (30)
+     Errors  1 error
+   Start at  14:05:07
+   Duration  2.32s (transform 378ms, setup 862ms, collect 1.81s, tests 1.27s, environment 2.04s, prepare 431ms)
+

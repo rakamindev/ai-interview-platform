@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 <repo>/web
+
+ ❯ src/components/fitgap/__tests__/ComparisonTable.baseline.test.tsx (1 test | 1 failed) 29ms
+   × ComparisonTable (API contract) > shows the required level the API sends for every skill 29ms
+     → Unable to find an element with the text: L3. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td

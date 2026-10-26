@@ -3,6 +3,8 @@
 module Api
   module V1
     class PortfolioSkillsController < ApiController
+      include TenantOwnedRecords
+
       authorize_auth_token! :assessor
 
       before_action :set_portfolio_skill
@@ -38,18 +40,19 @@ module Api
 
       private
 
+      # Keeps existing reports visible (they become "outdated" via their
+      # inputs digest) and queues a refresh for each. Never deletes them.
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+        FitGapReport.where(portfolio_id: portfolio.id).includes(:vacancy).find_each do |report|
+          next unless report.vacancy
+
+          FitGap::Scheduler.request(portfolio:, vacancy: report.vacancy)
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = tenant_portfolio_skills.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trustworthy Fit/Gap — Case Study Report</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root { --ink:#0f172a; --muted:#475569; --line:#e2e8f0; --teal:#01959f; --teal-50:#ecfeff; --amber:#b45309; --amber-50:#fffbeb; --red:#b91c1c; --red-50:#fef2f2; --violet:#6d28d9; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Inter, Roboto, sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 24pt; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 15pt; margin: 22px 0 8px; padding-top: 6px; border-top: 2px solid var(--teal); }
+  h3 { font-size: 11.5pt; margin: 14px 0 6px; }
+  p { margin: 0 0 8px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 8.5pt; }
+  .kicker { color: var(--teal); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 8.5pt; }
+  .page-break { break-before: page; }
+  .avoid { break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 8.8pt; }
+  th, td { text-align: left; vertical-align: top; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+  th { background: #f8fafc; font-weight: 600; }
+  tr { break-inside: avoid; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 8.5pt; background: #f1f5f9; padding: 0 3px; border-radius: 3px; }
+  .pill { display: inline-block; border-radius: 999px; padding: 0 7px; font-size: 8pt; font-weight: 600; }
+  .p0 { background: var(--red-50); color: var(--red); } .p1 { background: var(--amber-50); color: var(--amber); }
+  .p2 { background: #eff6ff; color: #1d4ed8; } .p3 { background: #f1f5f9; color: #334155; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+  .callout { border-left: 4px solid var(--teal); background: var(--teal-50); padding: 8px 12px; border-radius: 6px; margin: 8px 0; }
+  .warn { border-left-color: var(--amber); background: var(--amber-50); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .stat b { display: block; font-size: 17pt; color: var(--teal); line-height: 1.1; }
+  figure { margin: 8px 0 12px; break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+  figcaption { font-size: 8.3pt; color: var(--muted); margin-top: 4px; }
+  .phone img { width: 100%; }
+  .crop img { height: 330px; object-fit: cover; object-position: top; }
+  ul, ol { margin: 4px 0 8px 18px; padding: 0; }
+  li { margin: 2px 0; }
+  .links td:first-child { width: 28%; font-weight: 600; }
+  .placeholder { background: #fef9c3; padding: 0 4px; border-radius: 3px; }
+  .flow { font-family: ui-monospace, Menlo, monospace; font-size: 8.3pt; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; white-space: pre; line-height: 1.45; }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────── Cover ───────────────────────── -->
+<div class="kicker">Fullstack Product Engineer · Case Study</div>
+<h1>Making the Fit/Gap report trustworthy</h1>
+<p class="muted">AI Interview Platform — api/ (Rails) + web/ (React). Rivanda Putra · October 2026</p>
+
+<table class="links">
+  <tr><td>Pull Request (Option A)</td><td><a href="https://github.com/rakamindev/ai-interview-platform/pull/181">github.com/rakamindev/ai-interview-platform/pull/181</a></td></tr>
+  <tr><td>Video walkthrough (3–5 min)</td><td><a href="https://www.loom.com/share/757721abcf4540b6abb81aa0f0ef46a1">loom.com/share/757721abcf4540b6abb81aa0f0ef46a1</a></td></tr>
+  <tr><td>Branches</td><td><code>feat/trustworthy-fitgap</code> (PR) · <code>scratch/seeded-fault</code> (fault + revert, also in PR history)</td></tr>
+  <tr><td>Working docs in repo</td><td><code>assessment/</code>: context, gap analysis, strategy, AI log, proof, evidence, screenshots</td></tr>
+</table>
+
+<div class="callout">
+  <b>In one paragraph.</b> The Fit/Gap report is the only screen a hiring manager acts on, and on <code>main</code> it could not be trusted. The "Required" column was blank, assessor corrections were invisible, unprobed skills read like gaps, the report vanished or spun forever, and assessors could read other companies' candidates by id. The production build could not even boot. I rebuilt the slice end to end: a pure rule engine with explicit uncertainty, a report lifecycle with idempotent scheduling, tenant isolation, a model that is optional rather than blocking, a cross-service contract test, and a redesigned screen with a defined state for every situation.
+</div>
+
+<div class="grid3">
+  <div class="stat"><b>15</b>findings (P0–P3), each with evidence</div>
+  <div class="stat"><b>106 + 30</b>API specs + web tests (from zero), CI added</div>
+  <div class="stat"><b>17 + 3</b>failures caught by the seeded fault, then reverted</div>
+</div>
+
+<figure class="crop"><img src="../screenshots/00-before-main.png"><figcaption><b>Before (main UI).</b> "Required" is blank on every row; emoji status; a one-probe rating is a hard "Gap"; "Not assessed" is missing from the summary. <i>Note: this is the old UI rendering today's API payload, so the ✏ marker and the richer narrative shown would not appear on the real main.</i></figcaption></figure>
+<figure class="crop"><img src="../screenshots/01-desktop-ready.png"><figcaption><b>After.</b> Required vs. candidate on a level track, assessor-override and limited-evidence markers, not-assessed with a reason, an honest summary label.</figcaption></figure>
+
+<!-- ───────────────────────── Step 1 ───────────────────────── -->
+<h2 class="page-break">Step 1 — Setup & local exploration</h2>
+<ul>
+  <li>Cloned the repo and branched <code>feat/trustworthy-fitgap</code> off <code>main</code>. The work is split into small, reviewable commits, and the failing tests are committed before their fixes.</li>
+  <li>Ran Rails 7 / Ruby 3.3.2 (rbenv), PostgreSQL, Redis, Sidekiq and Vite locally, using fresh databases and an isolated Redis DB index so nothing else on the machine was touched. A Docker image was tried first and dropped because it built too slowly.</li>
+  <li>The interview needs Gemini Live, so I seeded <b>fictional</b> two-tenant data: an ended session, a complete portfolio and a vacancy including a skill that was never probed. I then exercised every fit/gap endpoint with curl and read the rows in Postgres and the Sidekiq logs.</li>
+  <li>Baseline: no specs, no web test runner, no CI. I added an RSpec harness (factories, tenant helpers, Sidekiq fake), Vitest + Testing Library, and GitHub Actions.</li>
+  <li>Two local-only quirks are documented in the README. On macOS, Puma's fork mode crashes, so local runs use single mode. CORS is limited to <code>:5173</code>.</li>
+</ul>
+
+<!-- ───────────────────────── Step 2 ───────────────────────── -->
+<h2>Step 2 — Context & domain immersion</h2>
+<h3>What the product does (observed, not inferred)</h3>
+<p>An assessor configures skills with L1–L5 behavioural anchors. A Gemini voice agent interviews the candidate while a coverage engine tracks which skills it has probed. Gemini Pro then writes a portfolio: a level, a confidence and evidence quotes per skill. The assessor can override any level. Finally, a <b>Fit/Gap report</b> compares the portfolio against a vacancy's expected levels and is exported to PDF. That report is the artefact that leaves the assessor's desk.</p>
+
+<h3>Industry: hiring in Indonesia</h3>
+<ul>
+  <li><b>Volume vs. capacity:</b> hundreds of applicants per opening and small HR teams. Screening calls are what gets rushed or skipped.</li>
+  <li><b>Commoditised:</b> ATS, CV parsing, psychometric tests and video recording.</li>
+  <li><b>Leverage:</b> a <i>structured, evidence-backed</i> judgement of skill at the cost of a screening call. Anchored structured interviews are among the most valid selection methods, and this product automates the structure.</li>
+  <li><b>Hard parts:</b> code-switching between Bahasa Indonesia and English, mobile connectivity, inconsistent rubric use, and low trust in black-box AI scores.</li>
+</ul>
+
+<h3>What it is for, and what must stay true</h3>
+<p><b>Outcome:</b> a hiring manager makes a faster <i>and fairer</i> next-step decision without re-interviewing. That holds only if (1) every number is right, since one visibly wrong row and assessors return to manual interviews; (2) uncertainty is honest, because missing evidence is not negative evidence; and (3) human corrections win and stay visible.</p>
+
+<table class="avoid">
+  <tr><th>User</th><th>Their day</th><th>What they need from this screen</th></tr>
+  <tr><td>Assessor</td><td>Dozens of candidates across roles, reviewed between meetings</td><td>See AI vs. their own corrections; know when a report is outdated; never wait on an infinite spinner</td></tr>
+  <tr><td>Recruiter</td><td>Moves candidates through stages and talks to them</td><td>A defensible one-glance summary and an export they can attach</td></tr>
+  <tr><td>Hiring manager</td><td>Reads on a phone between meetings</td><td>Required vs. candidate side by side, what to probe next, explicit caveats</td></tr>
+</table>
+
+<h3>Candidates — affected, never asked (UU PDP No. 27/2022)</h3>
+<table class="avoid">
+  <tr><th>Principle</th><th>What it means for this slice</th></tr>
+  <tr><td>Data minimisation</td><td>Logs carry IDs only; names, notes, evidence and transcript text are filtered; no candidate name is sent to the narrative model</td></tr>
+  <tr><td>Accuracy / correction</td><td>Assessor overrides are the correction mechanism: they must persist, win, and be shown</td></tr>
+  <tr><td>Automated decision-making</td><td>The narrative asks for "areas to probe", never hire/no-hire, and is labelled as an AI draft to verify</td></tr>
+  <tr><td>Confidentiality</td><td>Strict tenant isolation on every endpoint and inside background workers</td></tr>
+  <tr><td>Accountability</td><td>Each report records when it was generated, from which inputs (digest), and whether the text is AI or fallback</td></tr>
+</table>
+
+<!-- ───────────────────────── Step 3 ───────────────────────── -->
+<h2 class="page-break">Step 3 — Problem & gap to the ideal condition</h2>
+<div class="callout"><b>Core problem.</b> The Fit/Gap report, the one artefact a hiring manager acts on, cannot be trusted. It shows blank required levels, hides human corrections, presents missing or thin evidence as gaps, can disappear or spin forever, and can be read across companies.<br><b>Ideal.</b> Every row is correct, honest about certainty and provenance, always in a defined state, and visible only to its owner.</div>
+
+<p class="small muted">Type: <b>D</b> = defective implementation (defined, broken) · <b>M</b> = missing specification (never defined). Every row was reproduced locally; raw evidence is in <code>assessment/evidence/</code>.</p>
+<table>
+  <tr><th>#</th><th>Sev</th><th>Type</th><th>Finding</th><th>Impact on the real workflow</th></tr>
+  <tr><td>F0</td><td><span class="pill p0">P0</span></td><td>D</td><td>The API cannot boot with eager loading: <code>production.rb</code> configures Active Job (never loaded), then Zeitwerk fails on <code>AudioWebsocketMiddleware</code>. Found when CI eager-loaded the app.</td><td>Nothing ships. A release blocker independent of features.</td></tr>
+  <tr><td>F1</td><td><span class="pill p0">P0</span></td><td>D</td><td>API sends <code>expected_level</code>; web reads <code>required_level</code>, so "Required" is blank. The PDF reads the right key, so screen and PDF disagree. <code>tsc</code> passes because the web type mirrors itself.</td><td>The comparison screen cannot show what the role requires.</td></tr>
+  <tr><td>F2</td><td><span class="pill p0">P0</span></td><td>D</td><td><code>Portfolio.find</code> without a tenant check on fitgap, show, regenerate, export and override. Verified: tenant A exported tenant B's evidence quotes (200) and wrote a cross-tenant report.</td><td>One company reads and writes another's candidate data: a UU PDP breach.</td></tr>
+  <tr><td>F3</td><td><span class="pill p1">P1</span></td><td>D</td><td>Override destroys the report and enqueues a job. The page sees a 404 and enqueues again: 4 jobs for 2 requests.</td><td>The report vanishes after a correction; workers race.</td></tr>
+  <tr><td>F4</td><td><span class="pill p1">P1</span></td><td>D</td><td><code>is_override</code> is never serialised. After overriding 2→3 the row just says "match".</td><td>Human judgement is indistinguishable from AI output.</td></tr>
+  <tr><td>F5</td><td><span class="pill p1">P1</span></td><td>M</td><td>No report lifecycle. A worker failure means polling every 5 s forever.</td><td>Infinite spinner, no retry; the assessor abandons the tool.</td></tr>
+  <tr><td>F6</td><td><span class="pill p1">P1</span></td><td>M</td><td>A low-confidence (1-probe) rating yields a hard "gap", identical to a high-confidence gap.</td><td>The candidate is penalised for a short interview, not a lack of skill.</td></tr>
+  <tr><td>F7</td><td><span class="pill p1">P1</span></td><td>M</td><td><code>not_assessed</code> is absent from the UI summary and the fallback narrative ("1 matches, 1 exceeds, 1 gaps").</td><td>Readers assume full coverage.</td></tr>
+  <tr><td>F8</td><td><span class="pill p1">P1</span></td><td>D</td><td>Portfolio regeneration <code>destroy_all</code>s skills, cascading to overrides, with no transaction.</td><td>Human corrections are lost silently; partial portfolios are possible.</td></tr>
+  <tr><td>F9</td><td><span class="pill p2">P2</span></td><td>D</td><td>Prompt omits competency summaries (PRD-02 says include them), asks for a "hiring recommendation", JSON is unvalidated, and the UI shows <code>culture || overall</code>, hiding one paragraph.</td><td>Unverifiable AI text framed as the decision.</td></tr>
+  <tr><td>F10</td><td><span class="pill p2">P2</span></td><td>D</td><td>Skills match only by id or exact lowercase label.</td><td>Spurious "not assessed" rows.</td></tr>
+  <tr><td>F11</td><td><span class="pill p2">P2</span></td><td>M</td><td>Emoji icons, no error/empty/outdated states, no provenance, no long-text handling; the assessor header overflows phones.</td><td>Hard to read where hiring managers read it.</td></tr>
+  <tr><td>F12</td><td><span class="pill p2">P2</span></td><td>M</td><td>No <code>filter_parameters</code>: names, invite tokens and transcript text can reach logs.</td><td>PII in logs.</td></tr>
+  <tr><td>F13</td><td><span class="pill p3">P3</span></td><td>D</td><td>LLM <code>confidence</code> casing is not normalised before an enum insert; there is a duplicate index.</td><td>Avoidable job failures.</td></tr>
+  <tr><td>F14</td><td><span class="pill p3">P3</span></td><td>M</td><td>No specs, no web test runner, no CI.</td><td>Regressions like F1 ship unnoticed.</td></tr>
+</table>
+
+<h3>Constraint signal — what I would escalate to the Tech Lead</h3>
+<ol>
+  <li><b>Release blocker (F0):</b> <code>main</code> cannot boot in production mode. Either production is not deployed from this tree, or it runs a config that is not in the repo. Confirm before any release.</li>
+  <li><b>Tenancy is fail-open:</b> <code>TenantScoped</code> falls back to <code>all</code> when no tenant resolves, and four tables carry no <code>tenant_id</code>. My per-endpoint fix is necessary but not sufficient. The long-term options (tenant_id everywhere, fail-closed scope, Postgres RLS) are a cross-team decision.</li>
+  <li><b>Tenant is resolved from an unverified JWT decode;</b> it is safe only because auth verifies afterwards on assessor routes.</li>
+  <li><b>No retention or erasure path</b> for transcripts and portfolios (UU PDP right to erasure). This needs a product and legal decision.</li>
+  <li><b>Ambiguity:</b> the brief's deadline (19 August) predates the working date. I assumed the portal deadline governs.</li>
+</ol>
+
+<!-- ───────────────────────── Step 4 ───────────────────────── -->
+<h2 class="page-break">Step 4 — Strategy, trade-offs & acceptance criteria</h2>
+<table class="avoid">
+  <tr><th></th><th>A. Patch the seam</th><th>B. Stateful, versioned report <i>(chosen)</i></th><th>C. Event-driven recompute + push</th></tr>
+  <tr><td><b>What</b></td><td>Rename the field, add <code>is_override</code>, cap polling</td><td>Lifecycle columns, pure comparator, idempotent scheduler, tenant guard, redesigned status-driven screen</td><td>Domain events, WebSocket push, per-version history</td></tr>
+  <tr><td><b>Product impact</b></td><td>Fixes the blank column only</td><td>Every row correct and labelled; the report never disappears; failure has a next action; uncertainty is explicit</td><td>B plus live updates and history</td></tr>
+  <tr><td><b>Cost</b></td><td>~0.5 day</td><td>~3 days incl. tests</td><td>~6–8 days; socket stack is audio-tuned and untested</td></tr>
+  <tr><td><b>Forecloses</b></td><td>Nothing, but leaves the trust problem</td><td>Nothing: digest + status are C's prerequisites</td><td>Commits to an event bus before the domain is stable</td></tr>
+  <tr><td><b>Maintainability</b></td><td>Trivial</td><td>One reversible migration, one pure class, small services; cheap to walk back</td><td>Many moving parts; hard to walk back</td></tr>
+  <tr><td><b>Failure modes</b></td><td>Worker failure → spinner forever</td><td>Model outage → flagged fallback; crash → failed + retry; duplicate job → no-op; lost job → lease recovery</td><td>Message loss and ordering; reconnect storms</td></tr>
+  <tr><td><b>Fit</b></td><td>Too shallow</td><td>Reuses the existing enum, polling and shadcn primitives</td><td>Too risky for the deadline</td></tr>
+</table>
+
+<h3>Self-derived acceptance criteria (33; full list in <code>assessment/03-strategy.md</code>)</h3>
+<div class="grid2 small">
+  <div class="card"><b>Computation</b>
+    <ul><li>Unprobed skill → <code>not_assessed</code> (reason <code>not_probed</code>), never a gap</li>
+    <li>Rating nil / 0 / 6 / "three" / 2.5 → <code>not_assessed</code> (<code>invalid_rating</code>), no exception</li>
+    <li>Override wins; AI level kept for audit; no verification flag</li>
+    <li>Low or unknown confidence → result computed but <code>needs_verification</code></li>
+    <li>Labels match across case, whitespace, punctuation and diacritics</li>
+    <li>Vacancy with no skills → empty, complete report</li></ul></div>
+  <div class="card"><b>Lifecycle & failure</b>
+    <ul><li>First request → pending + exactly one job (202)</li>
+    <li>Repeated requests while in flight → no new job</li>
+    <li>Override → report kept, marked stale, one refresh queued</li>
+    <li>Model timeout / HTTP error / missing key / prose / <code>{}</code> → complete with flagged fallback</li>
+    <li>Unexpected error → <code>failed</code> + safe message; retries; never stuck</li>
+    <li>Writes atomic; overrides survive portfolio regeneration</li></ul></div>
+  <div class="card"><b>Security & data</b>
+    <ul><li>Other tenant's ids → 404, nothing queued or written</li>
+    <li>Worker refuses portfolio×vacancy from different tenants</li>
+    <li>401 / 403 / 422 for missing token, wrong role, bad <code>vacancy_id</code></li>
+    <li>Logs: ids only; PII parameters filtered</li></ul></div>
+  <div class="card"><b>Presentation</b>
+    <ul><li>Loading, generating, stale, failed, timeout, not-ready, not-available, error and empty states, each with a next action</li>
+    <li>Polling backs off, stops on terminal states, at ~2 min, and on unmount</li>
+    <li>Long labels clamp with full text available; long narrative collapses</li>
+    <li>No horizontal scroll at 390 px</li></ul></div>
+</div>
+
+<!-- ───────────────────────── Step 5 ───────────────────────── -->
+<h2 class="page-break">Step 5 — Implementation</h2>
+<div class="flow">POST /portfolios/:id/fitgap ─▶ TenantOwnedRecords (404 if not yours)
+                             └▶ FitGap::Scheduler ── row lock ── pending? live lease? up-to-date digest? ──▶ enqueue ≤1 job
+FitGapGeneratorWorker ── runs AS owning tenant ── claim (lock + lease) ──▶ FitGap::Engine
+   FitGap::Inputs (requirements, ratings+overrides, digest)
+   FitGap::Comparator  (pure rules: match/gap/exceed/not_assessed, needs_verification)
+   FitGap::Narrator    (optional model → validated JSON, else deterministic fallback)
+   └▶ one update!: rows + narrative + narrative_source + digest + status=complete
+GET …/fitgap/:vacancy_id ─▶ FitGap::ReportPresenter (single contract: status, stale, summary, rows)
+                                  └▶ generated fixture ─▶ web tests (contract)  ─▶ useFitGapReport state machine ─▶ UI</div>
+
+<h3>Screens</h3>
+<div class="grid2">
+  <figure><img src="../screenshots/05-stale-updating.png"><figcaption>After an override: the previous version stays visible (dimmed) while the refresh runs, instead of the report vanishing.</figcaption></figure>
+  <figure><img src="../screenshots/06-failed-with-previous.png"><figcaption>Failure is a state with a safe message, a retry action and the last good version.</figcaption></figure>
+  <figure><img src="../screenshots/03-override-tooltip.png"><figcaption>Provenance: "Assessor override · AI said L2", with the assessor's note on hover or keyboard focus.</figcaption></figure>
+  <figure><img src="../screenshots/04-generating-first-time.png"><figcaption>First generation: a skeleton that matches the final layout, and a busy, disabled Regenerate button.</figcaption></figure>
+  <figure><img src="../screenshots/08-empty-vacancy.png"><figcaption>Empty vacancy: an explicit state with a route to fix it.</figcaption></figure>
+  <figure><img src="../screenshots/09-cross-tenant-blocked.png"><figcaption>Another company's session: a neutral "not available" that does not reveal whether it exists.</figcaption></figure>
+</div>
+<div class="grid3">
+  <figure class="phone"><img src="../screenshots/02-mobile-ready.png"><figcaption>390 px: rows stack; the result stays beside the skill name.</figcaption></figure>
+  <figure class="phone"><img src="../screenshots/10-mobile-failed.png"><figcaption>390 px failed state; the header no longer overflows (it was 550 px wide on main).</figcaption></figure>
+  <figure><img src="../screenshots/07-load-error.png"><figcaption>Network or server error before anything loaded: a recoverable error card.</figcaption></figure>
+</div>
+<p class="small muted">Ready, mobile, tooltip, empty and cross-tenant screenshots come from the live app with fictional data. Generating, stale, failed and load-error states are transient, so they were captured by intercepting the fit/gap API response in the browser using payload shapes from the real API.</p>
+
+<h3>Proof of correctness</h3>
+<table class="avoid">
+  <tr><th>What</th><th>Evidence</th></tr>
+  <tr><td>Red before green</td><td>Seam bug (web test red on main), tenant isolation (5/5 red), override loss and partial write (4/4 red), production boot (<code>zeitwerk:check</code> fails on main). Each failing test is committed before its fix.</td></tr>
+  <tr><td>Suites</td><td>API <b>106 examples, 0 failures</b> (also with eager loading); web <b>30 tests</b> + typecheck + build; CI on every PR</td></tr>
+  <tr><td>Contract</td><td>The API spec renders the real presenter into <code>fitgap-report.contract.json</code>; every web test renders that file. Renaming a field on either side fails CI.</td></tr>
+  <tr><td>Migration</td><td>Spec runs down → inserts a legacy row → up: row backfilled <code>complete</code>, new rows <code>pending</code>, reversible. Also run against the dev DB with existing rows.</td></tr>
+  <tr><td>Browser</td><td>Puppeteer against local Chrome: checked every state at 1280 px and 390 px and asserted <code>scrollWidth</code>. This caught a marker that never rendered and the header overflow.</td></tr>
+</table>
+
+<h3>Seeded fault test</h3>
+<div class="card avoid">
+  <p><code>1b0b539</code> <b>SEEDED FAULT</b> reintroduces "unprobed skill = gap" (computation) and the <code>required_level</code> read (seam).<br>
+  → <b>API: 17 failures</b> (comparator AC2, contract, narrator, engine, request specs). <b>Web: 3 failures</b>, including the original seam reproduction.<br>
+  <code>6c99dea</code> <b>Revert</b>: the tree is byte-identical to before (<code>git diff</code> empty) and back to 106/106 and 30/30. Both commits stay in the PR history; outputs are in <code>assessment/evidence/seeded-*.txt</code>.</p>
+  <p class="small muted">No assertion was weakened. Two specs were corrected when they encoded a wrong assumption, and the stricter behaviour was kept (e.g. "401 without token" became 401 when the tenant is known and a fail-closed 403 when it is not).</p>
+</div>
+
+<h3>AI verification moments</h3>
+<div class="card avoid">
+  <p><b>1. An assumed timestamp would have re-created the infinite spinner.</b> Generated code used <code>report.updated_at</code> for the lost-job lease and wrote <code>updated_at</code> in the worker's failure path. <code>fit_gap_reports</code> has no timestamps. The worker spec showed the report stuck in <code>generating</code> because the <code>rescue</code> itself raised, which is exactly F5. Fix: an explicit <code>queued_at</code> lease column, plus a spec for the in-lease branch.</p>
+  <p><b>2. An "atomic" rewrite that was not atomic.</b> The suggested <code>transaction do … end</code> joined the outer transaction. Even with a savepoint, the error handler's <code>portfolio.update!</code> <b>autosaved the rolled-back skills back in</b>. A partial-write spec kept returning duplicate rows; tracing <code>sql.active_record</code> showed <code>ROLLBACK TO SAVEPOINT</code> followed by an <code>INSERT</code>. Fix: <code>requires_new: true</code> and a reload before marking the portfolio failed.</p>
+  <p class="small muted">Also: a factory for an association that does not exist (caught by reading the model), and a Tailwind class silently dropped by <code>tailwind-merge</code> (caught by inspecting computed style in the browser). Full log: <code>assessment/04-ai-verification-log.md</code>.</p>
+</div>
+
+<h3>Protected data & rollout</h3>
+<ul>
+  <li>Migration is additive with defaults, safe on existing rows and reversible. The worker signature is unchanged, so jobs queued during deploy still run. Legacy reports show as outdated and refresh on first view.</li>
+  <li>All portfolio, report, export and override endpoints are tenant-scoped (404); workers run as the owning tenant; <code>vacancy_id</code> is validated.</li>
+  <li>No secrets committed (<code>application.yml</code> and <code>.env</code> are git-ignored; CI uses dummy values). All names in specs, seeds and screenshots are fictional.</li>
+</ul>
+
+<h2>Assumptions & follow-ups</h2>
+<div class="grid2 small">
+  <div class="card"><b>Assumptions</b><ul>
+    <li>Tenant = organization (<code>sessions.tenant_id</code>); portfolios and reports inherit it.</li>
+    <li>The fit/gap report is the artefact hiring managers consume (PRD-02, Phase 5).</li>
+    <li>Low confidence (≤ 1 probe) should never be presented as final.</li>
+    <li>The portal deadline governs over the date printed in the brief.</li></ul></div>
+  <div class="card"><b>Next (not in this PR)</b><ul>
+    <li><code>tenant_id</code> on all candidate-data tables + fail-closed scope / RLS.</li>
+    <li>PDF export: render provenance and uncertainty markers.</li>
+    <li>Retention and erasure for transcripts and portfolios (UU PDP).</li>
+    <li>A candidate-facing summary: what was assessed and how to request a correction.</li></ul></div>
+</div>
+
+</body>
+</html>

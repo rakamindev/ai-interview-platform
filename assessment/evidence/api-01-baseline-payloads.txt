@@ -1,0 +1,55 @@
+# Baseline API evidence (main @ b836d02), fictional demo data, tokens redacted
+## Tenant A token -> GET /sessions/2/portfolio (tenant B, scoped path)
+{"errors":[{"status":404,"message":"Session not found"}]} [404]
+## Tenant A token -> GET /portfolios/2/export?format=json (tenant B, unscoped path)
+{"exported_at":"2026-10-23T06:37:14Z","portfolio":{"id":2,"session_id":2,"candidate_id":null,"generation_status":"complete","generated_at":"2026-10-23T06:36:17.998Z","generation_error":null,"skills":[{"id":5,"skill_id":"sk-eng-001","skill_label":"React / Frontend Development","is_discovered":false,"ai_level":3,"ai_confidence":"high","evidence":["We moved real-time data into refs to avoid re-renders"],"competency_summary":"Handles complex state with clear trade-off reasoning."},{"id":6,"skill_id"
+[200]
+## Tenant A token -> GET /portfolios/1/fitgap/1 (Gemini unavailable -> fallback)
+{
+    "report": {
+        "id": 1,
+        "portfolio_id": 1,
+        "vacancy_id": 1,
+        "skill_comparisons": [
+            {
+                "delta": 0,
+                "result": "match",
+                "skill_id": "sk-eng-001",
+                "confidence": "high",
+                "skill_label": "React / Frontend Development",
+                "expected_level": 3,
+                "candidate_level": 3
+            },
+            {
+                "delta": -1,
+                "result": "gap",
+                "skill_id": "communication",
+                "confidence": "low",
+                "skill_label": "Communication",
+                "expected_level": 3,
+                "candidate_level": 2
+            },
+            {
+                "delta": 1,
+                "result": "exceed",
+                "skill_id": "system-design",
+                "confidence": "high",
+                "skill_label": "System Design",
+                "expected_level": 2,
+                "candidate_level": 3
+            },
+            {
+                "delta": null,
+                "result": "not_assessed",
+                "skill_id": null,
+                "confidence": null,
+                "skill_label": "Kubernetes",
+                "expected_level": 2,
+                "candidate_level": null
+            }
+        ],
+        "culture_narrative": null,
+        "overall_narrative": "Candidate shows 1 skill matches, 1 exceeds, and 1 gaps against role requirements.",
+        "generated_at": "2026-10-23T06:36:46.546Z"
+    }
+}

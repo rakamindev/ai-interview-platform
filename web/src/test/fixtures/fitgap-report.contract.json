@@ -1,0 +1,78 @@
+{
+  "id": 1,
+  "portfolio_id": 1,
+  "vacancy_id": 1,
+  "status": "complete",
+  "stale": false,
+  "error_message": null,
+  "narrative_source": "ai",
+  "generated_at": "2026-10-23T06:40:00.000Z",
+  "summary": {
+    "total": 4,
+    "match": 1,
+    "gap": 1,
+    "exceed": 1,
+    "not_assessed": 1,
+    "needs_verification": 1
+  },
+  "skill_comparisons": [
+    {
+      "skill_id": "react",
+      "expected_level": 3,
+      "candidate_level": 3,
+      "ai_level": 3,
+      "is_override": false,
+      "assessor_notes": null,
+      "confidence": "high",
+      "needs_verification": false,
+      "delta": 0,
+      "not_assessed_reason": null,
+      "result": "match",
+      "skill_label": "React"
+    },
+    {
+      "skill_id": "communication",
+      "expected_level": 3,
+      "candidate_level": 2,
+      "ai_level": 2,
+      "is_override": false,
+      "assessor_notes": null,
+      "confidence": "low",
+      "needs_verification": true,
+      "delta": -1,
+      "not_assessed_reason": null,
+      "result": "gap",
+      "skill_label": "Communication"
+    },
+    {
+      "skill_id": "design",
+      "expected_level": 2,
+      "candidate_level": 4,
+      "ai_level": 3,
+      "is_override": true,
+      "assessor_notes": "Designed the payments platform at previous job",
+      "confidence": "high",
+      "needs_verification": false,
+      "delta": 2,
+      "not_assessed_reason": null,
+      "result": "exceed",
+      "skill_label": "System Design"
+    },
+    {
+      "skill_id": null,
+      "expected_level": 2,
+      "candidate_level": null,
+      "ai_level": null,
+      "is_override": false,
+      "assessor_notes": null,
+      "confidence": null,
+      "needs_verification": false,
+      "delta": null,
+      "not_assessed_reason": "not_probed",
+      "result": "not_assessed",
+      "skill_label": "Kubernetes"
+    }
+  ],
+  "culture_narrative": "Strong ownership signals.",
+  "overall_narrative": "Probe async communication next."
+}

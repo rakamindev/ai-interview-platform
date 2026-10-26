@@ -1,0 +1,239 @@
+
+Randomized with seed 46226
+2026-10-23T07:04:39.751Z pid=22274 tid=oqu INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/5"}
+............F....F..................F........................FFFFFF.FFF.F..F.........................FF..F
+
+Failures:
+
+  1) Fit/gap reports API GET /portfolios/:id/export?format=json embeds the same report contract
+     Failure/Error: expect(report).to include('status' => 'complete', 'summary' => a_hash_including('not_assessed' => 1))
+
+       expected {"culture_narrative" => "Strong ownership signals.", "error_message" => nil, "generated_at" => "2026-10-23T...1, "gap" => 2, "match" => 1, "needs_verification" => 1, "not_assessed" => 0, "total" => 4}, "vacancy_id" => 774} to include {"summary" => (a hash including {"not_assessed" => 1})}
+       Diff:
+
+       @@ -1,2 +1,12 @@
+       +"culture_narrative" => "Strong ownership signals.",
+       +"error_message" => nil,
+       +"generated_at" => "2026-10-23T07:04:40.017Z",
+       +"id" => 382,
+       +"narrative_source" => "ai",
+       +"overall_narrative" => "Probe async communication next.",
+       +"portfolio_id" => 814,
+       +"skill_comparisons" => [{"ai_level"=>3, "assessor_notes"=>nil, "candidate_level"=>3, "confidence"=>"high", "delta"=>0, "expected_level"=>3, "is_override"=>false, "needs_verification"=>false, "not_assessed_reason"=>nil, "result"=>"match", "skill_id"=>"react", "skill_label"=>"React"}, {"ai_level"=>2, "assessor_notes"=>nil, "candidate_level"=>2, "confidence"=>"low", "delta"=>-1, "expected_level"=>3, "is_override"=>false, "needs_verification"=>true, "not_assessed_reason"=>nil, "result"=>"gap", "skill_id"=>"communication", "skill_label"=>"Communication"}, {"ai_level"=>3, "assessor_notes"=>nil, "candidate_level"=>3, "confidence"=>"high", "delta"=>1, "expected_level"=>2, "is_override"=>false, "needs_verification"=>false, "not_assessed_reason"=>nil, "result"=>"exceed", "skill_id"=>"design", "skill_label"=>"System Design"}, {"ai_level"=>nil, "assessor_notes"=>nil, "candidate_level"=>nil, "confidence"=>nil, "delta"=>-2, "expected_level"=>2, "is_override"=>false, "needs_verification"=>false, "not_assessed_reason"=>nil, "result"=>"gap", "skill_id"=>nil, "skill_label"=>"Kubernetes"}],
+       +"stale" => false,
+        "status" => "complete",
+       -"summary" => (a hash including {"not_assessed" => 1}),
+       +"summary" => {"exceed"=>1, "gap"=>2, "match"=>1, "needs_verification"=>1, "not_assessed"=>0, "total"=>4},
+       +"vacancy_id" => 774,
+     # ./spec/requests/fit_gap_reports_spec.rb:167:in `block (3 levels) in <main>'
+
+  2) Fit/gap reports API POST /portfolios/:id/fitgap returns the complete report with the full contract once generated (200)
+     Failure/Error:
+       expect(report_json['summary']).to eq('total' => 4, 'match' => 1, 'gap' => 1, 'exceed' => 1,
+                                            'not_assessed' => 1, 'needs_verification' => 1)
+
+       expected: {"exceed"=>1, "gap"=>1, "match"=>1, "needs_verification"=>1, "not_assessed"=>1, "total"=>4}
+            got: {"exceed"=>1, "gap"=>2, "match"=>1, "needs_verification"=>1, "not_assessed"=>0, "total"=>4}
+
+       (compared using ==)
+
+       Diff:
+
+       @@ -1,6 +1,6 @@
+        "exceed" => 1,
+       -"gap" => 1,
+       +"gap" => 2,
+        "match" => 1,
+        "needs_verification" => 1,
+       -"not_assessed" => 1,
+       +"not_assessed" => 0,
+        "total" => 4,
+     # ./spec/requests/fit_gap_reports_spec.rb:39:in `block (3 levels) in <main>'
+
+  3) FitGap::Engine completes the report with rule-based comparisons, narrative and provenance
+     Failure/Error:
+       expect(report.skill_comparisons.map { |c| [c['skill_label'], c['result']] }).to eq(
+         [%w[React match], %w[Communication gap], ['System Design', 'exceed'], %w[Kubernetes not_assessed]]
+       )
+
+       expected: [["React", "match"], ["Communication", "gap"], ["System Design", "exceed"], ["Kubernetes", "not_assessed"]]
+            got: [["React", "match"], ["Communication", "gap"], ["System Design", "exceed"], ["Kubernetes", "gap"]]
+
+       (compared using ==)
+     # ./spec/services/fit_gap/engine_spec.rb:23:in `block (2 levels) in <main>'
+
+  4) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on HTTP error
+     Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+       expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+     # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  5) FitGap::Narrator model failures fall back to a deterministic summary (AC12) flags low-confidence ratings and lists areas to probe
+     Failure/Error: expect(narrative.overall).to include('Areas to probe in the next conversation: Communication.')
+       expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "Areas to probe in the next conversation: Communication."
+     # ./spec/services/fit_gap/narrator_spec.rb:67:in `block (3 levels) in <main>'
+
+  6) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on array
+     Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+       expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+     # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  7) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on missing API key
+     Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+       expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+     # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  8) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on empty object
+     Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+       expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+     # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  9) FitGap::Narrator model failures fall back to a deterministic summary (AC12) names unassessed skills and says missing evidence is not a gap
+     Failure/Error: expect(narrative.overall).to include('1 skill could not be assessed (Kubernetes)')
+       expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "1 skill could not be assessed (Kubernetes)"
+     # ./spec/services/fit_gap/narrator_spec.rb:59:in `block (3 levels) in <main>'
+
+  10) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on timeout
+      Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+        expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+      # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  11) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on prose instead of JSON
+      Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+        expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+      # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  12) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on non-string overall
+      Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+        expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+      # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  13) FitGap::Narrator model failures fall back to a deterministic summary (AC12) on blank overall
+      Failure/Error: expect(narrative.overall).to include('meets 1, exceeds 1 and is below the expected level on 1')
+        expected "Of 4 required skills, the candidate meets 1, exceeds 1 and is below the expected level on 2. 1 ratin...ld be verified before deciding. Areas to probe in the next conversation: Communication, Kubernetes." to include "meets 1, exceeds 1 and is below the expected level on 1"
+      # ./spec/services/fit_gap/narrator_spec.rb:52:in `block (4 levels) in <main>'
+
+  14) FitGap::Narrator prompt (AC23) includes competency summaries and uncertainty markers
+      Failure/Error: expect(prompt).to include('Kubernetes: expected L2, candidate —, not assessed')
+
+        expected "You are helping an assessor read a skills fit/gap comparison. You do NOT decide whether to hire.\n\n...ation.\n\nOUTPUT (JSON only):\n{ \"culture_narrative\": \"...\", \"overall_narrative\": \"...\" }\n" to include "Kubernetes: expected L2, candidate —, not assessed"
+        Diff:
+        @@ -1 +1,29 @@
+        -Kubernetes: expected L2, candidate —, not assessed
+        +You are helping an assessor read a skills fit/gap comparison. You do NOT decide whether to hire.
+        +
+        +ROLE: Senior Frontend Engineer
+        +CULTURE EXPECTATIONS:
+        +ownership, async-first
+        +
+        +
+        +SKILL COMPARISON (computed by rules; do not change these outcomes):
+        +- React: expected L3, candidate L3, match
+        +  Evidence summary: Consistent, evidence-backed behaviour at this level.
+        +- Communication: expected L3, candidate L2, gap, needs verification
+        +  Evidence summary: Consistent, evidence-backed behaviour at this level.
+        +- System Design: expected L2, candidate L3, exceed
+        +  Evidence summary: Consistent, evidence-backed behaviour at this level.
+        +- Kubernetes: expected L2, candidate —, gap
+        +
+        +Rules:
+        +- "not assessed" means the interview produced no usable evidence; never describe it as a weakness.
+        +- "needs verification" means the rating rests on limited evidence; say so when you mention it.
+        +- "assessor override" means a human corrected the AI rating; treat it as authoritative.
+        +- Do not recommend hiring or rejecting. Describe fit and the most useful areas to probe next.
+        +- Do not mention personal attributes (age, gender, religion, ethnicity, origin, health).
+        +
+        +Write two short paragraphs (2-3 sentences each):
+        +1. culture_narrative: culture/competency fit based on the comparison patterns.
+        +2. overall_narrative: overall summary and the areas to probe in the next conversation.
+        +
+        +OUTPUT (JSON only):
+        +{ "culture_narrative": "...", "overall_narrative": "..." }
+      # ./spec/services/fit_gap/narrator_spec.rb:105:in `block (3 levels) in <main>'
+
+  15) FitGap::Comparator skills that were never assessed (AC2) is not_assessed, never a gap
+      Failure/Error:
+        expect(row(result, 'Kubernetes')).to include(
+          result: 'not_assessed', candidate_level: nil, delta: nil, not_assessed_reason: 'not_probed'
+        )
+
+        expected {:ai_level => nil, :assessor_notes => nil, :candidate_level => nil, :confidence => nil, :delta => -2, :expected...ation => false, :not_assessed_reason => nil, :result => "gap", :skill_id => nil, :skill_label => "Kubernetes"} to include {:result => "not_assessed", :delta => nil, :not_assessed_reason => "not_probed"}
+        Diff:
+
+        @@ -1,4 +1,12 @@
+        +:ai_level => nil,
+        +:assessor_notes => nil,
+         :candidate_level => nil,
+        -:delta => nil,
+        -:not_assessed_reason => "not_probed",
+        -:result => "not_assessed",
+        +:confidence => nil,
+        +:delta => -2,
+        +:expected_level => 2,
+        +:is_override => false,
+        +:needs_verification => false,
+        +:not_assessed_reason => nil,
+        +:result => "gap",
+        +:skill_id => nil,
+        +:skill_label => "Kubernetes",
+      # ./spec/services/fit_gap/comparator_spec.rb:68:in `block (3 levels) in <main>'
+
+  16) FitGap::Comparator skills that were never assessed (AC2) is counted separately in the summary
+      Failure/Error: expect(result.summary).to include(total: 1, gap: 0, not_assessed: 1)
+
+        expected {:exceed => 0, :gap => 1, :match => 0, :needs_verification => 0, :not_assessed => 0, :total => 1} to include {:gap => 0, :not_assessed => 1}
+        Diff:
+        @@ -1,3 +1,6 @@
+        -:gap => 0,
+        -:not_assessed => 1,
+        +:exceed => 0,
+        +:gap => 1,
+        +:match => 0,
+        +:needs_verification => 0,
+        +:not_assessed => 0,
+         :total => 1,
+      # ./spec/services/fit_gap/comparator_spec.rb:74:in `block (3 levels) in <main>'
+
+  17) fit/gap report JSON contract matches the fixture consumed by the web app
+      Failure/Error:
+        expect(report_json['skill_comparisons'].map { |r| r.slice('skill_label', 'result', 'is_override') })
+          .to eq(fixture['skill_comparisons'].map { |r| r.slice('skill_label', 'result', 'is_override') })
+
+        expected: [{"is_override"=>false, "result"=>"match", "skill_label"=>"React"}, {"is_override"=>false, "result"=>...l"=>"System Design"}, {"is_override"=>false, "result"=>"not_assessed", "skill_label"=>"Kubernetes"}]
+             got: [{"is_override"=>false, "result"=>"match", "skill_label"=>"React"}, {"is_override"=>false, "result"=>...kill_label"=>"System Design"}, {"is_override"=>false, "result"=>"gap", "skill_label"=>"Kubernetes"}]
+
+        (compared using ==)
+
+        Diff:
+        @@ -1,4 +1,4 @@
+         [{"is_override"=>false, "result"=>"match", "skill_label"=>"React"},
+          {"is_override"=>false, "result"=>"gap", "skill_label"=>"Communication"},
+          {"is_override"=>true, "result"=>"exceed", "skill_label"=>"System Design"},
+        - {"is_override"=>false, "result"=>"not_assessed", "skill_label"=>"Kubernetes"}]
+        + {"is_override"=>false, "result"=>"gap", "skill_label"=>"Kubernetes"}]
+      # ./spec/contracts/fit_gap_report_contract_spec.rb:52:in `block (2 levels) in <main>'
+
+Finished in 2.02 seconds (files took 1.19 seconds to load)
+106 examples, 17 failures
+
+Failed examples:
+
+rspec ./spec/requests/fit_gap_reports_spec.rb:160 # Fit/gap reports API GET /portfolios/:id/export?format=json embeds the same report contract
+rspec ./spec/requests/fit_gap_reports_spec.rb:31 # Fit/gap reports API POST /portfolios/:id/fitgap returns the complete report with the full contract once generated (200)
+rspec ./spec/services/fit_gap/engine_spec.rb:18 # FitGap::Engine completes the report with rule-based comparisons, narrative and provenance
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:2]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on HTTP error
+rspec ./spec/services/fit_gap/narrator_spec.rb:63 # FitGap::Narrator model failures fall back to a deterministic summary (AC12) flags low-confidence ratings and lists areas to probe
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:6]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on array
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:3]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on missing API key
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:5]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on empty object
+rspec ./spec/services/fit_gap/narrator_spec.rb:56 # FitGap::Narrator model failures fall back to a deterministic summary (AC12) names unassessed skills and says missing evidence is not a gap
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:1]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on timeout
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:4]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on prose instead of JSON
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:8]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on non-string overall
+rspec './spec/services/fit_gap/narrator_spec.rb[1:5:7]' # FitGap::Narrator model failures fall back to a deterministic summary (AC12) on blank overall
+rspec ./spec/services/fit_gap/narrator_spec.rb:102 # FitGap::Narrator prompt (AC23) includes competency summaries and uncertainty markers
+rspec ./spec/services/fit_gap/comparator_spec.rb:67 # FitGap::Comparator skills that were never assessed (AC2) is not_assessed, never a gap
+rspec ./spec/services/fit_gap/comparator_spec.rb:73 # FitGap::Comparator skills that were never assessed (AC2) is counted separately in the summary
+rspec ./spec/contracts/fit_gap_report_contract_spec.rb:39 # fit/gap report JSON contract matches the fixture consumed by the web app
+
+Randomized with seed 46226
+

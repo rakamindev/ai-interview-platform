@@ -7,16 +7,18 @@ export const portfoliosApi = {
       override: data,
     }),
 
-  triggerFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ report: FitGapReport } | { status: string; message: string }>(`/portfolios/${portfolioId}/fitgap`, {
+  /** Idempotent: returns the report, queuing generation only when needed (200 ready, 202 in progress). */
+  ensureFitGap: (portfolioId: number, vacancyId: number) =>
+    api.post<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap`, {
       fitgap: { vacancy_id: vacancyId },
     }),
 
   getFitGap: (portfolioId: number, vacancyId: number) =>
     api.get<{ report: FitGapReport }>(`/portfolios/${portfolioId}/fitgap/${vacancyId}`),
 
+  /** Forces a fresh run; the previous report stays visible until it completes. */
   regenerateFitGap: (portfolioId: number, vacancyId: number) =>
-    api.post<{ status: string; message: string }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {
+    api.post<{ report: FitGapReport }>(`/portfolios/${portfolioId}/regenerate_fitgap`, {
       vacancy_id: vacancyId,
     }),
 

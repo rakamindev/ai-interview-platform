@@ -125,25 +125,55 @@ export interface VacancySkill {
   _destroy?: boolean;
 }
 
+// ── Fit/Gap ──────────────────────────────────────────────────────────────────
+// Mirrors FitGap::ReportPresenter (api/app/services/fit_gap/report_presenter.rb).
+// Contract-tested against src/test/fixtures/fitgap-report.contract.json, which
+// the API spec suite regenerates from the real serializer.
+
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
+export type FitGapStatus = "pending" | "generating" | "complete" | "failed";
+export type NotAssessedReason = "not_probed" | "invalid_rating" | "invalid_expectation";
+export type Confidence = "high" | "medium" | "low";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id: string | null;
+  expected_level: number | null;
+  candidate_level: number | null;
+  ai_level: number | null;
+  is_override: boolean;
+  assessor_notes: string | null;
+  confidence: Confidence | null;
+  needs_verification: boolean;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  not_assessed_reason: NotAssessedReason | null;
+}
+
+export interface FitGapSummary {
+  total: number;
+  match: number;
+  gap: number;
+  exceed: number;
+  not_assessed: number;
+  needs_verification: number;
 }
 
 export interface FitGapReport {
   id: number;
   portfolio_id: number;
   vacancy_id: number;
+  status: FitGapStatus;
+  /** Inputs (e.g. an assessor override) changed since this report was generated. */
+  stale: boolean;
+  /** Safe, user-facing message when status is "failed". */
+  error_message: string | null;
+  narrative_source: "ai" | "fallback" | null;
+  generated_at: string | null;
+  summary: FitGapSummary;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
-  generated_at: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
 }
 
 export interface SkillTaxonomy {

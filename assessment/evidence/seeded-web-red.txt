@@ -1,0 +1,709 @@
+
+ RUN  v3.2.7 <repo>/web
+
+ ✓ src/components/fitgap/__tests__/FitGapSummary.test.tsx (3 tests) 62ms
+ ✓ src/components/fitgap/__tests__/NarrativeCard.test.tsx (5 tests) 129ms
+ ❯ src/components/fitgap/__tests__/ComparisonTable.baseline.test.tsx (1 test | 1 failed) 79ms
+   × ComparisonTable (API contract) > shows the required level the API sends for every skill 78ms
+     → expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  L3
+Received:
+  —
+ ❯ src/components/fitgap/__tests__/ComparisonTable.test.tsx (9 tests | 2 failed) 289ms
+   × ComparisonTable > renders required and candidate levels for every contract row 62ms
+     → expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  L3
+Received:
+  —
+   ✓ ComparisonTable > labels outcomes in words with a signed delta 35ms
+   ✓ ComparisonTable > marks assessor overrides with the original AI level and shows the note on demand 123ms
+   ✓ ComparisonTable > shows AI provenance with confidence for non-overridden rows 10ms
+   ✓ ComparisonTable > flags only low-evidence ratings for verification 12ms
+   ✓ ComparisonTable > explains why a skill was not assessed instead of showing a gap 9ms
+   × ComparisonTable > describes the level track for screen readers 29ms
+     → Unable to find an accessible element with the role "img" and name "Required L3, candidate L2"
+
+Here are the accessible roles:
+
+  list:
+
+  Name "Skill comparison":
+  <ul
+    aria-label="Skill comparison"
+    role="list"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="grid grid-cols-1 gap-3 border-b px-4 py-3.5 last:border-0 sm:grid-cols-[minmax(0,1fr)_11rem_7.5rem] sm:items-center sm:gap-4"
+    data-testid="comparison-row"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "Communication":
+  <p
+    class="line-clamp-2 break-words text-sm font-medium leading-snug"
+    title="Communication"
+  />
+
+  Name "":
+  <p
+    class="text-xs tabular-nums text-muted-foreground"
+  />
+
+  --------------------------------------------------
+  img:
+
+  Name "Required not set, candidate L2":
+  <div
+    aria-label="Required not set, candidate L2"
+    class="flex items-center gap-1"
+    role="img"
+    title="Required not set, candidate L2"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      aria-busy="false"
+      class="rounded-xl border bg-card transition-opacity"
+    >
+      <div
+        class="hidden grid-cols-[minmax(0,1fr)_11rem_7.5rem] gap-4 border-b bg-muted/40 px-4 py-2.5 text-xs font-medium text-muted-foreground sm:grid"
+      >
+        <span>
+          Skill
+        </span>
+        <span>
+          Required vs candidate
+        </span>
+        <span
+          class="text-right"
+        >
+          Result
+        </span>
+      </div>
+      <ul
+        aria-label="Skill comparison"
+        role="list"
+      >
+        <li
+          class="grid grid-cols-1 gap-3 border-b px-4 py-3.5 last:border-0 sm:grid-cols-[minmax(0,1fr)_11rem_7.5rem] sm:items-center sm:gap-4"
+          data-testid="comparison-row"
+        >
+          <div
+            class="min-w-0 space-y-1"
+          >
+            <div
+              class="flex items-start justify-between gap-3 sm:block"
+            >
+              <p
+                class="line-clamp-2 break-words text-sm font-medium leading-snug"
+                title="Communication"
+              >
+                Communication
+              </p>
+              <span
+                class="shrink-0 sm:hidden"
+              >
+                <span
+                  class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-600/25"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-arrow-down-right h-3.5 w-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m7 7 10 10"
+                    />
+                    <path
+                      d="M17 7v10H7"
+                    />
+                  </svg>
+                  Below
+                  <span
+                    class="tabular-nums"
+                  >
+                     −1
+                  </span>
+                </span>
+              </span>
+            </div>
+            <div
+              class="flex flex-wrap items-center gap-x-2 gap-y-1"
+            >
+              <span
+                class="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-bot h-3 w-3"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 8V4H8"
+                  />
+                  <rect
+                    height="12"
+                    rx="2"
+                    width="16"
+                    x="4"
+                    y="8"
+                  />
+                  <path
+                    d="M2 14h2"
+                  />
+                  <path
+                    d="M20 14h2"
+                  />
+                  <path
+                    d="M15 13v2"
+                  />
+                  <path
+                    d="M9 13v2"
+                  />
+                </svg>
+                AI rating
+                 · low confidence
+              </span>
+              <span
+                class="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-circle-alert h-3 w-3"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                  />
+                  <line
+                    x1="12"
+                    x2="12"
+                    y1="8"
+                    y2="12"
+                  />
+                  <line
+                    x1="12"
+                    x2="12.01"
+                    y1="16"
+                    y2="16"
+                  />
+                </svg>
+                Limited evidence — verify
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center justify-between gap-3 sm:block sm:space-y-1.5"
+          >
+            <div
+              aria-label="Required not set, candidate L2"
+              class="flex items-center gap-1"
+              role="img"
+              title="Required not set, candidate L2"
+            >
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-amber-500"
+                data-filled="true"
+                data-testid="level-1"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-amber-500"
+                data-filled="true"
+                data-testid="level-2"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-muted"
+                data-testid="level-3"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-muted"
+                data-testid="level-4"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-muted"
+                data-testid="level-5"
+              />
+            </div>
+            <p
+              class="text-xs tabular-nums text-muted-foreground"
+            >
+              <span
+                class="font-semibold text-foreground"
+                data-testid="candidate-level"
+              >
+                L2
+              </span>
+               
+              of 
+              <span
+                data-testid="required-level"
+              >
+                —
+              </span>
+               required
+            </p>
+          </div>
+          <div
+            class="hidden justify-end sm:flex"
+          >
+            <span
+              class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-600/25"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-arrow-down-right h-3.5 w-3.5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 7 10 10"
+                />
+                <path
+                  d="M17 7v10H7"
+                />
+              </svg>
+              Below
+              <span
+                class="tabular-nums"
+              >
+                 −1
+              </span>
+            </span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</body>
+   ✓ ComparisonTable > clamps very long labels but keeps the full text available 3ms
+   ✓ ComparisonTable > dims and marks itself busy while a newer version is generating 6ms
+(node:22308) PromiseRejectionHandledWarning: Promise rejection was handled asynchronously (rejection id: 1)
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ src/pages/fitgap/__tests__/FitGapReportPage.test.tsx (12 tests) 790ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/fitgap/__tests__/ComparisonTable.baseline.test.tsx > ComparisonTable (API contract) > shows the required level the API sends for every skill
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  L3
+Received:
+  —
+ ❯ src/components/fitgap/__tests__/ComparisonTable.baseline.test.tsx:15:55
+     13| 
+     14|     const row = screen.getByText("Communication").closest<HTMLElement>…
+     15|     expect(within(row).getByTestId("required-level")).toHaveTextConten…
+       |                                                       ^
+     16|     expect(within(row).getByTestId("candidate-level")).toHaveTextConte…
+     17|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/components/fitgap/__tests__/ComparisonTable.test.tsx > ComparisonTable > renders required and candidate levels for every contract row
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  L3
+Received:
+  —
+ ❯ src/components/fitgap/__tests__/ComparisonTable.test.tsx:26:55
+     24|     for (const c of contractReport.skill_comparisons) {
+     25|       const r = rowFor(c.skill_label);
+     26|       expect(within(r).getByTestId("required-level")).toHaveTextConten…
+       |                                                       ^
+     27|       expect(within(r).getByTestId("candidate-level")).toHaveTextConte…
+     28|         c.candidate_level != null ? `L${c.candidate_level}` : "—"
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/components/fitgap/__tests__/ComparisonTable.test.tsx > ComparisonTable > describes the level track for screen readers
+TestingLibraryElementError: Unable to find an accessible element with the role "img" and name "Required L3, candidate L2"
+
+Here are the accessible roles:
+
+  list:
+
+  Name "Skill comparison":
+  <ul
+    aria-label="Skill comparison"
+    role="list"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="grid grid-cols-1 gap-3 border-b px-4 py-3.5 last:border-0 sm:grid-cols-[minmax(0,1fr)_11rem_7.5rem] sm:items-center sm:gap-4"
+    data-testid="comparison-row"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "Communication":
+  <p
+    class="line-clamp-2 break-words text-sm font-medium leading-snug"
+    title="Communication"
+  />
+
+  Name "":
+  <p
+    class="text-xs tabular-nums text-muted-foreground"
+  />
+
+  --------------------------------------------------
+  img:
+
+  Name "Required not set, candidate L2":
+  <div
+    aria-label="Required not set, candidate L2"
+    class="flex items-center gap-1"
+    role="img"
+    title="Required not set, candidate L2"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      aria-busy="false"
+      class="rounded-xl border bg-card transition-opacity"
+    >
+      <div
+        class="hidden grid-cols-[minmax(0,1fr)_11rem_7.5rem] gap-4 border-b bg-muted/40 px-4 py-2.5 text-xs font-medium text-muted-foreground sm:grid"
+      >
+        <span>
+          Skill
+        </span>
+        <span>
+          Required vs candidate
+        </span>
+        <span
+          class="text-right"
+        >
+          Result
+        </span>
+      </div>
+      <ul
+        aria-label="Skill comparison"
+        role="list"
+      >
+        <li
+          class="grid grid-cols-1 gap-3 border-b px-4 py-3.5 last:border-0 sm:grid-cols-[minmax(0,1fr)_11rem_7.5rem] sm:items-center sm:gap-4"
+          data-testid="comparison-row"
+        >
+          <div
+            class="min-w-0 space-y-1"
+          >
+            <div
+              class="flex items-start justify-between gap-3 sm:block"
+            >
+              <p
+                class="line-clamp-2 break-words text-sm font-medium leading-snug"
+                title="Communication"
+              >
+                Communication
+              </p>
+              <span
+                class="shrink-0 sm:hidden"
+              >
+                <span
+                  class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-600/25"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-arrow-down-right h-3.5 w-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m7 7 10 10"
+                    />
+                    <path
+                      d="M17 7v10H7"
+                    />
+                  </svg>
+                  Below
+                  <span
+                    class="tabular-nums"
+                  >
+                     −1
+                  </span>
+                </span>
+              </span>
+            </div>
+            <div
+              class="flex flex-wrap items-center gap-x-2 gap-y-1"
+            >
+              <span
+                class="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-bot h-3 w-3"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 8V4H8"
+                  />
+                  <rect
+                    height="12"
+                    rx="2"
+                    width="16"
+                    x="4"
+                    y="8"
+                  />
+                  <path
+                    d="M2 14h2"
+                  />
+                  <path
+                    d="M20 14h2"
+                  />
+                  <path
+                    d="M15 13v2"
+                  />
+                  <path
+                    d="M9 13v2"
+                  />
+                </svg>
+                AI rating
+                 · low confidence
+              </span>
+              <span
+                class="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-circle-alert h-3 w-3"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                  />
+                  <line
+                    x1="12"
+                    x2="12"
+                    y1="8"
+                    y2="12"
+                  />
+                  <line
+                    x1="12"
+                    x2="12.01"
+                    y1="16"
+                    y2="16"
+                  />
+                </svg>
+                Limited evidence — verify
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center justify-between gap-3 sm:block sm:space-y-1.5"
+          >
+            <div
+              aria-label="Required not set, candidate L2"
+              class="flex items-center gap-1"
+              role="img"
+              title="Required not set, candidate L2"
+            >
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-amber-500"
+                data-filled="true"
+                data-testid="level-1"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-amber-500"
+                data-filled="true"
+                data-testid="level-2"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-muted"
+                data-testid="level-3"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-muted"
+                data-testid="level-4"
+              />
+              <span
+                class="relative h-2.5 w-6 rounded-full transition-colors sm:w-7 bg-muted"
+                data-testid="level-5"
+              />
+            </div>
+            <p
+              class="text-xs tabular-nums text-muted-foreground"
+            >
+              <span
+                class="font-semibold text-foreground"
+                data-testid="candidate-level"
+              >
+                L2
+              </span>
+               
+              of 
+              <span
+                data-testid="required-level"
+              >
+                —
+              </span>
+               required
+            </p>
+          </div>
+          <div
+            class="hidden justify-end sm:flex"
+          >
+            <span
+              class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-600/25"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-arrow-down-right h-3.5 w-3.5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m7 7 10 10"
+                />
+                <path
+                  d="M17 7v10H7"
+                />
+              </svg>
+              Below
+              <span
+                class="tabular-nums"
+              >
+                 −1
+              </span>
+            </span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/__tests__/ComparisonTable.test.tsx:76:19
+     74|     renderTable([row("Communication")]);
+     75| 
+     76|     expect(screen.getByRole("img", { name: "Required L3, candidate L2"…
+       |                   ^
+     77|     expect(screen.getByTestId("level-3")).toHaveAttribute("data-requir…
+     78|     expect(screen.getByTestId("level-2")).toHaveAttribute("data-filled…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+{
+  response: { status: 502, data: { errors: [Array] } },
+  VITEST_TEST_NAME: 'tolerates a transient polling error',
+  VITEST_TEST_PATH: '<repo>/web/src/pages/fitgap/__tests__/FitGapReportPage.test.tsx',
+  VITEST_AFTER_ENV_TEARDOWN: undefined,
+  type: 'Unhandled Rejection',
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { response: { status: 502, data: { errors: [ { status: 502, message: 'Bad gateway' } ] } } }
+This error originated in "src/pages/fitgap/__tests__/FitGapReportPage.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "tolerates a transient polling error". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  2 failed | 3 passed (5)
+      Tests  3 failed | 27 passed (30)
+     Errors  1 error
+   Start at  14:04:42
+   Duration  2.16s (transform 301ms, setup 967ms, collect 1.25s, tests 1.35s, environment 2.49s, prepare 496ms)
+
