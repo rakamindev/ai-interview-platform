@@ -18,7 +18,7 @@ export interface SpeedThresholds {
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
     minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minUploadMbps: 2,
     maxPingMs: 300,
 };
 
@@ -83,7 +83,7 @@ async function measureDownloadSpeed(): Promise<number> {
 }
 
 async function measureUploadSpeed(): Promise<number> {
-    const uploadSizeMB = 0.5;
+    const uploadSizeMB = 4;
     const uploadData = new Blob([new ArrayBuffer(uploadSizeMB * 1024 * 1024)], {
         type: "application/octet-stream",
     });
@@ -102,7 +102,7 @@ async function measureUploadSpeed(): Promise<number> {
             continue;
         }
     }
-    return 0.5; // conservative fallback
+    return 1; // conservative fallback
 }
 
 async function runMultipleTests<T>(testFn: () => Promise<T>, count = 3): Promise<T[]> {

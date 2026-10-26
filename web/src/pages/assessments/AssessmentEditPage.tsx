@@ -101,10 +101,13 @@ export default function AssessmentEditPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+        <Link
+          to={id ? `/assessments/${id}/invite` : "/assessments"}
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">Back</span>
         </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
         <span className="text-sm text-muted-foreground">/</span>
         <span className="text-sm font-medium">Edit Assessment</span>
       </div>
