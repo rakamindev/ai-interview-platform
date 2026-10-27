@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Future Enhancement UI Concepts | AI Interview Platform</title>
+  <style>
+    :root {
+      --teal: #01959f;
+      --teal-dark: #087c84;
+      --teal-pale: #e7f5f5;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #dce4ec;
+      --canvas: #f7f9fb;
+      --white: #fff;
+      --green: #16835d;
+      --green-pale: #e9f7f0;
+      --amber: #9a6200;
+      --amber-pale: #fff5dc;
+      --red: #b54747;
+      --red-pale: #fff0ef;
+      --blue: #4667a8;
+      --blue-pale: #eef3ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #e8edf2;
+      color: var(--ink);
+      font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .page {
+      width: 297mm;
+      height: 210mm;
+      padding: 8mm 10mm 7mm;
+      margin: 0 auto 10px;
+      background: white;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .page:last-child { page-break-after: auto; }
+    .page-heading {
+      min-height: 48px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 8px;
+    }
+    .eyebrow {
+      margin: 0 0 2px;
+      color: var(--teal-dark);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: 19px; line-height: 1.2; letter-spacing: -.025em; }
+    .page-note { max-width: 410px; margin: 2px 0 0; color: var(--muted); font-size: 10px; text-align: right; }
+    .frame {
+      flex: 1;
+      min-height: 0;
+      border: 1px solid #d4dde6;
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px #15223812;
+      background: var(--canvas);
+    }
+    .topbar {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      background: var(--white);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+    .brand-mark {
+      width: 17px; height: 17px; border: 2px solid var(--teal); border-radius: 5px;
+      position: relative;
+    }
+    .brand-mark:after { content: ""; position: absolute; width: 4px; height: 4px; background: var(--teal); right: 2px; bottom: 2px; border-radius: 1px; }
+    .nav { display: flex; align-items: center; gap: 5px; margin-left: 24px; margin-right: auto; }
+    .nav-item { padding: 6px 10px; border-radius: 6px; color: var(--muted); font-size: 10px; }
+    .nav-item.active { color: var(--teal-dark); background: var(--teal-pale); font-weight: 700; }
+    .tenant { border: 1px solid var(--line); border-radius: 99px; padding: 4px 9px; color: var(--muted); font-size: 9px; }
+    .top-right { display: flex; align-items: center; gap: 11px; }
+    .screen { height: calc(100% - 42px); padding: 17px 21px 16px; overflow: hidden; }
+    .screen.candidate { background: #fff; height: 100%; padding: 20px 36px; }
+    .candidate-bar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 15px; }
+    .candidate-brand { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+    .language { color: var(--teal-dark); font-size: 10px; font-weight: 600; }
+    .content { max-width: 100%; margin: 0 auto; }
+    .content.narrow { max-width: 850px; }
+    .screen-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 13px; }
+    .screen h2 { font-size: 17px; line-height: 1.25; margin: 0 0 4px; letter-spacing: -.02em; }
+    .sub { margin: 0; color: var(--muted); font-size: 10px; }
+    .crumb { color: var(--muted); font-size: 9px; margin-bottom: 8px; }
+    .grid { display: grid; gap: 11px; }
+    .two { grid-template-columns: 1fr 1fr; }
+    .three { grid-template-columns: repeat(3, 1fr); }
+    .main-side { grid-template-columns: 1.65fr 1fr; }
+    .side-main { grid-template-columns: .82fr 1.8fr; }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 0;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 11px; }
+    .card h4 { margin: 0 0 5px; font-size: 10px; }
+    .card p { margin: 4px 0; }
+    .small { color: var(--muted); font-size: 9px; }
+    .tiny { color: var(--muted); font-size: 8px; }
+    .label { display: block; color: var(--muted); font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+    .row.start { justify-content: flex-start; }
+    .row.top { align-items: flex-start; }
+    .stack { display: flex; flex-direction: column; gap: 8px; }
+    .divider { height: 1px; background: var(--line); margin: 9px 0; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink);
+      padding: 6px 10px; font: inherit; font-size: 9px; font-weight: 650; white-space: nowrap;
+    }
+    .btn.primary { color: #fff; background: var(--teal); border-color: var(--teal); }
+    .btn.ghost { border-color: transparent; background: transparent; color: var(--teal-dark); }
+    .btn.danger { color: var(--red); }
+    .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 99px; font-size: 8px; font-weight: 700; white-space: nowrap; background: #f0f3f6; color: #526174; }
+    .pill.green { background: var(--green-pale); color: var(--green); }
+    .pill.amber { background: var(--amber-pale); color: var(--amber); }
+    .pill.red { background: var(--red-pale); color: var(--red); }
+    .pill.blue { background: var(--blue-pale); color: var(--blue); }
+    .check { color: var(--green); font-weight: 800; }
+    .metric { font-size: 19px; font-weight: 750; letter-spacing: -.03em; }
+    .progress { height: 6px; border-radius: 9px; background: #e9eef2; overflow: hidden; }
+    .progress > i { display: block; height: 100%; background: var(--teal); border-radius: inherit; }
+    .quote { border-left: 3px solid #81c9cc; padding: 7px 9px; background: #f5fbfb; border-radius: 0 5px 5px 0; font-size: 9px; }
+    .quote strong { color: #314155; }
+    .table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    .table th { background: #f6f8fa; color: var(--muted); font-size: 8px; letter-spacing: .04em; text-transform: uppercase; text-align: left; }
+    .table th, .table td { border-bottom: 1px solid #e8edf1; padding: 7px 6px; vertical-align: top; }
+    .table tr:last-child td { border-bottom: 0; }
+    .avatar { width: 23px; height: 23px; flex: 0 0 23px; display: grid; place-items: center; border-radius: 50%; color: var(--teal-dark); background: var(--teal-pale); font-size: 8px; font-weight: 800; }
+    .timeline { border-left: 1px solid #cbd6df; margin-left: 5px; padding-left: 12px; }
+    .event { position: relative; margin-bottom: 12px; font-size: 9px; }
+    .event:before { content: ""; position: absolute; left: -16px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); border: 2px solid white; box-shadow: 0 0 0 1px #99b8bd; }
+    .stepper { display: flex; gap: 6px; margin: 11px 0 15px; }
+    .step { flex: 1; height: 4px; border-radius: 10px; background: #e5eaef; }
+    .step.done { background: var(--teal); }
+    .notice { border: 1px solid #b9dfe0; background: #f0fbfb; color: #35535b; padding: 9px 10px; border-radius: 6px; font-size: 9px; }
+    .muted-box { padding: 8px; border-radius: 6px; background: #f6f8fa; font-size: 9px; }
+    .input { height: 28px; border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; background: white; color: #64748b; font-size: 9px; }
+    .tagline { display: inline-block; border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; font-size: 8px; color: #526174; }
+    .footer-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 11px; }
+    .page-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 6px; color: #7d8996; font-size: 8px; }
+    .page-footer strong { color: var(--teal-dark); }
+    .rationale {
+      flex: 0 0 auto;
+      margin-top: 6px;
+      padding: 6px 9px;
+      border: 1px solid #cfe7e7;
+      border-radius: 6px;
+      background: #f3fbfb;
+      color: #425765;
+      font-size: 8px;
+      line-height: 1.35;
+    }
+    .rationale strong { color: var(--teal-dark); }
+    @page { size: A4 landscape; margin: 0; }
+    @media print {
+      body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <main id="book"></main>
+  <script>
+    const assessorHeader = (active = "Assessments") => `
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark"></span>Rakamin AI Interview</div>
+        <nav class="nav"><span class="nav-item ${active === "Assessments" ? "active" : ""}">▤ Assessments</span><span class="nav-item ${active === "Vacancies" ? "active" : ""}">▢ Vacancies</span><span class="nav-item ${active === "Review" ? "active" : ""}">◉ Review</span></nav>
+        <div class="top-right"><span class="tenant">Tenant: Demo Hiring Team</span><span class="small">◉ Help</span></div>
+      </header>`;
+    const candidateHeader = () => `<div class="candidate-bar"><div class="candidate-brand"><span class="brand-mark"></span>Rakamin AI Interview</div><span class="language">English&nbsp; ▾ &nbsp;|&nbsp; Bahasa Indonesia</span></div>`;
+    const shell = (content, candidate = false, active = "Assessments") =>
+      `<div class="frame">${candidate ? "" : assessorHeader(active)}<section class="screen ${candidate ? "candidate" : ""}">${candidate ? candidateHeader() : ""}<div class="content">${content}</div></section></div>`;
+    const pages = [
+      {
+        group: "01 · Candidate trust & accessibility", title: "A clear, plain-language interview notice",
+        note: "Candidate entry · Informed choice before device access or recording begins.",
+        view: shell(`<div class="content narrow">
+          <div class="crumb">Invitation / Before you begin</div>
+          <div class="row"><div><h2>Before your interview</h2><p class="sub">A few minutes to understand what to expect and how your information is used.</p></div><span class="pill blue">Step 1 of 3</span></div>
+          <div class="stepper"><i class="step done"></i><i class="step"></i><i class="step"></i></div>
+          <div class="notice"><strong>Your choice matters.</strong> Please review this notice before continuing. You can contact the hiring team if you have questions or need an accommodation.</div>
+          <div class="grid two" style="margin-top:11px">
+            <article class="card"><h3>What may be collected</h3><div class="stack"><div class="row"><span>Microphone audio during the interview</span><span class="pill">Only in session</span></div><div class="row"><span>Transcript and interview answers</span><span class="pill">For review</span></div><div class="row"><span>Device readiness results</span><span class="pill">Troubleshooting</span></div></div></article>
+            <article class="card"><h3>Why, who, and how long</h3><p class="small"><strong>Purpose:</strong> assess skills for the role you applied to.</p><p class="small"><strong>Access:</strong> the authorized hiring team for this role.</p><p class="small"><strong>Retention:</strong> kept under the employer’s published retention schedule.</p><a class="small" href="#">Read the full privacy notice ↗</a></article>
+          </div>
+          <div class="card" style="margin-top:11px"><div class="row"><span class="small">□ I understand how this interview works and where to ask questions.</span><span class="small">□ I need an accommodation or another format.</span></div></div>
+          <div class="footer-actions"><button class="btn">Ask the hiring team</button><button class="btn primary">Continue to device check →</button></div>
+        </div>`, true)
+      },
+      {
+        group: "01 · Candidate trust & accessibility", title: "Guided device check with a safe fallback",
+        note: "Candidate entry · Distinguishes measured results from unavailable checks and gives next steps.",
+        view: shell(`<div class="content narrow">
+          <div class="row"><div><h2>Check your setup</h2><p class="sub">You can retry a check or ask for help. Results are saved for this attempt only.</p></div><span class="pill blue">Step 2 of 3</span></div>
+          <div class="stepper"><i class="step done"></i><i class="step done"></i><i class="step"></i></div>
+          <div class="grid two">
+            <div class="stack">
+              <article class="card"><div class="row"><h3>Microphone</h3><span class="pill green">Ready</span></div><p class="small">Built-in microphone · Input level detected</p><div class="progress"><i style="width:68%"></i></div><button class="btn" style="margin-top:8px">Test microphone</button></article>
+              <article class="card"><div class="row"><h3>Browser & permissions</h3><span class="pill green">Supported</span></div><p class="small">Allow microphone access when your interview begins. Camera is not required.</p></article>
+            </div>
+            <div class="stack">
+              <article class="card"><div class="row"><h3>Network check</h3><span class="pill amber">Could not measure</span></div><p class="small">The test service did not respond. This is not a measured speed result.</p><div class="muted-box">You can continue if your connection is stable. If the interview disconnects, use the reconnect link or contact support.</div><div class="row" style="margin-top:8px"><button class="btn">Try again</button><span class="small">No score recorded</span></div></article>
+              <article class="notice">Keyboard tip: use Tab to move through controls; press Enter to activate a button. Screen-reader labels are available for each check.</article>
+            </div>
+          </div>
+          <div class="footer-actions"><button class="btn">Back</button><button class="btn primary">Continue to interview →</button></div>
+        </div>`, true)
+      },
+      {
+        group: "01 · Candidate trust & accessibility", title: "Candidate privacy and support center",
+        note: "Candidate self-service · A transparent path to questions, corrections, and data requests.",
+        view: shell(`<div class="content narrow">
+          <div class="crumb">Candidate help / Privacy and support</div>
+          <div class="screen-title-row"><div><h2>Your information and support</h2><p class="sub">See how to reach the hiring team about your interview record.</p></div><span class="pill green">Secure help center</span></div>
+          <div class="grid main-side">
+            <div class="stack">
+              <article class="card"><h3>Interview record</h3><div class="row"><span class="small">Audio recording</span><span class="pill">Not retained in this session</span></div><div class="divider"></div><div class="row"><span class="small">Transcript and assessment</span><span class="small">Retention per employer policy</span></div><div class="divider"></div><p class="small">Access is limited to the authorized team for this role. For the exact retention date, ask the employer.</p></article>
+              <article class="card"><h3>What would you like help with?</h3><div class="grid three"><button class="btn">Ask a question</button><button class="btn">Request a correction</button><button class="btn">Data rights request</button></div><p class="tiny" style="margin-top:7px">Requests are routed to the employer’s designated contact. This screen does not promise a legal outcome.</p></article>
+            </div>
+            <article class="card"><h3>Your requests</h3><div class="muted-box"><div class="row"><strong>Transcript correction</strong><span class="pill amber">In review</span></div><p class="small">Submitted 24 Oct · Ref. CS-1042</p><p class="small">“Please review the spelling of my project name.”</p></div><div class="divider"></div><p class="small">Need more help?</p><p style="font-size:10px;font-weight:650">people-team@example.org</p><button class="btn">View request history</button></article>
+          </div>
+        </div>`, true)
+      },
+      {
+        group: "02 · Evidence-based assessor review", title: "Skill review anchored in candidate evidence",
+        note: "Assessor review · Separates observed evidence, AI interpretation, and the human decision.",
+        view: shell(`<div class="crumb">Assessments / Senior Frontend Engineer / Session 08 · Portfolio review</div>
+          <div class="screen-title-row"><div><h2>Review skill evidence</h2><p class="sub">Candidate: Jordan Lee · Interview completed 26 Oct · <span class="pill blue">Human review required</span></p></div><button class="btn">Open transcript ↗</button></div>
+          <div class="grid side-main">
+            <aside class="card"><h3>Skills in this assessment</h3><div class="stack"><div class="muted-box"><div class="row"><strong>React architecture</strong><span class="pill amber">Review</span></div><div class="progress" style="margin-top:7px"><i style="width:76%"></i></div><span class="tiny">2 of 3 probes · evidence available</span></div><div class="muted-box"><div class="row"><span>Testing strategy</span><span class="pill green">Evidence complete</span></div></div><div class="muted-box"><div class="row"><span>Accessibility</span><span class="pill amber">1 probe · gap</span></div></div></div></aside>
+            <div class="stack">
+              <article class="card"><div class="row"><div><h3>React architecture</h3><p class="small">AI suggestion: Level 3 · Confidence: Medium · 2 probes</p></div><span class="pill blue">Suggestion, not decision</span></div><div class="grid two" style="margin-top:8px"><div class="quote"><span class="label">Observed · 18:42</span>“I split the search state from the results list so typing doesn’t trigger a full page refresh.”</div><div class="muted-box"><span class="label">Model interpretation</span>Describes a separation of concerns and a user-facing performance trade-off. One edge case remains unexplored.</div></div><div class="divider"></div><div class="row"><div><span class="label">Rubric anchor · Level 3</span><span class="small">Chooses a suitable structure and explains trade-offs; identifies common failure modes.</span></div><button class="btn">View rubric</button></div></article>
+              <article class="card"><div class="row"><div><h3>Assessor decision</h3><p class="small">Choose a rating only if the evidence supports it.</p></div><span class="pill amber">Not yet reviewed</span></div><div class="row start"><button class="btn">Insufficient evidence</button><button class="btn">Level 2</button><button class="btn primary">Accept Level 3</button><button class="btn">Level 4</button></div><div class="input" style="margin-top:8px">Reason for decision (required when changing the AI suggestion)</div></article>
+            </div>
+          </div>`, false, "Review")
+      },
+      {
+        group: "02 · Evidence-based assessor review", title: "Coverage map and evidence-gap follow-up",
+        note: "Assessor review · Makes missing evidence visible instead of filling gaps with a forced score.",
+        view: shell(`<div class="crumb">Assessments / Session 08 / Coverage</div>
+          <div class="screen-title-row"><div><h2>Evidence coverage</h2><p class="sub">Coverage is a prompt for review, not a measure of candidate quality.</p></div><span class="pill amber">1 follow-up suggested</span></div>
+          <div class="grid main-side">
+            <article class="card"><h3>Coverage by skill</h3><table class="table"><thead><tr><th>Skill</th><th>Probes</th><th>Evidence</th><th>Review state</th></tr></thead><tbody><tr><td>React architecture</td><td>2 / 3</td><td>2 quotes</td><td><span class="pill amber">One gap</span></td></tr><tr><td>Testing strategy</td><td>3 / 3</td><td>3 quotes</td><td><span class="pill green">Ready</span></td></tr><tr><td>Accessibility</td><td>1 / 3</td><td>1 quote</td><td><span class="pill amber">Insufficient</span></td></tr></tbody></table><div class="divider"></div><div class="row"><span class="small">Open transcript at 18:42</span><button class="btn">Review evidence</button></div></article>
+            <aside class="stack"><article class="card"><span class="pill amber">Not enough evidence</span><h3 style="margin-top:8px">Accessibility</h3><p class="small">No rating is assigned. A follow-up could ask how the candidate validates keyboard navigation and screen-reader behavior.</p><div class="quote">Candidate mentioned semantic HTML, but did not describe a validation approach.</div><div class="footer-actions"><button class="btn">Leave unrated</button><button class="btn primary">Add follow-up</button></div></article><article class="notice"><strong>Fairness guardrail:</strong> Don’t infer ability from an unanswered prompt or a connectivity interruption.</article></aside>
+          </div>`, false, "Review")
+      },
+      {
+        group: "02 · Evidence-based assessor review", title: "Human decision history and review provenance",
+        note: "Assessor review · Shows who changed a suggestion, when, and why.",
+        view: shell(`<div class="crumb">Assessments / Session 08 / Portfolio / React architecture</div>
+          <div class="screen-title-row"><div><h2>Decision history</h2><p class="sub">The AI suggestion remains visible beside the accountable human decision.</p></div><button class="btn">Back to portfolio</button></div>
+          <div class="grid two">
+            <article class="card"><div class="row"><h3>Current reviewed result</h3><span class="pill green">Human-reviewed</span></div><div class="grid two"><div class="muted-box"><span class="label">Observed evidence</span><p class="small">Candidate described separating search state and results to avoid a full refresh.</p><span class="tiny">Transcript quote · 18:42</span></div><div class="muted-box"><span class="label">AI interpretation</span><p class="small">Level 3 suggestion, medium confidence. One edge case was not explored.</p></div></div><div class="divider"></div><div class="row"><div><span class="label">Human decision</span><strong>Level 3 · Alex Morgan</strong><p class="small">“The example meets the level-3 anchor; no evidence supports a higher level.”</p></div><button class="btn">Edit decision</button></div></article>
+            <article class="card"><h3>Change history</h3><div class="timeline"><div class="event"><strong>27 Oct, 10:14 · Alex Morgan</strong><p class="small">Accepted Level 3 after reviewing quote and rubric anchor.</p></div><div class="event"><strong>26 Oct, 17:52 · Analysis completed</strong><p class="small">AI suggested Level 3 · Medium confidence · rubric v2.1</p></div><div class="event"><strong>26 Oct, 17:48 · Interview completed</strong><p class="small">2 probes recorded · 2 evidence excerpts linked</p></div></div><div class="notice">Edits are append-only in the audit history. Export includes the rubric version and reviewer rationale.</div></article>
+          </div>`, false, "Review")
+      },
+      {
+        group: "03 · Fair & consistent assessment", title: "Rubric versioning with a transparent change log",
+        note: "Assessment configuration · Keeps past results tied to the rubric version used at the time.",
+        view: shell(`<div class="crumb">Vacancies / Senior Frontend Engineer / Rubric versions</div>
+          <div class="screen-title-row"><div><h2>Rubric versions</h2><p class="sub">Published versions are immutable. New wording applies only to future sessions.</p></div><button class="btn primary">Create draft version</button></div>
+          <div class="grid main-side">
+            <article class="card"><h3>Version history</h3><table class="table"><thead><tr><th>Version</th><th>Status</th><th>Published</th><th>Used by</th></tr></thead><tbody><tr><td><strong>v2.1</strong><br><span class="tiny">Current · Frontend Engineer</span></td><td><span class="pill green">Published</span></td><td>12 Oct 2026</td><td>8 sessions</td></tr><tr><td>v2.0</td><td><span class="pill">Archived</span></td><td>04 Sep 2026</td><td>19 sessions</td></tr><tr><td>v2.2 draft</td><td><span class="pill amber">Draft</span></td><td>Not published</td><td>0 sessions</td></tr></tbody></table><div class="divider"></div><span class="small">Existing portfolios keep their original rubric snapshot.</span></article>
+            <article class="card"><div class="row"><h3>Draft change preview · v2.2</h3><span class="pill amber">2 changes</span></div><div class="muted-box"><span class="label">React architecture · Level 3</span><p class="small"><del>Explains common trade-offs.</del></p><p class="small"><strong>Now:</strong> Explains a relevant trade-off and a validation approach, with an example.</p></div><div class="muted-box" style="margin-top:7px"><span class="label">Testing strategy · Level 2</span><p class="small">Added an explicit unit/integration boundary example.</p></div><div class="footer-actions"><button class="btn">Compare full rubric</button><button class="btn primary">Request review</button></div></article>
+          </div>`, false, "Vacancies")
+      },
+      {
+        group: "03 · Fair & consistent assessment", title: "Assessor calibration with shared practice cases",
+        note: "Team calibration · Uses synthetic examples and compares reasoning, not just numbers.",
+        view: shell(`<div class="crumb">Team tools / Calibration / Frontend rubric v2.1</div>
+          <div class="screen-title-row"><div><h2>Calibration exercise</h2><p class="sub">Practice together using fictional candidate evidence. No live candidate records are included.</p></div><span class="pill blue">Practice case 04 of 06</span></div>
+          <div class="grid main-side">
+            <article class="card"><div class="row"><h3>Fictional response · React architecture</h3><span class="pill">Synthetic</span></div><div class="quote" style="font-size:10px">“I used a shared store for the filters because the results panel and the filter drawer both needed the selected values. I’d add a test around the reset behavior; we had a bug where it cleared the URL but not the input.”</div><div class="divider"></div><span class="label">Rubric anchor</span><p class="small"><strong>Level 2:</strong> Describes a workable approach with limited trade-off analysis.</p><p class="small"><strong>Level 3:</strong> Explains a suitable structure, trade-offs, and common failure modes.</p><div class="row" style="margin-top:9px"><span class="small">What evidence supports your rating?</span><span class="tagline">Add rationale</span></div></article>
+            <aside class="card"><h3>Your rating</h3><div class="row start"><button class="btn">L2</button><button class="btn primary">L3</button><button class="btn">L4</button><button class="btn">Insufficient</button></div><div class="input" style="height:51px;margin-top:8px">The example identifies shared state and a failure mode…</div><div class="divider"></div><h3>Team comparison</h3><div class="row"><span class="small">You · Level 3</span><span class="small">5 reviewers submitted</span></div><div class="progress" style="margin-top:6px"><i style="width:72%"></i></div><p class="tiny">Rationale discussion opens after everyone submits. Names are hidden during the first pass.</p><button class="btn">Submit practice rating</button></aside>
+          </div>`, false, "Review")
+      },
+      {
+        group: "03 · Fair & consistent assessment", title: "Aggregate fairness monitoring with privacy safeguards",
+        note: "Quality oversight · Highlights patterns for qualified review; it does not infer sensitive traits.",
+        view: shell(`<div class="crumb">Team tools / Assessment quality / Aggregate patterns</div>
+          <div class="screen-title-row"><div><h2>Assessment consistency</h2><p class="sub">Use patterns to decide what to investigate—not to label individual candidates.</p></div><span class="pill blue">Last 90 days · aggregate only</span></div>
+          <div class="grid three"><article class="card"><span class="label">Reviewed sessions</span><div class="metric">126</div><span class="small">Across 4 role rubrics</span></article><article class="card"><span class="label">Human review coverage</span><div class="metric">94%</div><span class="small">Portfolios with recorded rationale</span></article><article class="card"><span class="label">Open quality checks</span><div class="metric">2</div><span class="small">Require qualified reviewer</span></article></div>
+          <div class="grid two" style="margin-top:10px">
+            <article class="card"><h3>Rating distribution by interview language</h3><table class="table"><thead><tr><th>Language</th><th>Sessions</th><th>Evidence coverage</th><th>Review note</th></tr></thead><tbody><tr><td>English</td><td>84</td><td>82%</td><td><span class="pill">No alert</span></td></tr><tr><td>Bahasa Indonesia</td><td>42</td><td>76%</td><td><span class="pill amber">Check prompt parity</span></td></tr></tbody></table><p class="tiny">No protected traits are inferred. Small groups are hidden below the minimum reporting threshold.</p></article>
+            <article class="card"><h3>Review queue</h3><div class="muted-box"><div class="row"><strong>Prompt parity check</strong><span class="pill amber">Needs review</span></div><p class="small">Compare translation and probe coverage for rubric v2.1. Aggregate signal only; not a finding of bias.</p><button class="btn">Assign qualified reviewer</button></div><p class="tiny" style="margin-top:7px">This view supports governance. It must not be used to auto-rank or reject candidates.</p></article>
+          </div>`, false, "Review")
+      },
+      {
+        group: "04 · Privacy, security & operations", title: "Data inventory and retention policy controls",
+        note: "Operations · Makes purpose, access, retention, and deletion ownership explicit.",
+        view: shell(`<div class="crumb">Admin / Privacy controls / Data inventory</div>
+          <div class="screen-title-row"><div><h2>Data inventory & retention</h2><p class="sub">Draft controls for legal and operations review before any production policy is published.</p></div><span class="pill amber">Draft · review required</span></div>
+          <div class="grid main-side">
+            <article class="card"><h3>Data categories</h3><table class="table"><thead><tr><th>Record</th><th>Purpose</th><th>Access</th><th>Retention</th></tr></thead><tbody><tr><td>Audio stream</td><td>Live interview only</td><td>Candidate session service</td><td><span class="pill">Do not persist*</span></td></tr><tr><td>Transcript</td><td>Evidence review</td><td>Assigned hiring team</td><td>Employer policy</td></tr><tr><td>Portfolio & decisions</td><td>Role assessment record</td><td>Authorized reviewers</td><td>Employer policy</td></tr><tr><td>Exports</td><td>Hiring workflow</td><td>Explicitly authorized</td><td>Short-lived link</td></tr></tbody></table><p class="tiny">* Proposed default shown for discussion; confirm actual system behavior before publishing.</p></article>
+            <aside class="stack"><article class="card"><h3>Policy owners</h3><div class="row"><span class="small">Product / Operations</span><span class="pill green">Assigned</span></div><div class="row" style="margin-top:7px"><span class="small">Security reviewer</span><span class="pill amber">Pending</span></div><div class="row" style="margin-top:7px"><span class="small">UU PDP counsel</span><span class="pill amber">Required review</span></div></article><article class="card"><h3>Deletion workflow</h3><p class="small">Define request validation, authorization, deletion scope, backups, and completion evidence.</p><button class="btn">Configure request process</button><div class="notice" style="margin-top:8px">No policy changes take effect until approved and versioned.</div></article></aside>
+          </div>`, false, "Review")
+      },
+      {
+        group: "04 · Privacy, security & operations", title: "Role-based access and auditable record access",
+        note: "Operations · Gives administrators a least-privilege view of permissions and access events.",
+        view: shell(`<div class="crumb">Admin / Security / Access control</div>
+          <div class="screen-title-row"><div><h2>Access and audit</h2><p class="sub">Review who can open candidate records, change results, and export reports.</p></div><button class="btn primary">Review access policy</button></div>
+          <div class="grid main-side">
+            <article class="card"><h3>Role permissions</h3><table class="table"><thead><tr><th>Role</th><th>Transcript</th><th>Override</th><th>Export</th><th>Members</th></tr></thead><tbody><tr><td><strong>Assessor</strong></td><td>Assigned sessions</td><td>With reason</td><td>Assigned only</td><td>8</td></tr><tr><td><strong>Hiring manager</strong></td><td>Assigned role</td><td>Review only</td><td>Approved report</td><td>3</td></tr><tr><td><strong>Tenant admin</strong></td><td>Not by default</td><td>No</td><td>Audit only</td><td>2</td></tr></tbody></table><p class="tiny">Permissions are scoped by tenant, role, and assigned assessment.</p></article>
+            <article class="card"><div class="row"><h3>Recent access events</h3><button class="btn">Filter</button></div><div class="stack"><div class="row top"><span class="avatar">AM</span><div style="flex:1"><strong style="font-size:9px">Alex Morgan viewed transcript</strong><p class="tiny">Session 08 · Assigned assessor · 27 Oct, 10:14</p></div><span class="pill green">Allowed</span></div><div class="divider"></div><div class="row top"><span class="avatar">JM</span><div style="flex:1"><strong style="font-size:9px">Jordan Miles requested export</strong><p class="tiny">Session 11 · Not assigned · 27 Oct, 09:51</p></div><span class="pill red">Denied</span></div></div><div class="footer-actions"><button class="btn">Export audit log</button></div></article>
+          </div>`, false, "Review")
+      },
+      {
+        group: "04 · Privacy, security & operations", title: "Queue health and recoverable provider failures",
+        note: "Operations · Shows actionable job states and categorized errors without exposing secrets.",
+        view: shell(`<div class="crumb">Admin / Operations / Queue health</div>
+          <div class="screen-title-row"><div><h2>Background jobs & provider status</h2><p class="sub">Operational signals are separate from candidate-facing results.</p></div><button class="btn">Refresh · 12:34:08</button></div>
+          <div class="grid three"><article class="card"><span class="label">Queue</span><div class="row"><div class="metric">4</div><span class="pill green">Healthy</span></div><span class="small">1 running · 3 waiting</span></article><article class="card"><span class="label">Provider</span><div class="row"><strong>Gemini</strong><span class="pill amber">Rate limited</span></div><span class="small">Retry after 42 seconds · no credentials shown</span></article><article class="card"><span class="label">Last successful analysis</span><div class="metric">11:58</div><span class="small">Synthetic test workspace</span></article></div>
+          <div class="grid two" style="margin-top:10px">
+            <article class="card"><h3>Recent jobs</h3><table class="table"><thead><tr><th>Job</th><th>State</th><th>Attempt</th><th>Action</th></tr></thead><tbody><tr><td>Portfolio analysis · #8401</td><td><span class="pill amber">Retry scheduled</span></td><td>2 / 4</td><td>View safe error</td></tr><tr><td>Fit-gap report · #8398</td><td><span class="pill green">Complete</span></td><td>1 / 4</td><td>View result</td></tr><tr><td>Portfolio analysis · #8392</td><td><span class="pill red">Needs attention</span></td><td>4 / 4</td><td>Inspect</td></tr></tbody></table></article>
+            <article class="card"><div class="row"><h3>Failure detail · #8401</h3><span class="pill amber">Quota / retryable</span></div><div class="muted-box"><span class="label">Safe diagnostic</span>Provider request throttled. Retry scheduled with backoff. Candidate report remains “processing”—no empty success result.</div><div class="row" style="margin-top:8px"><span class="small">Idempotency key verified · duplicate write prevented</span><button class="btn">Open trace</button></div><p class="tiny">Trace view redacts tokens, prompt payloads, and candidate content.</p></article>
+          </div>`, false, "Review")
+      },
+      {
+        group: "05 · Hiring-team workflow", title: "Candidate comparison against role requirements",
+        note: "Hiring workflow · Compares validated rubric evidence without inventing an overall rank.",
+        view: shell(`<div class="crumb">Vacancies / Senior Frontend Engineer / Candidate review</div>
+          <div class="screen-title-row"><div><h2>Role-aligned candidate comparison</h2><p class="sub">Compare evidence against the same published rubric. No unsupported “best candidate” score is calculated.</p></div><span class="pill blue">Rubric v2.1 · 3 reviewed sessions</span></div>
+          <div class="notice" style="margin-bottom:9px">Each candidate has a different evidence profile. Use the role requirements and human review notes; this table does not recommend a hiring decision.</div>
+          <article class="card"><table class="table"><thead><tr><th>Role criterion</th><th>Jordan Lee</th><th>Samira Putri</th><th>Chris Tan</th></tr></thead><tbody><tr><td><strong>React architecture</strong><br><span class="tiny">Required · rubric v2.1</span></td><td><span class="pill green">Level 3 · reviewed</span><p class="tiny">2 evidence excerpts</p><a>Open evidence</a></td><td><span class="pill green">Level 3 · reviewed</span><p class="tiny">3 evidence excerpts</p><a>Open evidence</a></td><td><span class="pill amber">Insufficient</span><p class="tiny">1 of 3 probes</p><a>Follow up needed</a></td></tr><tr><td><strong>Testing strategy</strong><br><span class="tiny">Required · rubric v2.1</span></td><td><span class="pill green">Level 4 · reviewed</span><p class="tiny">Human rationale available</p></td><td><span class="pill green">Level 2 · reviewed</span><p class="tiny">Human rationale available</p></td><td><span class="pill green">Level 3 · reviewed</span><p class="tiny">Human rationale available</p></td></tr><tr><td><strong>Accessibility</strong><br><span class="tiny">Required · rubric v2.1</span></td><td><span class="pill amber">Follow-up suggested</span></td><td><span class="pill green">Level 3 · reviewed</span></td><td><span class="pill green">Level 3 · reviewed</span></td></tr></tbody></table><div class="footer-actions"><button class="btn">Select criteria</button><button class="btn">Export accessible comparison</button></div></article>
+          <p class="tiny" style="margin-top:7px">Names and interview records are visible only to authorized reviewers. Criteria must be job-related and approved.</p>`, false, "Review")
+      },
+      {
+        group: "05 · Hiring-team workflow", title: "Shared assessment templates with ownership and versions",
+        note: "Team workflow · Adds controlled reuse without silently changing existing invitations.",
+        view: shell(`<div class="crumb">Team tools / Assessment templates</div>
+          <div class="screen-title-row"><div><h2>Assessment templates</h2><p class="sub">Share approved role setups with named owners, version history, and clear use permissions.</p></div><button class="btn primary">Create template</button></div>
+          <div class="grid main-side">
+            <article class="card"><div class="row"><h3>Team library</h3><div class="input" style="width:170px">Search templates</div></div><table class="table"><thead><tr><th>Template</th><th>Owner</th><th>Version</th><th>Access</th></tr></thead><tbody><tr><td><strong>Frontend Engineer</strong><br><span class="tiny">45 min · English · 5 skills</span></td><td>Alex Morgan</td><td><span class="pill green">v2.1 published</span></td><td>Hiring team</td></tr><tr><td><strong>Backend Engineer</strong><br><span class="tiny">60 min · English · 6 skills</span></td><td>Priya Shah</td><td><span class="pill amber">v1.3 review</span></td><td>Engineering</td></tr><tr><td><strong>Product Designer</strong><br><span class="tiny">45 min · Bahasa / English</span></td><td>Rina S.</td><td><span class="pill">v1.0 draft</span></td><td>Private</td></tr></tbody></table></article>
+            <article class="card"><div class="row"><h3>Frontend Engineer · v2.1</h3><span class="pill green">Published</span></div><p class="small">Owner: Alex Morgan · Updated 12 Oct 2026</p><div class="divider"></div><span class="label">Included skills</span><div class="stack"><div class="row"><span class="small">React architecture</span><span class="pill">Required</span></div><div class="row"><span class="small">Testing strategy</span><span class="pill">Required</span></div><div class="row"><span class="small">Accessibility</span><span class="pill">Required</span></div></div><div class="divider"></div><div class="row"><span class="small">5 authorized editors</span><button class="btn">Manage access</button></div><div class="footer-actions"><button class="btn">View versions</button><button class="btn primary">Use as starting point</button></div></article>
+          </div>`, false, "Assessments")
+      },
+      {
+        group: "05 · Hiring-team workflow", title: "Evidence-linked reviewer discussion and accessible export",
+        note: "Hiring workflow · Keeps comments attached to evidence and labels AI versus human conclusions.",
+        view: shell(`<div class="crumb">Assessments / Senior Frontend Engineer / Session 08 / Review</div>
+          <div class="screen-title-row"><div><h2>Team review & report</h2><p class="sub">Discuss evidence, assign follow-ups, and export a versioned, accessible record.</p></div><span class="pill green">Rubric v2.1 · Human-reviewed</span></div>
+          <div class="grid main-side">
+            <div class="stack">
+              <article class="card"><div class="row"><h3>React architecture · Level 3</h3><span class="pill">Human decision</span></div><div class="quote">“I split the search state from the results list so typing doesn’t trigger a full page refresh.”<br><span class="tiny">Transcript evidence · 18:42</span></div><div class="divider"></div><div class="row top"><span class="avatar">PS</span><div><strong style="font-size:9px">Priya Shah · Hiring manager</strong><p class="small">Can we ask for a concrete example of how this was tested?</p><span class="pill amber">Follow-up assigned to assessor</span></div></div><div class="input" style="margin-top:8px">Add a comment linked to this evidence…</div></article>
+              <article class="card"><h3>Follow-up questions</h3><div class="row"><span class="small">□ Ask candidate about validation approach</span><button class="btn">Add question</button></div></article>
+            </div>
+            <aside class="card"><h3>Export report</h3><p class="small">Includes evidence excerpts, rubric version, confidence, assessor rationale, and review history.</p><div class="stack" style="margin:10px 0"><div class="row"><span class="small">AI suggestion</span><span class="pill blue">Clearly labeled</span></div><div class="row"><span class="small">Human decision</span><span class="pill green">Rationale included</span></div><div class="row"><span class="small">Accessibility</span><span class="pill green">Tagged PDF</span></div></div><div class="divider"></div><span class="label">Export format</span><div class="row start"><button class="btn primary">Accessible PDF</button><button class="btn">JSON</button></div><div class="notice" style="margin-top:10px">Only authorized reviewers can export. The file records the rubric version and export time.</div><div class="footer-actions"><button class="btn">Preview report</button></div></aside>
+          </div>`, false, "Review")
+      }
+    ];
+
+    const explanations = [
+      {
+        what: "Explains what the interview collects, why it is used, who can see it, and where to ask questions before a candidate proceeds.",
+        why: "Candidates should be able to make an informed choice and raise accommodation needs before recording or device checks begin."
+      },
+      {
+        what: "Shows microphone, browser, and network outcomes separately, with actionable retry guidance and an honest “could not measure” state.",
+        why: "Candidates need a recoverable path through device problems; unavailable network measurements must not be presented as a failed score."
+      },
+      {
+        what: "Provides a candidate-facing place to understand the record, ask questions, request corrections, and follow a data request.",
+        why: "A clear support route builds trust and gives candidates a practical way to challenge inaccuracies or seek help after an interview."
+      },
+      {
+        what: "Presents a skill’s candidate quote, AI interpretation, rubric anchor, coverage, confidence, and separate assessor decision.",
+        why: "Assessors can verify what was actually said, question model interpretation, and make an accountable decision instead of relying on an opaque score."
+      },
+      {
+        what: "Maps probes and evidence by skill, highlights gaps, and offers a follow-up or an explicit insufficient-evidence outcome.",
+        why: "Visible gaps discourage unsupported ratings and help teams distinguish missing evidence from a candidate’s lack of ability."
+      },
+      {
+        what: "Keeps a time-ordered record of the AI suggestion, human decision, reviewer, rationale, evidence, and rubric version.",
+        why: "A durable decision trail makes later review, correction, and export more transparent without erasing how a conclusion was reached."
+      },
+      {
+        what: "Shows published and draft rubric versions, a change preview, and which sessions used each immutable version.",
+        why: "Versioning keeps historical results interpretable and prevents a rubric edit from silently changing the standard used for future or past candidates."
+      },
+      {
+        what: "Lets assessors rate fictional examples independently, explain their reasoning, and compare interpretations after submission.",
+        why: "Calibration can expose ambiguous rubric wording and improve consistency without using live candidate data as practice material."
+      },
+      {
+        what: "Displays aggregate process signals and a qualified-review queue while suppressing small groups and avoiding individual rankings.",
+        why: "Teams need a cautious way to investigate possible process differences; aggregate signals should prompt human inquiry, not be treated as proof or used to decide an individual’s outcome."
+      },
+      {
+        what: "Lists data categories, purpose, access, proposed retention, deletion workflow, and the people responsible for policy review.",
+        why: "Explicit ownership and lifecycle rules reduce accidental over-retention and help teams obtain security and legal review before publishing policy."
+      },
+      {
+        what: "Summarizes role permissions and records who accessed a candidate record, including denied attempts.",
+        why: "Least-privilege access and an audit trail help protect sensitive records and support investigation when access is questioned."
+      },
+      {
+        what: "Shows queue and provider health, categorized retryable failures, safe diagnostics, and whether duplicate writes were prevented.",
+        why: "Operators can recover jobs without mistaking failure for success, exposing candidate information, or creating duplicate results."
+      },
+      {
+        what: "Compares reviewed evidence across candidates against the same approved role criteria, with gaps clearly marked and no aggregate rank.",
+        why: "Hiring teams can discuss job-relevant evidence while avoiding an unsupported composite score that hides different evidence quality."
+      },
+      {
+        what: "Provides a shared template library with named owners, version status, included skills, and controlled access.",
+        why: "Reusable setups reduce repetitive work, while ownership and versioning prevent accidental changes to an assessment already in use."
+      },
+      {
+        what: "Connects reviewer comments and follow-up questions to evidence, then offers a rubric-versioned, accessible export that labels AI and human conclusions.",
+        why: "Discussion stays grounded in the underlying response, and recipients can understand the source and review history of each conclusion."
+      }
+    ];
+
+    const groups = [...new Set(pages.map((page) => page.group))];
+    const overview = `
+      <section class="page">
+        <header class="page-heading">
+          <div><p class="eyebrow">Appendix · Proposed product design</p><h1>Future enhancement UI concepts</h1></div>
+          <p class="page-note">A visual companion to the five recommendations in the assessment. Fifteen proposed screens, three per theme.</p>
+        </header>
+        <div class="frame">${assessorHeader("Review")}<section class="screen">
+          <div class="row" style="margin-bottom:10px"><div><h2>Design index</h2><p class="sub">A cohesive direction based on the existing teal-and-white interface.</p></div><span class="pill blue">15 screen concepts</span></div>
+          <div class="grid two">
+            ${groups.map((group) => {
+              const items = pages.filter((page) => page.group === group);
+              return `<article class="card"><div class="row"><h3>${group}</h3><span class="pill">${items.length} screens</span></div><div class="stack">${items.map((item, index) => `<div class="row start"><span class="pill blue">${String(index + 1).padStart(2, "0")}</span><span class="small">${item.title}</span></div>`).join("")}</div></article>`;
+            }).join("")}
+          </div>
+          <div class="notice" style="margin-top:10px"><strong>Concepts only:</strong> These pages illustrate future possibilities, not existing functionality. Example data, policy values, and states are illustrative; confirm product, technical, security, accessibility, and legal requirements before implementation.</div>
+        </section></div>
+        <footer class="page-footer"><span><strong>DESIGN APPENDIX</strong> · Intended for product discussion and refinement.</span><span>Overview</span></footer>
+      </section>`;
+
+    document.getElementById("book").innerHTML = overview + pages.map((page, index) => `
+      <section class="page">
+        <header class="page-heading">
+          <div><p class="eyebrow">${page.group}</p><h1>${page.title}</h1></div>
+          <p class="page-note">${page.note}</p>
+        </header>
+        ${page.view}
+        <div class="rationale"><strong>What it shows:</strong> ${explanations[index].what} <strong>Why it matters:</strong> ${explanations[index].why}</div>
+        <footer class="page-footer"><span><strong>CONCEPT ONLY</strong> · Future enhancement proposal, not current product functionality.</span><span>Screen ${String(index + 1).padStart(2, "0")} of ${pages.length}</span></footer>
+      </section>`).join("");
+  </script>
+</body>
+</html>
