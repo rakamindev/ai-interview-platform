@@ -77,6 +77,17 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Admin User ────────────────────────────────────────────────────────────────
+admin_user = User.find_or_initialize_by(email: "admin@rakamin.com")
+if admin_user.new_record?
+  admin_user.password = "password123"
+  admin_user.role = "admin"
+  admin_user.save!
+  puts "  Created default admin user: admin@rakamin.com (password: password123)"
+else
+  puts "  Admin user already exists: #{admin_user.email} (skipped)"
+end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [
@@ -367,6 +378,120 @@ B7_SKILLS.each do |attrs|
 end
 
 puts "  Done — #{B7_SKILLS.size} skills seeded."
+puts ""
+
+# ── Vacancies (Job Postings) ──────────────────────────────────────────────────
+puts "== Seeding Default Vacancies =="
+tenant_id = 1
+created_by = 1
+
+vacancies_data = [
+  {
+    role_title: 'Senior Fullstack Product Engineer',
+    culture_dimensions: 'Extreme ownership (Monozukuri), proactive communication, user-centric empathy, pragmatism over dogma.',
+    competency_expectations: 'Demonstrates strong end-to-end fullstack delivery. Able to architect clean API contracts, manage database concurrency, and build accessible, responsive React UIs.',
+    skills: [
+      { skill_id: 'SK-ENG-001', expected_level: 4 },
+      { skill_id: 'SK-ENG-002', expected_level: 4 },
+      { skill_id: 'SK-ENG-003', expected_level: 3 },
+      { skill_id: 'SK-ENG-004', expected_level: 3 },
+      { skill_id: 'SK-SOFT-004', expected_level: 4 }
+    ]
+  },
+  {
+    role_title: 'Lead Backend & Systems Architect',
+    culture_dimensions: 'Data-driven architectural decisions, failure-mode paranoia, mentorship, and system resilience.',
+    competency_expectations: 'Mastery over relational isolation levels, caching race conditions, and distributed event-driven consensus.',
+    skills: [
+      { skill_id: 'SK-ENG-002', expected_level: 5 },
+      { skill_id: 'SK-ENG-003', expected_level: 5 },
+      { skill_id: 'SK-ENG-004', expected_level: 4 },
+      { skill_id: 'SK-ENG-008', expected_level: 4 },
+      { skill_id: 'SK-ENG-010', expected_level: 3 }
+    ]
+  },
+  {
+    role_title: 'Frontend & Design System Lead',
+    culture_dimensions: 'Craftsmanship, visual harmony, accessibility compliance, and developer DX evangelism.',
+    competency_expectations: 'Deep understanding of browser rendering lifecycle, performance metrics (CWV), and scalable component hierarchy.',
+    skills: [
+      { skill_id: 'SK-ENG-001', expected_level: 5 },
+      { skill_id: 'SK-ENG-009', expected_level: 4 },
+      { skill_id: 'SK-ENG-006', expected_level: 4 },
+      { skill_id: 'SK-SOFT-003', expected_level: 4 }
+    ]
+  }
+]
+
+vacancies_data.each do |v_attrs|
+  v = Vacancy.find_or_initialize_by(role_title: v_attrs[:role_title], tenant_id: tenant_id)
+  v.created_by = created_by
+  v.culture_dimensions = v_attrs[:culture_dimensions]
+  v.competency_expectations = v_attrs[:competency_expectations]
+  v.save!
+  v.vacancy_skills.destroy_all
+
+  v_attrs[:skills].each do |s_attrs|
+    tax = SkillTaxonomy.find_by(skill_id: s_attrs[:skill_id])
+    v.vacancy_skills.create!(
+      skill_id: s_attrs[:skill_id],
+      skill_label: tax ? tax.skill_label : s_attrs[:skill_id],
+      expected_level: s_attrs[:expected_level]
+    )
+  end
+  puts "  Created Vacancy: #{v.role_title} (#{v.vacancy_skills.count} skills)"
+end
+puts ""
+
+# ── Assessments ───────────────────────────────────────────────────────────────
+puts "== Seeding Default Assessments =="
+assessments_data = [
+  {
+    name: 'Fullstack Product Engineer Screen (45 Min)',
+    time_limit_min: 45,
+    language: 'en',
+    skills: ['SK-ENG-001', 'SK-ENG-002', 'SK-ENG-003', 'SK-ENG-004']
+  },
+  {
+    name: 'Wawancara Teknis - Bahasa Indonesia (30 Min)',
+    time_limit_min: 30,
+    language: 'id',
+    skills: ['SK-ENG-001', 'SK-ENG-002', 'SK-SOFT-004']
+  },
+  {
+    name: 'Backend Platform & Architecture Deep Dive (60 Min)',
+    time_limit_min: 60,
+    language: 'en',
+    skills: ['SK-ENG-002', 'SK-ENG-003', 'SK-ENG-004', 'SK-ENG-008']
+  }
+]
+
+assessments_data.each do |a_attrs|
+  a = Assessment.find_or_initialize_by(name: a_attrs[:name], tenant_id: tenant_id)
+  a.created_by = created_by
+  a.time_limit_min = a_attrs[:time_limit_min]
+  a.language = a_attrs[:language]
+  a.save!
+  a.assessment_skills.destroy_all
+
+  a_attrs[:skills].each_with_index do |skill_id, idx|
+    tax = SkillTaxonomy.find_by!(skill_id: skill_id)
+    a.assessment_skills.create!(
+      skill_id: tax.skill_id,
+      skill_label: tax.skill_label,
+      expected_level: 4,
+      display_order: idx + 1,
+      l1_anchor: tax.l1_anchor,
+      l2_anchor: tax.l2_anchor,
+      l3_anchor: tax.l3_anchor,
+      l4_anchor: tax.l4_anchor,
+      l5_anchor: tax.l5_anchor
+    )
+  end
+
+  a.update!(system_prompt: Assessments::SystemPromptCompiler.new(a).call)
+  puts "  Created Assessment: #{a.name} (#{a.assessment_skills.count} skills)"
+end
 puts ""
 
 # ── Print usage instructions ──────────────────────────────────────────────────

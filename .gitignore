@@ -17,3 +17,7 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Local analysis scratch
+wiki_repo/
+brief-fullstack.pdf

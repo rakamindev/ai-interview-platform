@@ -37,7 +37,7 @@ module Gemini
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.8-live')
       @voice = voice
       @resumption_token = nil
       @connected = false
@@ -63,8 +63,9 @@ module Gemini
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
       @setup_complete = false
+      ws_url = "#{GEMINI_WS_URL}?key=#{@api_key}"
       @ws = Faye::WebSocket::Client.new(
-        GEMINI_WS_URL,
+        ws_url,
         nil,
         headers: { 'x-goog-api-key' => @api_key }
       )

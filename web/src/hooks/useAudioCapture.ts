@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
 interface UseAudioCaptureOptions {
   onFrame: (buffer: ArrayBuffer) => void;
@@ -56,15 +56,44 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   }, []);
 
   const stop = useCallback(() => {
-    workletNodeRef.current?.disconnect();
+    try {
+      workletNodeRef.current?.disconnect();
+    } catch {
+      // ignore
+    }
     workletNodeRef.current = null;
-    audioCtxRef.current?.close();
+
+    try {
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        audioCtxRef.current.close().catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
     audioCtxRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => {
+        try {
+          t.stop();
+          t.enabled = false;
+        } catch {
+          // ignore
+        }
+      });
+      streamRef.current = null;
+    }
+
     mutedRef.current = false;
     setIsCapturing(false);
   }, []);
+
+  // Ensure microphone tracks are always stopped on unmount
+  useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [stop]);
 
   return { start, stop, mute, unmute, isCapturing };
 }

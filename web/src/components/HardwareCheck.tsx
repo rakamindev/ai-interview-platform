@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from "@/utils/internetSpeedTest";
 import {
     ProctoringState,
@@ -44,9 +44,33 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     });
     const [allPassed, setAllPassed] = useState(false);
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
-    const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+    const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
+    const animFrameRef = useRef<number | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    const stopAllTracks = useCallback(() => {
+        if (animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current);
+            animFrameRef.current = null;
+        }
+        if (audioCtxRef.current) {
+            audioCtxRef.current.close().catch(() => {});
+            audioCtxRef.current = null;
+        }
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach((t) => {
+                try {
+                    t.stop();
+                    t.enabled = false;
+                } catch { /* ignore */ }
+            });
+            mediaStreamRef.current = null;
+        }
+        setMediaStream(null);
+    }, []);
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -60,12 +84,17 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [progress]);
 
     useEffect(() => {
-        if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
-    }, [videoStream]);
+        if (videoRef.current && mediaStream && REQUIRE_CAMERA) {
+            videoRef.current.srcObject = mediaStream;
+        }
+    }, [mediaStream]);
 
+    // Cleanup media streams and audio context on unmount
     useEffect(() => {
-        return () => { videoStream?.getTracks().forEach((t) => t.stop()); };
-    }, [videoStream]);
+        return () => {
+            stopAllTracks();
+        };
+    }, [stopAllTracks]);
 
     const checkAudioPlayback = async (): Promise<boolean> => {
         try {
@@ -80,6 +109,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             osc.frequency.setValueAtTime(440, ctx.currentTime);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.1);
+            setTimeout(() => {
+                ctx.close().catch(() => {});
+            }, 200);
             return true;
         } catch { return false; }
     };
@@ -88,6 +120,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const ctx = new AudioCtx();
+            audioCtxRef.current = ctx;
             const source = ctx.createMediaStreamSource(stream);
             const analyser = ctx.createAnalyser();
             analyser.fftSize = 256;
@@ -96,9 +129,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             const update = () => {
                 analyser.getByteFrequencyData(data);
                 setAudioLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
-                requestAnimationFrame(update);
+                animFrameRef.current = requestAnimationFrame(update);
             };
-            update();
+            animFrameRef.current = requestAnimationFrame(update);
         } catch { /* silent */ }
     };
 
@@ -146,7 +179,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
 
         getStream.then((stream) => {
             if (stream) {
-                if (REQUIRE_CAMERA) setVideoStream(stream);
+                stopAllTracks();
+                mediaStreamRef.current = stream;
+                setMediaStream(stream);
                 startAudioLevelMonitoring(stream);
                 setProgress((p) => ({
                     ...p,
@@ -162,7 +197,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 }));
             }
         });
-    }, [progress.camera, progress.microphone]);
+    }, [progress.camera, progress.microphone, stopAllTracks]);
 
     // Step 4: Audio output
     useEffect(() => {
@@ -176,8 +211,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [progress.audio]);
 
     const retryAll = () => {
-        videoStream?.getTracks().forEach((t) => t.stop());
-        setVideoStream(null);
+        stopAllTracks();
         setInternetResult(null);
         setProgress({
             osAndBrowser: ProctoringState.LOADING,
@@ -186,6 +220,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,
         });
+    };
+
+    const handleStartInterview = () => {
+        stopAllTracks();
+        onStart?.();
     };
 
     const thresholds = DEFAULT_THRESHOLDS;
@@ -204,7 +243,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         <div className="rounded-lg border bg-card overflow-hidden">
             {/* Camera preview */}
             {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
-                {videoStream ? (
+                {mediaStream ? (
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
@@ -214,7 +253,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         <p className="text-xs">Camera not active</p>
                     </div>
                 )}
-                {progress.camera === ProctoringState.PASSED && videoStream && (
+                {progress.camera === ProctoringState.PASSED && mediaStream && (
                     <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                         LIVE
@@ -282,7 +321,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     size="sm"
                     className="ml-auto"
                     disabled={!allPassed}
-                    onClick={onStart}
+                    onClick={handleStartInterview}
                 >
                     Start Interview
                 </Button>

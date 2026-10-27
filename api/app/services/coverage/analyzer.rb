@@ -5,12 +5,12 @@ module Coverage
   # using Gemini Flash. Updates coverage states and detects discovered skills.
   # Runs async — failures are non-critical; interview continues with stale map.
   class Analyzer
-    TURNS_CONTEXT = 6
+    TURNS_CONTEXT = 12
 
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.8-flash'),
         timeout: 45
       )
     end

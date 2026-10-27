@@ -76,4 +76,91 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /* ==========================================================================
+       Rakamin Theme Custom Scrollbar (Global)
+       ========================================================================== */
+
+    /* Firefox standard */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: hsl(184 99% 31% / 0.3) transparent;
+    }
+
+    *:hover {
+        scrollbar-color: hsl(184 99% 31% / 0.6) transparent;
+    }
+
+    /* WebKit / Chromium / Safari */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: hsl(184 99% 31% / 0.28);
+        border-radius: 9999px;
+        transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(184 99% 31% / 0.65);
+    }
+
+    ::-webkit-scrollbar-thumb:active {
+        background-color: hsl(184 99% 31% / 0.9);
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    /* Dark mode scrollbar adjustments */
+    .dark * {
+        scrollbar-color: hsl(184 99% 31% / 0.4) transparent;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+        background-color: hsl(184 99% 31% / 0.38);
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(184 99% 31% / 0.75);
+    }
+}
+
+/* Custom scrollbar utility classes */
+@layer utilities {
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: hsl(210 40% 96% / 0.6);
+        border-radius: 9999px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: hsl(184 99% 31% / 0.35);
+        border-radius: 9999px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(184 99% 31% / 0.75);
+    }
+
+    .scrollbar-none {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
 }

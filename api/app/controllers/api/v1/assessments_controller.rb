@@ -49,8 +49,12 @@ module Api
 
       # DELETE /api/v1/assessments/:id
       def destroy
-        @assessment.destroy
-        json_response({ message: "Assessment deleted" })
+        if @assessment.destroy
+          json_response({ message: "Assessment deleted" })
+        else
+          error_msg = @assessment.errors.full_messages.first || "Failed to delete assessment"
+          json_error(error_msg, :unprocessable_entity)
+        end
       end
 
       private

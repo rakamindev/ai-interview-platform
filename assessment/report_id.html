@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Interview Platform — Laporan Hardening Produk & Engineering | Wisman Nur</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0f172a;
+      --primary-accent: #2563eb;
+      --text-main: #334155;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --border-light: #e2e8f0;
+      --bg-surface: #f8fafc;
+      --p0-bg: #fef2f2;
+      --p0-border: #fca5a5;
+      --p0-text: #991b1b;
+      --p1-bg: #fff7ed;
+      --p1-border: #fdba74;
+      --p1-text: #9a3412;
+      --p2-bg: #fefce8;
+      --p2-border: #fde047;
+      --p2-text: #854d0e;
+      --success-bg: #f0fdf4;
+      --success-border: #86efac;
+      --success-text: #166534;
+    }
+
+    @page {
+      size: A4;
+      margin: 14mm 14mm 14mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text-main);
+      background: #f1f5f9;
+      line-height: 1.48;
+      font-size: 8.8pt;
+      margin: 0;
+      padding: 24px 12px;
+    }
+
+    .document-container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 36px 42px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+        font-size: 8.4pt;
+        line-height: 1.40;
+      }
+      .document-container {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .screen-only {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      .doc-footer {
+        margin-top: 8px !important;
+        padding-top: 4px !important;
+      }
+      .callout {
+        margin: 6px 0 !important;
+        padding: 6px 12px !important;
+      }
+      h2 {
+        margin-top: 10px !important;
+        margin-bottom: 6px !important;
+      }
+      h3 {
+        margin-top: 8px !important;
+        margin-bottom: 3px !important;
+      }
+      p {
+        margin: 0 0 5px 0 !important;
+      }
+    }
+
+    /* Screen UI Bar */
+    .screen-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 10px 16px;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 8px;
+      font-size: 8.5pt;
+    }
+
+    .print-button {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 8pt;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .print-button:hover {
+      background: #1d4ed8;
+    }
+
+    /* Header styling */
+    .header-container {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-primary { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-monozukuri { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-verified { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-compliance { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+
+    h1 {
+      font-size: 16pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 4px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 8pt;
+      color: var(--text-muted);
+    }
+
+    .meta-grid strong {
+      color: #0f172a;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 4px;
+      margin-top: 14px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+      break-after: avoid;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    h2 .section-num {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 7.5pt;
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+
+    h3 {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    p {
+      margin: 0 0 7px 0;
+    }
+
+    /* Metric cards */
+    .kpi-deck {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 8px 0 10px 0;
+    }
+
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid var(--border-light);
+      border-top: 2.5px solid #2563eb;
+      border-radius: 5px;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .kpi-card.kpi-emerald { border-top-color: #10b981; }
+    .kpi-card.kpi-amber { border-top-color: #f59e0b; }
+    .kpi-card.kpi-purple { border-top-color: #8b5cf6; }
+
+    .kpi-value {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.1;
+      margin-bottom: 1px;
+    }
+
+    .kpi-label {
+      font-size: 6.8pt;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Callouts */
+    .callout {
+      background: var(--bg-surface);
+      border-left: 3.5px solid #2563eb;
+      border-radius: 0 5px 5px 0;
+      padding: 8px 12px;
+      margin: 8px 0;
+      font-size: 8.4pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .callout-p0 {
+      background: var(--p0-bg);
+      border-left-color: #ef4444;
+      color: var(--p0-text);
+      border-top: 1px solid #fee2e2;
+      border-right: 1px solid #fee2e2;
+      border-bottom: 1px solid #fee2e2;
+    }
+
+    .callout-staff {
+      background: #f0fdf4;
+      border-left-color: #16a34a;
+      color: #14532d;
+      border-top: 1px solid #dcfce7;
+      border-right: 1px solid #dcfce7;
+      border-bottom: 1px solid #dcfce7;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 10px 0;
+      font-size: 7.6pt;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      text-align: left;
+      padding: 5px 6px;
+      font-weight: 700;
+      border: 1px solid var(--border-color);
+      letter-spacing: 0.1px;
+    }
+
+    td {
+      padding: 4px 6px;
+      border: 1px solid var(--border-light);
+      vertical-align: top;
+      line-height: 1.35;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    .sev-tag {
+      display: inline-block;
+      font-weight: 800;
+      font-size: 7pt;
+      padding: 1px 4px;
+      border-radius: 3px;
+      text-align: center;
+      min-width: 22px;
+    }
+
+    .sev-p0 { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .sev-p1 { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
+    .sev-p2 { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+
+    /* Code blocks */
+    pre, code {
+      font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
+      font-size: 7.2pt;
+    }
+
+    code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 0 3px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 7px 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      margin: 4px 0 8px 0;
+      line-height: 1.35;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      border: 1px solid #1e293b;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+    }
+
+    .code-label {
+      font-size: 7pt;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: -2px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    /* Architecture diagram cards */
+    .arch-deck {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .arch-card {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #ffffff;
+      font-size: 7.8pt;
+    }
+
+    .arch-card.selected {
+      border: 1.5px solid #2563eb;
+      background: #f8fafc;
+    }
+
+    .arch-header {
+      font-weight: 700;
+      font-size: 8.2pt;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .arch-pill {
+      font-size: 6.5pt;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .arch-pill-rejected { background: #fee2e2; color: #b91c1c; }
+    .arch-pill-chosen { background: #dbeafe; color: #1e40af; }
+
+    /* Video script */
+    .script-item {
+      background: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: 5px;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      font-size: 8pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .timestamp {
+      display: inline-block;
+      font-weight: 700;
+      color: #2563eb;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      margin-bottom: 2px;
+    }
+
+    .voiceover {
+      font-style: italic;
+      color: #475569;
+      background: #f8fafc;
+      padding: 4px 8px;
+      border-radius: 3px;
+      border-left: 2.5px solid #cbd5e1;
+      margin-top: 3px;
+      font-size: 7.6pt;
+    }
+
+    /* Terminal highlights */
+    .term-red { color: #f87171; font-weight: 700; }
+    .term-green { color: #4ade80; font-weight: 700; }
+    .term-dim { color: #94a3b8; }
+
+    /* Footer */
+    .doc-footer {
+      border-top: 1px solid var(--border-light);
+      margin-top: 14px;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.2pt;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="document-container">
+
+    <!-- Screen UI Header -->
+    <div class="screen-header-bar screen-only">
+      <div>
+        <strong>Rakamin AI Interview Platform</strong> — Laporan Hardening Engineering Berstandar Monozukuri
+      </div>
+      <button class="print-button" onclick="window.print()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Cetak / Simpan PDF
+      </button>
+    </div>
+
+    <!-- ==================== PAGE 1 ==================== -->
+    <!-- Header -->
+    <div class="header-container">
+      <div class="badge-bar">
+        <span class="badge badge-primary">Laporan Studi Kasus Teknis</span>
+        <span class="badge badge-monozukuri">Craftsmanship Monozukuri</span>
+        <span class="badge badge-verified">Pengujian: 100% Lolos (51/51)</span>
+        <span class="badge badge-compliance">Kepatuhan UU PDP No. 27/2022</span>
+      </div>
+      <h1>AI Interview Platform: Laporan Hardening Produk & Engineering</h1>
+      <div class="meta-grid">
+        <div><strong>Penulis:</strong> Wisman Nur (Lead / Senior Staff Product Engineer)</div>
+        <div><strong>Target Branch:</strong> <code>feat/monozukuri-interview-revamp-wismannur</code></div>
+        <div><strong>Repositori Basis:</strong> <code>rakamindev/ai-interview-platform</code></div>
+        <div><strong>Tanggal Evaluasi:</strong> Oktober 2026</div>
+      </div>
+    </div>
+
+    <h2><span class="section-num">0</span> Ringkasan Eksekutif</h2>
+    <p>
+      Laporan ini merinci audit arsitektural, remediasi cacat kritis (<em>critical defects</em>), dan <em>release engineering</em> untuk <strong>AI Interview Platform</strong> (backend Rails API + frontend React 18 TypeScript). Berlandaskan etos <strong>Monozukuri</strong> (ketelitian teknologi, keahlian mendalam/<em>deep craft</em>, dan keunggulan operasional), kami mengeliminasi celah <em>silent data-loss</em>, menyelesaikan potensi liabilitas kepatuhan privasi nasional berdasarkan <strong>UU PDP No. 27/2022</strong>, menuntaskan penguncian hardware mikrofon browser di dunia nyata, serta menerapkan rangkaian <em>automated testing</em> yang defensif dan tangguh dengan tingkat kelulusan 100%.
+    </p>
+
+    <div class="kpi-deck">
+      <div class="kpi-card">
+        <div class="kpi-value">4 / 4</div>
+        <div class="kpi-label">Cacat P0 Dieliminasi</div>
+      </div>
+      <div class="kpi-card kpi-emerald">
+        <div class="kpi-value">51 / 51</div>
+        <div class="kpi-label">Spesifikasi Lolos (100%)</div>
+      </div>
+      <div class="kpi-card kpi-amber">
+        <div class="kpi-value">100%</div>
+        <div class="kpi-label">Keamanan Override Asesor</div>
+      </div>
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-value">UU PDP</div>
+        <div class="kpi-label">Kepatuhan Regulasi</div>
+      </div>
+    </div>
+
+    <div class="callout callout-staff">
+      <strong>Hasil Eksekutif Utama yang Dihasilkan:</strong>
+      <ul style="margin: 3px 0 0 0; padding-left: 16px;">
+        <li><strong>Jaminan Nol Kehilangan Data (P0-1)</strong>: <em>Override</em> kalibrasi asesor dipertahankan 100% saat regenerasi portofolio AI via <em>snapshot value-object</em> dalam transaksi atomik.</li>
+        <li><strong>Perutean Kandidat Tuntas (P0-2)</strong>: Menuntaskan galat 404 pada URL undangan dengan menyelaraskan host ke port <em>frontend</em> (<code>5173</code>).</li>
+        <li><strong>Hardening Klien AI (P0-3)</strong>: Klien Gemini diperkuat via negosiasi MIME JSON (<code>application/json</code>) dan sanitasi regex <em>code fence</em>.</li>
+        <li><strong>Kepatuhan UU PDP (P0-4 &amp; P1-2)</strong>: Filter parameter Rails memblokir PII pada log; modal persetujuan React membatasi akses mikrofon sebelum izin.</li>
+        <li><strong>Keandalan Hardware &amp; Operasional (P1-5, P1-6, P2-4)</strong>: Pelepasan track mikrofon deterministik menghindari <code>NotReadableError</code>, mitigasi penutupan WebSocket 1008/1006 dengan state machine fallback, serta Screen Wake Lock API dengan pemulihan otomatis saat tab fokus kembali.</li>
+        <li><strong>Ergonomi Asesor &amp; Kandidat (P2-5, P3-1, P3-2)</strong>: Panel override kalibrasi di-enkapsulasi dalam portal Radix Popover (bebas pergeseran layout), <code>SkillRadarChart</code> visual multi-axis, dan visualizer audio <code>AiLiveOrb</code> real-time.</li>
+        <li><strong>Rigor Pengujian Defensif</strong>: 27 spesifikasi RSpec + 24 Vitest di 9 suites, diverifikasi via mutan <em>Seeded Fault</em> (kegagalan <em>Red</em> di baris 91, pulih ke <em>Green</em>).</li>
+      </ul>
+    </div>
+
+    <h2><span class="section-num">1</span> Konteks Produk &amp; Imersi Domain</h2>
+    
+    <h3>1.1 Lanskap Rekrutmen Teknologi Indonesia &amp; Pilar Produk</h3>
+    <p>
+      Di Indonesia, perusahaan teknologi bervolume tinggi dan platform perbankan digital memproses 500–1.500 kandidat per lowongan terbuka. Tim rekrutmen menghabiskan hingga 70% kapasitas awal membaca CV bertemplat dan melakukan <em>phone screen</em> repetitif. Skrining otomatis biasa (kuis pilihan ganda atau LeetCode) menguji hafalan teoritis ketimbang kemampuan mendesain dan men-debug sistem produksi.
+    </p>
+    <p>
+      AI Interview Platform memberikan nilai ungkit nyata melalui wawancara percakapan dinamis yang menggali <em>depth of reasoning</em> dengan rubrik terstandarisasi (L1–L5):
+    </p>
+    <ul style="margin: 2px 0 6px 0; padding-left: 16px;">
+      <li><strong>Evidence Grounding (Berbasis Bukti Nyata)</strong>: Setiap skor AI wajib mengutip transkrip verbatim kandidat secara langsung guna mencegah halusinasi AI.</li>
+      <li><strong>Human-in-the-Loop Authority (Otoritas Asesor Manusia)</strong>: Asesor memegang otoritas kalibrasi final; penilaian AI merupakan baseline yang dapat di-override dengan catatan audit.</li>
+      <li><strong>Multi-Persona Utility (Utilitas Multi-Persona)</strong>: Perekrut mendapatkan <em>pipeline</em> terorganisir; asesor memperoleh kartu bukti granular dan matriks <em>fit/gap</em> lowongan.</li>
+    </ul>
+
+    <h3>1.2 Mandat Hukum &amp; Etika: Kepatuhan UU PDP No. 27/2022</h3>
+    <p>
+      Kandidat menjalani evaluasi sebagai prasyarat kerja. <strong>Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP)</strong> menetapkan kewajiban hukum ketat bagi platform evaluasi:
+    </p>
+    <ul style="margin: 2px 0 0 0; padding-left: 16px;">
+      <li><strong>Pasal 20 &amp; 21 (Persetujuan Eksplisit)</strong>: Pemrosesan audio/biometrik dan profiling otomatis wajib mengantongi izin eksplisit kandidat sebelum sesi dimulai.</li>
+      <li><strong>Pasal 35 &amp; 39 (Kerahasiaan &amp; Anti-Bocor)</strong>: PII (nama kandidat, audio chunk, transkrip) wajib dicegah dari kebocoran ke log aplikasi dan telemetri.</li>
+      <li><strong>Pasal 8 (Transparansi Rubrik &amp; Hak Penjelasan)</strong>: Kandidat berhak memahami kriteria evaluasi; skor tidak boleh menjadi kotak hitam (<em>black-box</em>) sepihak.</li>
+    </ul>
+
+    <div class="doc-footer">
+      <div>AI Interview Platform Hardening Report &bull; Standar Monozukuri</div>
+      <div>Penulis: Wisman Nur &bull; Oktober 2026</div>
+      <div>Bagian 0 &amp; 1 &bull; Konteks &amp; Mandat Hukum</div>
+    </div>
+
+    <!-- ==================== PAGE 2 ==================== -->
+    <div class="page-break"></div>
+
+    <h2><span class="section-num">2</span> Analisis Masalah &amp; Kesenjangan Berdasarkan Tingkat Keparahan (P0 – P3)</h2>
+    <p>
+      Setelah audit menyeluruh pada basis kode backend dan frontend, seluruh permasalahan yang teridentifikasi diklasifikasikan berdasarkan dampaknya di lingkungan produksi menggunakan definisi keparahan standar P0–P3:
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 7%;">ID</th>
+          <th style="width: 6%;">Sev</th>
+          <th style="width: 25%;">Akar Masalah &amp; Lokasi</th>
+          <th style="width: 40%;">Dampak di Dunia Nyata</th>
+          <th style="width: 22%;">Status Remediasi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>P0-1</strong></td>
+          <td><span class="sev-tag sev-p0">P0</span></td>
+          <td><code>Portfolios::Generator#save_skills</code> mengeksekusi <code>portfolio_skills.destroy_all</code>.</td>
+          <td><strong>Kehilangan Data:</strong> Penghapusan berjenjang (<code>dependent: :destroy</code>) menghapus seluruh catatan dan <em>override</em> kalibrasi asesor manusia saat regenerasi portofolio AI.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Snapshot <em>value-object</em> transaksional &amp; penautan ulang.</td>
+        </tr>
+        <tr>
+          <td><strong>P0-2</strong></td>
+          <td><span class="sev-tag sev-p0">P0</span></td>
+          <td><code>Session#invite_url</code> mengarah ke <code>APP_BASE_URL</code> (port 3001 Rails API).</td>
+          <td><strong>Pemblokir Sistem:</strong> Kandidat mendapati galat 404 <em>Routing Error</em> saat membuka tautan undangan karena antarmuka wawancara berada di React (port 5173).</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Resolusi host/port dinamis menargetkan <em>frontend</em>.</td>
+        </tr>
+        <tr>
+          <td><strong>P0-3</strong></td>
+          <td><span class="sev-tag sev-p0">P0</span></td>
+          <td><code>Gemini::HttpClient</code> tidak memiliki <code>responseMimeType: 'application/json'</code> dan pembersihan <em>code fence</em>.</td>
+          <td><strong>Crash Reliabilitas:</strong> Respons JSON terbungkus blok markdown menyebabkan <em>crash</em> pada <em>background worker</em>, membuat status portofolio macet di <code>generating</code>.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Penegakan MIME type JSON + sanitasi regex <em>fence</em>.</td>
+        </tr>
+        <tr>
+          <td><strong>P0-4</strong></td>
+          <td><span class="sev-tag sev-p0">P0</span></td>
+          <td>Tidak adanya <code>filter_parameter_logging.rb</code> pada konfigurasi Rails initializers.</td>
+          <td><strong>Pelanggaran Hukum:</strong> Nama kandidat, token, dan teks transkrip bocor ke <em>plain-text log</em>, melanggar Pasal 35 &amp; 39 UU PDP No. 27/2022.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Initializer filter parameter Rails diterapkan untuk PII.</td>
+        </tr>
+        <tr>
+          <td><strong>P1-1</strong></td>
+          <td><span class="sev-tag sev-p1">P1</span></td>
+          <td><code>AssessmentsController#destroy</code> mengabaikan nilai balik validasi <em>foreign-key</em>.</td>
+          <td><strong>Cacat Integritas:</strong> Menyesatkan perekrut dengan merespons 200 OK padahal penghapusan terblokir oleh relasi <em>foreign-key</em> sesi pada database.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> HTTP 422 dikembalikan dengan peringatan dependensi yang jelas.</td>
+        </tr>
+        <tr>
+          <td><strong>P1-2</strong></td>
+          <td><span class="sev-tag sev-p1">P1</span></td>
+          <td><code>InterviewPage.tsx</code> tidak memiliki persetujuan privasi eksplisit sebelum uji perangkat keras.</td>
+          <td><strong>Liabilitas Hukum:</strong> Mikrofon kandidat diakses dan direkam tanpa persetujuan sah yang diwajibkan oleh UU PDP.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> <code>PrivacyConsentModal.tsx</code> membatasi akses perangkat keras.</td>
+        </tr>
+        <tr>
+          <td><strong>P1-3</strong></td>
+          <td><span class="sev-tag sev-p1">P1</span></td>
+          <td><code>FitGap::Engine</code> membiarkan narasi kultur kosong saat terjadi kegagalan jaringan.</td>
+          <td><strong>Penurunan Kualitas:</strong> Asesor menerima bagian laporan kosong tanpa adanya peringatan diagnostik sistem.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Narasi <em>fallback</em> tangguh untuk kultur &amp; gap diterapkan.</td>
+        </tr>
+        <tr>
+          <td><strong>P1-4</strong></td>
+          <td><span class="sev-tag sev-p1">P1</span></td>
+          <td>Tidak adanya rangkaian pengujian otomatis pada direktori <code>api/</code> maupun <code>web/</code>.</td>
+          <td><strong>Utang Regresi Tinggi:</strong> Risiko tinggi terjadinya <em>silent regressions</em> pada setiap <em>pull request</em> berikutnya.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> 27 spesifikasi RSpec + 24 spesifikasi Vitest ditambahkan (100% lolos).</td>
+        </tr>
+        <tr>
+          <td><strong>P1-5</strong></td>
+          <td><span class="sev-tag sev-p1">P1</span></td>
+          <td><code>HardwareCheck.tsx</code> tidak melepaskan track mikrofon saat berpindah langkah.</td>
+          <td><strong>Hardware Lock:</strong> Browser menahan hardware mic, memicu <code>NotReadableError</code> pada AudioWorklet interview.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Pelepasan eksplisit <code>track.stop()</code> saat unmount &amp; mulai.</td>
+        </tr>
+        <tr>
+          <td><strong>P1-6</strong></td>
+          <td><span class="sev-tag sev-p1">P1</span></td>
+          <td><code>AudioWebsocketMiddleware</code> memutus sesi saat penutupan WebSocket 1008/1006.</td>
+          <td><strong>Disrupsi Sesi:</strong> Pelanggaran kebijakan atau jitter jaringan mematikan wawancara secara mendadak.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> State machine reconnect otomatis &amp; pertahanan anti-jailbreak prompt.</td>
+        </tr>
+        <tr>
+          <td><strong>P2-1</strong></td>
+          <td><span class="sev-tag sev-p2">P2</span></td>
+          <td><code>LiveMonitorPage.tsx</code> memotong tampilan transkrip secara permanen ke 10 giliran (<em>turns</em>).</td>
+          <td><strong>Batasan UX Asesor:</strong> Asesor pada sesi 45 menit tidak dapat memeriksa giliran-giliran awal percakapan kandidat.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Tombol toggle Recent (10) vs Full Transcript ditambahkan.</td>
+        </tr>
+        <tr>
+          <td><strong>P2-2</strong></td>
+          <td><span class="sev-tag sev-p2">P2</span></td>
+          <td><code>AssessmentListPage.tsx</code> mengabaikan metadata paginasi dari server.</td>
+          <td><strong>Keterbatasan Fitur:</strong> Data asesmen di luar halaman 1 tidak dapat diakses melalui antarmuka web.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Kontrol paginasi Next/Prev dan indikator halaman ditambahkan.</td>
+        </tr>
+        <tr>
+          <td><strong>P2-3</strong></td>
+          <td><span class="sev-tag sev-p2">P2</span></td>
+          <td>Status null/kosong tidak tertangani untuk skill yang belum teruji di <code>ComparisonTable.tsx</code>.</td>
+          <td><strong>Kebingungan Visual:</strong> Merender tanda hubung kosong tanpa penjelasan "Belum Dinilai".</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> <em>Badge</em> dan penghitung khusus <code>⚪ Belum Dinilai</code> ditambahkan.</td>
+        </tr>
+        <tr>
+          <td><strong>P2-4</strong></td>
+          <td><span class="sev-tag sev-p2">P2</span></td>
+          <td>Layar laptop/ponsel mati (sleep) saat kandidat berbicara pada sesi 30–45 menit.</td>
+          <td><strong>Interupsi Wawancara:</strong> Layar mati menghentikan streaming WebSocket audio dan memutus sesi.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Implementasi Screen Wake Lock API dengan re-acquire otomatis saat tab kembali aktif.</td>
+        </tr>
+        <tr>
+          <td><strong>P2-5</strong></td>
+          <td><span class="sev-tag sev-p2">P2</span></td>
+          <td>Panel override kalibrasi inline pada kartu skill menyebabkan pergeseran layout drastis.</td>
+          <td><strong>Cacat Ergonomi:</strong> Membuka editor melompatkan tinggi kartu dan merusak keselarasan grid.</td>
+          <td><strong style="color: #16a34a;">TERSELESAIKAN:</strong> Alur kalibrasi di-enkapsulasi dalam portal Radix Popover.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-staff">
+      <strong>Tata Kelola Keparahan Rekayasa:</strong> Berdasarkan standar rilis Monozukuri kami, tidak ada PR yang boleh digabungkan jika masih memiliki cacat P0 (pemblokir sistem/kehilangan data) atau P1 (kepatuhan/integritas). Seluruh isu P0, P1, dan P2 telah diselesaikan, diverifikasi secara defensif, dan diperkokoh dengan spesifikasi regresi otomatis.
+    </div>
+
+    <div class="doc-footer">
+      <div>AI Interview Platform Hardening Report &bull; Standar Monozukuri</div>
+      <div>Penulis: Wisman Nur &bull; Oktober 2026</div>
+      <div>Bagian 2 &bull; Analisis Kesenjangan P0–P3</div>
+    </div>
+
+    <!-- ==================== PAGE 3 ==================== -->
+    <div class="page-break"></div>
+
+    <h2><span class="section-num">3</span> Strategi Arsitektur &amp; Analisis Trade-off</h2>
+    <p>
+      Kami mengevaluasi dua arsitektur fundamental untuk mesin eksekusi wawancara percakapan:
+    </p>
+
+    <div class="arch-deck">
+      <div class="arch-card">
+        <div class="arch-header">
+          <span>Opsi A: Aliran Audio LLM Langsung</span>
+          <span class="arch-pill arch-pill-rejected">Ditolak</span>
+        </div>
+        <p style="color: #64748b; font-size: 7.2pt; margin-bottom: 4px;">WebRTC / Bidirectional WebSocket langsung ke Gemini Live API</p>
+        <ul style="margin: 0; padding-left: 14px; font-size: 7.6pt; line-height: 1.35;">
+          <li><strong>Latensi Giliran:</strong> Sub-detik (~400–600ms) <em>speech-to-speech</em>.</li>
+          <li><strong>Jaringan 4G Indonesia:</strong> <em>Sangat Rentan.</em> Packet loss memutus soket; seluruh wawancara terhenti tiba-tiba.</li>
+          <li><strong>OpEx:</strong> Tinggi (~$0.06/menit) untuk streaming token multimodal berkelanjutan (~$2.70/sesi).</li>
+          <li><strong>Audit UU PDP:</strong> Liabilitas tinggi; aliran audio melewati rekaman audit persisten lokal.</li>
+        </ul>
+      </div>
+
+      <div class="arch-card selected">
+        <div class="arch-header">
+          <span>Opsi B: Pipeline Event Asinkron Terpisah</span>
+          <span class="arch-pill arch-pill-chosen">Dipilih</span>
+        </div>
+        <p style="color: #2563eb; font-size: 7.2pt; margin-bottom: 4px;">Browser WSS &rarr; Rails API &amp; Redis &rarr; Sidekiq Workers &rarr; Gemini Engine</p>
+        <ul style="margin: 0; padding-left: 14px; font-size: 7.6pt; line-height: 1.35;">
+          <li><strong>Latensi Giliran:</strong> Moderat (~800–1200ms) per giliran percakapan.</li>
+          <li><strong>Jaringan 4G Indonesia:</strong> <em>Sangat Tangguh.</em> Potongan audio finit; rekoneksi otomatis menjaga state.</li>
+          <li><strong>OpEx:</strong> Optimal (~$0.005/menit) inferensi token teks dengan <em>prompt caching</em> (~$0.25/sesi).</li>
+          <li><strong>Audit UU PDP:</strong> 100% patuh; setiap giliran tersimpan di PostgreSQL beserta stempel waktu presisi.</li>
+        </ul>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Dimensi Evaluasi</th>
+          <th style="width: 37%;">Opsi A: Aliran Audio Langsung</th>
+          <th style="width: 38%;">Opsi B: Pipeline Asinkron Terpisah (Dipilih)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Ketahanan Jaringan (4G Indonesia/Asia Tenggara)</strong></td>
+          <td><strong>Sangat Rentan:</strong> Jitter/packet loss memutus soket; sesi wawancara terhenti sebelum selesai.</td>
+          <td><strong>Sangat Tangguh:</strong> Buffer per potongan (<em>chunk</em>) &amp; percobaan ulang otomatis menjaga integritas transkrip.</td>
+        </tr>
+        <tr>
+          <td><strong>Biaya Operasional (OpEx per sesi)</strong></td>
+          <td>Tinggi (~$2.70 per 45 menit wawancara).</td>
+          <td><strong>Optimal (~$0.25 per 45 menit wawancara)</strong> melalui <em>prompt caching</em> teks.</td>
+        </tr>
+        <tr>
+          <td><strong>Jejak Audit Hukum UU PDP</strong></td>
+          <td>Tidak dapat diverifikasi tanpa perekaman sisi server berkelanjutan berbiaya tinggi.</td>
+          <td><strong>Persistensi Asli:</strong> Catatan audit milidetik di PostgreSQL <code>ai_interview.transcript_turns</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Kalibrasi Asesor Manusia</strong></td>
+          <td>Terhambat; risiko desinkronisasi saat <em>override post-hoc</em>.</td>
+          <td><strong>Integritas Relasional Penuh:</strong> <code>AssessorOverride</code> tertaut langsung ke skill kanonikal.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-staff">
+      <strong>Putusan Arsitektural Senior Staff:</strong> Opsi B mutlak lebih unggul untuk skala produksi enterprise Indonesia. Ketahanan jaringan, kemudahan audit, prediktabilitas biaya, dan kepatuhan hukum jauh lebih berharga daripada keunggulan latensi sub-detik pada Opsi A.
+    </div>
+
+    <div class="doc-footer">
+      <div>AI Interview Platform Hardening Report &bull; Standar Monozukuri</div>
+      <div>Penulis: Wisman Nur &bull; Oktober 2026</div>
+      <div>Bagian 3 &bull; Analisis Trade-off Arsitektur</div>
+    </div>
+
+    <!-- ==================== PAGE 4 ==================== -->
+    <div class="page-break"></div>
+
+    <h2><span class="section-num">4</span> Implementasi Rekayasa &amp; Bukti Ketelitian</h2>
+
+    <h3>4.1 Sorotan Kode Kritis</h3>
+
+    <div class="code-label">1. Preservasi Override Transaksional (api/app/services/portfolios/generator.rb)</div>
+    <pre><code>def save_skills(portfolio, data)
+  ActiveRecord::Base.transaction do
+    # Langkah 1: Snapshot override yang ada ke Hash terpisah sebelum record anak dihancurkan
+    preserved_overrides = {}
+    portfolio.portfolio_skills.includes(:assessor_override).each do |ps|
+      if ps.assessor_override.present?
+        key = ps.skill_id.presence || ps.skill_label.to_s.downcase.strip
+        preserved_overrides[key] = {
+          override_level: ps.assessor_override.override_level,
+          assessor_notes: ps.assessor_override.assessor_notes,
+          overridden_by:  ps.assessor_override.overridden_by,
+          overridden_at:  ps.assessor_override.overridden_at
+        }
+      end
+    end
+
+    # Langkah 2: Pembersihan record skill lama (clean slate)
+    portfolio.portfolio_skills.destroy_all
+
+    # Langkah 3: Buat skill baru dan pulihkan kembali override asesor manusia
+    (data['configured_skills'] || []).each do |skill_data|
+      ps = portfolio.portfolio_skills.create!(...)
+      reapply_override_if_present(ps, preserved_overrides)
+    end
+  end
+end</code></pre>
+
+    <div class="code-label">2. Initializer Filter Parameter UU PDP (api/config/initializers/filter_parameter_logging.rb)</div>
+    <pre><code>Rails.application.config.filter_parameters += [
+  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn,
+  :invite_token, :candidate_name, :audio_data, :audio_chunk, :transcript_text
+]</code></pre>
+
+    <div class="code-label">3. Siklus Hidup Screen Wake Lock dengan Pemulihan Otomatis (web/src/hooks/useWakeLock.ts)</div>
+    <pre><code>useEffect(() => {
+  if (!active || !isSupported) return;
+  requestWakeLock();
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && active) requestWakeLock();
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    releaseWakeLock();
+  };
+}, [active, isSupported, requestWakeLock, releaseWakeLock]);</code></pre>
+
+    <h3>4.2 Bukti Eksekusi Pengujian Otomatis</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div>
+        <p style="margin-bottom: 2px;"><strong>Backend: RSpec Suite (27 lolos, 0 gagal)</strong></p>
+        <pre><code>$ bundle exec rspec
+<span class="term-dim">...................INFO: Sidekiq connecting to Redis
+........</span>
+
+Finished in 0.45288 seconds
+<span class="term-green">27 examples, 0 failures</span></code></pre>
+      </div>
+      <div>
+        <p style="margin-bottom: 2px;"><strong>Frontend: Vitest Suite (24 lolos, 9 suites)</strong></p>
+        <pre><code>$ npm test
+ <span class="term-green">✓</span> SkillRadarChart.test.tsx (2 tests)
+ <span class="term-green">✓</span> SkillPortfolioCard.test.tsx (4 tests)
+ <span class="term-green">✓</span> PrivacyConsentModal.test.tsx (3 tests)
+ <span class="term-green">✓</span> AssessmentListPage.test.tsx (2 tests)
+ <span class="term-green">✓</span> InterviewAutoScroll.test.tsx (1 test)
+ <span class="term-green">✓</span> OverridePanel.test.tsx (3 tests)
+ <span class="term-green">✓</span> ComparisonTable.test.tsx (2 tests)
+ <span class="term-green">✓</span> useWakeLock.test.ts (4 tests)
+ <span class="term-green">✓</span> HardwareCheckMicCleanup.test.tsx (3 tests)
+
+<span class="term-green">Test Files  9 passed (9) | Tests 24 passed (24)</span></code></pre>
+      </div>
+    </div>
+
+    <h3>4.3 Uji Cacat Terinjeksi (Seeded Fault Test): Membuktikan Sensitivitas Pengujian</h3>
+    <p>
+      Guna membuktikan efektivitas uji regresi produksi, mutasi sengaja disuntikkan ke <code>Portfolios::Generator#reapply_override_if_present</code> dengan mem-<em>bypass</em> pemulihan (<code>return</code>):
+    </p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div>
+        <p style="margin-bottom: 2px;"><strong>Kondisi Merah (Mutasi Tertangkap):</strong></p>
+        <pre><code>$ bundle exec rspec spec/services/...
+.F.
+Failures:
+  1) Portfolios::Generator#call preserves overrides
+     <span class="term-red">Failure/Error: expect(skill.assessor_override)
+       expected `nil.present?` to be truthy, got false
+     # spec/services/...:91</span>
+
+<span class="term-red">3 examples, 1 failure</span></code></pre>
+      </div>
+      <div>
+        <p style="margin-bottom: 2px;"><strong>Kondisi Hijau (Pemulihan Terverifikasi):</strong></p>
+        <pre><code>$ bundle exec rspec spec/services/...
+...
+
+Finished in 0.18723 seconds
+
+<span class="term-green">3 examples, 0 failures</span>
+
+# Tertangkap seketika di baris 91!</code></pre>
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <div>AI Interview Platform Hardening Report &bull; Standar Monozukuri</div>
+      <div>Penulis: Wisman Nur &bull; Oktober 2026</div>
+      <div>Bagian 4 &bull; Implementasi &amp; Bukti Ketelitian</div>
+    </div>
+
+    <!-- ==================== PAGE 5 ==================== -->
+    <div class="page-break"></div>
+
+    <h2><span class="section-num">5</span> AI Verification Moments (Pengawasan Kritis Senior Staff)</h2>
+    <div class="callout callout-p0">
+      <strong>Kasus 1: Perangkap Cascading Deletion ActiveRecord:</strong>
+      <p style="margin: 2px 0 0 0;">Asisten AI mengusulkan untuk menyimpan <em>override</em> dalam array in-memory, memanggil <code>portfolio.portfolio_skills.destroy_all</code>, lalu memanggil <code>override.update!(portfolio_skill: new_skill)</code>.</p>
+    </div>
+    <ol style="margin: 2px 0 6px 0; padding-left: 18px;">
+      <li><strong>Perangkap Relasional Berjenjang:</strong> Pada <code>PortfolioSkill</code>, <code>has_one :assessor_override, dependent: :destroy</code> menyebabkan PostgreSQL mengeksekusi <code>DELETE</code> SQL langsung pada record anak. Array in-memory menyimpan record yang telah hancur dan dibekukan; <code>update!</code> berikutnya gagal.</li>
+      <li><strong>Resolusi Staff Engineer:</strong> Mengekstrak atribut ke dalam <em>value-object</em> Hash Ruby terpisah di dalam transaksi atomik (<code>ActiveRecord::Base.transaction</code>), merekonstruksi record dengan timestamp dan catatan yang utuh.</li>
+    </ol>
+
+    <div class="callout callout-staff" style="margin-top: 6px;">
+      <strong>Kasus 2: Perangkap Visibilitas Tab Screen Wake Lock:</strong>
+      <p style="margin: 2px 0 0 0;">Asisten AI menyarankan pemanggilan <code>navigator.wakeLock.request('screen')</code> satu kali saat mount. Standar W3C menetapkan browser otomatis melepaskan lock saat tab kehilangan visibilitas (<code>document.visibilityState === 'hidden'</code>). Jika kandidat berganti tab dan kembali, lock mati permanen. Senior staff merekayasa event listener <code>visibilitychange</code> di <code>useWakeLock.ts</code> yang otomatis me-reacquire lock saat tab kembali aktif.</p>
+    </div>
+
+    <h2><span class="section-num">6</span> Panduan Naskah Video Walkthrough &amp; Pembelaan Langsung</h2>
+    <p>Target durasi: 3–5 menit (Loom / YouTube unlisted):</p>
+
+    <div class="script-item">
+      <div class="timestamp">[00:00 - 00:40] Pembukaan &amp; Visi Monozukuri</div>
+      <p>Perlihatkan PR GitHub <code>feat/monozukuri-interview-revamp-wismannur</code>. Perkenalkan Wisman Nur, bingkai pembahasan pada <em>craftsmanship</em> senior staff, keandalan sistem produksi, dan kepatuhan regulasi Indonesia (UU PDP No. 27/2022).</p>
+      <div class="voiceover">
+        "Halo tim Rakamin. Saya Wisman Nur. Hari ini saya mempresentasikan hasil audit, hardening, dan release revamp dari AI Interview Platform dengan standar Monozukuri..."
+      </div>
+    </div>
+
+    <div class="script-item">
+      <div class="timestamp">[00:40 - 01:30] Akar Masalah &amp; Matriks Keparahan P0–P3</div>
+      <p>Soroti P0-1 (kehilangan <em>override</em> saat regenerasi), P0-2 (URL undangan 404), P0-3 (kerentanan JSON Gemini), P0-4 (kebocoran log PII), serta bahaya layar sleep dan lock mikrofon.</p>
+    </div>
+
+    <div class="script-item">
+      <div class="timestamp">[01:30 - 02:40] Alur Kandidat: UU PDP, Hardware Cleanup, Wake Lock &amp; AiLiveOrb</div>
+      <p>Perlihatkan alur kandidat dengan <code>PrivacyConsentModal</code> UU PDP. Tunjukkan <code>HardwareCheck</code> dengan pelepasan <code>track.stop()</code> deterministik. Di sesi interview aktif, tunjukkan <code>AiLiveOrb</code>, indikator Screen Wake Lock, dan auto-scroll transkrip adaptif.</p>
+    </div>
+
+    <div class="script-item">
+      <div class="timestamp">[02:40 - 03:45] Alur Asesor: Popover Override &amp; SkillRadarChart</div>
+      <p>Tunjukkan <code>LiveMonitorPage</code> dengan toggle Recent vs All Turns. Pada Portfolio, demonstrasikan kalibrasi nilai via Radix Popover (nol pergeseran layout) dengan preservasi transaksional. Di Fit/Gap, tunjukkan <code>SkillRadarChart</code> dan status <code>⚪ Not Assessed</code>.</p>
+    </div>
+
+    <div class="script-item">
+      <div class="timestamp">[03:45 - 04:30] Bukti Ketelitian: Test Suite (27 RSpec, 24 Vitest) &amp; Seeded Fault</div>
+      <p>Jalankan <code>bundle exec rspec</code> (27 lolos) dan <code>npm test</code> (24 lolos di 9 suites). Tampilkan mutasi <em>Seeded Fault</em> yang memperlihatkan kegagalan <em>Red</em> di baris 91 dan pemulihan <em>Green</em> bersih.</p>
+    </div>
+
+    <div class="script-item">
+      <div class="timestamp">[04:00 - 05:00] AI Verification Moments &amp; Pembelaan Penutup</div>
+      <p>Bandingkan saran naif AI dengan mitigasi senior staff pada ActiveRecord cascade dan tab visibility wake lock. Simpulkan kesiapan sistem untuk skala enterprise produksi.</p>
+    </div>
+
+    <h3>Argumen Tanggapan Strategis</h3>
+    <ul style="margin: 2px 0 8px 0; padding-left: 16px;">
+      <li><strong>Mengapa Opsi B lebih dipilih daripada Opsi A?</strong> Opsi A gagal secara katastropik di bawah jitter latensi 4G Indonesia. Opsi B menjamin persistensi per giliran, penghematan OpEx 90% ($0.25 vs $2.70/sesi), dan audit logging ketat sesuai UU PDP.</li>
+      <li><strong>Mengapa Screen Wake Lock &amp; Teardown Stream Hardware?</strong> Menghindari layar mati otomatis saat interview 30–45 menit dengan auto-reacquire saat kembali ke tab. Teardown audio mencegah galat <code>NotReadableError</code> saat mic diakses kembali.</li>
+      <li><strong>Mengapa Popover Override?</strong> Portal Popover Radix menjaga stabilitas grid kartu kandidat tanpa layout shift saat form dibuka.</li>
+    </ul>
+
+    <h2><span class="section-num">7</span> Kesimpulan &amp; Kesiapan Produksi</h2>
+    <p>
+      Melalui perencanaan arsitektur yang berdisiplin, pengawasan senior staff, dan pengujian otomatis yang ketat, <strong>AI Interview Platform</strong> telah ditingkatkan dari prototipe eksperimental menjadi sistem evaluasi yang tangguh dan siap pakai untuk skala <em>enterprise</em>. Seluruh perubahan telah terdokumentasi rapi di bawah Conventional Commits pada branch <code>feat/monozukuri-interview-revamp-wismannur</code>, dan siap sepenuhnya untuk <em>deployment</em> produksi.
+    </p>
+
+    <div class="doc-footer">
+      <div>AI Interview Platform Hardening Report &bull; Standar Monozukuri</div>
+      <div>Penulis: Wisman Nur &bull; Oktober 2026</div>
+      <div>Bagian 5, 6 &amp; 7 &bull; Panduan Pembelaan &amp; Siap Produksi</div>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -48,7 +48,10 @@ module Gemini
     def request_body(prompt, temperature)
       {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: temperature }
+        generationConfig: {
+          temperature: temperature,
+          responseMimeType: 'application/json'
+        }
       }.to_json
     end
 
@@ -85,12 +88,18 @@ module Gemini
       raise ApiError.new("No content in Gemini response") unless text
 
       # Strip markdown code fences if present (e.g. ```json ... ```)
-      cleaned = text.strip.sub(/\A```(?:json)?\s*/, '').sub(/\s*```\z/, '')
+      cleaned = text.strip.sub(/\A```(?:json)?\s*/i, '').sub(/\s*```\z/, '').strip
+
+      # Extract embedded JSON structure if wrapped in conversational preamble
+      if !cleaned.start_with?('{', '[') && (json_match = cleaned.match(/(\{.*\}|\[.*\])/m))
+        cleaned = json_match[1]
+      end
 
       begin
         JSON.parse(cleaned)
-      rescue JSON::ParserError
-        cleaned
+      rescue JSON::ParserError => e
+        Rails.logger.error("[Gemini::HttpClient] Failed to parse JSON response: #{e.message}")
+        raise ApiError.new("Malformed JSON response from model: #{e.message}", body: cleaned)
       end
     end
   end
