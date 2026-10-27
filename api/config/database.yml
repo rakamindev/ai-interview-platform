@@ -8,7 +8,6 @@ default: &default
   username: <%= ENV['DB_USERNAME'] %>
   password: <%= ENV['DB_PASSWORD'] %>
   host: <%= ENV['DB_HOST'] %>
-  database: <%= ENV['DB_NAME'] %>
   port: <%= ENV.fetch('DB_PORT', 5432) %>
   pool: <%= ENV.fetch('DB_POOL', ENV.fetch('RAILS_MAX_THREADS', 5).to_i + 10) %>
   timeout: 5000
@@ -16,11 +15,11 @@ default: &default
 
 development:
   <<: *default
-  database: rakamin_development
+  database: <%= ENV['DB_NAME'] %>
 
 test:
   <<: *default
-  database: rakamin_test
+  database: <%= ENV['DB_NAME'] %>_test
 
 staging:
   <<: *default
