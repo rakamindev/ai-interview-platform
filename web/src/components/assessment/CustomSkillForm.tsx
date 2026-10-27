@@ -29,10 +29,19 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
           Name <span className="text-destructive">*</span>
         </Label>
         <Input
-          id={`skills.${index}.skill_label`}
-          placeholder="e.g. Communication"
-          {...register(`skills.${index}.skill_label`, { required: true })}
-        />
+        id={`skills.${index}.skill_label`}
+        placeholder="e.g. Communication"
+        {...register(`skills.${index}.skill_label`, {
+          required: "Skill name is required.",
+          validate: (value) =>
+            (value ?? "").trim().length > 0 || "Skill name cannot be empty.",
+        })}
+      />
+      {errors.skills?.[index]?.skill_label && (
+        <p className="text-sm text-destructive">
+          {String(errors.skills[index]?.skill_label?.message)}
+        </p>
+      )}
       </div>
 
       <div className="space-y-1.5">
@@ -43,8 +52,17 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
           id={`skills.${index}.scope_include`}
           placeholder="Clear technical explanation, stakeholder alignment, async written communication..."
           rows={2}
-          {...register(`skills.${index}.scope_include`, { required: true })}
+          {...register(`skills.${index}.scope_include`, {
+            required: "Scope include is required.",
+            validate: (value) =>
+              (value ?? "").trim().length > 0 || "Scope include cannot be empty.",
+          })}
         />
+        {errors.skills?.[index]?.scope_include && (
+          <p className="text-sm text-destructive">
+            {String(errors.skills[index]?.scope_include?.message)}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -57,8 +75,18 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
               id={`skills.${index}.${key}`}
               placeholder={LEVEL_PLACEHOLDERS[i + 1]}
               rows={2}
-              {...register(`skills.${index}.${key}`, { required: true })}
+              {...register(`skills.${index}.${key}`, {
+                required: `${key.toUpperCase().replace("_", " ")} is required.`,
+                validate: (value) =>
+                  (value ?? "").trim().length > 0 ||
+                  `${key.toUpperCase().replace("_", " ")} cannot be empty.`,
+              })}
             />
+            {errors.skills?.[index]?.[key] && (
+              <p className="text-sm text-destructive">
+                {String(errors.skills[index]?.[key]?.message)}
+              </p>
+            )}
           </div>
         ))}
       </div>
