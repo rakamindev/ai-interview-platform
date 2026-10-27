@@ -230,7 +230,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             <span className="text-sm font-medium">{label}</span>
                             <div className="flex items-center gap-2">
                                 <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
+                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-700" :
                                     progress[key] === ProctoringState.ERROR ? "text-destructive" :
                                         "text-muted-foreground"
                                     }`}>
@@ -242,13 +242,13 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         {/* Internet speed details */}
                         {key === "internet" && internetResult && (
                             <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-700" : "text-destructive"}>
                                     ↓ {internetResult.download} Mbps
                                 </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-700" : "text-destructive"}>
                                     ↑ {internetResult.upload} Mbps
                                 </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
+                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-700" : "text-destructive"}>
                                     {internetResult.ping} ms
                                 </span>
                             </div>

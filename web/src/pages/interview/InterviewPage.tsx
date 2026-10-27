@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,6 +188,20 @@ export default function InterviewPage() {
       ? "connected"
       : "reconnecting";
 
+  // ── Loading invite details ───────────────────────────────────────────────
+  if (interviewState === "idle" && token && !candidateInfo) {
+    return (
+      <div role="status" aria-busy="true" aria-label="Loading interview" className="max-w-xl mx-auto px-4 py-8 space-y-6">
+        <div className="flex flex-col items-center gap-2">
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <Skeleton className="h-28 w-full rounded-lg" />
+        <Skeleton className="h-40 w-full rounded-lg" />
+      </div>
+    );
+  }
+
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
@@ -204,8 +219,8 @@ export default function InterviewPage() {
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
               <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
+              <p>• The AI asks follow-up questions based on your answers. There is no script.</p>
+              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "a set number of"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
@@ -269,7 +284,7 @@ export default function InterviewPage() {
         ) : (
           <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
             <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
+            <span>Reconnecting. Please wait a moment.</span>
           </div>
         )
       )}
@@ -277,7 +292,7 @@ export default function InterviewPage() {
       {/* Reconnected prompt */}
       {reconnectedPrompt && (
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
-          <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
+          <span>Reconnected. Please say <strong>"check"</strong> or continue your answer to resume.</span>
           <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
         </div>
       )}

@@ -1,5 +1,9 @@
 import { Outlet } from "react-router-dom";
 
+/**
+ * Provides a minimal page shell featuring a basic header without navigation links.
+ * Use it as the layout route wrapper for candidate-facing interview pages.
+ */
 export default function CandidateLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">

@@ -20,6 +20,13 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      # Duplicate job (e.g. end_session enqueued twice): a finished portfolio is
+      # only rebuilt through the explicit regenerate endpoint, which resets it to failed.
+      if portfolio.complete?
+        Rails.logger.info("[N10] Portfolio for session #{@session.id} already complete — skipping duplicate job")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
@@ -31,7 +38,9 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # reload first: after a rolled-back save_skills the association still holds
+      # the unsaved rows, and update! would autosave them back into the table.
+      portfolio&.reload&.update!(generation_status: 'failed', generation_error: e.message)
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
@@ -147,35 +156,93 @@ module Portfolios
       }
     end
 
+    # Replaces the portfolio's skills with the model output in one transaction,
+    # so a bad row from the model can never leave a half-written portfolio or
+    # wipe assessor overrides without restoring them.
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      raise ArgumentError, 'Model response is not a JSON object' unless data.is_a?(Hash)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      unprobed = unprobed_skill_keys
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      # requires_new: roll back via a savepoint even when called inside an outer transaction
+      ActiveRecord::Base.transaction(requires_new: true) do
+        existing_overrides = snapshot_overrides(portfolio)
+
+        # Destroy existing skills (idempotent regeneration)
+        portfolio.portfolio_skills.destroy_all
+
+        Array(data['configured_skills']).each do |skill_data|
+          next unless skill_data.is_a?(Hash)
+
+          key = skill_key(skill_data['skill_id'], skill_data['skill_label'])
+          # A skill the interview never reached has no evidence. Leaving it out
+          # makes the fit/gap report say "not assessed" instead of an invented L1.
+          next if key.nil? || unprobed.include?(key)
+
+          create_skill(portfolio, skill_data, discovered: false, override: existing_overrides[key])
+        end
+
+        Array(data['discovered_skills']).each do |skill_data|
+          next unless skill_data.is_a?(Hash)
+
+          key = skill_key(nil, skill_data['skill_label'])
+          next if key.nil?
+
+          create_skill(portfolio, skill_data, discovered: true, override: existing_overrides[key])
+        end
       end
+    end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+    def create_skill(portfolio, skill_data, discovered:, override:)
+      skill = portfolio.portfolio_skills.create!(
+        skill_id:           discovered ? nil : skill_data['skill_id'].presence,
+        skill_label:        skill_data['skill_label'].to_s.strip,
+        is_discovered:      discovered,
+        ai_level:           normalize_level(skill_data['level']),
+        ai_confidence:      normalize_confidence(skill_data['confidence']),
+        evidence:           Array(skill_data['evidence']).map(&:to_s).reject(&:blank?).first(3),
+        competency_summary: skill_data['competency_summary'].presence ||
+                            'No competency summary was returned by the model. Review the evidence before relying on this rating.'
+      )
+      return skill unless override
+
+      skill.create_assessor_override!(override.merge(ai_level: skill.ai_level))
+      skill
+    end
+
+    def snapshot_overrides(portfolio)
+      portfolio.portfolio_skills.includes(:assessor_override).each_with_object({}) do |ps, acc|
+        ov  = ps.assessor_override
+        key = skill_key(ps.skill_id, ps.skill_label)
+        next unless ov && key
+
+        acc[key] = ov.slice(:override_level, :assessor_notes, :overridden_by, :overridden_at).symbolize_keys
       end
+    end
+
+    # Configured skills whose coverage never left `not_yet`.
+    def unprobed_skill_keys
+      @session.coverage_maps
+              .reject(&:is_discovered)
+              .select { |m| m.state == 'not_yet' && m.probe_count.to_i.zero? }
+              .map { |m| skill_key(m.skill_id, m.skill_label) }
+              .compact
+              .to_set
+    end
+
+    def skill_key(skill_id, skill_label)
+      skill_id.presence || skill_label.to_s.strip.downcase.presence
+    end
+
+    def normalize_level(level)
+      # Accepts 3, "3", "L3" or 3.0 — the model is not strict about the type.
+      level.to_s[/\d+/]&.to_i&.clamp(1, 5) || 1
+    end
+
+    def normalize_confidence(confidence)
+      value = confidence.to_s.downcase
+      PortfolioSkill::CONFIDENCE_LEVELS.include?(value) ? value : 'low'
     end
   end
 end

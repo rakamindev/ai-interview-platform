@@ -6,5 +6,6 @@ class FitGapReport < ApplicationRecord
   belongs_to :portfolio
   belongs_to :vacancy
 
-  validates :skill_comparisons, presence: true
+  # An empty array is valid (vacancy without skills); only a missing value is not.
+  validate { errors.add(:skill_comparisons, :blank) if skill_comparisons.nil? }
 end

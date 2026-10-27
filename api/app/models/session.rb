@@ -26,11 +26,17 @@ class Session < ApplicationRecord
   def pending? = status == 'pending'
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    "#{frontend_base_url}/interview/#{invite_token}"
   end
 
   private
+
+  # Invite links are opened by candidates, so they must point at the web app,
+  # never at the API host. A wildcard CORS origin is not a usable URL.
+  def frontend_base_url
+    origin = ENV['ALLOWED_ORIGINS'].to_s.split(',').map(&:strip).find { |o| o.start_with?('http') }
+    (ENV['FRONTEND_URL'].presence || origin || 'http://localhost:5173').chomp('/')
+  end
 
   def generate_invite_token
     self.invite_token ||= SecureRandom.hex(32)

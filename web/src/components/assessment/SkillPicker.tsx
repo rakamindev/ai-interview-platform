@@ -6,7 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
 
@@ -55,9 +56,9 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[95vw] sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add from B7 taxonomy</DialogTitle>
+          <DialogTitle>Add from Skill Taxonomy</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
@@ -73,8 +74,10 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
         <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div role="status" aria-busy="true" aria-label="Loading skills" className="space-y-1">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-9 w-full" />
+              ))}
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>

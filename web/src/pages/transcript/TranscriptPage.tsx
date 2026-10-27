@@ -2,9 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import PageHeader from "@/components/layout/PageHeader";
+import PageSkeleton, { PageHeaderSkeleton } from "@/components/layout/PageSkeleton";
+import PageTransition from "@/components/layout/PageTransition";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
+import ErrorState from "@/components/feedback/ErrorState";
+import EmptyState from "@/components/feedback/EmptyState";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -40,52 +45,44 @@ export default function TranscriptPage() {
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
-          </div>
+  if (loading) {
+    return (
+      <PageSkeleton label="transcript">
+        <PageHeaderSkeleton actions={1} />
+        <div className="space-y-3">
+          <Skeleton className="h-20 w-3/4 rounded-lg" />
+          <Skeleton className="h-24 w-3/4 ml-auto rounded-lg" />
+          <Skeleton className="h-16 w-3/4 rounded-lg" />
         </div>
-        {!loading && !error && turns.length > 0 && (
+      </PageSkeleton>
+    );
+  }
+
+  return (
+    <PageTransition className="space-y-6">
+      <PageHeader
+        backTo={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+        backLabel="Candidate Portfolio"
+        title="Interview transcript"
+        subtitle={candidateName ?? undefined}
+      >
+        {!error && turns.length > 0 && (
           <Button variant="outline" size="sm" onClick={handleDownload}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Download .txt
           </Button>
         )}
-      </div>
+      </PageHeader>
 
-      {loading && (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
+      {error && (
+        <ErrorState message="Could not load the transcript. Refresh the page to try again." />
       )}
 
-      {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
-          Failed to load transcript. Please refresh.
-        </div>
+      {!error && turns.length === 0 && (
+        <EmptyState title="No transcript for this session" description="The candidate has not spoken yet, or the session ended before any turn was recorded." />
       )}
 
-      {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-          No transcript available for this session.
-        </div>
-      )}
-
-      {!loading && !error && turns.length > 0 && (
+      {!error && turns.length > 0 && (
         <div className="space-y-3">
           {turns.map((turn) => {
             const isAI = turn.speaker === "ai";
@@ -111,6 +108,6 @@ export default function TranscriptPage() {
           })}
         </div>
       )}
-    </div>
+    </PageTransition>
   );
 }

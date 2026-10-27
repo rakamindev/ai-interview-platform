@@ -7,6 +7,10 @@ interface LevelBadgeProps {
   className?: string;
 }
 
+/**
+ * Renders an L1 to L5 rating badge with corresponding styling and descriptions.
+ * Use it to show evaluated candidate competency levels, with the size prop choosing between a compact badge ("sm") and the default badge with description text ("md").
+ */
 export default function LevelBadge({ level, size = "md", className }: LevelBadgeProps) {
   return (
     <div
@@ -19,7 +23,7 @@ export default function LevelBadge({ level, size = "md", className }: LevelBadge
     >
       <span>{LEVEL_LABELS[level]}</span>
       {size === "md" && (
-        <span className="text-[10px] font-normal opacity-70">{LEVEL_DESCRIPTIONS[level]}</span>
+        <span className="text-[10px] font-normal">{LEVEL_DESCRIPTIONS[level]}</span>
       )}
     </div>
   );

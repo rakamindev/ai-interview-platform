@@ -3,7 +3,8 @@
 
 # Env / secrets
 **/.env
-**/.env.local
+**/.env.*
+!**/.env.example
 api/config/application.yml
 
 # Logs and temp
@@ -14,6 +15,7 @@ api/storage/
 # Build output
 web/dist/
 web/.vite/
+**/coverage/
 
 # OS
 .DS_Store

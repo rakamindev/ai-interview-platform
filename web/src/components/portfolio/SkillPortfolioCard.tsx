@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
-import { Zap } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -12,6 +11,10 @@ interface SkillPortfolioCardProps {
   onOverrideSaved: (override: AssessorOverride) => void;
 }
 
+/**
+ * Displays a single evaluated skill with its level badge, confidence indicator, candidate interview quotes, and competency summary.
+ * Use it in candidate portfolio views to allow assessors to inspect evaluation details and submit score overrides.
+ */
 export default function SkillPortfolioCard({
   skill,
   override,
@@ -23,18 +26,11 @@ export default function SkillPortfolioCard({
     <Card>
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
             <LevelBadge level={effectiveLevel} />
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
-                {skill.is_discovered && (
-                  <span className="flex items-center gap-0.5 text-xs text-amber-600">
-                    <Zap className="h-3 w-3" /> Discovered
-                  </span>
-                )}
-              </div>
+            <div className="space-y-0.5 min-w-0">
+              <h3 className="font-semibold break-words">{skill.skill_label}</h3>
               <ConfidenceIndicator confidence={skill.ai_confidence} />
             </div>
           </div>
@@ -43,21 +39,22 @@ export default function SkillPortfolioCard({
 
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
-          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
-          </div>
+          <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            Only briefly explored, so this rating is a guess. If the skill matters for the role, probe it in a follow-up round.
+          </p>
         )}
 
         {/* Evidence */}
         {skill.evidence.length > 0 && (
           <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Evidence from interview
-            </span>
-            <ul className="space-y-1">
+            <h4 className="text-xs font-medium text-muted-foreground">Candidate said</h4>
+            <ul className="space-y-1.5">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
+                <li key={i}>
+                  {/* Border marks quoted speech, the usual typographic convention */}
+                  <blockquote className="border-l-2 border-border pl-3 text-sm text-foreground break-words">
+                    "{quote}"
+                  </blockquote>
                 </li>
               ))}
             </ul>
@@ -67,9 +64,7 @@ export default function SkillPortfolioCard({
         {/* Competency summary */}
         {skill.competency_summary && (
           <div className="space-y-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Competency summary
-            </span>
+            <h4 className="text-xs font-medium text-muted-foreground">Competency summary</h4>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {skill.competency_summary}
             </p>

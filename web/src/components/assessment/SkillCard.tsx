@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import LevelRadio from "./LevelRadio";
 import CustomSkillForm from "./CustomSkillForm";
 import { cn } from "@/lib/utils";
-import type { AssessmentFormValues } from "@/pages/assessments/AssessmentNewPage";
+import type { AssessmentFormValues } from "./AssessmentForm";
 
 interface SkillCardProps {
   index: number;
@@ -35,7 +35,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       ref={setNodeRef}
       style={style}
       className={cn(
-        "border rounded-lg bg-white",
+        "border rounded-lg bg-card transition-all duration-200 ease-out hover:border-primary/40 hover:shadow-sm",
         isDragging && "opacity-50 shadow-lg"
       )}
     >
@@ -43,6 +43,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       <div className="flex items-center gap-2 px-3 py-2.5">
         <button
           type="button"
+          aria-label="Drag to reorder skill"
           className="cursor-grab text-muted-foreground hover:text-foreground touch-none"
           {...attributes}
           {...listeners}

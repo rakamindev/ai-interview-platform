@@ -24,7 +24,10 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
+import PageSkeleton, { PageHeaderSkeleton } from "@/components/layout/PageSkeleton";
+import PageTransition from "@/components/layout/PageTransition";
+import { CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -129,11 +132,27 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-32 w-full" />
-      </div>
+      <PageSkeleton label="live monitor">
+        <PageHeaderSkeleton actions={1} />
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <Skeleton className="h-4 w-32" />
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-12 w-3/4" />
+            <Skeleton className="h-12 w-2/3 ml-auto" />
+          </CardContent>
+        </Card>
+      </PageSkeleton>
     );
   }
 
@@ -141,42 +160,35 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <PageTransition className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
-          </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
-        </div>
-
+      <PageHeader
+        backTo={`/assessments/${id}/invite`}
+        backLabel="Assessment Sessions"
+        title="Live monitor"
+        subtitle={assessmentName ?? undefined}
+      >
         <div className="flex items-center gap-3">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
           <span className={cn(
             "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
+            isConnected ? "text-green-700" : "text-muted-foreground"
           )}>
             <Radio className="h-3 w-3" />
             {isConnected ? "Live" : "Reconnecting..."}
           </span>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Session ended banner */}
       {sessionEnded && (
         <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+          <CheckCircle className="h-4 w-4 text-green-700 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>
             {sessionEndReason && (
               <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
+                ({sessionEndReason.replace(/_/g, " ")})
               </span>
             )}
           </div>
@@ -320,6 +332,6 @@ export default function LiveMonitorPage() {
           </Button>
         )}
       </div>
-    </div>
+    </PageTransition>
   );
 }

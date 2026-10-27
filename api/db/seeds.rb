@@ -77,6 +77,28 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Default Admin User (for assessor login) ──────────────────────────────────
+# Credentials come from the environment so no password lives in the repo or
+# in seed output. Skipped outside development unless explicitly provided.
+admin_email    = ENV.fetch('SEED_ADMIN_EMAIL', 'admin@rakamin.com')
+admin_password = ENV['SEED_ADMIN_PASSWORD'].presence ||
+                 (Rails.env.development? ? SecureRandom.alphanumeric(16) : nil)
+
+if admin_password
+  admin_user = User.find_or_initialize_by(email: admin_email)
+  admin_user.password = admin_password
+  admin_user.password_confirmation = admin_password
+  admin_user.role = 'admin'
+  if admin_user.save
+    puts "  Default admin user ready: email=#{admin_email}"
+    puts "  Generated password (shown once, dev only): #{admin_password}" unless ENV['SEED_ADMIN_PASSWORD'].present?
+  else
+    puts "  Admin user: #{admin_user.errors.full_messages.join(', ')}"
+  end
+else
+  puts "  Skipping admin user: set SEED_ADMIN_PASSWORD to create one"
+end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [

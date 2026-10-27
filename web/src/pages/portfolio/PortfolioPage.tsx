@@ -7,10 +7,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
 import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
+import { assessmentsApi } from "@/services/assessments";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import PageHeader from "@/components/layout/PageHeader";
+import { Card, CardContent } from "@/components/ui/card";
+import PageSkeleton, { PageHeaderSkeleton } from "@/components/layout/PageSkeleton";
+import PageTransition from "@/components/layout/PageTransition";
+import { Notice } from "@/components/motion/Notice";
+import { Download, Loader2, FileText } from "lucide-react";
+import type { Portfolio, AssessorOverride, Vacancy, AssessmentSkill, PortfolioSkill } from "@/types";
+import ErrorState from "@/components/feedback/ErrorState";
+import EmptyState from "@/components/feedback/EmptyState";
+
+const normalizeLabel = (label: string) => label.trim().toLowerCase();
+
+/** Configured skills the interview never reached: the generator stores no row for them. */
+export function unreachedSkills(configured: AssessmentSkill[], rated: PortfolioSkill[]): AssessmentSkill[] {
+  const ratedIds = new Set(rated.map((s) => s.skill_id).filter((v) => v != null));
+  const ratedLabels = new Set(rated.map((s) => normalizeLabel(s.skill_label)));
+  return configured.filter(
+    (c) => !(c.skill_id != null && ratedIds.has(c.skill_id)) && !ratedLabels.has(normalizeLabel(c.skill_label)),
+  );
+}
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -23,6 +42,10 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [configuredSkills, setConfiguredSkills] = useState<AssessmentSkill[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  const [retryError, setRetryError] = useState(false);
+  const [overrideChanged, setOverrideChanged] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -41,21 +64,41 @@ export default function PortfolioPage() {
     }
   }, [sessionId]);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
+    // The configured skill list only feeds the "not reached" section; losing it must not block the page.
+    assessmentsApi
+      .get(Number(id))
+      .then((res) => setConfiguredSkills(res.data.assessment.skills ?? []))
+      .catch(() => setConfiguredSkills([]));
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, [fetchPortfolio, sessionId]);
+  }, [fetchPortfolio, id, sessionId]);
+
+  useEffect(load, [load]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
+    setOverrideChanged(true);
+  };
+
+  const handleRetryGeneration = async () => {
+    setRetryError(false);
+    try {
+      await sessionsApi.regeneratePortfolio(Number(sessionId));
+      setGenerating(true);
+    } catch {
+      setRetryError(true);
+    }
   };
 
   const handleRunFitGap = () => {
@@ -96,62 +139,80 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
+      <PageSkeleton label="portfolio">
+        <PageHeaderSkeleton actions={3} />
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-32" />
+          {[0, 1].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-14 w-14" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </PageSkeleton>
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
-          </div>
-        </div>
+  if (loadError) {
+    return (
+      <ErrorState message="Could not load this candidate's portfolio. Check your connection, then try again." onRetry={load}>
+        <Button asChild variant="ghost" size="sm">
+          <Link to={`/assessments/${id}/invite`}>Back to sessions</Link>
+        </Button>
+      </ErrorState>
+    );
+  }
 
-        <div className="flex gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
-          >
+  const notReached = portfolio?.generation_status === "complete" ? unreachedSkills(configuredSkills, portfolio.skills) : [];
+
+  return (
+    <PageTransition className="space-y-6">
+      {/* Header */}
+      <PageHeader
+        backTo={`/assessments/${id}/invite`}
+        backLabel="Assessment Sessions"
+        title="Candidate portfolio"
+        subtitle={candidateName ?? undefined}
+      >
+        <Button asChild variant="outline" size="sm">
+          <Link to={`/assessments/${id}/sessions/${sessionId}/transcript`}>
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("pdf")}
-                disabled={!!exporting}
-              >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("json")}
-                disabled={!!exporting}
-              >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                JSON
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+        </Button>
+        {!generating && portfolio && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport("pdf")}
+              disabled={!!exporting}
+            >
+              {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport("json")}
+              disabled={!!exporting}
+            >
+              {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+              JSON
+            </Button>
+          </>
+        )}
+      </PageHeader>
 
       {/* Generating state */}
       {generating && (
@@ -160,7 +221,7 @@ export default function PortfolioPage() {
           <div>
             <p className="font-medium">Generating portfolio...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The AI is analyzing the interview transcript. This takes about 2 minutes.
+              Rating each skill from the interview transcript. This usually takes about 2 minutes; the page updates by itself.
             </p>
           </div>
         </div>
@@ -168,27 +229,48 @@ export default function PortfolioPage() {
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
-            }}
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
-          </Button>
-        </div>
+        <ErrorState
+          message={
+            <>
+              The portfolio could not be generated. No ratings were saved, so nothing is half-finished. Generating again reuses the same transcript.
+              {retryError && <span className="mt-1 block text-red-700">The retry could not be queued. Try again in a moment.</span>}
+            </>
+          }
+          onRetry={handleRetryGeneration}
+          retryLabel="Generate again"
+        />
+      )}
+
+      {/* Empty / Not ready state */}
+      {!generating && (!portfolio || (portfolio.generation_status !== "complete" && portfolio.generation_status !== "failed")) && (
+        <EmptyState
+          title="Portfolio not available yet"
+          description="This candidate session does not have a completed portfolio yet. A portfolio is generated automatically after the interview session concludes."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/assessments/${id}/invite`}>Back to candidate list</Link>
+            </Button>
+          }
+        />
       )}
 
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
           {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
+          <section aria-labelledby="configured-heading" className="space-y-3">
+            <div>
+              <h2 id="configured-heading" className="text-sm font-semibold">Assessed skills</h2>
+              <p className="text-xs text-muted-foreground">
+                AI ratings from the interview. Override any rating you disagree with; the override is kept if the portfolio is regenerated.
+              </p>
+            </div>
+            {portfolio.skills.filter((s) => !s.is_discovered).length === 0 && (
+              <EmptyState
+                title="No configured skill was reached"
+                description="The interview ended before any configured skill came up, so there is nothing to rate. See the list below and probe them in a follow-up round."
+              />
+            )}
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
@@ -199,58 +281,94 @@ export default function PortfolioPage() {
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
                 />
               ))}
-          </div>
+          </section>
+
+          {/* Configured skills with no rating */}
+          {notReached.length > 0 && (
+            <section aria-labelledby="unreached-heading" className="rounded-lg border border-dashed p-4 space-y-2">
+              <h2 id="unreached-heading" className="text-sm font-semibold">Not reached in the interview</h2>
+              <p className="text-xs text-muted-foreground">
+                These skills have no rating. They show as "Not assessed" in fit/gap reports, not as gaps. Probe them in a follow-up round.
+              </p>
+              <ul className="flex flex-wrap gap-2">
+                {notReached.map((s) => (
+                  <li key={s.skill_id ?? s.skill_label} className="text-sm rounded-md bg-muted px-2.5 py-1 break-words max-w-full">
+                    {s.skill_label}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/* Discovered skills */}
           {portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Skills the AI probed that were not in the original assessment
-                  </p>
-                </div>
-                {portfolio.skills
-                  .filter((s) => s.is_discovered)
-                  .map((skill) => (
-                    <SkillPortfolioCard
-                      key={skill.id}
-                      skill={skill}
-                      override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                    />
-                  ))}
+            <section aria-labelledby="discovered-heading" className="space-y-3">
+              <div>
+                <h2 id="discovered-heading" className="text-sm font-semibold">Also came up in the interview</h2>
+                <p className="text-xs text-muted-foreground">
+                  Skills the candidate showed that this assessment did not ask about.
+                </p>
               </div>
-            </>
+              {portfolio.skills
+                .filter((s) => s.is_discovered)
+                .map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))}
+            </section>
           )}
 
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
-                {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.role_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
-          </div>
+          <section aria-labelledby="compare-heading" className="space-y-3">
+            <div>
+              <h2 id="compare-heading" className="text-sm font-semibold">Compare with a vacancy</h2>
+              <p className="text-xs text-muted-foreground">
+                The fit/gap report uses the levels above, including your overrides.
+              </p>
+            </div>
+            <Notice show={overrideChanged}>
+              <p role="status" className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                You changed a rating. Reports generated earlier still use the old level and will ask you to regenerate.
+              </p>
+            </Notice>
+            {vacancies.length === 0 ? (
+              <EmptyState
+                title="No vacancies yet"
+                description="A fit/gap report compares this candidate against a vacancy's required levels."
+                action={
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/vacancies/new">Create a vacancy</Link>
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+                  <SelectTrigger className="w-full sm:w-64 min-h-11 sm:min-h-9" aria-label="Vacancy">
+                    <SelectValue placeholder="Choose a vacancy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vacancies.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.role_title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="w-full sm:w-auto min-h-11 sm:min-h-9">
+                  Open fit/gap report
+                </Button>
+              </div>
+            )}
+          </section>
         </>
       )}
-    </div>
+    </PageTransition>
   );
 }

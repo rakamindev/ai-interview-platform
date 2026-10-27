@@ -1,10 +1,14 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+/** Parse "L3" → 3, passthrough number, fallback to 1, clamp to 1..5 safely */
+export function parseLevel(level?: string | number | null): number {
+  if (level == null) return 1;
+  if (typeof level === "number") {
+    return isNaN(level) ? 1 : Math.min(Math.max(Math.round(level), 1), 5);
+  }
+  const str = String(level).trim();
+  const n = parseInt(str.replace(/\D/g, ""), 10);
+  return isNaN(n) ? 1 : Math.min(Math.max(n, 1), 5);
 }
 
 export const LEVEL_LABELS: Record<number, string> = {
@@ -25,11 +29,11 @@ export const LEVEL_DESCRIPTIONS: Record<number, string> = {
 
 // L-badge colors (Tailwind classes)
 export const LEVEL_BADGE_CLASSES: Record<number, string> = {
-  1: "bg-neutral-200 text-neutral-700",
-  2: "bg-blue-100 text-blue-700",
-  3: "bg-teal-100 text-teal-700",
-  4: "bg-purple-100 text-purple-700",
-  5: "bg-yellow-100 text-yellow-700",
+  1: "bg-neutral-100 text-neutral-700",
+  2: "bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-100",
+  3: "bg-teal-100 text-teal-900",
+  4: "bg-teal-200 text-teal-950",
+  5: "bg-teal-700 text-white",
 };
 
 // Coverage state display
