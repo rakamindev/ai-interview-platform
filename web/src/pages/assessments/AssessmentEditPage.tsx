@@ -36,6 +36,7 @@ export default function AssessmentEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -49,11 +50,19 @@ export default function AssessmentEditPage() {
       .get(Number(id))
       .then((res) => {
         const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
+        reset({
+          name: a.name,
+          time_limit_min: a.time_limit_min,
+          skills: a.skills,
+        });
       })
-      .catch(() => {})
+      .catch(() => {
+        setLoadFailed(true);
+        setError("Failed to load assessment. Please try again.");
+      })
       .finally(() => setLoading(false));
   }, [id, reset]);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -98,6 +107,19 @@ export default function AssessmentEditPage() {
     );
   }
 
+      if (loadFailed) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <p className="text-sm text-destructive">
+          Failed to load assessment. Please try again.
+        </p>
+        <Button variant="outline" onClick={() => navigate("/assessments")}>
+          Back to Assessments
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
@@ -110,9 +132,21 @@ export default function AssessmentEditPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
+               <div className="space-y-1.5">
+          <Label htmlFor="name">
+            Role title <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="name"
+            {...register("name", {
+              required: "Role title is required.",
+              validate: (value) =>
+                value.trim().length > 0 || "Role title cannot be empty.",
+            })}
+          />
+          {errors.name && (
+            <p className="text-sm text-destructive">{errors.name.message}</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
