@@ -7,7 +7,7 @@ data:
   DB_HOST: "<your-db-host>"
   DB_NAME: "<your-db-name>"
   DB_PORT: "5432"
-  DB_POOL: "26"           # RAILS_MAX_THREADS(16) + 10 headroom (matches database.yml formula)
+  DB_POOL: "26" # RAILS_MAX_THREADS(16) + 10 headroom (matches database.yml formula)
   RAILS_ENV: production
   RAILS_LOG_LEVEL: info
   WEB_CONCURRENCY: "2"
@@ -17,5 +17,5 @@ data:
   GEMINI_FLASH_MODEL: gemini-2.5-flash
   GEMINI_PRO_MODEL: gemini-2.5-pro
   PROACTIVE_RECONNECT_AFTER: "510"
-  APP_BASE_URL: https://ai-interview-api.rakamin.com
-  ALLOWED_ORIGINS: "https://<your-frontend-domain>"
+  FRONTEND_BASE_URL: http://localhost:5173/
+  ALLOWED_ORIGINS: "http://localhost:5173/"

@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ClipboardList, Users } from "lucide-react";
 import type { Assessment } from "@/types";
+import { LoadingStateAsesment } from "@/components/loaderState/component";
+import { EmptyStateAsesment } from "@/components/emptyState/component";
+import { CardUi } from "@/components/cardUi/component";
 
-function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
+function SessionSummary({
+  session,
+}: {
+  session?: Assessment["latest_session"];
+}) {
   if (!session) return null;
 
   if (session.status === "active")
@@ -22,9 +27,13 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
     return <span className="text-xs text-destructive">Last: failed</span>;
 
   if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
+    return (
+      <span className="text-xs text-muted-foreground">Last: completed</span>
+    );
 
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+  return (
+    <span className="text-xs text-muted-foreground">Awaiting candidate</span>
+  );
 }
 
 export default function AssessmentListPage() {
@@ -51,49 +60,56 @@ export default function AssessmentListPage() {
       </div>
 
       {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+        <div className="p-4 text-sm border rounded-lg border-destructive/40 text-destructive">
           Failed to load assessments. Please refresh the page.
         </div>
       )}
 
-      {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
-        </div>
-      ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
-        </div>
+      {loading && <LoadingStateAsesment />}
+
+      {assessments.length === 0 ? (
+        <EmptyStateAsesment navigate={navigate} />
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {assessments.map((a) => (
-            <Card
+            <CardUi
               key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
+              id={a.id}
+              Icon={ClipboardList}
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {a.time_limit_min} min
-                    </span>
-                    {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
-                    )}
-                  </div>
+              <div className="mt-4">
+                <h3 className="text-base font-semibold leading-6 tracking-tight transition-colors line-clamp-2 min-h-12 group-hover:text-primary">
+                  {a.name}
+                </h3>
+
+                <div className="flex flex-wrap items-center mt-3 text-xs gap-x-4 gap-y-2 text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    {a.time_limit_min} min
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 shrink-0" />
+                    Interview assessment
+                  </span>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+              </div>
+
+              {/* Latest session */}
+              <div className="flex items-center pt-3 mt-4 border-t min-h-10 border-border/70">
+                {a.latest_session ? (
+                  <div className="min-w-0 text-xs text-muted-foreground">
+                    <p className="mb-1 font-medium">Latest session</p>
+                    <SessionSummary session={a.latest_session} />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No interview sessions yet
+                  </p>
+                )}
+              </div>
+            </CardUi>
           ))}
         </div>
       )}

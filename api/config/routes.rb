@@ -10,7 +10,27 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
+      # Speed test endpoints used by the public candidate hardware check.
+      get 'speed_test', to: proc { |env|
+        query = Rack::Utils.parse_query(env['QUERY_STRING'])
+
+        if query['type'] == 'download'
+          bytes = 512 * 1024
+          [
+            200,
+            {
+              'Content-Type' => 'application/octet-stream',
+              'Cache-Control' => 'no-store',
+              'Content-Length' => bytes.to_s
+            },
+            [SecureRandom.random_bytes(bytes)]
+          ]
+        else
+          [200, { 'Content-Type' => 'application/json', 'Cache-Control' => 'no-store' }, [{ status: 'ok' }.to_json]]
+        end
+      }
+
+      # Upload speed test — accepts any payload, discards it, returns bytes received.
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
         [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
