@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ai-interview-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: rakamin_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - ai-interview-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rakamin_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-interview-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    image: ai-interview-api-dev:latest
+    container_name: ai-interview-api
+    #membersihkan semua sampah (pidfile) sebelum memulai rails agar container not failed when restart
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p 3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/ai-interview
+      - ai-interview-bundle-data:/usr/local/bundle
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    image: ai-interview-api-dev:latest
+    container_name: ai-interview-sidekiq
+    command: bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+    volumes:
+      - ./api:/ai-interview
+      - ai-interview-bundle-data:/usr/local/bundle
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  ai-interview-postgres-data:
+    name: ai-interview-postgres-data
+  ai-interview-bundle-data:
+    name: ai-interview-bundle-data

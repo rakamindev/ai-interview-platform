@@ -60,6 +60,8 @@ module FitGap
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          required_level:  expected_level,
+          is_override:     portfolio_skill&.dig(:is_override) || false,
           result:          result,
           delta:           delta,
           confidence:      portfolio_skill&.dig(:confidence)
@@ -80,7 +82,7 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          is_override:      override.present? #cek overwrite by user and shows the icon
         }
       end
     end
@@ -139,11 +141,15 @@ module FitGap
     end
 
     def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+        gaps         = comparisons.count { |c| c[:result] == 'gap' }
+        matches      = comparisons.count { |c| c[:result] == 'match' }
+        exceeds      = comparisons.count { |c| c[:result] == 'exceed' }
+        not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
-    end
+        #report semua categories secera clear so unassessed skills are never obscured
+        narrative = "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+        narrative += " #{not_assessed} required skills were not assessed in the interview." if not_assessed.positive?
+        narrative
+      end
   end
 end

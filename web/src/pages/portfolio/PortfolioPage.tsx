@@ -32,9 +32,9 @@ export default function PortfolioPage() {
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setGenerating(false);
-      // Build overrides map
+      //extract overrides secara safely if present, untuk mencegah breaking promise resolution
       const overrideMap: Record<number, AssessorOverride> = {};
-      data.portfolio.overrides.forEach((o: AssessorOverride) => {
+      (data.portfolio.overrides || []).forEach((o: AssessorOverride) => {
         overrideMap[o.portfolio_skill_id] = o;
       });
       setOverrides(overrideMap);

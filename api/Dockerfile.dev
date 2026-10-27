@@ -1,0 +1,25 @@
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  libpq-dev \
+  tzdata \
+  libjemalloc2 \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+#install semua gem groups termasuk development dan test agar rspec dan pry bekerja di dalam container
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4
+
+COPY . .
+
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+
+RUN mkdir -p tmp/pids tmp/cache tmp/sockets log
+
+EXPOSE 3001
+
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3001"]

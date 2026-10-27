@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+﻿# frozen_string_literal: true
 
 module Portfolios
   # N10: Generates a structured skill portfolio from the full transcript
@@ -62,11 +62,11 @@ module Portfolios
         #{skills_text}
 
         UNIVERSAL L1-L5 ANCHORS (use for discovered skills):
-        L1 — Executes with explicit guidance and close review. Understands conceptually but cannot apply independently.
-        L2 — Executes independently on routine scope. Uses known patterns. Handles common cases but not edge cases.
-        L3 — Executes complex, ambiguous scope. Makes tradeoffs. Handles edge cases. Can teach L1-L2.
-        L4 — Defines standards and creates reusable systems. Resolves systemic problems. Cross-team impact.
-        L5 — Org-level authority. Shapes how the skill is practiced. Rare.
+        L1 â€” Executes with explicit guidance and close review. Understands conceptually but cannot apply independently.
+        L2 â€” Executes independently on routine scope. Uses known patterns. Handles common cases but not edge cases.
+        L3 â€” Executes complex, ambiguous scope. Makes tradeoffs. Handles edge cases. Can teach L1-L2.
+        L4 â€” Defines standards and creates reusable systems. Resolves systemic problems. Cross-team impact.
+        L5 â€” Org-level authority. Shapes how the skill is practiced. Rare.
 
         FINAL COVERAGE MAP:
         #{coverage_json}
@@ -74,9 +74,9 @@ module Portfolios
         FULL INTERVIEW TRANSCRIPT:
         #{transcript_text}
 
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
         TASK
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 
         For EACH skill in the coverage map (both configured and discovered):
 
@@ -95,9 +95,9 @@ module Portfolios
            What does this person reliably do at this skill? What's the ceiling? What's missing?
 
         4. ASSIGN CONFIDENCE
-           high — probe_count >= 3 AND state = covered
-           medium — probe_count = 2 OR state = partial
-           low — probe_count <= 1 OR state = initiated
+           high â€” probe_count >= 3 AND state = covered
+           medium â€” probe_count = 2 OR state = partial
+           low â€” probe_count <= 1 OR state = initiated
 
         OUTPUT (JSON only, no prose):
         {
@@ -125,15 +125,15 @@ module Portfolios
     end
 
     def skill_definition_block(skill)
-      lines = ["━━━━━━━━━━━━━━━"]
+      lines = ["â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”"]
       lines << "SKILL: #{skill.skill_label} (#{skill.skill_id || 'custom'})"
       lines << "SCOPE: #{skill.scope_include}" if skill.scope_include.present?
       lines << ""
-      lines << "L1 — #{skill.l1_anchor}"
-      lines << "L2 — #{skill.l2_anchor}"
-      lines << "L3 — #{skill.l3_anchor}"
-      lines << "L4 — #{skill.l4_anchor}"
-      lines << "L5 — #{skill.l5_anchor}"
+      lines << "L1 â€” #{skill.l1_anchor}"
+      lines << "L2 â€” #{skill.l2_anchor}"
+      lines << "L3 â€” #{skill.l3_anchor}"
+      lines << "L4 â€” #{skill.l4_anchor}"
+      lines << "L5 â€” #{skill.l5_anchor}"
       lines.join("\n")
     end
 
@@ -150,31 +150,43 @@ module Portfolios
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      #wrap proses hapus dan create pakai transaction biar rollback if theres a failure di tengah
+      ApplicationRecord.transaction do
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+        (data['configured_skills'] || []).each do |skill_data|
+          raw_level = skill_data['level']
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+          #ignore skill kalau rating unvalid atau nil agar tidak faking nilai lv1
+          next if raw_level.nil? || !raw_level.to_s.match?(/\A[1-5]\z/)
+
+          portfolio.portfolio_skills.create!(
+            skill_id:           skill_data['skill_id'],
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      false,
+            ai_level:           raw_level.to_i,
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
+
+        (data['discovered_skills'] || []).each do |skill_data|
+          raw_level = skill_data['level']
+
+          #ignore  skill kalau rating tidak valid atau nil agar tidak faking nilai level 1
+          next if raw_level.nil? || !raw_level.to_s.match?(/\A[1-5]\z/)
+
+          portfolio.portfolio_skills.create!(
+            skill_id:           nil,
+            skill_label:        skill_data['skill_label'],
+            is_discovered:      true,
+            ai_level:           raw_level.to_i,
+            ai_confidence:      skill_data['confidence'],
+            evidence:           Array(skill_data['evidence']).first(3),
+            competency_summary: skill_data['competency_summary']
+          )
+        end
       end
     end
   end

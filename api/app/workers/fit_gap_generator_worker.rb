@@ -6,8 +6,13 @@ class FitGapGeneratorWorker
   sidekiq_options queue: :default, retry: 2
 
   def perform(portfolio_id, vacancy_id)
-    portfolio = Portfolio.find(portfolio_id)
+    portfolio = Portfolio.includes(:session).find(portfolio_id)
     vacancy   = Vacancy.unscoped.find(vacancy_id)
+
+    #mencegah cross-tenant comparisons between mismatched portfolios and vacancies
+    if portfolio.session.tenant_id != vacancy.tenant_id
+      raise ActiveRecord::RecordNotFound, "Tenant mismatch between portfolio and vacancy"
+    end
 
     FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
   rescue ActiveRecord::RecordNotFound => e
