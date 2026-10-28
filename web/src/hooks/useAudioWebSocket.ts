@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { WS_URL } from "@/services/api";
 import type { WsControlMessage, TranscriptTurn, InterviewState, InterviewSpeaker } from "@/types";
+import { screenForReason } from "@/utils/interviewScreen";
 
 interface UseAudioWebSocketOptions {
   sessionId: number;
@@ -27,6 +28,7 @@ export function useAudioWebSocket({
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionEndedRef = useRef(false);
+  const intentionalCloseRef = useRef(false);
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
   );
@@ -35,6 +37,7 @@ export function useAudioWebSocket({
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     sessionEndedRef.current = false;
+    intentionalCloseRef.current = false;
     setConnectionState("connecting");
     const url = token
       ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
@@ -100,10 +103,14 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              // The reason tells us if the interview really finished or failed.
+              onStateChange(screenForReason(msg.reason));
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                intentionalCloseRef.current = true; // fatal: do not reconnect
+                onStateChange("error");
+              }
               break;
           }
         } catch {
@@ -118,7 +125,7 @@ export function useAudioWebSocket({
 
     ws.onclose = () => {
       setConnectionState("disconnected");
-      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
+      if (sessionEndedRef.current || intentionalCloseRef.current) return; // session ended cleanly — do not reconnect
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
         onStateChange("reconnecting");
@@ -127,7 +134,7 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        onStateChange("connection_lost");
       }
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
@@ -147,12 +154,14 @@ export function useAudioWebSocket({
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
+    intentionalCloseRef.current = true;
     wsRef.current?.close();
   }, []);
 
   useEffect(() => {
     return () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      intentionalCloseRef.current = true;
       wsRef.current?.close();
     };
   }, []);

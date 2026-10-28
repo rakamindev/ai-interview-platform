@@ -23,6 +23,7 @@ import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
+import { screenForSession } from "@/utils/interviewScreen";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -39,16 +40,20 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
-  // Fetch candidate info
+  // Fetch candidate info and decide the screen from what the server says.
   useEffect(() => {
     if (!token) return;
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        const screen = screenForSession(res.data.session_status, res.data.end_reason);
+        if (screen) setInterviewState(screen);
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        // 404 means the link is wrong. Anything else means we could not reach the server.
+        setInterviewState(err?.response?.status === 404 ? "invalid_link" : "unreachable");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -241,6 +246,40 @@ export default function InterviewPage() {
     );
   }
 
+  // Final screens that are not "complete"
+  const failureScreens: Partial<Record<InterviewState, { icon: string; title: string; body: string }>> = {
+    error: {
+      icon: "⚠️",
+      title: "The interview could not be completed",
+      body: "Something went wrong and the interview could not be completed. This is not your fault. Please contact the person who sent you this invitation.",
+    },
+    connection_lost: {
+      icon: "⚠️",
+      title: "Connection lost",
+      body: "We lost the connection and could not restore it, so the interview may not have been completed. Please contact the person who sent you this invitation.",
+    },
+    invalid_link: {
+      icon: "🔗",
+      title: "This link is not valid",
+      body: "Please check that you copied the full link, or ask the person who sent it for a new one.",
+    },
+    unreachable: {
+      icon: "📡",
+      title: "Cannot reach the server",
+      body: "Please check your internet connection and refresh page.",
+    },
+  };
+  const failure = failureScreens[interviewState];
+  if (failure) {
+    return (
+      <div role="alert" className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl" aria-hidden="true">{failure.icon}</div>
+        <h2 className="text-xl font-semibold">{failure.title}</h2>
+        <p className="text-sm text-muted-foreground break-words">{failure.body}</p>
+      </div>
+    );
+  }
+
   // ── States B/C/D/E: Active interview ────────────────────────────────────
   const aiSpeaking = speaker === "ai";
   const candidateSpeaking = speaker === "candidate";
@@ -269,7 +308,7 @@ export default function InterviewPage() {
         ) : (
           <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
             <span className="animate-pulse">●</span>
-            <span>Briefly reconnecting — please wait a moment.</span>
+            <span>Connection interrupted. Trying to reconnect...</span>
           </div>
         )
       )}
@@ -286,6 +325,8 @@ export default function InterviewPage() {
       <div className="flex-1 flex flex-col items-center justify-center gap-6 py-8">
         {interviewState === "connecting" ? (
           <div className="text-sm text-muted-foreground animate-pulse">Connecting...</div>
+        ) : interviewState === "reconnecting" ? (
+          <div className="text-sm text-muted-foreground animate-pulse">Trying to reconnect...</div>
         ) : interviewState === "draining_audio" ? (
           <div className="flex flex-col items-center gap-2 text-center">
             <VoiceBars active={true} label="AI speaking" variant="ai" />
