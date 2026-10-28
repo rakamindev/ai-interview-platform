@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import StateView from "@/components/StateView";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -38,13 +39,13 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
         <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
+        <div className="min-w-0 space-y-0.5">
+          <div className="truncate text-sm font-medium" title={displayName}>{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -53,7 +54,7 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -84,7 +85,7 @@ function SessionRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="min-h-10 px-2 text-xs sm:min-h-8"
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
@@ -98,7 +99,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="min-h-10 px-2 text-xs sm:min-h-8"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
@@ -108,7 +109,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="min-h-10 px-2 text-xs sm:min-h-8"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
             >
               Results
@@ -126,6 +127,10 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -135,29 +140,51 @@ export default function AssessmentInvitePage() {
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
+    if (!Array.isArray(res.data?.sessions)) {
+      throw new Error("Session response did not contain a list.");
+    }
     setSessions(res.data.sessions);
+    setSessionsError(null);
+  }, [id]);
+
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const [aRes, sRes] = await Promise.all([
+        assessmentsApi.get(Number(id)),
+        assessmentsApi.getSessions(Number(id)),
+      ]);
+      if (!aRes.data?.assessment || !Array.isArray(sRes.data?.sessions)) {
+        throw new Error("Assessment response did not match the expected shape.");
+      }
+      setAssessment(aRes.data.assessment);
+      setSessions(sRes.data.sessions);
+      setSessionsError(null);
+    } catch {
+      setLoadError("Failed to load assessment and candidates.");
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
+    void loadPage();
+  }, [loadPage]);
 
   // Poll while any session is live or pending
   useEffect(() => {
     const hasActive = sessions.some((s) => s.status !== "ended");
     if (!hasActive) return;
-    const interval = setInterval(loadSessions, 5000);
+    const interval = setInterval(() => {
+      void loadSessions().catch(() => setSessionsError("Failed to refresh candidates."));
+    }, 5000);
     return () => clearInterval(interval);
   }, [sessions, loadSessions]);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
+    setInviteError(null);
     setShowInviteDialog(true);
   };
 
@@ -165,49 +192,72 @@ export default function AssessmentInvitePage() {
     setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
+    setInviteError(null);
     try {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+    } catch {
+      setInviteError("Failed to create the invite link. Retry to try again.");
+      setShowInviteDialog(true);
     } finally {
       setCreatingSession(false);
     }
   };
 
-  const copyLink = (session: Session, id: number) => {
-    navigator.clipboard.writeText(session.invite_url);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const copyLink = async (session: Session, id: number) => {
+    try {
+      await navigator.clipboard.writeText(session.invite_url);
+      setActionError(null);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setActionError("Could not copy the invite link. Select and copy the link manually.");
+    }
   };
 
-  const copyNewSessionLink = () => {
+  const copyNewSessionLink = async () => {
     if (!newSession?.invite_url) return;
-    navigator.clipboard.writeText(newSession.invite_url);
-    setNewSessionCopied(true);
-    setTimeout(() => setNewSessionCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(newSession.invite_url);
+      setActionError(null);
+      setNewSessionCopied(true);
+      setTimeout(() => setNewSessionCopied(false), 2000);
+    } catch {
+      setActionError("Could not copy the invite link. Select and copy the link manually.");
+    }
   };
 
-  if (loading) {
+  if (loading || loadError) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
+      <StateView
+        loading={loading}
+        error={loadError}
+        onRetry={() => void loadPage()}
+        loadingContent={
+          <div className="mx-auto max-w-2xl space-y-4" role="status" aria-label="Loading assessment">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        }
+      >
+        <></>
+      </StateView>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold" title={assessment?.name}>{assessment?.name ?? "—"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
@@ -215,11 +265,11 @@ export default function AssessmentInvitePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button className="min-h-10 sm:min-h-8" variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button className="min-h-10 sm:min-h-8" size="sm" onClick={openInviteDialog} disabled={creatingSession}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
@@ -243,13 +293,24 @@ export default function AssessmentInvitePage() {
               autoFocus
             />
             <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            {inviteError && (
+              <p role="alert" className="text-sm text-destructive">{inviteError}</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
-            <Button onClick={handleInviteCandidate}>Create Link</Button>
+            <Button onClick={handleInviteCandidate} disabled={creatingSession}>
+              {creatingSession ? "Creating..." : "Create Link"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {actionError && (
+        <div role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">
+          {actionError}
+        </div>
+      )}
 
       {/* Newly created session invite link */}
       {newSession && (
@@ -279,7 +340,7 @@ export default function AssessmentInvitePage() {
       <Separator />
 
       {/* Sessions list */}
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">
             Candidates
@@ -289,7 +350,19 @@ export default function AssessmentInvitePage() {
           </h2>
         </div>
 
-        {sessions.length === 0 ? (
+        {sessionsError ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 p-3 text-sm text-destructive">
+            <span>{sessionsError}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-h-10 sm:min-h-8"
+              onClick={() => void loadSessions().catch(() => setSessionsError("Failed to refresh candidates."))}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : sessions.length === 0 ? (
           <div className="border rounded-lg p-10 text-center space-y-3">
             <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
             <div>
@@ -328,10 +401,10 @@ export default function AssessmentInvitePage() {
             <h2 className="text-sm font-semibold">Skills assessed</h2>
             <ul className="space-y-1">
               {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <li key={s.id ?? s.skill_label} className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
                   <span>•</span>
-                  <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                  <span className="min-w-0 truncate" title={s.skill_label}>{s.skill_label}</span>
+                  <span className="shrink-0 text-xs">(expected {LEVEL_LABELS[s.expected_level] ?? "—"})</span>
                 </li>
               ))}
             </ul>

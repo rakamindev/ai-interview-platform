@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import StateView from "@/components/StateView";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
@@ -33,6 +34,7 @@ export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,16 +46,28 @@ export default function AssessmentEditPage() {
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = form;
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
-  useEffect(() => {
-    assessmentsApi
-      .get(Number(id))
-      .then((res) => {
-        const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const loadAssessment = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await assessmentsApi.get(Number(id));
+      const assessment = res.data?.assessment;
+      if (!assessment) throw new Error("Assessment response did not contain an assessment.");
+      reset({
+        name: assessment.name,
+        time_limit_min: assessment.time_limit_min,
+        skills: assessment.skills ?? [],
+      });
+    } catch {
+      setLoadError("Failed to load assessment.");
+    } finally {
+      setLoading(false);
+    }
   }, [id, reset]);
+
+  useEffect(() => {
+    void loadAssessment();
+  }, [loadAssessment]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -87,14 +101,23 @@ export default function AssessmentEditPage() {
     }
   };
 
-  if (loading) {
+  if (loading || loadError) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-24 w-full" />
-      </div>
+      <StateView
+        loading={loading}
+        error={loadError}
+        onRetry={() => void loadAssessment()}
+        loadingContent={
+          <div className="mx-auto max-w-2xl space-y-4" role="status" aria-label="Loading assessment">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        }
+      >
+        <></>
+      </StateView>
     );
   }
 
@@ -149,22 +172,22 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button className="min-h-10 sm:min-h-8" type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
+            <Button className="min-h-10 sm:min-h-8" type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill
             </Button>
           </div>
         </div>
 
         <Separator />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button className="min-h-10 sm:min-h-9" type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
+          <Button className="min-h-10 sm:min-h-9" type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Changes
           </Button>

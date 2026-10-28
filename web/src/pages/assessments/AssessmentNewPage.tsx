@@ -209,8 +209,9 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button
+              className="min-h-10 sm:min-h-8"
               type="button"
               variant="outline"
               size="sm"
@@ -220,6 +221,7 @@ export default function AssessmentNewPage() {
               Add from Skill Taxonomy
             </Button>
             <Button
+              className="min-h-10 sm:min-h-8"
               type="button"
               variant="outline"
               size="sm"
@@ -234,19 +236,20 @@ export default function AssessmentNewPage() {
         <Separator />
 
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p role="alert" className="text-sm text-destructive">{error}</p>
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
+            className="min-h-10 sm:min-h-9"
             type="button"
             variant="outline"
             onClick={() => navigate("/assessments")}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button className="min-h-10 sm:min-h-9" type="submit" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save &amp; Create Session →
           </Button>
