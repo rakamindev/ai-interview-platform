@@ -198,11 +198,20 @@ module Api
       end
 
       def fit_gap_json(report)
+        normalized_comparisons = (report.skill_comparisons || []).map do |c|
+          c_hash = c.is_a?(Hash) ? c.with_indifferent_access : {}
+          req = c_hash[:required_level] || c_hash[:expected_level]
+          c_hash.merge(
+            required_level: req,
+            expected_level: req
+          )
+        end
+
         {
           id:                report.id,
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
+          skill_comparisons: normalized_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at

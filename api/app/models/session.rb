@@ -3,7 +3,7 @@
 class Session < ApplicationRecord
   include TenantScoped
 
-  STATUSES   = %w[pending active ended failed].freeze
+  STATUSES    = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
   belongs_to :assessment
@@ -25,14 +25,24 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # Proper interview URL
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    base = ENV.fetch('FRONTEND_URL', ENV.fetch('APP_BASE_URL', 'http://localhost:5173'))
+    "#{base}/join/#{invite_token}"
   end
 
   private
 
+  # Generates clean, memorable, branded token (e.g. RKM-842-910)
   def generate_invite_token
-    self.invite_token ||= SecureRandom.hex(32)
+    return if invite_token.present?
+
+    loop do
+      token = "RKM-#{rand(100..999)}-#{rand(100..999)}"
+      unless Session.exists?(invite_token: token)
+        self.invite_token = token
+        break
+      end
+    end
   end
 end

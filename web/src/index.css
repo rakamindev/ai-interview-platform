@@ -13,18 +13,18 @@
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
+        /* Rakamin teal: #01959F -> hsl(184, 99%, 31%) */
         --primary: 184 99% 31%;
         --primary-foreground: 0 0% 98%;
 
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
+        /* Rakamin yellow: #FBC037 -> hsl(43, 96%, 60%) */
         --secondary: 43 96% 60%;
         --secondary-foreground: 26 47% 25%;
 
-        --muted: 210 40% 96%;
+        --muted: 210 40% 96.5%;
         --muted-foreground: 215 16% 47%;
 
-        --accent: 210 40% 96%;
+        --accent: 210 40% 96.5%;
         --accent-foreground: 222 47% 11%;
 
         --destructive: 0 84% 60%;
@@ -34,7 +34,7 @@
         --input: 214 32% 91%;
         --ring: 184 99% 31%;
 
-        --radius: 0.5rem;
+        --radius: 0.625rem;
     }
 
     .dark {
@@ -73,7 +73,15 @@
         @apply border-border;
     }
 
+    html {
+        scrollbar-gutter: stable;
+        overflow-y: scroll;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+
     body {
-        @apply bg-background text-foreground;
+        @apply bg-slate-50/60 text-slate-900 font-sans;
     }
 }

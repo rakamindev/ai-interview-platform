@@ -189,6 +189,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.bigint "tenant_id", null: false
     t.bigint "created_by", null: false
     t.string "role_title", limit: 255, null: false
+    t.string "employment_type", default: "full_time"
+    t.string "workplace_type", default: "on_site"
     t.text "culture_dimensions"
     t.text "competency_expectations"
     t.datetime "created_at", null: false

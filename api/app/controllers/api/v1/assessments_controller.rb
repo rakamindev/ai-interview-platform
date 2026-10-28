@@ -62,7 +62,7 @@ module Api
       end
 
       def assessment_params
-        params.require(:assessment).permit(
+        permitted = params.require(:assessment).permit(
           :name,
           :time_limit_min,
           :language,
@@ -73,6 +73,9 @@ module Api
             expected_level display_order _destroy
           ]
         )
+
+        # Note: anchor defaults are handled by AssessmentSkill#set_default_anchors (before_validation)
+        permitted
       end
 
       def assessment_json(assessment)
@@ -87,6 +90,7 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          sessions_count: assessment.sessions.size,
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,

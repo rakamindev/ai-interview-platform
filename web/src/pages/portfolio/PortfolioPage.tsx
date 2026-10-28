@@ -77,7 +77,7 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
+        a.download = `${candidateName ?? "candidate"}-Session_${sessionId}.json`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -85,7 +85,7 @@ export default function PortfolioPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
+        a.download = `${candidateName ?? "candidate"}-Session_${sessionId}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
       }

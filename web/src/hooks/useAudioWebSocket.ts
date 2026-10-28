@@ -12,7 +12,8 @@ interface UseAudioWebSocketOptions {
   onReconnected?: () => void;
 }
 
-const RECONNECT_DELAYS = [1000, 2000, 4000];
+// Note #14: Extended reconnect backoff to prevent premature auto-ending (~30s tolerance)
+const RECONNECT_DELAYS = [1000, 2000, 3000, 5000, 8000, 10000];
 
 export function useAudioWebSocket({
   sessionId,
@@ -34,7 +35,6 @@ export function useAudioWebSocket({
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    sessionEndedRef.current = false;
     setConnectionState("connecting");
     const url = token
       ? `${WS_URL}/ws/sessions/${sessionId}/audio?token=${token}`
@@ -49,8 +49,6 @@ export function useAudioWebSocket({
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
     };
 
-    // Only signal AI speaking once per turn (first binary chunk).
-    // Reset when speaker_changed:candidate arrives.
     let aiSpeakingSignalled = false;
 
     ws.onmessage = (event) => {
@@ -74,9 +72,6 @@ export function useAudioWebSocket({
               }
               break;
             case "speaker_changed":
-              // Backend sends speaker_changed:candidate 800ms after AI finishes
-              // (GATE_OPEN_DELAY) — audio playback has drained by then.
-              // No async wait needed on the frontend.
               if (msg.speaker === "candidate") {
                 aiSpeakingSignalled = false;
                 onSpeakerChange("candidate");
@@ -98,12 +93,18 @@ export function useAudioWebSocket({
               onReconnected?.();
               break;
             case "session_ended":
+              // Explicit end from server
               sessionEndedRef.current = true;
-              reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
+              reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              // Note #14: Only complete if explicitly unrecoverable AND session ended, otherwise try to recover
+              if (!msg.recoverable && sessionEndedRef.current) {
+                onStateChange("complete");
+              } else {
+                console.warn("[WebSocket] Recoverable warning or server error:", msg.message);
+              }
               break;
           }
         } catch {
@@ -118,7 +119,9 @@ export function useAudioWebSocket({
 
     ws.onclose = () => {
       setConnectionState("disconnected");
-      if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
+      // Clean exit requested: do not reconnect
+      if (sessionEndedRef.current) return;
+
       const attempt = reconnectAttemptsRef.current;
       if (attempt < RECONNECT_DELAYS.length) {
         onStateChange("reconnecting");
@@ -127,10 +130,12 @@ export function useAudioWebSocket({
           connect();
         }, RECONNECT_DELAYS[attempt]);
       } else {
-        onStateChange("complete");
+        // Note #14: Do NOT force session to "complete" on connection drops!
+        // Instead keep in reconnecting state so user can retry or wait for internet restoration
+        onStateChange("reconnecting");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onReconnected]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -145,8 +150,9 @@ export function useAudioWebSocket({
   }, []);
 
   const disconnect = useCallback(() => {
+    sessionEndedRef.current = true; // Mark session explicitly ended
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
+    reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
     wsRef.current?.close();
   }, []);
 
