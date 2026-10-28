@@ -62,7 +62,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill ? portfolio_skill[:overridden] : false
         }
       end
 
@@ -139,11 +140,15 @@ module FitGap
     end
 
     def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      gaps         = comparisons.count { |c| c[:result] == 'gap' }
+      matches      = comparisons.count { |c| c[:result] == 'match' }
+      exceeds      = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      # Kalimat dibuat netral terhadap bentuk jamak, dan skill yang belum dinilai wajib disebut
+      # supaya pembaca tidak mengira semua skill sudah dinilai.
+      "Against role requirements: #{matches} skill matched, #{exceeds} exceeded, " \
+        "#{gaps} below the required level, #{not_assessed} not assessed."
     end
   end
 end

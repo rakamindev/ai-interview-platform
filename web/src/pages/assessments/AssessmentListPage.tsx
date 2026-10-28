@@ -31,15 +31,18 @@ export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
+    setLoading(true);
+    setError(false);
     assessmentsApi
       .list()
       .then((res) => setAssessments(res.data.assessments))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   return (
     <div className="space-y-4">
@@ -50,15 +53,16 @@ export default function AssessmentListPage() {
         </Button>
       </div>
 
-      {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load assessments. Please refresh the page.
-        </div>
-      )}
-
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+        </div>
+      ) : error ? (
+        <div role="alert" className="border border-destructive/40 rounded-lg p-8 text-center space-y-3">
+          <p className="text-sm text-destructive">Could not load the assessments. Please try again.</p>
+          <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+            Try again
+          </Button>
         </div>
       ) : assessments.length === 0 ? (
         <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">

@@ -6,6 +6,10 @@ interface ComparisonTableProps {
   comparisons: SkillComparison[];
 }
 
+function levelLabel(level: number | null | undefined): string {
+  return level != null ? LEVEL_LABELS[level] ?? `L${level}` : "—";
+}
+
 function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   const label = FIT_GAP_RESULT_LABELS[comparison.result];
   const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
@@ -25,10 +29,19 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
 }
 
 export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
+  if (comparisons.length === 0) {
+    return (
+      <div className="rounded-lg border px-4 py-6 text-center text-sm text-muted-foreground">
+        No skills to compare.
+      </div>
+    );
+  }
+
   const matchCount = comparisons.filter((c) => c.result === "match").length;
   const gapCount = comparisons.filter((c) => c.result === "gap").length;
   const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+  const notAssessedCount = comparisons.filter((c) => c.result === "not_assessed").length;
+  const hasOverride = comparisons.some((c) => c.is_override);
 
   return (
     <div className="space-y-3">
@@ -36,30 +49,33 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
+              <th className="text-left px-2 sm:px-4 py-2.5 font-medium">Skill</th>
+              <th className="text-center px-2 sm:px-4 py-2.5 font-medium">Required</th>
+              <th className="text-center px-2 sm:px-4 py-2.5 font-medium">Candidate</th>
+              <th className="text-center px-2 sm:px-4 py-2.5 font-medium">Result</th>
             </tr>
           </thead>
           <tbody>
             {comparisons.map((c, i) => (
               <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+                <td className="px-2 sm:px-4 py-2.5 break-words [overflow-wrap:anywhere]">{c.skill_label}</td>
+                <td className="px-2 sm:px-4 py-2.5 text-center text-muted-foreground">
+                  {levelLabel(c.expected_level)}
                 </td>
-                <td className="px-4 py-2.5 text-center">
+                <td className="px-2 sm:px-4 py-2.5 text-center">
                   {c.candidate_level != null ? (
                     <span>
-                      {LEVEL_LABELS[c.candidate_level]}
+                      {levelLabel(c.candidate_level)}
                       {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.confidence === "low" && (
+                        <span className="block text-xs text-amber-600">low confidence</span>
+                      )}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-center">
+                <td className="px-2 sm:px-4 py-2.5 text-center">
                   <ResultBadge comparison={c} />
                 </td>
               </tr>
@@ -69,11 +85,12 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+        {notAssessedCount > 0 && <span>— Not assessed: {notAssessedCount} skill{notAssessedCount !== 1 ? "s" : ""}</span>}
+        {hasOverride && <span className="ml-auto">✏ = human override applied</span>}
       </div>
     </div>
   );

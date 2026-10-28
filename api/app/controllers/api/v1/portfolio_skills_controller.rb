@@ -48,7 +48,8 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        # Hanya skill milik portofolio di perusahaan (tenant) yang sedang login.
+        @portfolio_skill = PortfolioSkill.where(portfolio_id: Portfolio.for_current_tenant.select(:id))
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

@@ -13,6 +13,11 @@ class Portfolio < ApplicationRecord
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
 
+  # Tabel portfolios tidak punya kolom tenant_id. Pembatasan per perusahaan diturunkan dari
+  # Session, yang memakai TenantScoped, sehingga subquery ini otomatis hanya memuat sesi
+  # milik perusahaan yang sedang login.
+  scope :for_current_tenant, -> { where(session_id: Session.select(:id)) }
+
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'
