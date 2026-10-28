@@ -801,3 +801,5 @@ class AudioWebSocketMiddleware
     end
   end
 end
+
+AudioWebsocketMiddleware = AudioWebSocketMiddleware

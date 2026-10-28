@@ -52,6 +52,8 @@ module ExceptionHandler
 
   def exception_status(e)
     case e
+    when ActionDispatch::Http::Parameters::ParseError
+      400
     when ActiveRecord::RecordInvalid,
          ActiveModel::StrictValidationFailed,
          ActionController::ParameterMissing  then 422

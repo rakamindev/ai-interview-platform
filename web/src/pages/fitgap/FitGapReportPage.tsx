@@ -195,7 +195,7 @@ export default function FitGapReportPage() {
                         <span className="text-muted-foreground">
                           {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
                         </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
+                        <span className="text-xs text-muted-foreground">(Tidak dipersyaratkan untuk peran ini, dapat menjadi nilai tambah)</span>
                       </div>
                     ))}
                 </CardContent>

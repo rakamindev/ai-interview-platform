@@ -23,7 +23,9 @@ export const DEFAULT_THRESHOLDS: SpeedThresholds = {
 };
 
 const SPEED_TEST_PING_URL = import.meta.env.VITE_SPEED_TEST_PING_URL as string | undefined;
-const SPEED_TEST_UPLOAD_URL = import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined;
+const SPEED_TEST_UPLOAD_URL =
+    (import.meta.env.VITE_SPEED_TEST_UPLOAD_URL as string | undefined) ||
+    "http://localhost:3001/api/v1/speed_test";
 
 async function measurePing(): Promise<number> {
     if (SPEED_TEST_PING_URL) {

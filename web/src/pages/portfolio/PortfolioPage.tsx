@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, AlertCircle } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -96,7 +96,7 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-4xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -105,7 +105,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
@@ -186,22 +186,34 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
-          {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
-              ))}
-          </div>
-
-          {/* Discovered skills */}
+          {portfolio.skills.length === 0 ? (
+            <div className="border border-neutral-200 rounded-xl p-10 text-center space-y-3 bg-neutral-50/50">
+              <AlertCircle className="h-8 w-8 text-neutral-400 mx-auto" />
+              <div className="space-y-1">
+                <p className="font-semibold text-neutral-900">Belum Ada Bukti Rekaman Wawancara</p>
+                <p className="text-sm text-neutral-500 max-w-md mx-auto leading-relaxed">
+                  Sesi ini diakhiri sebelum percakapan tanya jawab dimulai atau tidak ada jawaban kandidat yang terekam.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Configured skills */}
+              <div className="space-y-3">
+                <h2 className="text-sm font-semibold">Configured Skills</h2>
+                {portfolio.skills
+                  .filter((s) => !s.is_discovered)
+                  .map((skill) => (
+                    <SkillPortfolioCard
+                      key={skill.id}
+                      skill={skill}
+                      override={overrides[skill.id]}
+                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                    />
+                  ))}
+              </div>
+            </>
+          )}
           {portfolio.skills.some((s) => s.is_discovered) && (
             <>
               <Separator />

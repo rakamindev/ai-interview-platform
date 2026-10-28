@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'umbrella/**'
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - 'umbrella/**'
+      - 'feature/**'
+
+jobs:
+  api-test:
+    name: Backend (Rails & RSpec)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: rakamin_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3.2
+          bundler-cache: true
+          working-directory: api
+
+      - name: Configure test environment
+        run: |
+          cp config/application.yml.sample config/application.yml
+
+      - name: Prepare database
+        env:
+          RAILS_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: rakamin_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: admin
+          SECRET_KEY_BASE: test_secret_key_base_for_ci_pipeline_verification
+        run: |
+          bundle exec rails db:test:prepare
+
+      - name: Run RSpec test suite
+        env:
+          RAILS_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: rakamin_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: admin
+          SECRET_KEY_BASE: test_secret_key_base_for_ci_pipeline_verification
+        run: |
+          bundle exec rspec
+
+  web-test:
+    name: Frontend (React, Vitest & Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest unit & component tests
+        run: npm test
+
+      - name: Run Production Build
+        run: npm run build

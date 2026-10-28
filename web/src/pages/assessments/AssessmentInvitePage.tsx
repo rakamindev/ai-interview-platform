@@ -15,7 +15,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  CheckCircle2,
+  AlertCircle,
+  Users,
+  Radio,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -73,10 +86,17 @@ function SessionRow({
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
+          (session.turns_count === 0 || (session.duration_seconds != null && session.duration_seconds < 15 && !session.started_at)) ? (
+            <span className="flex items-center gap-1.5 text-xs text-neutral-600 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
+              Diakhiri Awal (Tanpa Jawaban)
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs text-emerald-700 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Completed
+            </span>
+          )
         )}
 
         <div className="flex items-center gap-1.5">
@@ -190,27 +210,37 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-20 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
+  const totalCount = sessions.length;
+  const completedCount = sessions.filter((s) => s.status === "ended" && s.end_reason !== "error").length;
+  const activeCount = sessions.filter((s) => s.status === "active").length;
+  const failedCount = sessions.filter((s) => s.end_reason === "error").length;
+  const pendingCount = sessions.filter((s) => s.status === "pending").length;
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
+        <div className="flex items-center gap-3">
+          <Link to="/assessments" className="text-neutral-500 hover:text-neutral-900 p-1 rounded-md hover:bg-neutral-100 transition-colors">
+            <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
+            <h1 className="text-xl font-bold text-neutral-900">{assessment?.name ?? "Wawancara Kompetensi"}</h1>
+            <div className="flex items-center gap-2 text-xs text-neutral-500 mt-0.5">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 text-neutral-400" />
+                {assessment?.time_limit_min} menit
+              </span>
+              <span>•</span>
+              <span>{assessment?.skills?.length ?? 0} skill dievaluasi</span>
             </div>
           </div>
         </div>
@@ -219,10 +249,30 @@ export default function AssessmentInvitePage() {
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession} className="bg-neutral-900 hover:bg-neutral-800 text-white">
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            {creatingSession ? "Creating..." : "Invite Candidate"}
+            {creatingSession ? "Membuat link..." : "Undang Kandidat"}
           </Button>
+        </div>
+      </div>
+
+      {/* Metric Tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white border border-neutral-200 rounded-xl p-3.5 shadow-sm">
+          <span className="text-xs font-medium text-neutral-500">Total Kandidat</span>
+          <p className="text-xl font-bold text-neutral-900 mt-0.5">{totalCount}</p>
+        </div>
+        <div className="bg-white border border-neutral-200 rounded-xl p-3.5 shadow-sm">
+          <span className="text-xs font-medium text-emerald-700">Selesai Wawancara</span>
+          <p className="text-xl font-bold text-emerald-700 mt-0.5">{completedCount}</p>
+        </div>
+        <div className="bg-white border border-neutral-200 rounded-xl p-3.5 shadow-sm">
+          <span className="text-xs font-medium text-blue-700">Dalam Sesi Live</span>
+          <p className="text-xl font-bold text-blue-700 mt-0.5">{activeCount}</p>
+        </div>
+        <div className="bg-white border border-neutral-200 rounded-xl p-3.5 shadow-sm">
+          <span className="text-xs font-medium text-amber-700">Menunggu / Terputus</span>
+          <p className="text-xl font-bold text-neutral-700 mt-0.5">{pendingCount + failedCount}</p>
         </div>
       </div>
 
@@ -242,7 +292,7 @@ export default function AssessmentInvitePage() {
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-xs text-neutral-500">Opsional (membantu identifikasi kandidat pada daftar sesi).</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
@@ -257,8 +307,8 @@ export default function AssessmentInvitePage() {
           <CardContent className="pt-4 space-y-2">
             <p className="text-sm font-medium">
               {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
+                ? <>Link untuk <span className="font-semibold">{newSession.candidate_name}</span> siap dibagikan kepada kandidat:</>
+                : <>Link undangan wawancara baru siap dibagikan kepada kandidat:</>}
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">

@@ -17,3 +17,10 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Local API Testing & Bruno
+/testing/*
+!/testing/bruno-report.html
+
+# RSpec cache
+**/examples.txt

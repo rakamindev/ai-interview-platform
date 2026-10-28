@@ -175,8 +175,8 @@ export default function LiveMonitorPage() {
           <div>
             <span className="font-medium">Session ended</span>
             {sessionEndReason && (
-              <span className="text-muted-foreground ml-1.5">
-                — {sessionEndReason.replace(/_/g, " ")}
+              <span className="text-muted-foreground ml-1.5 font-normal">
+                ({sessionEndReason.replace(/_/g, " ")})
               </span>
             )}
           </div>

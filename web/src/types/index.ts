@@ -45,6 +45,8 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  turns_count?: number;
+  portfolio_status?: string;
 }
 
 export interface CoverageSkill {
@@ -129,7 +131,8 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  required_level?: number;
+  expected_level?: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -164,6 +167,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
 }
 
 export interface PaginationMeta {
@@ -182,8 +186,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
-
+  | "complete"
+  | "error";
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
 export interface WsControlMessage {

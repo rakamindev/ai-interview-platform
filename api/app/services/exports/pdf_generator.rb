@@ -119,7 +119,7 @@ module Exports
       pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
       pdf.move_down 8
 
-      comparisons = @fit_gap.skill_comparisons
+      comparisons = @fit_gap.comparisons
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|

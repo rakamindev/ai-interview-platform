@@ -8,7 +8,7 @@ module FitGap
       @portfolio = portfolio
       @vacancy   = vacancy
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.8-flash'),
         timeout: 30
       )
     end
@@ -17,6 +17,7 @@ module FitGap
     def call
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
+      summary           = compute_summary(skill_comparisons)
 
       report = FitGapReport.find_or_initialize_by(
         portfolio_id: @portfolio.id,
@@ -24,7 +25,10 @@ module FitGap
       )
 
       report.update!(
-        skill_comparisons: skill_comparisons,
+        skill_comparisons: {
+          comparisons: skill_comparisons,
+          summary:     summary
+        },
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
         generated_at:      Time.current
@@ -43,14 +47,14 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+        candidate_level = portfolio_skill&.dig(:effective_level)
+        expected_level  = vacancy_skill.expected_level
+
+        if candidate_level.is_a?(Numeric)
+          delta  = candidate_level - expected_level
+          result = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
           candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
         end
@@ -144,6 +148,21 @@ module FitGap
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
 
       "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+    end
+    def compute_summary(skill_comparisons)
+      matches      = skill_comparisons.select { |c| c[:result] == 'match' }
+      gaps         = skill_comparisons.select { |c| c[:result] == 'gap' }
+      exceeds      = skill_comparisons.select { |c| c[:result] == 'exceed' }
+      not_assessed = skill_comparisons.select { |c| c[:result] == 'not_assessed' }
+      denom        = [matches.count + exceeds.count + gaps.count, 1].max
+
+      {
+        match_count:        matches.count,
+        gap_count:          gaps.count,
+        exceed_count:       exceeds.count,
+        not_assessed_count: not_assessed.count,
+        fit_percentage:     ((matches.count + exceeds.count).to_f / denom * 100).round(1)
+      }
     end
   end
 end
