@@ -6,7 +6,6 @@ import LevelRadio from "@/components/assessment/LevelRadio";
 import LevelBadge from "./LevelBadge";
 import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, Pencil } from "lucide-react";
-import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface OverridePanelProps {
@@ -17,7 +16,10 @@ interface OverridePanelProps {
 
 export default function OverridePanel({ skill, existingOverride, onSaved }: OverridePanelProps) {
   const [open, setOpen] = useState(false);
-  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? parseLevel(skill.ai_level));
+  // 3 (mid-scale) is only ever used as a starting point when ai_level is
+  // null — an insufficient_evidence skill whose level genuinely couldn't be
+  // parsed. An assessor reviews and changes it before saving regardless.
+  const [overrideLevel, setOverrideLevel] = useState(existingOverride?.override_level ?? skill.ai_level ?? 3);
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -47,7 +49,7 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
         {hasOverride ? (
           <>
             <div className="flex items-center gap-1.5 text-sm">
-              <LevelBadge level={parseLevel(skill.ai_level)} size="sm" />
+              <LevelBadge level={skill.ai_level} size="sm" />
               <span className="text-muted-foreground text-xs">AI</span>
               <span className="text-muted-foreground">→</span>
               <LevelBadge level={existingOverride!.override_level} size="sm" />

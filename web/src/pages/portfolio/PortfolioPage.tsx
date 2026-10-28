@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -22,7 +22,9 @@ export default function PortfolioPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -47,7 +49,7 @@ export default function PortfolioPage() {
         setVacancies(vRes.data.vacancies);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -66,6 +68,7 @@ export default function PortfolioPage() {
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(
         portfolio.id,
@@ -89,6 +92,12 @@ export default function PortfolioPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch {
+      // Previously missing entirely: a failed export (e.g. the backend
+      // rejects export while generation_status isn't "complete") surfaced
+      // as an unhandled promise rejection in the console — the button just
+      // silently reset with no indication to the user that nothing happened.
+      setExportError(`Couldn't export as ${format.toUpperCase()}. Try again.`);
     } finally {
       setExporting(null);
     }
@@ -128,7 +137,11 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {/* Previously gated on `portfolio` alone, which is truthy even
+              when generation_status is "failed" — the backend correctly
+              rejects export in that state (422), but the button offered it
+              anyway with no visible consequence when it failed. */}
+          {!generating && portfolio?.generation_status === "complete" && (
             <>
               <Button
                 variant="outline"
@@ -152,6 +165,20 @@ export default function PortfolioPage() {
           )}
         </div>
       </div>
+
+      {exportError && (
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/5 border border-destructive/30 rounded-lg px-3 py-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {exportError}
+        </div>
+      )}
+
+      {loadError && (
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/5 border border-destructive/30 rounded-lg px-3 py-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Some data on this page failed to load. Refresh to try again.
+        </div>
+      )}
 
       {/* Generating state */}
       {generating && (

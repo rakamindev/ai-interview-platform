@@ -10,7 +10,17 @@ module Coverage
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
+        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-3.8-flash'),
+        # gemini-2.0-flash-001 (the prior default) was retired by Google and
+        # returns 404, so this path is dead today regardless of timeout.
+        # NOTE: the replacement, gemini-3.8-flash, is a reasoning model and
+        # was measured elsewhere in this codebase taking 120-300s on other
+        # prompts. This analyzer runs per-turn during a live interview and is
+        # documented above as needing to stay fast — that latency has NOT
+        # been measured here (would need a real live interview to test), so
+        # the timeout is left unchanged. If gemini-3.8-flash proves too slow
+        # for per-turn use, disable extended thinking via the API's
+        # thinkingConfig, or pin an older non-reasoning Flash model instead.
         timeout: 45
       )
     end

@@ -2,12 +2,26 @@ import { LEVEL_LABELS, LEVEL_BADGE_CLASSES, LEVEL_DESCRIPTIONS } from "@/utils/c
 import { cn } from "@/lib/utils";
 
 interface LevelBadgeProps {
-  level: number;
+  level: number | null;
   size?: "sm" | "md";
   className?: string;
 }
 
 export default function LevelBadge({ level, size = "md", className }: LevelBadgeProps) {
+  if (level == null) {
+    return (
+      <div
+        className={cn(
+          "inline-flex flex-col items-center justify-center rounded font-semibold bg-neutral-100 text-neutral-400",
+          size === "md" ? "px-3 py-2 min-w-14 text-base" : "px-2 py-1 min-w-10 text-sm",
+          className
+        )}
+      >
+        <span>—</span>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(

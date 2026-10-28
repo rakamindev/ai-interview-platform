@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
 interface UseAudioCaptureOptions {
   onFrame: (buffer: ArrayBuffer) => void;
@@ -64,6 +64,20 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
     streamRef.current = null;
     mutedRef.current = false;
     setIsCapturing(false);
+  }, []);
+
+  // Without this, navigating away from the interview page by any route
+  // other than the explicit "End Interview" button (back button, closing a
+  // link, a route change) left the mic and AudioContext running — the
+  // browser's mic indicator stayed lit and audio kept being captured after
+  // the candidate believed they had left. Reads refs directly rather than
+  // calling `stop` so this doesn't re-run on every render.
+  useEffect(() => {
+    return () => {
+      workletNodeRef.current?.disconnect();
+      audioCtxRef.current?.close();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
   }, []);
 
   return { start, stop, mute, unmute, isCapturing };

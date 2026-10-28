@@ -178,9 +178,11 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
+          assessment_status: skill.assessment_status,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
           evidence:          skill.evidence_quotes,
+          evidence_count:    skill.evidence_quotes.size,
           competency_summary: skill.competency_summary
         }
       end

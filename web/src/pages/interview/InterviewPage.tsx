@@ -48,7 +48,12 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      // A failure here (invalid/expired token, network error, backend down)
+      // is NOT the same as a finished interview — telling the candidate
+      // "Interview Complete, thank you" when they never started is actively
+      // misleading and hides a real system failure from both the candidate
+      // and the hiring team. "link_error" renders a distinct message below.
+      .catch(() => setInterviewState("link_error"));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -222,6 +227,24 @@ export default function InterviewPage() {
             </Button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ── State: Link error ───────────────────────────────────────────────────
+  // Distinct from "complete" — this interview was never reached, let alone
+  // finished. A candidate hitting this should contact whoever sent the link,
+  // not believe they already did something.
+  if (interviewState === "link_error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="text-4xl">⚠️</div>
+        <h2 className="text-xl font-semibold">This interview link isn't working</h2>
+        <p className="text-sm text-muted-foreground">
+          It may have expired, already been used, or there's a temporary connection problem.
+          <br />
+          Please contact the person who sent you this link — your interview has not started or been recorded.
+        </p>
       </div>
     );
   }

@@ -3,7 +3,6 @@ import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
 import { Zap } from "lucide-react";
-import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
 interface SkillPortfolioCardProps {
@@ -17,7 +16,13 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const effectiveLevel = override?.override_level ?? skill.ai_level;
+  // Overriding is not offered for not_assessed skills: there is no AI level
+  // to anchor a correction against (an assessor override must record what
+  // the AI said, and for not_assessed there is nothing it said). A human
+  // judgement on a never-discussed skill belongs in a follow-up interview,
+  // not a retroactive edit here.
+  const canOverride = override != null || skill.assessment_status !== "not_assessed";
 
   return (
     <Card>
@@ -35,16 +40,27 @@ export default function SkillPortfolioCard({
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              {skill.assessment_status === "not_assessed" ? (
+                <span className="text-xs text-muted-foreground">Not covered in the interview</span>
+              ) : (
+                <ConfidenceIndicator confidence={skill.ai_confidence} />
+              )}
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          {canOverride && (
+            <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          )}
         </div>
 
-        {/* Low confidence note */}
-        {skill.ai_confidence?.toLowerCase() === "low" && (
+        {/* Assessment status note */}
+        {skill.assessment_status === "not_assessed" && (
+          <div className="text-xs text-muted-foreground bg-neutral-50 border border-neutral-200 rounded px-3 py-2">
+            This skill was never reached in the interview — not a weak result, just an untested one. Consider a follow-up if it matters for this role.
+          </div>
+        )}
+        {skill.assessment_status === "insufficient_evidence" && (
           <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+            Only briefly explored. Confidence is low — warrants a dedicated follow-up if this skill matters.
           </div>
         )}
 

@@ -19,6 +19,15 @@ module AiInterview
     # API-only mode
     config.api_only = true
 
+    # This app creates a custom Postgres schema (ai_interview) via raw SQL in
+    # a migration (db/migrate/20240101000000_create_ai_interview_schema.rb).
+    # The default :ruby format (schema.rb) cannot represent CREATE SCHEMA, so
+    # `db:schema:load` — which `maintain_test_schema!` runs automatically
+    # whenever db/schema.rb changes — silently created every table in
+    # `public` instead of `ai_interview` on a schema reload from a clean
+    # state, until this file (db/structure.sql) was introduced.
+    config.active_record.schema_format = :sql
+
     # Auto-load paths
     config.autoload_paths += %W[
       #{config.root}/app/auth

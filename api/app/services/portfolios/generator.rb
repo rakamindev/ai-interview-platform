@@ -8,8 +8,13 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.8-flash'),
+        # gemini-2.0-pro-001 (the prior default) was retired by Google and
+        # returns 404. gemini-3.8-flash is a reasoning ("thinking") model —
+        # measured against this exact prompt shape with real transcript data,
+        # a single call took over 180s and completed within 300s. 240s below
+        # leaves headroom under Sidekiq's 300s job timeout (config/sidekiq.yml).
+        timeout: 240
       )
     end
 
@@ -149,32 +154,127 @@ module Portfolios
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+      configured_response = Array(data['configured_skills'])
+      discovered_response = Array(data['discovered_skills'])
+      coverage_maps        = @session.coverage_maps.to_a
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Atomic: a validation failure partway through (e.g. a malformed
+      # confidence value from the LLM) must not leave a partial skill set
+      # under a portfolio whose generation_status says "failed" — the caller
+      # (#call) sets that status outside this transaction, after it's clear
+      # whether the whole set actually saved.
+      # requires_new: true forces a real savepoint even when this runs
+      # inside an already-open transaction (e.g. a future caller wrapping
+      # Generator in its own transaction, or — exactly this case — under a
+      # test suite's per-example transaction) — without it, Rails treats a
+      # "nested" transaction as joining the parent one, and a raise here
+      # would not actually undo these writes until whatever opened the
+      # outer transaction finishes.
+      portfolio.transaction(requires_new: true) do
+        portfolio.portfolio_skills.destroy_all
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        # Iterate the assessment's configured skills, not the AI response's
+        # keys — a skill the AI's response omits entirely still gets a row
+        # (not_assessed), rather than silently disappearing from the report.
+        @session.assessment.assessment_skills.order(:display_order).each do |skill|
+          skill_data = find_skill_data(configured_response, skill_id: skill.skill_id, skill_label: skill.skill_label)
+          coverage   = find_coverage(coverage_maps, is_discovered: false, skill_id: skill.skill_id, skill_label: skill.skill_label)
+
+          create_portfolio_skill(
+            portfolio,
+            skill_id: skill.skill_id, skill_label: skill.skill_label, is_discovered: false,
+            skill_data: skill_data, coverage: coverage
+          )
+        end
+
+        discovered_response.each do |skill_data|
+          label    = skill_data['skill_label']
+          coverage = find_coverage(coverage_maps, is_discovered: true, skill_id: nil, skill_label: label)
+
+          create_portfolio_skill(
+            portfolio,
+            skill_id: nil, skill_label: label, is_discovered: true,
+            skill_data: skill_data, coverage: coverage
+          )
+        end
+      end
+    rescue
+      # When the transaction above rolls back to its savepoint, ActiveRecord
+      # correctly resets each rolled-back record's own new_record?/id state
+      # — but `portfolio`'s in-memory `portfolio_skills` association target
+      # still holds references to those now-unsaved objects. Left alone, the
+      # NEXT `portfolio.update!` (the caller's rescue, marking generation
+      # 'failed') would silently re-INSERT them as a side effect of Rails
+      # autosaving new records sitting in a loaded has_many target —
+      # resurrecting exactly the partial data this transaction exists to
+      # prevent. Proven by reproducing it with a plain `rails runner` script
+      # (no test-framework transaction involved) before writing this fix.
+      portfolio.portfolio_skills.reset
+      raise
+    end
+
+    def create_portfolio_skill(portfolio, skill_id:, skill_label:, is_discovered:, skill_data:, coverage:)
+      evidence = Array(skill_data && skill_data['evidence']).first(3)
+      status = Portfolios::SkillStatus.derive(
+        coverage:       coverage,
+        raw_level:      skill_data && skill_data['level'],
+        evidence_count: evidence.size
+      )
+
+      # A discovered skill exists in the response only because the AI
+      # surfaced some signal for it — "not_assessed" (no evidence at all)
+      # isn't a meaningful state for something that was, by construction,
+      # at least weakly observed. Mirrors the backfill in the migration.
+      if is_discovered && status.status == Portfolios::SkillStatus::NOT_ASSESSED
+        status = Portfolios::SkillStatus::Result.new(status: "insufficient_evidence", level: nil, confidence: "low")
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      summary = (skill_data && skill_data['competency_summary']).presence || default_summary(status.status)
+
+      portfolio.portfolio_skills.create!(
+        skill_id:            skill_id,
+        skill_label:         skill_label,
+        is_discovered:       is_discovered,
+        assessment_status:   status.status,
+        ai_level:            status.level,
+        ai_confidence:       status.confidence,
+        evidence:            evidence,
+        competency_summary:  summary
+      )
+    end
+
+    def find_skill_data(response_skills, skill_id:, skill_label:)
+      return nil if response_skills.blank?
+
+      if skill_id.present?
+        match = response_skills.find { |s| s['skill_id'] == skill_id }
+        return match if match
+      end
+      response_skills.find { |s| normalize_label(s['skill_label']) == normalize_label(skill_label) }
+    end
+
+    def find_coverage(coverage_maps, is_discovered:, skill_id:, skill_label:)
+      scoped = coverage_maps.select { |m| m.is_discovered == is_discovered }
+
+      if skill_id.present?
+        match = scoped.find { |m| m.skill_id == skill_id }
+        return match if match
+      end
+      scoped.find { |m| normalize_label(m.skill_label) == normalize_label(skill_label) }
+    end
+
+    def normalize_label(label)
+      label.to_s.strip.downcase.gsub(/\s+/, " ")
+    end
+
+    def default_summary(status)
+      case status
+      when Portfolios::SkillStatus::NOT_ASSESSED
+        "This skill was not covered during the interview."
+      when Portfolios::SkillStatus::INSUFFICIENT_EVIDENCE
+        "Limited evidence was gathered for this skill during the interview."
+      else
+        "No summary was provided."
       end
     end
   end

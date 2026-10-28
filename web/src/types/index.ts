@@ -16,7 +16,12 @@ export interface Assessment {
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  // Matches SkillTaxonomy.skill_id (e.g. "SK-ENG-001") — a taxonomy-sourced
+  // skill carries it through from the picker; a custom skill has none.
+  // Previously typed `number`, which every backend skill_id column
+  // (varchar) never actually is — see SkillPicker.tsx's onSelect, which
+  // worked around the mismatch by discarding the real value entirely.
+  skill_id?: string;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -49,7 +54,7 @@ export interface Session {
 
 export interface CoverageSkill {
   id: number;
-  skill_id: number;
+  skill_id: string;
   skill_label: string;
   is_discovered: boolean;
   state: "not_yet" | "initiated" | "partial" | "covered";
@@ -85,14 +90,27 @@ export interface Portfolio {
   overrides: AssessorOverride[];
 }
 
+// A skill the interview never reached, or reached too briefly to trust, is
+// not the same thing as a bad result — see Portfolios::SkillStatus (backend)
+// for the rule that derives this from coverage data rather than trusting
+// whatever level the AI reports for itself.
+export type SkillAssessmentStatus = "assessed" | "insufficient_evidence" | "not_assessed";
+
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  assessment_status: SkillAssessmentStatus;
+  // null exactly when assessment_status is "not_assessed". Previously typed
+  // as a string ("L1".."L5") — the backend has only ever sent a plain
+  // integer here (see Api::V1::PortfoliosController#portfolio_skill_json);
+  // every `parseLevel(skill.ai_level)` call site elsewhere in this codebase
+  // was converting a type that was never actually a string at runtime.
+  ai_level: number | null;
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
+  evidence_count: number;
   competency_summary: string;
 }
 
@@ -119,21 +137,30 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
 }
 
-export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
+export type SkillComparisonResult = SkillAssessmentStatus | "match" | "gap" | "exceed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string;
+  expected_level: number;
+  // Set only when result is match/gap/exceed (i.e. the skill was actually
+  // assessed, or a human override stands in for that).
+  candidate_level: number | null;
+  // Set only when result is insufficient_evidence — the level the AI
+  // reported, kept for context but never scored against expected_level.
+  provisional_level: number | null;
+  ai_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  confidence: string | null;
+  evidence_count: number;
+  is_override: boolean;
 }
 
 export interface FitGapReport {
@@ -182,7 +209,8 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "link_error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

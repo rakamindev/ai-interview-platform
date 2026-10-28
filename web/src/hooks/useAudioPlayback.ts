@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 
 const PLAYBACK_SAMPLE_RATE = 24000; // Gemini outputs 24kHz
 
@@ -83,6 +83,17 @@ export function useAudioPlayback() {
     audioCtxRef.current = null;
     nextPlayTimeRef.current = 0;
   }, [cancelDrain]);
+
+  // Without this, leaving the interview page any way other than "End
+  // Interview" left the drain-check interval running indefinitely and the
+  // playback AudioContext open.
+  useEffect(() => {
+    return () => {
+      if (drainCheckRef.current) clearInterval(drainCheckRef.current);
+      audioCtxRef.current?.close();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain };
 }

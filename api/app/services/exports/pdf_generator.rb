@@ -9,11 +9,17 @@ module Exports
   class PdfGenerator
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
+    STATUS_LABELS = {
+      'assessed'              => 'Assessed',
+      'insufficient_evidence' => 'Insufficient evidence',
+      'not_assessed'          => 'Not assessed — not covered in the interview'
+    }.freeze
     RESULT_LABELS = {
-      'match'        => 'Match',
-      'gap'          => 'Gap',
-      'exceed'       => 'Exceeds',
-      'not_assessed' => 'Not Assessed'
+      'match'                 => 'Match',
+      'gap'                   => 'Gap',
+      'exceed'                => 'Exceeds',
+      'insufficient_evidence' => 'Insufficient evidence',
+      'not_assessed'          => 'Not assessed'
     }.freeze
 
     def initialize(portfolio:, vacancy: nil)
@@ -81,10 +87,20 @@ module Exports
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        # Not assessed (and never overridden) carries no level at all —
+        # showing "Level: " blank, or worse a fabricated one, is exactly the
+        # false signal this report exists to stop sending to hiring
+        # managers. Status is shown ahead of level so it reads first.
+        if !override && skill.assessment_status != 'assessed'
+          pdf.text "Status: #{STATUS_LABELS[skill.assessment_status] || skill.assessment_status}", style: :italic
+        end
+
+        if effective_level
+          level_text = "Level: #{LEVEL_LABELS[effective_level]}"
+          level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+          level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+          pdf.text level_text
+        end
       end
 
       pdf.move_down 4

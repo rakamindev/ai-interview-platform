@@ -12,13 +12,23 @@ DB_USERNAME: "postgres"
 DB_PASSWORD: ""
 
 # AI Interview specific
+# GEMINI_FLASH_MODEL / GEMINI_PRO_MODEL: verified working against the
+# generateContent REST API as of this writing. The previous gemini-2.0-*
+# defaults have been retired by Google (404 Not Found).
+# GEMINI_LIVE_MODEL: a separate model family (Live/bidi API) — NOT verified
+# in this change; check it independently before relying on it.
 GEMINI_API_KEY: "your_gemini_api_key"
 GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
-GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
-GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
+GEMINI_FLASH_MODEL: "gemini-3.8-flash"
+GEMINI_PRO_MODEL: "gemini-3.8-flash"
 
-# App URL (for invite links)
+# This API's own base URL
 APP_BASE_URL: "http://localhost:3001"
+
+# The web app's base URL — used to build candidate invite links.
+# This is a DIFFERENT origin from APP_BASE_URL in every real deployment
+# (see web/vercel.json vs api/k8s/ingress.yml).
+WEB_BASE_URL: "http://localhost:5173"
 
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds

@@ -8,7 +8,8 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { LEVEL_LABELS } from "@/utils/constants";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
@@ -24,6 +25,11 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  // Distinct from "generating" and from the initial `loading` skeleton —
+  // any failure that isn't the expected "not generated yet" 404 used to be
+  // silently dropped, leaving just the header with no spinner, no report,
+  // and no indication anything went wrong.
+  const [error, setError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -31,15 +37,21 @@ export default function FitGapReportPage() {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
+      setError(null);
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
           await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
           setGenerating(true);
+          setError(null);
         } catch {
           setGenerating(false);
+          setError("Couldn't start fit/gap generation. Try again.");
         }
+        return;
       }
+      setGenerating(false);
+      setError("Couldn't load the fit/gap report. Try again.");
     }
   }, [portfolio, vacancyId]);
 
@@ -50,8 +62,11 @@ export default function FitGapReportPage() {
         const data = res.data as any;
         if (data.portfolio) {
           setPortfolio(data.portfolio);
+        } else {
+          setError("Couldn't load this candidate's portfolio.");
         }
       })
+      .catch(() => setError("Couldn't load this candidate's portfolio."))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -68,6 +83,9 @@ export default function FitGapReportPage() {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+      setError(null);
+    } catch {
+      setError("Couldn't start regeneration. Try again.");
     } finally {
       setRegenerating(false);
     }
@@ -148,6 +166,17 @@ export default function FitGapReportPage() {
         </div>
       )}
 
+      {/* Error — distinct from "generating": something actually failed */}
+      {!generating && error && (
+        <div className="border border-destructive/40 rounded-lg p-8 text-center space-y-3">
+          <AlertTriangle className="h-6 w-6 text-destructive mx-auto" />
+          <p className="text-sm text-destructive">{error}</p>
+          <Button variant="outline" size="sm" onClick={() => fetchReport()}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+          </Button>
+        </div>
+      )}
+
       {/* Report ready */}
       {report && (
         <>
@@ -193,7 +222,8 @@ export default function FitGapReportPage() {
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                          {s.ai_level != null ? LEVEL_LABELS[s.ai_level] : "—"}
+                          {" "}({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
                         </span>
                         <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>

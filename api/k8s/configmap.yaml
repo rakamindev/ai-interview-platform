@@ -18,4 +18,6 @@ data:
   GEMINI_PRO_MODEL: gemini-2.5-pro
   PROACTIVE_RECONNECT_AFTER: "510"
   APP_BASE_URL: https://ai-interview-api.rakamin.com
+  # Must be the web app's origin, not this API's — see Session#invite_url.
+  WEB_BASE_URL: "https://<your-frontend-domain>"
   ALLOWED_ORIGINS: "https://<your-frontend-domain>"
