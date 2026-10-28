@@ -24,21 +24,30 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [pollError, setPollError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
     try {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
+      if (res.data?.report) {
+        setReport(res.data.report);
+        setGenerating(false);
+        setPollError(null);
+      }
     } catch (e: any) {
       if (e?.response?.status === 404) {
         try {
           await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
           setGenerating(true);
+          setPollError(null);
         } catch {
           setGenerating(false);
+          setPollError("Gagal memulai proses pembuatan laporan. Silakan coba lagi.");
         }
+      } else {
+        setGenerating(false);
+        setPollError("Terjadi kendala saat mengambil data laporan fit/gap.");
       }
     }
   }, [portfolio, vacancyId]);
@@ -52,6 +61,9 @@ export default function FitGapReportPage() {
           setPortfolio(data.portfolio);
         }
       })
+      .catch(() => {
+        setPollError("Gagal memuat portofolio kandidat.");
+      })
       .finally(() => setLoading(false));
   }, [sessionId]);
 
@@ -59,7 +71,26 @@ export default function FitGapReportPage() {
     if (portfolio) fetchReport();
   }, [portfolio, fetchReport]);
 
-  usePolling(fetchReport, 5000, generating && !!portfolio);
+  // Polling dengan safety guard: batasi maksimal 6 kali percobaan (30 detik) agar tidak infinite loop
+  useEffect(() => {
+    if (!generating || !portfolio) return;
+
+    let attempts = 0;
+    const maxAttempts = 6;
+
+    const interval = setInterval(() => {
+      attempts += 1;
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        setGenerating(false);
+        setPollError("Waktu pembuatan laporan melebihi batas (timeout). Silakan klik 'Coba Lagi'.");
+        return;
+      }
+      fetchReport();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [generating, portfolio, fetchReport]);
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
@@ -75,17 +106,18 @@ export default function FitGapReportPage() {
 
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
+    if (format === "pdf") {
+      window.print();
+      return;
+    }
     setExporting(format);
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
-      const ext = format;
-      const blob = format === "pdf"
-        ? new Blob([res.data as BlobPart], { type: "application/pdf" })
-        : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
+      a.download = `fitgap-${sessionId}-${vacancyId}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -140,17 +172,57 @@ export default function FitGapReportPage() {
         )}
       </div>
 
+      {/* Error state saat timeout atau gagal */}
+      {pollError && !generating && (
+        <div className="border border-destructive/30 bg-destructive/5 rounded-lg p-5 text-center space-y-3">
+          <p className="text-sm text-destructive font-medium">{pollError}</p>
+          <Button variant="outline" size="sm" onClick={() => fetchReport()}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Coba Lagi
+          </Button>
+        </div>
+      )}
+
       {/* Generating */}
       {generating && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+          <p className="text-sm text-muted-foreground">Menghasilkan laporan fit/gap...</p>
+          <p className="text-xs text-muted-foreground">Proses ini membandingkan data kompetensi dengan kebutuhan posisi.</p>
         </div>
       )}
 
       {/* Report ready */}
       {report && (
         <>
+          {/* Rekomendasi Penempatan Peran Alternatif (Talent Redeployment) */}
+          {(report as any).recommendation && (
+            <Card className="border-indigo-200 bg-indigo-50/50">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-indigo-100 text-indigo-700">
+                    Rekomendasi Penempatan
+                  </span>
+                  <span className="text-sm font-semibold text-indigo-950">
+                    {(report as any).recommendation.recommended_role}
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-900 leading-relaxed">
+                  {(report as any).recommendation.reason}
+                </p>
+                {(report as any).recommendation.recommended_vacancy_id && (
+                  <div className="pt-1">
+                    <Link
+                      to={`/assessments/${id}/sessions/${sessionId}/fitgap/${(report as any).recommendation.recommended_vacancy_id}`}
+                      className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+                    >
+                      Bandingkan dengan lowongan ini sekarang →
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">

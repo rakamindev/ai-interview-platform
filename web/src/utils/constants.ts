@@ -1,10 +1,12 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
+/** Parse "L3" → 3, passthrough number, mengembalikan null jika input null/undefined/invalid */
+export function parseLevel(level: string | number | null | undefined): number | null {
+  if (level === null || level === undefined) return null;
+  if (typeof level === "number") return level >= 1 && level <= 5 ? level : null;
+  if (typeof level !== "string") return null;
   const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
+  return isNaN(n) ? null : n;
 }
 
 export const LEVEL_LABELS: Record<number, string> = {
@@ -63,8 +65,8 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-emerald-700 bg-emerald-50/70 border-emerald-200",
+  gap: "text-rose-700 bg-rose-50/70 border-rose-200",
+  exceed: "text-indigo-700 bg-indigo-50/70 border-indigo-200",
+  not_assessed: "text-slate-600 bg-slate-50 border-slate-200",
 };

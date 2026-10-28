@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, CheckCircle } from "lucide-react";
+import { Toast } from "@/components/ui/toast";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -26,6 +27,7 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -48,7 +50,10 @@ export default function VacancyEditPage() {
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
-      navigate("/vacancies");
+      setShowSuccessToast(true);
+      setTimeout(() => {
+        navigate("/vacancies");
+      }, 1000);
     } finally {
       setSubmitting(false);
     }
@@ -98,6 +103,10 @@ export default function VacancyEditPage() {
           <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
         </div>
       </form>
+
+      {showSuccessToast && (
+        <Toast message="Vacancy successfully saved!" type="success" />
+      )}
 
       <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
     </div>

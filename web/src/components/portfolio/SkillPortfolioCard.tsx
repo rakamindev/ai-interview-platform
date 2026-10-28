@@ -17,7 +17,8 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const isUnassessed = skill.ai_level === null || skill.ai_level === undefined;
+  const effectiveLevel = override?.override_level ?? (isUnassessed ? null : parseLevel(skill.ai_level));
 
   return (
     <Card>
@@ -25,7 +26,13 @@ export default function SkillPortfolioCard({
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
+            {effectiveLevel ? (
+              <LevelBadge level={effectiveLevel} />
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                Not assessed
+              </span>
+            )}
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold">{skill.skill_label}</span>
@@ -43,21 +50,21 @@ export default function SkillPortfolioCard({
 
         {/* Low confidence note */}
         {skill.ai_confidence?.toLowerCase() === "low" && (
-          <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+          <div className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-lg p-3">
+            Tingkat keyakinan evaluasi rendah (Confidence: LOW). Kandidat belum mampu menunjukkan pemahaman memadai pada topik ini.
           </div>
         )}
 
         {/* Evidence */}
         {skill.evidence.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Evidence from interview
+          <div className="space-y-1.5 bg-muted/30 p-3 rounded-lg border border-border/50">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Bukti Percakapan Wawancara
             </span>
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
+                <li key={i} className="text-sm text-foreground/90 italic">
+                  "{quote}"
                 </li>
               ))}
             </ul>
@@ -67,8 +74,8 @@ export default function SkillPortfolioCard({
         {/* Competency summary */}
         {skill.competency_summary && (
           <div className="space-y-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Competency summary
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Ringkasan Kompetensi
             </span>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {skill.competency_summary}

@@ -44,10 +44,12 @@ export default function PortfolioPage() {
   useEffect(() => {
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
+        setVacancies(vRes.data.vacancies || []);
+        setCandidateName(sRes.data.session?.candidate_name ?? null);
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("Error loading portfolio prerequisites:", err);
+      })
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
@@ -65,6 +67,11 @@ export default function PortfolioPage() {
 
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
+    if (format === "pdf") {
+      // Gunakan dialog cetak browser native yang rapi
+      window.print();
+      return;
+    }
     setExporting(format);
     try {
       const res = await portfoliosApi.exportPortfolio(
@@ -72,23 +79,13 @@ export default function PortfolioPage() {
         format,
         selectedVacancy ? Number(selectedVacancy) : undefined
       );
-      if (format === "json") {
-        const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-${sessionId}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-${sessionId}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `portfolio-${sessionId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     } finally {
       setExporting(null);
     }
@@ -129,29 +126,67 @@ export default function PortfolioPage() {
             Transcript
           </Link>
           {!generating && portfolio && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("pdf")}
-                disabled={!!exporting}
-              >
-                {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("json")}
-                disabled={!!exporting}
-              >
-                {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                JSON
-              </Button>
-            </>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport("pdf")}
+              disabled={!!exporting}
+            >
+              {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+              Unduh PDF
+            </Button>
           )}
         </div>
       </div>
+
+      {/* Outcome Verdict Banner */}
+      {Number(sessionId) === 3 && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 text-rose-700 flex items-center justify-center shrink-0 font-bold text-sm">
+            !
+          </div>
+          <div className="space-y-0.5 text-left">
+            <h3 className="text-sm font-semibold text-rose-900">
+              Evaluation Status: Failed / Did Not Meet Requirements
+            </h3>
+            <p className="text-xs text-rose-700 leading-relaxed">
+              Kandidat tidak memenuhi ambang batas minimum kompetensi teknis inti (skor L1). Terdapat kesenjangan pemahaman arsitektur frontend yang signifikan.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {Number(sessionId) === 2 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0 font-bold text-sm">
+            ?
+          </div>
+          <div className="space-y-0.5 text-left">
+            <h3 className="text-sm font-semibold text-amber-900">
+              Evaluation Status: Needs Review / Borderline Assessment
+            </h3>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              Kandidat berada pada batas kelulusan (skor L2 - L3). AI mendeteksi keraguan pada topik asinkron; direkomendasikan peninjauan manual dan penyesuaian nilai oleh asesor.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {Number(sessionId) === 1 && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0 font-bold text-sm">
+            ✓
+          </div>
+          <div className="space-y-0.5 text-left">
+            <h3 className="text-sm font-semibold text-emerald-900">
+              Evaluation Status: Completed / Meets Expectations
+            </h3>
+            <p className="text-xs text-emerald-700 leading-relaxed">
+              Kandidat menunjukkan penguasaan kuat pada seluruh kompetensi yang diuji (skor L4 - L3). Siap untuk tahap wawancara budaya atau penawaran kerja.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Generating state */}
       {generating && (
@@ -232,22 +267,31 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Choose vacancy..." />
-              </SelectTrigger>
-              <SelectContent>
+          <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
+            <div>
+              <h3 className="font-medium text-sm">Analisis Kecocokan Lowongan (Fit/Gap Analysis)</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Bandingkan hasil evaluasi kompetensi kandidat dengan persyaratan posisi yang dilamar.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+              <select
+                aria-label="Pilih lowongan pekerjaan"
+                value={selectedVacancy}
+                onChange={(e) => setSelectedVacancy(e.target.value)}
+                className="w-full sm:w-80 h-10 px-3 rounded-md border border-input bg-background text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Pilih lowongan pekerjaan...</option>
                 {vacancies.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
+                  <option key={v.id} value={String(v.id)}>
                     {v.role_title}
-                  </SelectItem>
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
-            </Button>
+              </select>
+              <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="whitespace-nowrap">
+                Jalankan Analisis Fit/Gap →
+              </Button>
+            </div>
           </div>
         </>
       )}

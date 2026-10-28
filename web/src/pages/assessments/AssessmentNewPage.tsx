@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -23,10 +23,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Briefcase, Sparkles } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
+import { vacanciesApi } from "@/services/vacancies";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
-import type { AssessmentSkill } from "@/types";
+import type { AssessmentSkill, Vacancy } from "@/types";
 
 export interface AssessmentFormValues {
   name: string;
@@ -41,6 +42,11 @@ export default function AssessmentNewPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // State untuk integrasi Vacancy
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [loadingVacancies, setLoadingVacancies] = useState(false);
+  const [selectedVacancyId, setSelectedVacancyId] = useState<string>("");
+
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
       name: "",
@@ -51,7 +57,62 @@ export default function AssessmentNewPage() {
   });
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = form;
-  const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
+  const { fields, append, remove, move, replace } = useFieldArray({ control, name: "skills" });
+
+  // Ambil daftar lowongan aktif untuk mempermudah recruiter
+  useEffect(() => {
+    setLoadingVacancies(true);
+    vacanciesApi.list()
+      .then((res) => {
+        setVacancies(res.data.vacancies || []);
+      })
+      .catch(() => {
+        // Abaikan jika gagal memuat lowongan, form tetap bisa digunakan secara manual
+      })
+      .finally(() => {
+        setLoadingVacancies(false);
+      });
+  }, []);
+
+  // Handler saat recruiter memilih untuk mengimpor dari lowongan
+  const handleSelectVacancy = async (val: string) => {
+    setSelectedVacancyId(val);
+    if (!val || val === "manual") return;
+
+    const targetVacancyId = Number(val);
+    try {
+      const res = await vacanciesApi.get(targetVacancyId);
+      const v = res.data.vacancy;
+      if (v) {
+        // Otomatis isi Role title dari Vacancy
+        setValue("name", v.role_title);
+
+        // Otomatis tarik skill yang ada di Vacancy tersebut
+        const skillsList = v.skills || (v as any).vacancy_skills || [];
+        if (skillsList.length > 0) {
+          const importedSkills: Partial<AssessmentSkill>[] = skillsList.map((vs: any, idx: number) => ({
+            skill_id: vs.skill_id,
+            skill_label: vs.skill_label,
+            is_custom: !vs.skill_id,
+            expected_level: vs.expected_level || 3,
+            display_order: idx,
+            l1_anchor: "Pemahaman dasar awal.",
+            l2_anchor: "Mampu menerapkan konsep dengan panduan.",
+            l3_anchor: "Mandiri dalam pemecahan masalah.",
+            l4_anchor: "Penguasaan mendalam dan optimasi.",
+            l5_anchor: "Ahli tingkat lanjut dan arsitektur.",
+          }));
+          replace(importedSkills);
+        }
+      }
+    } catch {
+      // Fallback: gunakan data yang sudah ada di list jika get by id gagal
+      const fallback = vacancies.find((x) => x.id === targetVacancyId);
+      if (fallback) {
+        setValue("name", fallback.role_title);
+      }
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -119,6 +180,37 @@ export default function AssessmentNewPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Opsi Pintas: Impor dari Vacancy */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-slate-800">
+            <Briefcase className="h-4 w-4 text-teal-600" />
+            <Label htmlFor="import-vacancy" className="text-sm font-semibold">
+              Hubungkan dengan Lowongan (Vacancy)
+            </Label>
+          </div>
+          <p className="text-xs text-slate-500">
+            Pilih lowongan untuk mengisi otomatis judul posisi dan daftar kriteria skill yang dibutuhkan.
+          </p>
+
+          <Select
+            value={selectedVacancyId}
+            onValueChange={handleSelectVacancy}
+            disabled={loadingVacancies}
+          >
+            <SelectTrigger id="import-vacancy" className="w-full bg-white text-sm">
+              <SelectValue placeholder={loadingVacancies ? "Memuat daftar lowongan..." : "Pilih lowongan (Opsional)"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">-- Input Manual Tanpa Lowongan --</SelectItem>
+              {vacancies.map((v) => (
+                <SelectItem key={v.id} value={String(v.id)}>
+                  {v.role_title} ({v.skills?.length || (v as any).vacancy_skills?.length || 0} skill kriteria)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Role title */}
         <div className="space-y-1.5">
           <Label htmlFor="name">

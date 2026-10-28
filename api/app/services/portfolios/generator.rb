@@ -154,11 +154,15 @@ module Portfolios
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        # Evaluasi level: jika tidak ada bukti atau nilai nil, simpan nil (unassessed)
+        raw_level = skill_data['level']
+        assigned_level = raw_level.present? && raw_level.to_i.positive? ? raw_level.to_i.clamp(1, 5) : nil
+
         portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
           skill_label:        skill_data['skill_label'],
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           assigned_level,
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
@@ -166,11 +170,14 @@ module Portfolios
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        raw_level = skill_data['level']
+        assigned_level = raw_level.present? && raw_level.to_i.positive? ? raw_level.to_i.clamp(1, 5) : nil
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
           skill_label:        skill_data['skill_label'],
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
+          ai_level:           assigned_level,
           ai_confidence:      skill_data['confidence'],
           evidence:           Array(skill_data['evidence']).first(3),
           competency_summary: skill_data['competency_summary']
