@@ -28,39 +28,39 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+            <Link to="/assessments" className="flex shrink-0 items-center gap-2" aria-label="Rakamin AI Interview home">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <span className="hidden font-semibold text-sm md:inline">Rakamin AI Interview</span>
             </Link>
-            <nav className="flex items-center gap-1">
+            <nav className="flex min-w-0 items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
                   to={href}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                    "flex min-w-0 items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm transition-colors",
                     location.pathname.startsWith(href)
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{label}</span>
                 </Link>
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="hidden text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 lg:inline">
                 Tenant: {tenant.name}
               </span>
             )}
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Log out">
+              <LogOut className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>

@@ -76,14 +76,14 @@ module Exports
 
     def render_skill_card(pdf, skill)
       override = skill.assessor_override
-      effective_level = override ? override.override_level : skill.ai_level
+      effective_level = skill.effective_level
 
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
+        level_text = "Level: #{level_label(effective_level)}"
+        level_text += " (AI: #{level_label(skill.ai_level)} → Assessor: #{level_label(override.override_level)})" if override
+        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}" if skill.assessed?
         pdf.text level_text
       end
 
@@ -125,7 +125,7 @@ module Exports
       comparisons.each do |c|
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
+          (c['required_level'] || c['expected_level']) ? "L#{c['required_level'] || c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
@@ -161,6 +161,10 @@ module Exports
                         align:  :center,
                         size:   9,
                         color:  '999999'
+    end
+
+    def level_label(level)
+      LEVEL_LABELS.fetch(level, 'Not assessed')
     end
 
     def format_duration(seconds)

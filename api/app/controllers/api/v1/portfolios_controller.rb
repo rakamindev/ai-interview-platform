@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor
 
       before_action :set_session,   only: %i[show regenerate]
-      before_action :set_portfolio, only: %i[show export]
+      before_action :set_portfolio, only: %i[show export fitgap regenerate_fitgap show_fitgap]
 
       # GET /api/v1/sessions/:id/portfolio
       def show
@@ -32,11 +32,14 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        stuck = portfolio.generating? &&
+                (portfolio.generation_started_at.nil? ||
+                 portfolio.generation_started_at < Portfolios::Generator::STALE_CLAIM_AFTER.ago)
+        unless portfolio.failed? || stuck
+          return json_error("Portfolio can only be regenerated when generation failed or is stuck", :unprocessable_entity)
         end
 
-        portfolio.update!(generation_status: "pending", generation_error: nil)
+        portfolio.update!(generation_status: "pending", generation_error: nil, generation_started_at: nil)
         PortfolioGeneratorWorker.perform_async(@session.id)
 
         json_response(
@@ -79,7 +82,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = @portfolio
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -95,13 +98,11 @@ module Api
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = @portfolio
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -121,22 +122,17 @@ module Api
 
         FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
         render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
-        report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
+        report = FitGapReport.find_by(portfolio_id: @portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
         end
 
         json_response(report: fit_gap_json(report))
-      rescue ActiveRecord::RecordNotFound
-        json_error("Portfolio not found", :not_found)
       end
 
       private
@@ -147,14 +143,13 @@ module Api
         json_error("Session not found", :not_found)
       end
 
+      # Routes use :id for both session-based and direct portfolio lookups.
+      # Portfolio has no tenant_id column, so direct lookups must go through the
+      # session's tenant; otherwise any assessor could read any company's candidates.
       def set_portfolio
-        # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
-        if @session
-          @portfolio = @session.portfolio
-        else
-          @portfolio = Portfolio.find(params[:id])
-        end
+        return if performed?
+
+        @portfolio = @session ? @session.portfolio : Portfolio.for_tenant(current_tenant_id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
@@ -166,8 +161,10 @@ module Api
           candidate_id:      portfolio.candidate_id,
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
-          generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          generation_error:  portfolio.complete? ? nil : portfolio.generation_error,
+          generation_started_at: portfolio.generation_started_at,
+          generation_attempts:   portfolio.generation_attempts,
+          skills:            portfolio.portfolio_skills.order(:is_discovered, :id).map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
       end
@@ -178,9 +175,15 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
+          assessment_status: skill.assessment_status,
+          status_reason:     skill.status_reason,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
+          coverage_state:    skill.coverage_state,
+          probe_count:       skill.probe_count,
           evidence:          skill.evidence_quotes,
+          evidence_refs:     skill.evidence_refs,
+          unverified_evidence_count: skill.unverified_evidence_count,
           competency_summary: skill.competency_summary
         }
       end

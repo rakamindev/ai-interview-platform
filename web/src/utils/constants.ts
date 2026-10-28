@@ -57,14 +57,15 @@ export const COVERAGE_STATE_COLOR: Record<string, string> = {
 // Fit/Gap result display
 export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   match: "Match",
-  gap: "Gap",
+  gap: "Below",
   exceed: "Exceeds",
   not_assessed: "Not assessed",
 };
 
+// "Not assessed" is deliberately neutral: missing evidence is not a weakness.
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
-  match: "text-green-700 bg-green-50",
-  gap: "text-amber-700 bg-amber-50",
-  exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  match: "text-emerald-800 bg-emerald-50 ring-1 ring-inset ring-emerald-200",
+  gap: "text-amber-800 bg-amber-50 ring-1 ring-inset ring-amber-200",
+  exceed: "text-teal-800 bg-teal-50 ring-1 ring-inset ring-teal-200",
+  not_assessed: "text-neutral-600 bg-background border border-dashed border-neutral-300",
 };

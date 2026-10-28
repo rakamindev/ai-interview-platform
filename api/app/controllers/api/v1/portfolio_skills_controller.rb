@@ -9,6 +9,10 @@ module Api
 
       # POST /api/v1/portfolio-skills/:id/override
       def override
+        if !@portfolio_skill.assessed? && override_params[:assessor_notes].blank?
+          return json_error("A note is required when rating a skill the AI did not assess", :unprocessable_entity)
+        end
+
         existing = @portfolio_skill.assessor_override
 
         if existing
@@ -48,8 +52,7 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = PortfolioSkill.for_tenant(current_tenant_id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end
