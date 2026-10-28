@@ -19,6 +19,26 @@ module Sessions
       @session
     end
 
+    def self.compile_cv_instruction(session)
+      return '' if session.cv_text.blank?
+
+      <<~PROMPT.strip
+
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        CANDIDATE CV & BACKGROUND DOSSIER
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        The candidate has provided the following résumé / CV details:
+
+        #{session.cv_text}
+
+        VETTING & SCREENING RULES FOR THIS CANDIDATE:
+        1. PROBE THEIR REAL-WORLD EXPERIENCE: Explicitly reference the specific projects, companies, architectural decisions, and technologies they mentioned in their CV above.
+        2. TEST DEPTH VS BUZZWORDS: Candidates frequently list technologies they only used on the surface. Formulate technical questions asking how they resolved real challenges, performance bottlenecks, or race conditions in those projects.
+        3. CROSS-EXAMINE: If the candidate's live spoken answers differ from the claims or seniority on their CV, challenge them politely for concrete implementation details.
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      PROMPT
+    end
+
     private
 
     def publish_status_update

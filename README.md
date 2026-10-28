@@ -19,6 +19,7 @@ Each service has its own setup guide. Run the API first, then the web app pointe
 
 1. **API** — see [`api/README.md`](api/README.md). Rails app; needs Ruby (see `api/.ruby-version`), PostgreSQL, and Redis. It serves on `http://localhost:3001`.
 2. **Web** — see [`web/README.md`](web/README.md). Vite app; `npm install`, copy `.env.example` to `.env`, point `VITE_API_BASE_URL` at the API, then `npm run dev`. It serves on `http://localhost:5173`.
+3. **Accounts** — seeds create `admin@mail.com` (assessor superuser) and `user1–3@mail.com` (candidate accounts), password `password123` unless you set `SEED_ADMIN_PASSWORD`. Both roles can sign in; candidates land on `/candidate` and the API refuses candidate tokens on every assessor endpoint.
 
 ## Notes for the case study
 

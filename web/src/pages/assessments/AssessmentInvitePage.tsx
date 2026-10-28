@@ -132,6 +132,7 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [candidateEmailInput, setCandidateEmailInput] = useState("");
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -158,6 +159,7 @@ export default function AssessmentInvitePage() {
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
+    setCandidateEmailInput("");
     setShowInviteDialog(true);
   };
 
@@ -166,7 +168,10 @@ export default function AssessmentInvitePage() {
     setShowInviteDialog(false);
     setNewSession(null);
     try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
+      const res = await assessmentsApi.createSession(Number(id), {
+        candidateName: candidateNameInput.trim() || undefined,
+        candidateEmail: candidateEmailInput.trim() || undefined,
+      });
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
@@ -232,17 +237,33 @@ export default function AssessmentInvitePage() {
           <DialogHeader>
             <DialogTitle>Invite Candidate</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="candidate-name">Candidate name</Label>
-            <Input
-              id="candidate-name"
-              placeholder="e.g. Budi Santoso"
-              value={candidateNameInput}
-              onChange={(e) => setCandidateNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
-              autoFocus
-            />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="candidate-name">Candidate name</Label>
+              <Input
+                id="candidate-name"
+                placeholder="e.g. Budi Santoso"
+                value={candidateNameInput}
+                onChange={(e) => setCandidateNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="candidate-email">Candidate email</Label>
+              <Input
+                id="candidate-email"
+                type="email"
+                placeholder="candidate@example.com"
+                value={candidateEmailInput}
+                onChange={(e) => setCandidateEmailInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional — the interview then appears on that candidate's dashboard.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>

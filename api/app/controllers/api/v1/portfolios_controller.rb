@@ -10,6 +10,8 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
+        reconcile_stale_generation
+
         if @portfolio.nil? || @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
@@ -140,6 +142,22 @@ module Api
       end
 
       private
+
+      # A worker that died mid-run leaves generation_status stuck on
+      # 'generating' (the table has no updated_at to fall back on). Without
+      # this the assessor polls an endless spinner; here the row flips to
+      # failed and the client gets the retry affordance.
+      def reconcile_stale_generation
+        return unless @portfolio&.generating?
+
+        started_at = @portfolio.generation_started_at
+        return unless started_at.nil? || started_at < Portfolios::Generator::STALE_AFTER.ago
+
+        @portfolio.update(
+          generation_status: "failed",
+          generation_error:  "Portfolio generation timed out before it finished. Regenerate to try again."
+        )
+      end
 
       def set_session
         @session = Session.find(params[:id])

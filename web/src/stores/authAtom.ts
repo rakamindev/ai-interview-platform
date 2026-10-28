@@ -1,23 +1,38 @@
 import { atom } from "jotai";
+import { roleFromToken } from "@/lib/jwt";
+
+const TOKEN_KEY = "auth_token";
+const EMAIL_KEY = "auth_email";
 
 export interface AuthState {
-  token: string | null;
+    token: string | null;
+    /** "admin" (assessor superuser) or "user" (candidate); null when unknown. */
+    role: string | null;
+    /** Only populated right after login (the JWT carries no email claim). */
+    email: string | null;
 }
-
-const STORAGE_KEY = "auth_token";
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null;
+    return localStorage.getItem(TOKEN_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null;
 }
 
-export function saveToken(token: string) {
-  localStorage.setItem(STORAGE_KEY, token);
+export function saveToken(token: string, email?: string) {
+    localStorage.setItem(TOKEN_KEY, token);
+    if (email) localStorage.setItem(EMAIL_KEY, email);
 }
 
 export function clearToken() {
-  localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(EMAIL_KEY);
 }
 
-export const authAtom = atom<AuthState>({
-  token: getStoredToken(),
-});
+function initialState(): AuthState {
+    const token = getStoredToken();
+    return {
+        token,
+        role: roleFromToken(token),
+        email: localStorage.getItem(EMAIL_KEY),
+    };
+}
+
+export const authAtom = atom<AuthState>(initialState());

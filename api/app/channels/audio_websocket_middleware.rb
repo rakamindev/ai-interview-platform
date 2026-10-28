@@ -4,7 +4,7 @@ require 'faye/websocket'
 
 # Rack middleware that proxies a WebSocket at /ws/sessions/:id/audio between the browser (16kHz PCM)
 # and Gemini Live (24kHz PCM). Audio is buffered in a ring buffer for reconnection replay.
-class AudioWebSocketMiddleware
+class AudioWebsocketMiddleware
   AUDIO_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/audio\z}
 
   MAX_RECONNECT_ATTEMPTS = 3
@@ -64,30 +64,48 @@ class AudioWebSocketMiddleware
 
   def handle_browser_frame(event, browser_ws, state, session_id)
     if event.data.is_a?(String) && !event.data.start_with?('{')
-      forward_audio_frame(event.data, state, session_id)
+      forward_audio_frame(event.data, browser_ws, state, session_id)
     else
       handle_browser_message(event.data, browser_ws, state)
     end
   end
 
-  # Forward audio frame to Gemini when ready; suppress while model is speaking to prevent echo loop.
-  def forward_audio_frame(data, state, session_id)
+  RMS_SPEECH_THRESHOLD = 450 # 16-bit PCM amplitude threshold distinguishing voice from ambient noise
+
+  # Forward audio frame to Gemini when ready; handle barge-in if candidate speaks while model is speaking.
+  def forward_audio_frame(data, browser_ws, state, session_id)
+    return unless state.gemini_client&.accepting_audio?
+
+    rms = calculate_pcm_rms(data)
+    is_voice = rms >= RMS_SPEECH_THRESHOLD
+
     if state.model_speaking
-      # Server-side audio gate: suppress mic while model is speaking to prevent speaker echo loop.
-      unless state.logged_gate_suppressed
-        Rails.logger.warn("[AudioWS] Audio suppressed by model_speaking gate (session=#{session_id})")
-        state.logged_gate_suppressed = true
+      if is_voice
+        # Candidate barge-in: candidate speaks over the AI
+        Rails.logger.info("[AudioWS] Candidate interrupted AI (RMS=#{rms.round}) — halting model output")
+        state.model_speaking = false
+        send_json(browser_ws, type: 'stop_playback')
+        send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
+        state.gemini_client.send_audio(data, is_voice: true)
+      else
+        # Suppress ambient room noise while model is speaking to prevent echo loop
+        unless state.logged_gate_suppressed
+          Rails.logger.debug("[AudioWS] Ambient audio suppressed by model_speaking gate (session=#{session_id})")
+          state.logged_gate_suppressed = true
+        end
       end
-    elsif state.gemini_client&.accepting_audio?
-      state.logged_gate_suppressed = false
-      state.gemini_client.send_audio(data)
     else
-      # Log once per gap to avoid spam (~33 chunks/s during reconnection).
-      unless state.logged_not_ready
-        Rails.logger.warn("[AudioWS] Audio received but Gemini not ready — buffering (accepting=#{state.gemini_client&.accepting_audio?} connected=#{state.gemini_client&.connected})")
-        state.logged_not_ready = true
-      end
+      state.logged_gate_suppressed = false
+      state.gemini_client.send_audio(data, is_voice: is_voice)
     end
+  end
+
+  def calculate_pcm_rms(binary_data)
+    samples = binary_data.unpack('s<*') # 16-bit signed little-endian
+    return 0 if samples.empty?
+
+    sum_squares = samples.sum { |s| s * s }
+    Math.sqrt(sum_squares / samples.size)
   end
 
   def handle_browser_close(event, browser_ws, state, session_id)
@@ -101,6 +119,18 @@ class AudioWebSocketMiddleware
 
   def connect_to_gemini(browser_ws, state)
     session = state.session
+
+    # A live interview needs a working Gemini connection. If AI is off, the
+    # key is missing, or the deployment runs on the mock client, say so in a
+    # generic, candidate-safe message instead of opening a socket that dies.
+    unless live_ai_available?
+      send_json(browser_ws, type: 'error', code: 'ai_unavailable',
+                            message: 'The interview assistant is unavailable right now. ' \
+                                     'Please contact your interviewer to reschedule.',
+                            recoverable: false)
+      browser_ws.close
+      return
+    end
 
     ensure_system_prompt(session)
 
@@ -124,6 +154,10 @@ class AudioWebSocketMiddleware
     state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
   end
 
+  def live_ai_available?
+    Gemini::Config.enabled? && Gemini::Config.configured? && !Gemini::Config.mock?
+  end
+
   def ensure_system_prompt(session)
     return if session.assessment.system_prompt.present?
 
@@ -136,18 +170,32 @@ class AudioWebSocketMiddleware
   def build_gemini_client(browser_ws, state)
     session = state.session
 
+    cv_instructions = Sessions::StartHandler.compile_cv_instruction(session)
+    composite_prompt = "#{session.assessment.system_prompt}\n\n#{cv_instructions}".strip
+
     state.gemini_client = Gemini::LiveClient.new(
-      system_prompt: session.assessment.system_prompt,
+      system_prompt: composite_prompt,
       on_audio: build_on_audio(browser_ws, state),
       on_input_transcription: build_on_input_transcription(browser_ws, state, session),
       on_output_transcription: build_on_output_transcription(browser_ws, state, session),
       on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
+      on_interrupted: build_on_interrupted(browser_ws, state),
       on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
       on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
       on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
       on_resumption_token_update: build_on_resumption_token_update(state, session),
       on_ready: build_on_ready(browser_ws, state, session)
     )
+  end
+
+  def build_on_interrupted(browser_ws, state)
+    lambda {
+      Rails.logger.info('[AudioWS] Barge-in confirmed by Gemini — resetting speaker to candidate')
+      state.model_speaking = false
+      state.ai_audio_chunks = 0
+      send_json(browser_ws, type: 'stop_playback')
+      send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
+    }
   end
 
   def build_on_audio(browser_ws, state)

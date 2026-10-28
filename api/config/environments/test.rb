@@ -45,6 +45,10 @@ Rails.application.configure do
   # Annotate rendered view with file names.
   # config.action_view.annotate_rendered_view_with_filenames = true
 
+  # Store uploaded files in tmp/storage during tests so specs never write into the
+  # development Active Storage directory.
+  config.active_storage.service = :test
+
   # Log level
   config.log_level = :warn
 end

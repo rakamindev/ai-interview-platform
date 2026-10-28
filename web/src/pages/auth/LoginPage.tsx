@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "jotai";
+import axios from "axios";
 import { authAtom, saveToken } from "@/stores/authAtom";
 import { authApi } from "@/services/auth";
+import { roleFromToken } from "@/lib/jwt";
+import { homePathForRole } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,14 +23,32 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    const cleanEmail = email.trim();
     try {
-      const res = await authApi.login({ email, password });
-      const token = res.data.token;
-      saveToken(token);
-      setAuth({ token });
-      navigate("/assessments");
-    } catch {
-      setError("Invalid email or password.");
+      const res = await authApi.login({ email: cleanEmail, password });
+      const { token, user } = res.data;
+      const role = user?.role ?? roleFromToken(token);
+      saveToken(token, user?.email);
+      setAuth({ token, role, email: user?.email ?? null });
+      navigate(homePathForRole(role));
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        if (!err.response) {
+          setError("Cannot connect to server. Please ensure the backend is running on port 3001.");
+        } else if (err.response.status === 429) {
+          const data = err.response.data as { error?: string } | undefined;
+          setError(data?.error ?? "Too many login attempts. Please wait a minute and try again.");
+        } else if (err.response.status === 401) {
+          const data = err.response.data as { errors?: Array<{ message?: string }> } | undefined;
+          setError(data?.errors?.[0]?.message ?? "Invalid email or password.");
+        } else {
+          const data = err.response.data as { errors?: Array<{ message?: string }>; error?: string; message?: string } | undefined;
+          const msg = data?.errors?.[0]?.message ?? data?.error ?? data?.message;
+          setError(msg ?? "Login failed. Please try again.");
+        }
+      } else {
+        setError("Invalid email or password.");
+      }
     } finally {
       setLoading(false);
     }

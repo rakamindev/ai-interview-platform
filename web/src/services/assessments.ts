@@ -34,9 +34,22 @@ export const assessmentsApi = {
   getSessions: (assessmentId: number) =>
     api.get<{ sessions: Session[] }>(`/assessments/${assessmentId}/sessions`),
 
-  createSession: (assessmentId: number, candidateName?: string, candidateId?: number) =>
+  /**
+   * candidateEmail ties the session to a candidate account: that is what makes
+   * the interview show up on the candidate's own dashboard.
+   */
+  createSession: (
+    assessmentId: number,
+    attrs: { candidateName?: string; candidateEmail?: string; candidateId?: number } = {}
+  ) =>
     api.post<{ session: Session; invite_url: string }>(
       `/assessments/${assessmentId}/sessions`,
-      { session: { candidate_name: candidateName, candidate_id: candidateId } }
+      {
+        session: {
+          candidate_name: attrs.candidateName,
+          candidate_email: attrs.candidateEmail,
+          candidate_id: attrs.candidateId,
+        },
+      }
     ),
 };

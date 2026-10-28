@@ -9,10 +9,7 @@ module Coverage
 
     def initialize(session:, gemini_client: nil)
       @session = session
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
-        timeout: 45
-      )
+      @gemini_client = gemini_client || Gemini.client(:analysis)
     end
 
     # Returns { skill_updates: [...], discovered_skills: [...] } or raises on error.
@@ -27,6 +24,11 @@ module Coverage
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       parse_response(response, coverage_maps)
+    rescue Gemini::Errors::InvalidResponseError => e
+      # Malformed model output must never break the interview: the coverage
+      # map stays as it is and the worker logs the failure.
+      Rails.logger.error("[N7/Analyzer] Ignoring unusable Gemini response: #{e.message}")
+      { skill_updates: [], discovered_skills: [] }
     end
 
     private

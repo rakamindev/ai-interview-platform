@@ -29,6 +29,22 @@ export const sessionsApi = {
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
 
-  audioComplete: (token: string) =>
-    api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+  uploadCv: (token: string, file: File) => {
+    const formData = new FormData();
+    formData.append("cv", file);
+    // No explicit Content-Type: the browser must set multipart/form-data *with*
+    // its boundary, otherwise the API cannot parse the part and sees no file.
+    return api.post<{
+      success: boolean;
+      filename: string;
+      text_length: number;
+      text_extracted: boolean;
+      preview: string;
+    }>(`/sessions/${token}/cv`, formData);
+  },
+
+  audioComplete: (token: string, reason?: "manual_candidate") =>
+    api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`, null, {
+      params: reason ? { reason } : undefined,
+    }),
 };

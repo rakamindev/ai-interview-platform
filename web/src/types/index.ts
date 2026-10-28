@@ -37,6 +37,7 @@ export interface Session {
   tenant_id?: number;
   candidate_id?: number;
   candidate_name?: string;
+  candidate_email?: string | null;
   invite_token: string;
   invite_url: string;
   status: "pending" | "active" | "ended";
@@ -164,6 +165,27 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  has_cv?: boolean;
+  has_cv_text?: boolean;
+  cv_filename?: string | null;
+}
+
+/** One row on the candidate dashboard (GET /candidate/sessions). */
+export interface CandidateSession {
+  id: number;
+  invite_token: string;
+  invite_url: string;
+  assessment_id: number;
+  role_title?: string | null;
+  time_limit_min?: number | null;
+  status: "pending" | "active" | "ended" | "failed";
+  end_reason?: string | null;
+  created_at?: string | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  duration_seconds?: number | null;
+  has_cv?: boolean;
+  has_report?: boolean;
 }
 
 export interface PaginationMeta {
@@ -177,12 +199,39 @@ export interface PaginationMeta {
 export type InterviewState =
   | "idle"
   | "hardware_check"
+  | "cv_upload"
   | "connecting"
   | "active"
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "failed";
+
+/**
+ * Why the interview left the flow without a server-confirmed completion.
+ * Each kind maps to a candidate-facing screen in InterviewPage — never to raw
+ * API/stack-trace text.
+ */
+export type InterviewExitKind =
+  /** Invite token missing, unknown, expired or revoked. */
+  | "link_invalid"
+  /** Backend unreachable / 5xx while loading the session. */
+  | "load_failed"
+  /** WebSocket reconnect budget exhausted before the session ended. */
+  | "connection_lost"
+  /** Backend sent an unrecoverable error frame. */
+  | "server_error"
+  /** We could not tell the backend the interview ended. */
+  | "submit_failed";
+
+export interface InterviewExit {
+  kind: InterviewExitKind;
+  /** Optional candidate-facing detail. Never contains raw exception text. */
+  message?: string;
+  /** Whether offering a "Try again" button makes sense for this kind. */
+  retryable: boolean;
+}
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -195,6 +244,7 @@ export interface WsControlMessage {
     | "reconnecting"
     | "reconnected"
     | "speaker_changed"
+    | "stop_playback"
     | "preparing_to_end"
     | "error";
   speaker?: "candidate" | "ai";

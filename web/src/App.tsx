@@ -15,6 +15,7 @@ import VacancyListPage from "@/pages/vacancies/VacancyListPage";
 import VacancyNewPage from "@/pages/vacancies/VacancyNewPage";
 import VacancyEditPage from "@/pages/vacancies/VacancyEditPage";
 import InterviewPage from "@/pages/interview/InterviewPage";
+import CandidateHomePage from "@/pages/candidate/CandidateHomePage";
 
 export default function App() {
   return (
@@ -22,8 +23,8 @@ export default function App() {
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Assessor routes (protected) */}
-      <Route element={<ProtectedRoute />}>
+      {/* Assessor routes — admin superuser only */}
+      <Route element={<ProtectedRoute roles={["admin"]} />}>
       <Route element={<AssessorLayout />}>
         <Route path="/" element={<Navigate to="/assessments" replace />} />
         <Route path="/assessments" element={<AssessmentListPage />} />
@@ -52,9 +53,13 @@ export default function App() {
       </Route>
       </Route>
 
-      {/* Candidate route (public) */}
+      {/* Candidate surface: public interview by invite token, plus the
+          signed-in candidate home (any authenticated role) */}
       <Route element={<CandidateLayout />}>
         <Route path="/interview/:token" element={<InterviewPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/candidate" element={<CandidateHomePage />} />
+        </Route>
       </Route>
     </Routes>
   );

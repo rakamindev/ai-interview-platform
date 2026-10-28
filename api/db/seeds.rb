@@ -369,6 +369,34 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Local development accounts ─────────────────────────────────────────────────
+# Development and test only — this block never runs in production or staging.
+# The passwords below are intentionally well-known local fixtures, NOT secrets.
+# Override with SEED_ADMIN_PASSWORD if you want a different local password.
+if Rails.env.production? || Rails.env.staging?
+  puts "Skipping user seeds (#{Rails.env} environment)."
+else
+  password = ENV.fetch('SEED_ADMIN_PASSWORD', 'password123')
+
+  [
+    { email: 'admin@mail.com',  password: password, role: 'admin' },
+    { email: 'user1@mail.com',  password: password, role: 'user' },
+    { email: 'user2@mail.com',  password: password, role: 'user' },
+    { email: 'user3@mail.com',  password: password, role: 'user' }
+  ].each do |data|
+    user = User.find_or_initialize_by(email: data[:email])
+    user.password = data[:password]
+    user.password_confirmation = data[:password]
+    user.role = data[:role]
+
+    if user.save
+      puts "Seeded #{user.email}"
+    else
+      puts "Failed to seed #{user.email}: #{user.errors.full_messages.join(', ')}"
+    end
+  end
+end
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

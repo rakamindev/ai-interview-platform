@@ -7,10 +7,7 @@ module FitGap
     def initialize(portfolio:, vacancy:, gemini_client: nil)
       @portfolio = portfolio
       @vacancy   = vacancy
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
-        timeout: 30
-      )
+      @gemini_client = gemini_client || Gemini.client(:narrative)
     end
 
     # Returns the FitGapReport record.
@@ -98,14 +95,29 @@ module FitGap
 
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
 
-      begin
-        response = @gemini_client.generate_content(prompt, temperature: 0.4)
-        data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
-      rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
-      end
+      data =
+        begin
+          response = @gemini_client.generate_content(prompt, temperature: 0.4)
+          response.is_a?(Hash) ? response : JSON.parse(response.to_s)
+        rescue => e
+          # Never let a narrative failure take the report down: the skill
+          # comparison above is rule-based and is the load-bearing part.
+          Rails.logger.error("[N13] Narrative generation failed: #{Gemini::Config.safe_message(e)}")
+          nil
+        end
+
+      culture = data && data['culture_narrative'].to_s.strip
+      overall = data && data['overall_narrative'].to_s.strip
+      return { culture: culture, overall: overall } if culture.present? && overall.present?
+
+      # A partial payload (one paragraph missing) or no payload at all is
+      # reported as unavailable rather than stored as a blank paragraph.
+      { culture: culture.presence || fallback_culture, overall: overall.presence || generate_fallback_narrative(skill_comparisons) }
+    end
+
+    def fallback_culture
+      '(unavailable) No culture narrative was returned for this pairing — ' \
+        'regenerate this report to retry the AI analysis.'
     end
 
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed)

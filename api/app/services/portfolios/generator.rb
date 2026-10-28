@@ -5,12 +5,15 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
+    # A run that has not reported back within this window is treated as
+    # dead: the longest HTTP budget (180s + one retry with backoff) stays
+    # well under it, while a worker that was SIGKILLed stops blocking the
+    # portfolio forever.
+    STALE_AFTER = 15.minutes
+
     def initialize(session:, gemini_client: nil)
       @session = session
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
-      )
+      @gemini_client = gemini_client || Gemini.client(:portfolio)
     end
 
     # Returns the Portfolio record with skills populated.
@@ -20,7 +23,9 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      # Duplicate Sidekiq deliveries must not run the model twice: the first
+      # worker owns the row until it finishes, fails, or goes stale.
+      return portfolio unless claim!(portfolio)
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
@@ -31,12 +36,42 @@ module Portfolios
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      # Never let a failure message reach an assessor unfiltered: it is
+      # stored and rendered, so it carries class/structure only.
+      safe_error = Gemini::Config.safe_message(e)
+      # update_columns: this must land even when the in-memory row already
+      # holds 'failed', where a plain update would find no dirty attribute
+      # and write nothing.
+      portfolio&.update_columns(generation_status: 'failed', generation_error: safe_error)
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{safe_error}")
       raise
     end
 
     private
+
+    # Atomic claim: one UPDATE with a WHERE so two workers racing on the
+    # same portfolio can never both win. Returns false when another run
+    # still holds a fresh claim.
+    def claim!(portfolio)
+      now = Time.current
+      claimable = Portfolio.where(id: portfolio.id).where(
+        "generation_status <> 'generating' OR generation_started_at IS NULL OR generation_started_at < ?",
+        STALE_AFTER.ago
+      )
+
+      claimed = claimable.update_all(generation_status: 'generating', generation_started_at: now)
+      if claimed.zero?
+        Rails.logger.info("[N10] Portfolio generation already in progress for session #{@session.id} — skipping duplicate run")
+        return false
+      end
+
+      # update_all bypasses this instance, so re-read it. Without the reload
+      # the row is left with stale dirty attributes and a later
+      # update(generation_status: 'failed') would compare against the old
+      # value, drop the change, and silently leave the row on 'generating'.
+      portfolio.reload
+      true
+    end
 
     def build_prompt
       assessment       = @session.assessment
@@ -148,34 +183,134 @@ module Portfolios
     end
 
     def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+      rows = build_skill_rows(portfolio, response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
-
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      if rows.empty? && expected_skill_labels.any?
+        raise Gemini::Errors::InvalidResponseError,
+              "Gemini returned no skill ratings for #{expected_skill_labels.length} covered skill(s)"
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      # One transaction: the previous portfolio survives intact if any new row
+      # fails to save, so a half-written portfolio is never observable.
+      ActiveRecord::Base.transaction do
+        portfolio.portfolio_skills.destroy_all
+        rows.each(&:save!)
       end
+
+      # Completion is judged against the skills the interview actually covered.
+      # Partial output is persisted (so an assessor can still read it) and the
+      # caller's rescue then marks the portfolio failed instead of complete.
+      missing = unrated_skills(rows)
+      return if missing.empty?
+
+      raise Gemini::Errors::InvalidResponseError,
+            "Gemini rated #{rows.count { |row| !row.is_discovered }} of #{expected_skill_labels.length} covered " \
+            "skill(s); not rated: #{missing.join(', ')}"
+    end
+
+    # Skill labels from the coverage map, canonically compared only.
+    def expected_skill_labels
+      @expected_skill_labels ||= @session.coverage_maps.reject(&:is_discovered).map { |m| canon(m.skill_label) }
+    end
+
+    def canon(text)
+      text.to_s.downcase.gsub(/[^a-z0-9]+/, ' ').strip
+    end
+
+    def unrated_skills(rows)
+      rated = rows.reject(&:is_discovered).map { |row| canon(row.skill_label) }.select(&:present?)
+
+      expected_skill_labels.reject do |label|
+        # A model that paraphrases a label still counts as covering it, as long
+        # as the coverage label appears in what it returned.
+        rated.any? { |value| value == label || value.include?(label) || label.include?(value) }
+      end
+    end
+
+    def build_skill_rows(portfolio, response)
+      data = coerce_json(response)
+
+      configured = Array(data['configured_skills'])
+      discovered = Array(data['discovered_skills'])
+
+      if configured.empty? && discovered.empty?
+        raise Gemini::Errors::InvalidResponseError, 'Gemini returned a portfolio with no skills at all'
+      end
+
+      configured.map { |raw| build_skill_row(portfolio, raw, discovered: false) } +
+        discovered.map { |raw| build_skill_row(portfolio, raw, discovered: true) }
+    end
+
+    def coerce_json(response)
+      return response if response.is_a?(Hash)
+
+      begin
+        JSON.parse(response.to_s)
+      rescue JSON::ParserError
+        raise Gemini::Errors::InvalidResponseError,
+              "Gemini portfolio payload was not JSON (#{response.to_s.length} characters)"
+      end
+    end
+
+    # Validates one skill before anything is written. Every message is about
+    # structure (label, level, confidence) and never quotes the transcript.
+    def build_skill_row(portfolio, raw, discovered:)
+      unless raw.is_a?(Hash)
+        raise Gemini::Errors::InvalidResponseError,
+              "A #{discovered ? 'discovered' : 'configured'} skill entry was #{raw.class}, expected an object"
+      end
+
+      label = raw['skill_label'].to_s.strip
+      if label.empty?
+        raise Gemini::Errors::InvalidResponseError,
+              "A #{discovered ? 'discovered' : 'configured'} skill entry arrived with no skill_label"
+      end
+
+      level = parse_level(raw['level'])
+      unless level
+        raise Gemini::Errors::InvalidResponseError,
+              "Skill '#{label}' has invalid level #{raw['level'].inspect} (expected an integer from 1 to 5)"
+      end
+
+      confidence = raw['confidence'].to_s.strip.downcase
+      unless PortfolioSkill::CONFIDENCE_LEVELS.include?(confidence)
+        raise Gemini::Errors::InvalidResponseError,
+              "Skill '#{label}' has invalid confidence #{raw['confidence'].inspect} " \
+              "(expected #{PortfolioSkill::CONFIDENCE_LEVELS.join(', ')})"
+      end
+
+      summary = raw['competency_summary'].to_s.strip
+      if summary.empty?
+        raise Gemini::Errors::InvalidResponseError,
+              "Skill '#{label}' arrived without a competency summary"
+      end
+
+      evidence = Array(raw['evidence']).select { |quote| quote.is_a?(String) && quote.strip.present? }
+
+      PortfolioSkill.new(
+        portfolio_id:      portfolio.id,
+        skill_id:          discovered ? nil : raw['skill_id'].to_s.presence,
+        skill_label:       label,
+        is_discovered:     discovered,
+        ai_level:          level,
+        ai_confidence:     confidence,
+        evidence:          evidence.first(3),
+        competency_summary: summary
+      )
+    end
+
+    # Accepts 3, "3", 3.0, "3.0" — and nothing outside 1..5, so a nonsense
+    # model answer surfaces as a failed generation instead of a distorted
+    # rating that was silently clamped.
+    def parse_level(raw)
+      level = case raw
+              when Integer then raw
+              when Numeric then raw.to_i
+              else Integer(raw.to_s, exception: false)
+              end
+      return nil unless level&.between?(1, 5)
+
+      level
     end
   end
 end

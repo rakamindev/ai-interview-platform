@@ -4,7 +4,7 @@ require 'faye/websocket'
 
 # Rack middleware for assessor live coverage monitoring at /ws/sessions/:id/coverage.
 # Server-push only: subscribes to Redis pub/sub and forwards coverage updates to the assessor.
-class CoverageWebSocketMiddleware
+class CoverageWebsocketMiddleware
   COVERAGE_PATH_PATTERN = %r{\A/ws/sessions/([^/]+)/coverage\z}
 
   def initialize(app)

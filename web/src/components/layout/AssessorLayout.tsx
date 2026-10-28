@@ -20,7 +20,7 @@ export default function AssessorLayout() {
 
   const handleLogout = () => {
     clearToken();
-    setAuth({ token: null });
+    setAuth({ token: null, role: null, email: null });
     navigate("/login");
   };
 

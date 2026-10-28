@@ -6,6 +6,9 @@
 **/.env.local
 api/config/application.yml
 
+# Throwaway local diagnostics that reference local credentials
+api/diagnose.rb
+
 # Logs and temp
 **/log/*.log
 **/tmp/

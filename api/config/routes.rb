@@ -34,7 +34,11 @@ Rails.application.routes.draw do
 
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
+      post 'sessions/:token/cv',             to: 'sessions#upload_cv'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+
+      # Candidate dashboard (JWT — a signed-in candidate's own interviews)
+      get  'candidate/sessions',             to: 'sessions#mine'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

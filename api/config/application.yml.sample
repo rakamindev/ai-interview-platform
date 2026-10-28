@@ -11,11 +11,40 @@ DB_NAME: "rakamin_development"
 DB_USERNAME: "postgres"
 DB_PASSWORD: ""
 
-# AI Interview specific
-GEMINI_API_KEY: "your_gemini_api_key"
-GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
-GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
-GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
+# ---------------------------------------------------------------------------
+# AI integration (Google AI Studio — classic API key, header: x-goog-api-key)
+# ---------------------------------------------------------------------------
+# *secret*. Create it at https://aistudio.google.com/apikey. Never commit the
+# real value; this file only carries a placeholder. Left empty, local runs use
+# the mock client automatically — paste a key to call the real API.
+GEMINI_API_KEY: ""
+
+# Master switch. false => every AI feature refuses to start (callers fail with
+# Gemini::Errors::NotConfiguredError) and nothing silently pretends to work.
+GEMINI_ENABLED: "true"
+
+# Local development: mock mode makes every AI call return deterministic
+# fixtures (no network, no cost, no key needed). Leave it commented out to use
+# your real key locally; uncomment it to develop offline.
+# GEMINI_MOCK_MODE: "true"
+
+# Model ids. Leave unset to use the shipped defaults:
+#   live  = gemini-3.8-live
+#   flash = gemini-3.6-flash   (coverage analysis, fit/gap narratives, checks)
+#   pro   = gemini-3.6-flash   (portfolio generation — pre-3.5 "pro" ids are gone)
+# gemini-3.8-flash is a valid current id but returned only timeouts and HTTP 503
+# for new keys on 2026-10-27, so the default stays on 3.6 until capacity lands.
+# Only set these if you need to pin a different, currently-available model.
+# GEMINI_LIVE_MODEL: "gemini-3.8-live"
+# GEMINI_FLASH_MODEL: "gemini-3.6-flash"
+# GEMINI_PRO_MODEL: "gemini-3.6-flash"
+
+# Per-call tuning (seconds / attempt counts). Defaults are set per role.
+# GEMINI_TIMEOUT_ANALYSIS: "45"
+# GEMINI_TIMEOUT_NARRATIVE: "30"
+# GEMINI_TIMEOUT_PORTFOLIO: "180"
+# GEMINI_RETRY_MAX_ANALYSIS: "2"
+# GEMINI_RETRY_WAIT_PORTFOLIO: "10"
 
 # App URL (for invite links)
 APP_BASE_URL: "http://localhost:3001"

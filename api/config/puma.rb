@@ -7,7 +7,13 @@ max_threads_count = ENV.fetch('RAILS_MAX_THREADS', 16)
 min_threads_count = ENV.fetch('RAILS_MIN_THREADS') { max_threads_count }
 threads min_threads_count, max_threads_count
 
-workers ENV.fetch('WEB_CONCURRENCY', 2)
+# Prefork workers. Disabled in development (forking + the EventMachine reactor
+# is fragile on a local Windows/macOS dev box). Production and staging keep the
+# 2 workers the header comment and the k8s ConfigMap (WEB_CONCURRENCY: "2")
+# both assume, so behaviour there is unchanged.
+default_workers = %w[production staging].include?(ENV.fetch('RAILS_ENV', 'development')) ? 2 : 0
+workers_count = ENV.fetch('WEB_CONCURRENCY', default_workers).to_i
+workers workers_count if workers_count.positive?
 
 worker_timeout 3600 if ENV.fetch('RAILS_ENV', 'development') == 'development'
 
