@@ -8,20 +8,22 @@ interface LevelRadioProps {
   onChange: (level: number) => void;
   disabled?: boolean;
   className?: string;
+  /** Keeps radio ids unique when several pickers are on one page. */
+  idPrefix?: string;
 }
 
-export default function LevelRadio({ value, onChange, disabled, className }: LevelRadioProps) {
+export default function LevelRadio({ value, onChange, disabled, className, idPrefix = "level" }: LevelRadioProps) {
   return (
     <RadioGroup
       value={String(value)}
       onValueChange={(v) => onChange(Number(v))}
       disabled={disabled}
-      className={cn("flex items-center gap-3", className)}
+      className={cn("flex flex-wrap items-center gap-3", className)}
     >
       {[1, 2, 3, 4, 5].map((level) => (
         <div key={level} className="flex items-center gap-1">
-          <RadioGroupItem value={String(level)} id={`level-${level}`} />
-          <Label htmlFor={`level-${level}`} className="cursor-pointer font-normal">
+          <RadioGroupItem value={String(level)} id={`${idPrefix}-${level}`} />
+          <Label htmlFor={`${idPrefix}-${level}`} className="cursor-pointer font-normal">
             {LEVEL_LABELS[level]}
           </Label>
         </div>

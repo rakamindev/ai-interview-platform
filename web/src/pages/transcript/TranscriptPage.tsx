@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionsApi } from "@/services/sessions";
@@ -12,6 +12,14 @@ export default function TranscriptPage() {
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { hash } = useLocation();
+  // Evidence links from the portfolio point at #turn-N.
+  const focusedTurn = hash.startsWith("#turn-") ? Number(hash.slice(6)) : null;
+
+  useEffect(() => {
+    if (loading || focusedTurn == null) return;
+    document.getElementById(`turn-${focusedTurn}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [loading, focusedTurn]);
 
   useEffect(() => {
     Promise.all([
@@ -89,14 +97,16 @@ export default function TranscriptPage() {
         <div className="space-y-3">
           {turns.map((turn) => {
             const isAI = turn.speaker === "ai";
+            const focused = turn.turn_number === focusedTurn;
             return (
               <div
                 key={turn.id}
-                className={`rounded-lg p-4 ${
+                id={`turn-${turn.turn_number}`}
+                className={`scroll-mt-20 rounded-lg p-4 transition-shadow ${
                   isAI
                     ? "bg-muted border"
                     : "bg-background border border-primary/20"
-                }`}
+                } ${focused ? "ring-2 ring-primary ring-offset-2" : ""}`}
               >
                 <p
                   className={`text-xs font-semibold mb-1 ${
@@ -104,8 +114,9 @@ export default function TranscriptPage() {
                   }`}
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
+                  <span className="ml-2 font-normal text-muted-foreground">Turn {turn.turn_number}</span>
                 </p>
-                <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{turn.text}</p>
               </div>
             );
           })}
