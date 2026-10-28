@@ -43,27 +43,31 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
             </tr>
           </thead>
           <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
-              </tr>
-            ))}
+            {comparisons.map((c, i) => {
+              const req = c.required_level ?? c.expected_level;
+              const cand = c.candidate_level;
+              return (
+                <tr key={i} className="border-b last:border-0">
+                  <td className="px-4 py-2.5 font-medium">{c.skill_label}</td>
+                  <td className="px-4 py-2.5 text-center font-medium text-slate-700">
+                    {req != null ? (LEVEL_LABELS[Number(req)] || `L${req}`) : "—"}
+                  </td>
+                  <td className="px-4 py-2.5 text-center font-medium">
+                    {cand != null ? (
+                      <span>
+                        {LEVEL_LABELS[Number(cand)] || `L${cand}`}
+                        {c.is_override && <span className="text-xs text-muted-foreground ml-1" title="Human override applied">✏</span>}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <ResultBadge comparison={c} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

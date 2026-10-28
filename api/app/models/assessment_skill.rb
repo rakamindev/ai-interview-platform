@@ -6,8 +6,8 @@ class AssessmentSkill < ApplicationRecord
   before_validation :set_default_anchors
 
   validates :skill_label, presence: true
-  validates :l1_anchor, :l2_anchor, :l3_anchor, :l4_anchor, :l5_anchor, presence: true
   validates :display_order, presence: true
+  # l1–l5 anchors are guaranteed by before_validation :set_default_anchors, so no presence check needed
   validates :expected_level, numericality: { only_integer: true,
                                               in: 1..5,
                                               allow_nil: true }

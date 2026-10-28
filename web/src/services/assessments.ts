@@ -23,7 +23,7 @@ export const assessmentsApi = {
       { assessment: data }
     ),
 
-  update: (id: number, data: AssessmentPayload) =>
+  update: (id: number, data: Partial<AssessmentPayload>) =>
     api.put<{ assessment: Assessment; system_prompt_generated: boolean }>(
       `/assessments/${id}`,
       { assessment: data }

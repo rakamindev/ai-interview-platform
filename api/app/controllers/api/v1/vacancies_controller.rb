@@ -60,6 +60,8 @@ module Api
       def vacancy_params
         params.require(:vacancy).permit(
           :role_title,
+          :employment_type,
+          :workplace_type,
           :culture_dimensions,
           :competency_expectations,
           vacancy_skills_attributes: %i[
@@ -69,9 +71,27 @@ module Api
       end
 
       def vacancy_json(vacancy)
+        emp = vacancy.respond_to?(:employment_type) && vacancy.employment_type.present? ? vacancy.employment_type : nil
+        work = vacancy.respond_to?(:workplace_type) && vacancy.workplace_type.present? ? vacancy.workplace_type : nil
+
+        # Fallback to parse competency_expectations if top-level attribute returned default or nil
+        if (emp.nil? || emp == "full_time") && vacancy.competency_expectations.present?
+          begin
+            parsed = JSON.parse(vacancy.competency_expectations)
+            if parsed.is_a?(Hash)
+              emp = parsed["employment_type"] if parsed["employment_type"].present?
+              work = parsed["workplace_type"] if parsed["workplace_type"].present?
+            end
+          rescue StandardError
+            # ignore
+          end
+        end
+
         {
           id:                       vacancy.id,
           role_title:               vacancy.role_title,
+          employment_type:          emp || "full_time",
+          workplace_type:           work || "on_site",
           culture_dimensions:       vacancy.culture_dimensions,
           competency_expectations:  vacancy.competency_expectations,
           created_by:               vacancy.created_by,
