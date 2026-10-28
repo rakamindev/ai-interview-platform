@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -149,7 +149,35 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          candidate_name:  session.candidate_name,
+          has_consented:   session.consented?,
+          consented_at:    session.consented_at
+        )
+      end
+
+      # POST /sessions/:token/consent — candidate records informed consent (UU PDP)
+      def consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+
+        unless session
+          return json_error("Invalid or expired invite token", :not_found)
+        end
+
+        if session.ended?
+          return json_error("Session has already ended", :unprocessable_entity)
+        end
+
+        version = params.dig(:consent, :consent_version).presence || 'v1.0-2026'
+        session.update!(
+          consented_at:    Time.current,
+          consent_version: version
+        )
+
+        json_response(
+          consented:    true,
+          consented_at: session.consented_at,
+          session_id:   session.id
         )
       end
 

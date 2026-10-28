@@ -21,13 +21,15 @@ class Session < ApplicationRecord
   scope :pending, -> { where(status: 'pending') }
   scope :ended,   -> { where(status: 'ended') }
 
-  def active?  = status == 'active'
-  def ended?   = status == 'ended'
-  def pending? = status == 'pending'
+  def active?    = status == 'active'
+  def ended?     = status == 'ended'
+  def pending?   = status == 'pending'
+  def consented? = consented_at.present?
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    base = ENV['FRONTEND_URL'].presence ||
+           (Rails.env.development? ? 'http://localhost:5173' : ENV.fetch('APP_BASE_URL', 'http://localhost:3001'))
+    "#{base.to_s.chomp('/')}/interview/#{invite_token}"
   end
 
   private
