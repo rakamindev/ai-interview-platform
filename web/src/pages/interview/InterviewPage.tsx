@@ -21,12 +21,13 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { AlertCircle, CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
+  const [candidateInfoError, setCandidateInfoError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
@@ -44,11 +45,19 @@ export default function InterviewPage() {
     if (!token) return;
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
+        setCandidateInfoError(null);
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((error: unknown) => {
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        setCandidateInfoError(
+          status === 404
+            ? "This invitation link is invalid or no longer available. Please request a new link from the hiring team."
+            : "We couldn't verify this invitation because the service could not be reached. Retry when your connection is available."
+        );
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -186,6 +195,26 @@ export default function InterviewPage() {
       : connectionState === "connected"
       ? "connected"
       : "reconnecting";
+
+  if (candidateInfoError) {
+    return (
+      <div className="mx-auto max-w-xl space-y-5 px-4 py-12">
+        <div className="flex flex-col items-center gap-3 rounded-xl border p-8 text-center">
+          <AlertCircle className="h-9 w-9 text-destructive" aria-hidden="true" />
+          <h1 className="text-xl font-semibold">We couldn't verify your invitation</h1>
+          <p role="alert" className="max-w-md text-sm leading-6 text-muted-foreground">
+            {candidateInfoError}
+          </p>
+          <p className="max-w-md text-xs leading-5 text-muted-foreground">
+            The interview has not been started from this page. No completion message will be shown until the invitation can be verified.
+          </p>
+          <Button onClick={() => window.location.reload()} className="mt-1">
+            Retry invitation check
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {

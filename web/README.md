@@ -4,7 +4,7 @@
 
 - **Node.js** (v18+ recommended)
 - **npm** (comes with Node)
-- A running backend API server (default: `http://localhost:3000`)
+- A running backend API server (default: `http://localhost:3001`)
 
 ## Quick Start
 
@@ -46,6 +46,7 @@ The app will be available at **http://localhost:5173**.
 | ------------------- | ------------------------------------ |
 | `npm run dev`       | Start Vite dev server with HMR       |
 | `npm run build`     | Type-check with `tsc` then build     |
+| `npm run test`      | Run Vitest component tests            |
 | `npm run preview`   | Preview the production build locally |
 
 ## Environment Variables
@@ -64,7 +65,7 @@ The app will be available at **http://localhost:5173**.
 ## Tech Stack
 
 - **React 18** with TypeScript
-- **Vite 5** (build tool)
+- **Vite 6** (build tool)
 - **Tailwind CSS 3** (styling)
 - **Radix UI** (accessible UI primitives)
 - **Jotai** (state management)

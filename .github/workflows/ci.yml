@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'take-home/**'
+      - 'scratch/**'
+      - 'feat/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API - RSpec
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rakamin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rakamin_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: api
+    env:
+      RAILS_ENV: test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: rakamin_test
+      SECRET_KEY_BASE: ci-only-secret-key-base-not-for-production
+      GEMINI_API_KEY: ci-only-key
+      GEMINI_FLASH_MODEL: gemini-2.0-flash-001
+      GEMINI_PRO_MODEL: gemini-2.0-pro-001
+      REDIS_URL: redis://127.0.0.1:6379/1
+      APP_BASE_URL: http://localhost:3001
+      ALLOWED_ORIGINS: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.2'
+          bundler-cache: false
+      - name: Install API dependencies
+        run: bundle install
+      - name: Apply database migrations
+        run: bundle exec rails db:migrate
+      - name: Verify lifecycle migration rollback and re-apply
+        run: |
+          bundle exec rails db:rollback STEP=1
+          bundle exec rails db:migrate
+      - name: Run RSpec
+        run: bundle exec rspec
+
+  web:
+    name: Web - Vitest and production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Run component tests
+        run: npm test
+      - name: Build production bundle
+        run: npm run build

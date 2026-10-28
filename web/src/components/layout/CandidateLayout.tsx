@@ -2,15 +2,13 @@ import { Outlet } from "react-router-dom";
 
 export default function CandidateLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Minimal header — no nav */}
-      <header className="border-b bg-white">
-        <div className="max-w-2xl mx-auto px-4 h-12 flex items-center">
-          <span className="font-semibold text-sm text-muted-foreground">AI Interview</span>
+    <div className="flex min-h-screen flex-col bg-muted/30">
+      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+        <div className="mx-auto flex h-14 w-full max-w-4xl items-center px-4 sm:px-6">
+          <span className="text-sm font-semibold tracking-tight text-foreground">AI Interview</span>
         </div>
       </header>
-
-      <main className="flex-1 flex flex-col">
+      <main className="flex flex-1 flex-col">
         <Outlet />
       </main>
     </div>

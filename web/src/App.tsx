@@ -25,7 +25,7 @@ export default function App() {
       {/* Assessor routes (protected) */}
       <Route element={<ProtectedRoute />}>
       <Route element={<AssessorLayout />}>
-        <Route path="/" element={<Navigate to="/assessments" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/assessments" element={<AssessmentListPage />} />
         <Route path="/assessments/new" element={<AssessmentNewPage />} />
         <Route path="/assessments/:id/edit" element={<AssessmentEditPage />} />

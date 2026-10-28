@@ -13,7 +13,7 @@ function SessionSummary({ session }: { session?: Assessment["latest_session"] })
   if (session.status === "active")
     return (
       <span className="flex items-center gap-1 text-xs text-primary">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
         Live now
       </span>
     );
@@ -41,57 +41,91 @@ export default function AssessmentListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const gridClass =
+    "grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3";
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Assessment
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+            Workspace
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">Assessments</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage interviews and follow candidate progress.
+          </p>
+        </div>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => navigate("/assessments/new")}
+        >
+          <Plus className="mr-1.5 h-4 w-4" />
+          New Assessment
         </Button>
       </div>
 
       {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
           Failed to load assessments. Please refresh the page.
         </div>
       )}
 
       {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+        <div className={gridClass}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="rounded-xl shadow-none">
+              <CardContent className="space-y-3 p-4">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed bg-card px-5 py-12 text-center text-sm text-muted-foreground sm:px-10">
           <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
+          <Button
+            variant="outline"
+            onClick={() => navigate("/assessments/new")}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Create your first assessment
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className={gridClass}>
           {assessments.map((a) => (
             <Card
               key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
+              role="button"
+              tabIndex={0}
+              className="flex h-full cursor-pointer flex-col rounded-xl shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => navigate(`/assessments/${a.id}/invite`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  navigate(`/assessments/${a.id}/invite`);
+                }
+              }}
             >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
+              <CardContent className="flex flex-1 items-start justify-between gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-semibold leading-5">
+                    {a.name}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1 rounded-md bg-muted px-2 py-1">
                       <Clock className="h-3 w-3" />
                       {a.time_limit_min} min
                     </span>
                     {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
+                      <SessionSummary session={a.latest_session} />
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               </CardContent>
             </Card>
           ))}

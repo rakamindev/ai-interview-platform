@@ -37,7 +37,10 @@ module Api
       # PUT /api/v1/vacancies/:id
       def update
         if @vacancy.update(vacancy_params)
-          json_response(vacancy: vacancy_with_skills_json(@vacancy))
+          refresh_warning = refresh_related_fitgap_reports
+          payload = { vacancy: vacancy_with_skills_json(@vacancy) }
+          payload[:fitgap_refresh_warning] = "Some reports could not be refreshed. Retry the report from the portfolio page." if refresh_warning
+          json_response(payload)
         else
           json_error(@vacancy.errors.full_messages.first, :unprocessable_entity)
         end
@@ -50,6 +53,34 @@ module Api
       end
 
       private
+
+      def refresh_related_fitgap_reports
+        refresh_failed = false
+
+        @vacancy.fit_gap_reports.includes(:portfolio).find_each do |report|
+          scheduled = FitGap::ReportScheduler.enqueue(portfolio: report.portfolio, vacancy: @vacancy)
+          if scheduled.nil?
+            report.update_columns(
+              generation_status: "failed",
+              generation_error: "Report refresh could not be scheduled",
+              generation_started_at: nil
+            )
+            refresh_failed = true
+          else
+            refresh_failed ||= scheduled.failed?
+          end
+        rescue StandardError => e
+          refresh_failed = true
+          report.update_columns(
+            generation_status: "failed",
+            generation_error: "Report refresh could not be scheduled",
+            generation_started_at: nil
+          )
+          Rails.logger.error("[Vacancies] Fit/gap refresh failed: #{e.class}")
+        end
+
+        refresh_failed
+      end
 
       def set_vacancy
         @vacancy = Vacancy.find(params[:id])
