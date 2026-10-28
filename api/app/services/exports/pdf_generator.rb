@@ -22,6 +22,7 @@ module Exports
       @session     = portfolio.session
       @assessment  = @session.assessment
       @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
+      @fit_gap     = nil unless @fit_gap&.generated_at.present?
     end
 
     # Returns PDF binary string.

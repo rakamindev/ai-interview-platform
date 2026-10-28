@@ -4,9 +4,11 @@ module FitGap
   # N13: Generates a fit/gap report comparing a portfolio against a vacancy.
   # Uses rule-based comparison for skill levels + Gemini Flash for culture narrative.
   class Engine
-    def initialize(portfolio:, vacancy:, gemini_client: nil)
+    def initialize(portfolio:, vacancy:, generation_started_at:, generation_token:, gemini_client: nil)
       @portfolio = portfolio
       @vacancy   = vacancy
+      @generation_started_at = generation_started_at
+      @generation_token = generation_token
       @gemini_client = gemini_client || Gemini::HttpClient.new(
         model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
         timeout: 30
@@ -23,12 +25,28 @@ module FitGap
         vacancy_id:   @vacancy.id
       )
 
-      report.update!(
-        skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
-      )
+      updated = false
+      report.with_lock do
+        next unless report.generation_status == "generating" &&
+                    report.generation_started_at == @generation_started_at &&
+                    report.generation_token == @generation_token
+
+        report.update!(
+          skill_comparisons: skill_comparisons,
+          culture_narrative: narratives[:culture],
+          overall_narrative: narratives[:overall],
+          generated_at:      Time.current,
+          generation_status: 'complete',
+          generation_started_at: nil,
+          generation_token: nil
+        )
+        updated = true
+      end
+
+      unless updated
+        Rails.logger.info("[N13] Discarded superseded fit/gap generation: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
+        return report
+      end
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
       report
@@ -37,10 +55,11 @@ module FitGap
     private
 
     def build_skill_comparisons
-      vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
+      vacancy_skills = @vacancy.vacancy_skills
       portfolio_skills = effective_portfolio_skills  # includes overrides
 
-      comparisons = vacancy_skills.map do |label, vacancy_skill|
+      comparisons = vacancy_skills.map do |vacancy_skill|
+        label = vacancy_skill.skill_label
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
         if portfolio_skill
@@ -48,11 +67,13 @@ module FitGap
           expected_level   = vacancy_skill.expected_level
           delta            = candidate_level - expected_level
           result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          is_override      = portfolio_skill[:overridden]
         else
           candidate_level = nil
           expected_level  = vacancy_skill.expected_level
           delta           = nil
           result          = 'not_assessed'
+          is_override     = false
         end
 
         {
@@ -62,7 +83,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     is_override
         }
       end
 
@@ -91,6 +113,8 @@ module FitGap
     end
 
     def generate_narratives(skill_comparisons)
+      return { culture: nil, overall: generate_fallback_narrative(skill_comparisons) } if skill_comparisons.empty?
+
       gaps    = skill_comparisons.select { |c| c[:result] == 'gap' }
       matches = skill_comparisons.select { |c| c[:result] == 'match' }
       exceeds = skill_comparisons.select { |c| c[:result] == 'exceed' }
@@ -100,12 +124,22 @@ module FitGap
 
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
-        data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        data = response.is_a?(Hash) ? response : JSON.parse(response.to_s)
+        raise JSON::ParserError, 'Narrative response must be a JSON object' unless data.is_a?(Hash)
+
+        culture = narrative_text(data['culture_narrative'] || data[:culture_narrative])
+        overall = narrative_text(data['overall_narrative'] || data[:overall_narrative])
+        raise JSON::ParserError, 'Narrative response did not contain usable text' if culture.nil? && overall.nil?
+
+        { culture: culture, overall: overall || generate_fallback_narrative(skill_comparisons) }
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}")
         { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
       end
+    end
+
+    def narrative_text(value)
+      value.is_a?(String) && value.present? ? value : nil
     end
 
     def build_narrative_prompt(gaps, matches, exceeds, not_assessed)
@@ -127,8 +161,8 @@ module FitGap
         - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
 
         Write two short narrative paragraphs:
-        1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
-        2. overall_narrative: 2-3 sentence overall hiring recommendation summary.
+        1. culture_narrative: Culture and interview behavior were not assessed in this prompt. State that limitation; do not infer culture fit.
+        2. overall_narrative: Summarize the skill comparison and identify any unassessed requirements. Do not make or recommend a hiring decision.
 
         OUTPUT (JSON only):
         {
@@ -139,11 +173,18 @@ module FitGap
     end
 
     def generate_fallback_narrative(comparisons)
+      if comparisons.empty?
+        return "No role skill requirements are configured, so a fit/gap comparison could not be calculated. " \
+          "This comparison alone is not a hiring recommendation."
+      end
+
       gaps    = comparisons.count { |c| c[:result] == 'gap' }
       matches = comparisons.count { |c| c[:result] == 'match' }
       exceeds = comparisons.count { |c| c[:result] == 'exceed' }
+      not_assessed = comparisons.count { |c| c[:result] == 'not_assessed' }
 
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
+      "The rule-based comparison found #{matches} skill matches, #{exceeds} skills above the expected level, and #{gaps} gaps. " \
+        "#{not_assessed} role requirements were not assessed. This comparison alone is not a hiring recommendation."
     end
   end
 end
