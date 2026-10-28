@@ -73,6 +73,51 @@ bundle exec rails server
 
 Runs on **port 3001** by default.
 
+> **macOS:** Puma forks 2 workers by default, and forked workers crash on macOS
+> (`objc ... fork() was called`). Run single-process locally:
+> `WEB_CONCURRENCY=0 bundle exec rails server`.
+>
+> `bin/rails` is not executable in this repo; use `bundle exec rails ...`.
+
+---
+
+## Tests
+
+```bash
+RAILS_ENV=test bundle exec rails db:create db:schema:load   # first time only
+bundle exec rspec
+bundle exec rails zeitwerk:check                            # eager load, as production does
+```
+
+Specs never call Gemini: `spec/support/scripted_model.rb` stands in for the model.
+
+---
+
+## Reviewing the results screens without a Gemini key
+
+```bash
+bundle exec rails db:seed
+bundle exec rails demo:seed_results    # development only; prints the URLs to open
+```
+
+Seeds fictional finished interviews (one ended before a skill was reached, one
+whose generation failed, one still generating). The real portfolio generator and
+fit/gap engine run; only the model reply is scripted. Log in as
+`assessor@test-corp.local` / `password123`.
+
+---
+
+## Repairing portfolios generated before "not assessed" existed
+
+Older portfolios stored a level for skills the interview never reached. This
+finds them (coverage map shows 0 probes) and marks them not assessed, keeping
+assessor ratings and re-queuing affected fit/gap reports:
+
+```bash
+bundle exec rails portfolios:repair_legacy_levels           # dry run
+APPLY=1 bundle exec rails portfolios:repair_legacy_levels   # write
+```
+
 ---
 
 ## 7. Start the frontend
