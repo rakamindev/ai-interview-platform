@@ -157,7 +157,7 @@ export default function FitGapReportPage() {
               <CardTitle className="text-sm">Skill Comparison</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <ComparisonTable comparisons={report.skill_comparisons} />
+              <ComparisonTable comparisons={report.skill_comparisons} coverage={report.coverage} />
             </CardContent>
           </Card>
 

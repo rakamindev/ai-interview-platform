@@ -129,7 +129,8 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  required_level?: number; // legacy name
+  expected_level?: number; // field the API sends
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -141,6 +142,7 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
+  coverage?: FitGapCoverage;
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
@@ -204,4 +206,11 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+}
+
+export interface FitGapCoverage {
+  assessed: number;
+  total: number;
+  not_assessed: number;
+  complete: boolean;
 }
