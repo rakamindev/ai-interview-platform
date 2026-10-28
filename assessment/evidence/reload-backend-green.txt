@@ -1,0 +1,37 @@
+
+Randomized with seed 54794
+
+AudioWebSocketMiddleware
+  opens the candidate microphone when a browser resumes an existing session
+
+Api::V1::SessionsController
+  exposes terminal reason and original remaining time to the public candidate screen
+
+Audio browser lifecycle
+  does not let a detached browser keep reconnecting or schedule a destructive grace timer
+  does not erase a handle for an unrelated policy or model error
+  rebuilds once without reusing an explicitly expired handle and restores persisted conversation
+  does not allow an expired-handle fallback to create an unlimited reconnect loop
+  cancels queued retry when the old browser detaches
+  does not restart an active interview beyond its original time limit
+  does not send a ready notification from an obsolete browser connection
+
+Gemini::HttpClient
+  sends preview model generation to the documented beta endpoint
+
+Gemini::LiveClient
+  returns the microphone to the candidate for a text-only completed model turn
+  opens the microphone only once after the generationComplete drain delay
+  does not retain a checkpoint explicitly marked non-resumable
+  gives Gemini a fresh response timeout after a long candidate answer
+  signals the end of a paused audio stream and accepts the next answer
+  persists candidate transcription when audio ends without generationComplete
+  restores role-labelled history without completing a new user turn
+  waits for a full pause after the most recent audio rather than cutting speech mid-turn
+
+Finished in 0.08965 seconds (files took 0.8872 seconds to load)
+18 examples, 0 failures
+
+Randomized with seed 54794
+
+process_exit_code=0

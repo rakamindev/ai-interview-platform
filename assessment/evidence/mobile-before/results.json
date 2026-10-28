@@ -1,0 +1,280 @@
+{
+  "phase": "before",
+  "result": "FAIL",
+  "browser": "Edge Chromium viewport emulation",
+  "widths": [
+    360,
+    390,
+    768,
+    1280
+  ],
+  "cases": [
+    {
+      "state": "precheck",
+      "width": 360,
+      "viewport": 360,
+      "document": 360,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 360,
+      "viewport": 360,
+      "document": 576,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": " Mic On",
+          "right": 448
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End Interview",
+          "right": 560
+        }
+      ],
+      "inaccessible": [
+        "Mic On",
+        "End Interview"
+      ],
+      "pass": false
+    },
+    {
+      "state": "portfolio",
+      "width": 360,
+      "viewport": 360,
+      "document": 1055,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": "Logout",
+          "right": 527
+        },
+        {
+          "tag": "BUTTON",
+          "text": "JSON",
+          "right": 390
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Override rating ▼",
+          "right": 1031
+        }
+      ],
+      "inaccessible": [
+        "JSON"
+      ],
+      "pass": false
+    },
+    {
+      "state": "fitgap",
+      "width": 360,
+      "viewport": 360,
+      "document": 527,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": "Logout",
+          "right": 527
+        },
+        {
+          "tag": "BUTTON",
+          "text": "JSON",
+          "right": 392
+        },
+        {
+          "tag": "TABLE",
+          "text": "SkillRequiredCandidateResultFrontendArchitectureAndAcce",
+          "right": 975
+        }
+      ],
+      "inaccessible": [
+        "JSON"
+      ],
+      "pass": false,
+      "tableResultReachable": true
+    },
+    {
+      "state": "precheck",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 390,
+      "viewport": 390,
+      "document": 576,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": " Mic On",
+          "right": 448
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End Interview",
+          "right": 560
+        }
+      ],
+      "inaccessible": [
+        "Mic On",
+        "End Interview"
+      ],
+      "pass": false
+    },
+    {
+      "state": "portfolio",
+      "width": 390,
+      "viewport": 390,
+      "document": 1055,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": "Logout",
+          "right": 527
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Override rating ▼",
+          "right": 1031
+        }
+      ],
+      "inaccessible": [],
+      "pass": false
+    },
+    {
+      "state": "fitgap",
+      "width": 390,
+      "viewport": 390,
+      "document": 527,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": "Logout",
+          "right": 527
+        },
+        {
+          "tag": "BUTTON",
+          "text": "JSON",
+          "right": 392
+        },
+        {
+          "tag": "TABLE",
+          "text": "SkillRequiredCandidateResultFrontendArchitectureAndAcce",
+          "right": 975
+        }
+      ],
+      "inaccessible": [
+        "JSON"
+      ],
+      "pass": false,
+      "tableResultReachable": true
+    },
+    {
+      "state": "precheck",
+      "width": 768,
+      "viewport": 768,
+      "document": 768,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 768,
+      "viewport": 768,
+      "document": 768,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "portfolio",
+      "width": 768,
+      "viewport": 768,
+      "document": 1087,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": "Override rating ▼",
+          "right": 1063
+        }
+      ],
+      "inaccessible": [],
+      "pass": false
+    },
+    {
+      "state": "fitgap",
+      "width": 768,
+      "viewport": 768,
+      "document": 768,
+      "offenders": [
+        {
+          "tag": "TABLE",
+          "text": "SkillRequiredCandidateResultFrontendArchitectureAndAcce",
+          "right": 1007
+        }
+      ],
+      "inaccessible": [],
+      "pass": true,
+      "tableResultReachable": true
+    },
+    {
+      "state": "precheck",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "portfolio",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1343,
+      "offenders": [
+        {
+          "tag": "BUTTON",
+          "text": "Override rating ▼",
+          "right": 1319
+        }
+      ],
+      "inaccessible": [],
+      "pass": false
+    },
+    {
+      "state": "fitgap",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true,
+      "tableResultReachable": true
+    }
+  ],
+  "unknownRequests": [],
+  "pageErrors": [],
+  "fixtures": true,
+  "envLoaded": false,
+  "realApiCalled": false,
+  "realMicrophoneUsed": false,
+  "realGeminiUsed": false,
+  "autoplayOverrideForLayout": true
+}

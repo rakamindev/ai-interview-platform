@@ -1,0 +1,19 @@
+
+Randomized with seed 23823
+
+Gemini::LiveClient
+  returns the microphone to the candidate for a text-only completed model turn
+  signals the end of a paused audio stream and accepts the next answer
+  opens the microphone only once after the generationComplete drain delay
+  waits for a full pause after the most recent audio rather than cutting speech mid-turn
+  gives Gemini a fresh response timeout after a long candidate answer
+  persists candidate transcription when audio ends without generationComplete
+
+AudioWebSocketMiddleware
+  opens the candidate microphone when a browser resumes an existing session
+
+Finished in 0.06378 seconds (files took 0.86655 seconds to load)
+7 examples, 0 failures
+
+Randomized with seed 23823
+

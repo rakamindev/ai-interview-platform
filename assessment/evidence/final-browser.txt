@@ -1,0 +1,14 @@
+npm notice run ai-interview-web@0.0.0 test:audio-browser
+npm notice run node scripts/audio-browser-smoke.mjs
+{
+  "result": "PASS",
+  "browser": "156.0.4314.42",
+  "capture": "non-silent 16kHz PCM16",
+  "mute": "PASS",
+  "unmute": "PASS",
+  "playback": "24kHz rendered and drained",
+  "credentialsLoaded": false,
+  "realMicrophoneUsed": false,
+  "geminiCalled": false
+}
+process_exit_code=0

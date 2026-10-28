@@ -1,0 +1,80 @@
+
+Randomized with seed 28131
+
+AudioWebSocketMiddleware
+  opens the candidate microphone when a browser resumes an existing session
+
+Gemini::HttpClient
+  sends preview model generation to the documented beta endpoint
+
+Audio browser lifecycle
+  does not erase a handle for an unrelated policy or model error
+  rebuilds once without reusing an explicitly expired handle and restores persisted conversation (FAILED - 1)
+  does not let a detached browser keep reconnecting or schedule a destructive grace timer (FAILED - 2)
+  cancels queued retry when the old browser detaches (FAILED - 3)
+
+Gemini::LiveClient
+  persists candidate transcription when audio ends without generationComplete
+  gives Gemini a fresh response timeout after a long candidate answer
+  opens the microphone only once after the generationComplete drain delay
+  returns the microphone to the candidate for a text-only completed model turn
+  waits for a full pause after the most recent audio rather than cutting speech mid-turn
+  signals the end of a paused audio stream and accepts the next answer
+
+Api::V1::SessionsController
+  exposes terminal reason and original remaining time to the public candidate screen (FAILED - 4)
+
+Failures:
+
+  1) Audio browser lifecycle rebuilds once without reusing an explicitly expired handle and restores persisted conversation
+     Failure/Error: expect(connections).to eq([{ resumption_handle: nil }])
+
+       expected: [{:resumption_handle=>nil}]
+            got: [{:resumption_handle=>"synthetic-expired"}]
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -[{:resumption_handle=>nil}]
+       +[{:resumption_handle=>"synthetic-expired"}]
+     # ./spec/channels/audio_lifecycle_spec.rb:57:in `block (2 levels) in <top (required)>'
+
+  2) Audio browser lifecycle does not let a detached browser keep reconnecting or schedule a destructive grace timer
+     Failure/Error: expect(state.instance_variable_get(:@detached)).to be(true)
+
+       expected true
+            got nil
+     # ./spec/channels/audio_lifecycle_spec.rb:42:in `block (2 levels) in <top (required)>'
+
+  3) Audio browser lifecycle cancels queued retry when the old browser detaches
+     Failure/Error: expect(connections).to be_empty
+       expected `[{:resumption_handle=>"synthetic-expired"}].empty?` to be truthy, got false
+     # ./spec/channels/audio_lifecycle_spec.rb:52:in `block (2 levels) in <top (required)>'
+
+  4) Api::V1::SessionsController exposes terminal reason and original remaining time to the public candidate screen
+     Failure/Error: expect(payload).to include(end_reason: nil, remaining_seconds: 2580)
+
+       expected {:role_title => "Synthetic interview", :session_id => 123, :session_status => "active", :time_limit_min => 45} to include {:end_reason => nil, :remaining_seconds => 2580}
+       Diff:
+       @@ -1,2 +1,4 @@
+       -:end_reason => nil,
+       -:remaining_seconds => 2580,
+       +:role_title => "Synthetic interview",
+       +:session_id => 123,
+       +:session_status => "active",
+       +:time_limit_min => 45,
+     # ./spec/controllers/candidate_info_spec.rb:28:in `block (2 levels) in <top (required)>'
+
+Finished in 0.12472 seconds (files took 1.62 seconds to load)
+13 examples, 4 failures
+
+Failed examples:
+
+rspec ./spec/channels/audio_lifecycle_spec.rb:54 # Audio browser lifecycle rebuilds once without reusing an explicitly expired handle and restores persisted conversation
+rspec ./spec/channels/audio_lifecycle_spec.rb:39 # Audio browser lifecycle does not let a detached browser keep reconnecting or schedule a destructive grace timer
+rspec ./spec/channels/audio_lifecycle_spec.rb:48 # Audio browser lifecycle cancels queued retry when the old browser detaches
+rspec ./spec/controllers/candidate_info_spec.rb:15 # Api::V1::SessionsController exposes terminal reason and original remaining time to the public candidate screen
+
+Randomized with seed 28131
+

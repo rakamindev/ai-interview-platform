@@ -1,0 +1,972 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows a technical failure for ended/error instead of success after reload 156ms
+   → Unable to find an accessible element with the role "heading" and name "Interview interrupted"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  [36m<h2[39m
+    [33mclass[39m=[32m"text-xl font-semibold"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-xl mx-auto px-4 py-16 text-center space-y-4"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"text-4xl"[39m
+      [36m>[39m
+        [0m✅[0m
+      [36m</div>[39m
+      [36m<h2[39m
+        [33mclass[39m=[32m"text-xl font-semibold"[39m
+      [36m>[39m
+        [0mInterview Complete[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+      [36m>[39m
+        [0mThank you. The interview has been recorded.[0m
+        [36m<br />[39m
+        [0mThe hiring team will review your results and follow up with you.[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > only shows normal completion when the server supplies a normal end reason 23ms
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not infer a successful interview from an unknown legacy end reason 13ms
+   → expected <h2 class="text-xl font-semibold"></h2> to be null
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > offers a status retry on load failure instead of claiming the interview was recorded 19ms
+   → Unable to find an accessible element with the role "heading" and name "Unable to load interview"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  [36m<h2[39m
+    [33mclass[39m=[32m"text-xl font-semibold"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-xl mx-auto px-4 py-16 text-center space-y-4"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"text-4xl"[39m
+      [36m>[39m
+        [0m✅[0m
+      [36m</div>[39m
+      [36m<h2[39m
+        [33mclass[39m=[32m"text-xl font-semibold"[39m
+      [36m>[39m
+        [0mInterview Complete[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+      [36m>[39m
+        [0mThank you. The interview has been recorded.[0m
+        [36m<br />[39m
+        [0mThe hiring team will review your results and follow up with you.[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > uses the server remaining time after a page reload 76ms
+   → Unable to find an element with the text: 02:00. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-xl mx-auto px-4 flex flex-col h-full"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"text-sm font-medium"[39m
+        [36m>[39m
+          [0mAI Interview[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"font-mono text-sm font-medium tabular-nums text-foreground"[39m
+        [36m>[39m
+          [0m⏱ [0m
+          [0m45:00[0m
+        [36m</span>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex-1 flex flex-col items-center justify-center gap-6 py-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col items-center gap-3"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-end gap-1 h-10"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+          [36m>[39m
+            [0mListening...[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col items-center gap-3"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-end gap-1 h-10"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+          [36m>[39m
+            [0mYour turn — microphone ready[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-1.5 text-xs text-green-600"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"h-1.5 w-1.5 rounded-full bg-green-500"[39m
+          [36m/>[39m
+          [0mConnected[0m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-3"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-mic h-3.5 w-3.5 mr-1.5"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M19 10v2a7 7 0 0 1-14 0v-2"[39m
+              [36m/>[39m
+              [36m<line[39m
+                [33mx1[39m=[32m"12"[39m
+                [33mx2[39m=[32m"12"[39m
+                [33my1[39m=[32m"19"[39m
+                [33my2[39m=[32m"22"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0m Mic On[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-expanded[39m=[32m"false"[39m
+            [33maria-haspopup[39m=[32m"dialog"[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"[39m
+            [33mdata-state[39m=[32m"closed"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mEnd Interview[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"[39m
+          [36m>[39m
+            [0m⚡ Force reconnect[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows interrupted on terminal model error and releases audio 51ms
+   → Unable to find an accessible element with the role "heading" and name "Interview interrupted"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  [36m<h2[39m
+    [33mclass[39m=[32m"text-xl font-semibold"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-xl mx-auto px-4 py-16 text-center space-y-4"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"text-4xl"[39m
+      [36m>[39m
+        [0m✅[0m
+      [36m</div>[39m
+      [36m<h2[39m
+        [33mclass[39m=[32m"text-xl font-semibold"[39m
+      [36m>[39m
+        [0mInterview Complete[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+      [36m>[39m
+        [0mThank you. The interview has been recorded.[0m
+        [36m<br />[39m
+        [0mThe hiring team will review your results and follow up with you.[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > waits for the server acknowledgement before showing manual completion 136ms
+   → expected <h2 class="text-xl font-semibold"></h2> to be null
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > treats an unacknowledged end request as an unknown connection outcome 246ms
+   → Unable to find an accessible element with the role "heading" and name "Connection lost"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  [36m<h2[39m
+    [33mclass[39m=[32m"text-xl font-semibold"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-xl mx-auto px-4 py-16 text-center space-y-4"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"text-4xl"[39m
+      [36m>[39m
+        [0m✅[0m
+      [36m</div>[39m
+      [36m<h2[39m
+        [33mclass[39m=[32m"text-xl font-semibold"[39m
+      [36m>[39m
+        [0mInterview Complete[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+      [36m>[39m
+        [0mThank you. The interview has been recorded.[0m
+        [36m<br />[39m
+        [0mThe hiring team will review your results and follow up with you.[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not reconnect a socket closed by page unmount 70ms
+   → expected [ FakeWebSocket{ …(8) }, …(1) ] to have a length of 1 but got 2
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > stops at a connection error after retries are exhausted without claiming success 184ms
+   → Unable to find an accessible element with the role "heading" and name "Connection lost"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  [36m<h2[39m
+    [33mclass[39m=[32m"text-xl font-semibold"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-xl mx-auto px-4 py-16 text-center space-y-4"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"text-4xl"[39m
+      [36m>[39m
+        [0m✅[0m
+      [36m</div>[39m
+      [36m<h2[39m
+        [33mclass[39m=[32m"text-xl font-semibold"[39m
+      [36m>[39m
+        [0mInterview Complete[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+      [36m>[39m
+        [0mThank you. The interview has been recorded.[0m
+        [36m<br />[39m
+        [0mThe hiring team will review your results and follow up with you.[0m
+      [36m</p>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition 259ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible 35ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows whose turn it is without claiming a silent candidate is speaking 73ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session 37ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > reports input activity from PCM energy and clears it when frames stop 25ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > clears input activity when the candidate mutes the microphone 5ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph 4ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn 5ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails 4ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts 2ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > converts PCM16 and schedules chunks without overlap 37ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped 9ms
+ ✓ src/test/audioWorklet.test.js > actual PCM worklet > preserves quiet microphone samples instead of replacing them with zeros 6ms
+ ✓ src/test/audioWorklet.test.js > actual PCM worklet > keeps silence flowing so upstream automatic VAD can observe the full pause 22ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows a technical failure for ended/error instead of success after reload
+TestingLibraryElementError: Unable to find an accessible element with the role "heading" and name "Interview interrupted"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  <h2
+    class="text-xl font-semibold"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-sm text-muted-foreground"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 py-16 text-center space-y-4"
+    >
+      <div
+        class="text-4xl"
+      >
+        ✅
+      </div>
+      <h2
+        class="text-xl font-semibold"
+      >
+        Interview Complete
+      </h2>
+      <p
+        class="text-sm text-muted-foreground"
+      >
+        Thank you. The interview has been recorded.
+        <br />
+        The hiring team will review your results and follow up with you.
+      </p>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:38:19
+     36|   it("shows a technical failure for ended/error instead of success aft…
+     37|     api.info.mockResolvedValue(info("ended", "error")); await mountPag…
+     38|     expect(screen.getByRole("heading", { name: "Interview interrupted"…
+       |                   ^
+     39|     expect(screen.queryByText("Interview Complete")).toBeNull();
+     40|     expect(screen.queryByRole("button", { name: "Start Interview" })).…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not infer a successful interview from an unknown legacy end reason
+AssertionError: expected <h2 class="text-xl font-semibold"></h2> to be null
+
+- Expected:
+null
+
++ Received:
+<h2
+  class="text-xl font-semibold"
+>
+  Interview Complete
+</h2>
+
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:48:54
+     46|   it("does not infer a successful interview from an unknown legacy end…
+     47|     api.info.mockResolvedValue(info("ended")); await mountPage();
+     48|     expect(screen.queryByText("Interview Complete")).toBeNull();
+       |                                                      ^
+     49|     expect(screen.getByRole("heading", { name: "Interview interrupted"…
+     50|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > offers a status retry on load failure instead of claiming the interview was recorded
+TestingLibraryElementError: Unable to find an accessible element with the role "heading" and name "Unable to load interview"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  <h2
+    class="text-xl font-semibold"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-sm text-muted-foreground"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 py-16 text-center space-y-4"
+    >
+      <div
+        class="text-4xl"
+      >
+        ✅
+      </div>
+      <h2
+        class="text-xl font-semibold"
+      >
+        Interview Complete
+      </h2>
+      <p
+        class="text-sm text-muted-foreground"
+      >
+        Thank you. The interview has been recorded.
+        <br />
+        The hiring team will review your results and follow up with you.
+      </p>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:53:19
+     51|   it("offers a status retry on load failure instead of claiming the in…
+     52|     api.info.mockRejectedValueOnce(new Error("offline")); await mountP…
+     53|     expect(screen.getByRole("heading", { name: "Unable to load intervi…
+       |                   ^
+     54|     expect(screen.queryByText("Interview Complete")).toBeNull();
+     55|     await act(async () => fireEvent.click(screen.getByRole("button", {…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > uses the server remaining time after a page reload
+TestingLibraryElementError: Unable to find an element with the text: 02:00. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 flex flex-col h-full"
+    >
+      <div
+        class="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10"
+      >
+        <span
+          class="text-sm font-medium"
+        >
+          AI Interview
+        </span>
+        <span
+          class="font-mono text-sm font-medium tabular-nums text-foreground"
+        >
+          ⏱ 
+          45:00
+        </span>
+      </div>
+      <div
+        class="flex-1 flex flex-col items-center justify-center gap-6 py-8"
+      >
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Listening...
+          </span>
+        </div>
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Your turn — microphone ready
+          </span>
+        </div>
+      </div>
+      <div
+        class="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white"
+      >
+        <div
+          class="flex items-center gap-1.5 text-xs text-green-600"
+        >
+          <span
+            class="h-1.5 w-1.5 rounded-full bg-green-500"
+          />
+          Connected
+        </div>
+        <div
+          class="flex items-center gap-3"
+        >
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-mic h-3.5 w-3.5 mr-1.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"
+              />
+              <path
+                d="M19 10v2a7 7 0 0 1-14 0v-2"
+              />
+              <line
+                x1="12"
+                x2="12"
+                y1="19"
+                y2="22"
+              />
+            </svg>
+             Mic On
+          </button>
+          <button
+            aria-expanded="false"
+            aria-haspopup="dialog"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            data-state="closed"
+            type="button"
+          >
+            End Interview
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"
+          >
+            ⚡ Force reconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:59:34
+     57|   });
+     58|   it("uses the server remaining time after a page reload", async () =>…
+     59|     await start(); expect(screen.getByText("02:00")).toBeTruthy();
+       |                                  ^
+     60|   });
+     61|   it("shows interrupted on terminal model error and releases audio", a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows interrupted on terminal model error and releases audio
+TestingLibraryElementError: Unable to find an accessible element with the role "heading" and name "Interview interrupted"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  <h2
+    class="text-xl font-semibold"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-sm text-muted-foreground"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 py-16 text-center space-y-4"
+    >
+      <div
+        class="text-4xl"
+      >
+        ✅
+      </div>
+      <h2
+        class="text-xl font-semibold"
+      >
+        Interview Complete
+      </h2>
+      <p
+        class="text-sm text-muted-foreground"
+      >
+        Thank you. The interview has been recorded.
+        <br />
+        The hiring team will review your results and follow up with you.
+      </p>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:63:19
+     61|   it("shows interrupted on terminal model error and releases audio", a…
+     62|     const socket = await start(); act(() => socket.receive({ type: "se…
+     63|     expect(screen.getByRole("heading", { name: "Interview interrupted"…
+       |                   ^
+     64|     expect(FakeAudioContext.instances.every(context => context.state =…
+     65|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > waits for the server acknowledgement before showing manual completion
+AssertionError: expected <h2 class="text-xl font-semibold"></h2> to be null
+
+- Expected:
+null
+
++ Received:
+<h2
+  class="text-xl font-semibold"
+>
+  Interview Complete
+</h2>
+
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:70:54
+     68|     fireEvent.click(screen.getByRole("button", { name: "End Interview"…
+     69|     fireEvent.click(screen.getByRole("button", { name: "End interview"…
+     70|     expect(screen.queryByText("Interview Complete")).toBeNull();
+       |                                                      ^
+     71|     act(() => socket.receive({ type: "session_ended", reason: "manual_…
+     72|     expect(screen.getByRole("heading", { name: "Interview Complete" })…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > treats an unacknowledged end request as an unknown connection outcome
+TestingLibraryElementError: Unable to find an accessible element with the role "heading" and name "Connection lost"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  <h2
+    class="text-xl font-semibold"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-sm text-muted-foreground"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 py-16 text-center space-y-4"
+    >
+      <div
+        class="text-4xl"
+      >
+        ✅
+      </div>
+      <h2
+        class="text-xl font-semibold"
+      >
+        Interview Complete
+      </h2>
+      <p
+        class="text-sm text-muted-foreground"
+      >
+        Thank you. The interview has been recorded.
+        <br />
+        The hiring team will review your results and follow up with you.
+      </p>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:78:19
+     76|     fireEvent.click(screen.getByRole("button", { name: "End interview"…
+     77|     act(() => vi.advanceTimersByTime(11000));
+     78|     expect(screen.getByRole("heading", { name: "Connection lost" })).t…
+       |                   ^
+     79|     expect(screen.queryByText("Interview Complete")).toBeNull();
+     80|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not reconnect a socket closed by page unmount
+AssertionError: expected [ FakeWebSocket{ …(8) }, …(1) ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:83:37
+     81|   it("does not reconnect a socket closed by page unmount", async () =>…
+     82|     await start(); cleanup(); act(() => vi.advanceTimersByTime(10000));
+     83|     expect(FakeWebSocket.instances).toHaveLength(1);
+       |                                     ^
+     84|   });
+     85|   it("stops at a connection error after retries are exhausted without …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > stops at a connection error after retries are exhausted without claiming success
+TestingLibraryElementError: Unable to find an accessible element with the role "heading" and name "Connection lost"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Interview Complete":
+  <h2
+    class="text-xl font-semibold"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-sm text-muted-foreground"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 py-16 text-center space-y-4"
+    >
+      <div
+        class="text-4xl"
+      >
+        ✅
+      </div>
+      <h2
+        class="text-xl font-semibold"
+      >
+        Interview Complete
+      </h2>
+      <p
+        class="text-sm text-muted-foreground"
+      >
+        Thank you. The interview has been recorded.
+        <br />
+        The hiring team will review your results and follow up with you.
+      </p>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:88:19
+     86|     const socket = await start(); act(() => socket.close());
+     87|     for (const delay of [1000, 2000, 4000]) { act(() => vi.advanceTime…
+     88|     expect(screen.getByRole("heading", { name: "Connection lost" })).t…
+       |                   ^
+     89|     expect(screen.queryByText("Interview Complete")).toBeNull();
+     90|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  9 failed | 15 passed (24)
+   Start at  21:16:53
+   Duration  10.46s (environment 61%, import 19%, tests 17%, transform 2%, worker 1%)
+
+Environment  jsdom was created 5 times · 5.45s total, 61% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

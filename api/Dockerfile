@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   build-essential \
   git \
   libpq-dev \
+  libssl-dev \
   tzdata \
   libjemalloc2 \
   && rm -rf /var/lib/apt/lists/*
@@ -11,8 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /ai-interview
 
 COPY Gemfile Gemfile.lock ./
-RUN bundle config set --local without 'development test' && \
-    bundle install --deployment --frozen --jobs 4
+RUN bundle install --jobs 4
 
 COPY . .
 

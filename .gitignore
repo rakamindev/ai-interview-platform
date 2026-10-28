@@ -17,3 +17,18 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Local credentials and environment variants (keep public templates).
+**/.env.*
+!**/.env.example
+!**/.env.sample
+api/config/master.key
+api/config/credentials.yml.enc
+api/config/credentials/*.key
+api/config/secrets.yml
+api/vertex_ai_credentials.json
+**/*.pem
+**/*.key
+
+# Local backup of drafts; current deliverables live directly in assessment/.
+assessment/archive/

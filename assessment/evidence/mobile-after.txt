@@ -1,0 +1,182 @@
+{
+  "phase": "after",
+  "result": "PASS",
+  "browser": "Edge Chromium viewport emulation",
+  "widths": [
+    360,
+    390,
+    768,
+    1280
+  ],
+  "cases": [
+    {
+      "state": "precheck",
+      "width": 360,
+      "viewport": 360,
+      "document": 360,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 360,
+      "viewport": 360,
+      "document": 360,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "portfolio",
+      "width": 360,
+      "viewport": 360,
+      "document": 360,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "fitgap",
+      "width": 360,
+      "viewport": 360,
+      "document": 360,
+      "offenders": [
+        {
+          "tag": "TABLE",
+          "text": "SkillRequiredCandidateResultFrontendArchitectureAndAcce",
+          "right": 546
+        }
+      ],
+      "inaccessible": [],
+      "pass": true,
+      "tableResultReachable": true
+    },
+    {
+      "state": "precheck",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "portfolio",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "fitgap",
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "offenders": [
+        {
+          "tag": "TABLE",
+          "text": "SkillRequiredCandidateResultFrontendArchitectureAndAcce",
+          "right": 546
+        }
+      ],
+      "inaccessible": [],
+      "pass": true,
+      "tableResultReachable": true
+    },
+    {
+      "state": "precheck",
+      "width": 768,
+      "viewport": 768,
+      "document": 768,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 768,
+      "viewport": 768,
+      "document": 768,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "portfolio",
+      "width": 768,
+      "viewport": 768,
+      "document": 768,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "fitgap",
+      "width": 768,
+      "viewport": 768,
+      "document": 768,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true,
+      "tableResultReachable": true
+    },
+    {
+      "state": "precheck",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "interview",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "portfolio",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true
+    },
+    {
+      "state": "fitgap",
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "inaccessible": [],
+      "pass": true,
+      "tableResultReachable": true
+    }
+  ],
+  "unknownRequests": [],
+  "pageErrors": [],
+  "fixtures": true,
+  "envLoaded": false,
+  "realApiCalled": false,
+  "realMicrophoneUsed": false,
+  "realGeminiUsed": false,
+  "autoplayOverrideForLayout": true
+}
+process_exit_code=0

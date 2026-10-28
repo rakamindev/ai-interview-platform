@@ -1,0 +1,18 @@
+{
+  "result": "PASS",
+  "ui": "built production InterviewPage",
+  "cases": [
+    "ended/error",
+    "load failure",
+    "normal completion"
+  ],
+  "viewports": [
+    1280,
+    390
+  ],
+  "horizontalOverflow": false,
+  "credentialsLoaded": false,
+  "realApiCalled": false,
+  "microphoneUsed": false
+}
+process_exit_code=0

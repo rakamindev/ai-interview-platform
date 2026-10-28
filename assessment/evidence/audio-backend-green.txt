@@ -1,0 +1,13 @@
+
+Randomized with seed 58194
+
+Gemini::LiveClient
+  persists candidate transcription when audio ends without generationComplete
+  opens the microphone only once after the generationComplete drain delay
+  returns the microphone to the candidate for a text-only completed model turn
+
+Finished in 0.04324 seconds (files took 0.96788 seconds to load)
+3 examples, 0 failures
+
+Randomized with seed 58194
+

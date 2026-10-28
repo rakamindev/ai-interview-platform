@@ -1,0 +1,30 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition 752ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible 80ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows whose turn it is without claiming a silent candidate is speaking 155ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session 91ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > reports input activity from PCM energy and clears it when frames stop 40ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > clears input activity when the candidate mutes the microphone 5ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph 6ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn 7ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails 7ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts 4ms
+ ✓ src/test/audioWorklet.test.js > actual PCM worklet > preserves quiet microphone samples instead of replacing them with zeros 6ms
+ ✓ src/test/audioWorklet.test.js > actual PCM worklet > keeps silence flowing so upstream automatic VAD can observe the full pause 26ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > converts PCM16 and schedules chunks without overlap 29ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped 9ms
+
+ Test Files  4 passed (4)
+      Tests  14 passed (14)
+   Start at  19:32:16
+   Duration  12.44s (environment 64%, import 22%, tests 12%, transform 2%)
+
+Environment  jsdom was created 4 times · 6.84s total, 64% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+process_exit_code=0

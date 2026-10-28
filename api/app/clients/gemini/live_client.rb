@@ -12,11 +12,8 @@ module Gemini
     INACTIVITY_TIMEOUT = 30 # reconnect if Gemini produces no meaningful response
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
 
-    # Silence pump: synthetic silent PCM frames sent during browser silence so Gemini's VAD detects end-of-speech.
-    SILENCE_PUMP_DELAY    = 1
-    SILENCE_PUMP_INTERVAL = 0.03
-    SILENCE_FRAME_SAMPLES = 640
-    SILENCE_FRAME = ("\x00" * (SILENCE_FRAME_SAMPLES * 2)).freeze
+    # The worklet stops sending silence; explicitly finish that input stream after a pause.
+    INPUT_PAUSE_SECONDS = 1
 
     attr_reader :resumption_token, :connected, :connected_at, :inactivity_close
 
@@ -44,10 +41,11 @@ module Gemini
       @ws = nil
       @input_text_buffer  = +''
       @output_text_buffer = +''
+      @turn_gate_open = false
       @last_activity_at = nil
       @inactivity_timer = nil
       @last_audio_forwarded_at = nil
-      @silence_pump_timer = nil
+      @input_pause_timer = nil
 
       @on_audio = on_audio
       @on_input_transcription = on_input_transcription
@@ -83,7 +81,7 @@ module Gemini
 
       ensure_inactivity_watchdog
       track_audio_forwarded(pcm_bytes)
-      schedule_silence_pump
+      schedule_input_pause
 
       @ws.send(audio_message(pcm_bytes))
     end
@@ -93,6 +91,13 @@ module Gemini
       return false unless @connected && @ws
 
       @ws.send({ realtimeInput: { text: text } }.to_json)
+      true
+    end
+
+    # Restore only persisted turns; do not fabricate candidate answers or start a new greeting.
+    def restore_context(turns)
+      return false unless @connected && @ws && !@superseded
+      @ws.send({ clientContent: { turns: turns, turnComplete: false } }.to_json)
       true
     end
 
@@ -109,15 +114,15 @@ module Gemini
       @connected && @ws && !@superseded
     end
 
-    def silence_pumping?
-      @silence_pumping
+    def waiting_for_response?
+      @waiting_for_response
     end
 
     # Gracefully closes the connection.
     def close
       @inactivity_timer&.cancel
       @gate_timer&.cancel
-      stop_silence_pump
+      cancel_input_pause
       @ws&.close
       @connected = false
     end
@@ -127,7 +132,7 @@ module Gemini
       @superseded = true
       @inactivity_timer&.cancel
       @gate_timer&.cancel
-      stop_silence_pump
+      cancel_input_pause
     end
 
     private
@@ -182,72 +187,55 @@ module Gemini
       }.to_json
     end
 
-    # Fire-once timer + timestamp avoids EM reactor churn and premature pump firing during intra-sentence pauses.
-    def schedule_silence_pump
-      stop_silence_pump if @silence_pumping
+    # A timestamp keeps an existing timer from cutting speech when more audio has arrived.
+    def schedule_input_pause
+      cancel_input_pause if @waiting_for_response
 
-      @last_real_audio_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      @last_input_audio_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
-      return if @silence_pump_timer
+      return if @input_pause_timer
 
-      @silence_pump_timer = EM::Timer.new(SILENCE_PUMP_DELAY) do
-        @silence_pump_timer = nil
-        check_silence_pump_ready
+      @input_pause_timer = EM::Timer.new(INPUT_PAUSE_SECONDS) do
+        @input_pause_timer = nil
+        check_input_pause
       end
     end
 
     # Verifies real silence elapsed since last audio frame; reschedules if audio arrived during the timer window.
-    def check_silence_pump_ready
-      return if @silence_pumping || !@connected || !@ws || @superseded || !@last_real_audio_at || @model_emitting_audio
+    def check_input_pause
+      return if @waiting_for_response || !@connected || !@ws || @superseded || !@last_input_audio_at || @model_emitting_audio
 
-      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - @last_real_audio_at
-      remaining = SILENCE_PUMP_DELAY - elapsed
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - @last_input_audio_at
+      remaining = INPUT_PAUSE_SECONDS - elapsed
 
       if remaining <= 0.02 # close enough — EM timer precision is ~10ms
-        start_silence_pump
+        end_input_stream
       else
-        @silence_pump_timer = EM::Timer.new(remaining) do
-          @silence_pump_timer = nil
-          check_silence_pump_ready
+        @input_pause_timer = EM::Timer.new(remaining) do
+          @input_pause_timer = nil
+          check_input_pause
         end
       end
     end
 
-    def start_silence_pump
-      return if @silence_pumping || !@connected || !@ws || @model_emitting_audio
+    def end_input_stream
+      return if @waiting_for_response || !@connected || !@ws || @model_emitting_audio
 
-      @silence_pumping = true
-      Rails.logger.info('[Gemini::LiveClient] Silence pump started — no real audio for 500ms')
-
-      silence_msg = {
-        realtimeInput: {
-          audio: {
-            mimeType: 'audio/pcm;rate=16000',
-            data: Base64.strict_encode64(SILENCE_FRAME)
-          }
-        }
-      }.to_json.freeze
-
-      # Pump until: real audio arrives, Gemini responds (turnComplete), or connection closes/supersedes.
-      @silence_pump_periodic = EM::PeriodicTimer.new(SILENCE_PUMP_INTERVAL) do
-        if !@connected || !@ws || @superseded
-          stop_silence_pump
-        else
-          @ws.send(silence_msg)
-        end
-      end
+      @waiting_for_response = true
+      # Candidate speech time is not model response time.
+      record_activity!
+      @ws.send({ realtimeInput: { audioStreamEnd: true } }.to_json)
+      Rails.logger.info('[Gemini::LiveClient] Audio stream ended after input pause — waiting for response')
     end
 
-    def stop_silence_pump
-      @silence_pump_timer&.cancel
-      @silence_pump_timer = nil
-      @last_real_audio_at = nil
-      @silence_pump_periodic&.cancel
-      @silence_pump_periodic = nil
-      @silence_pumping = false
+    def cancel_input_pause
+      @input_pause_timer&.cancel
+      @input_pause_timer = nil
+      @last_input_audio_at = nil
+      @waiting_for_response = false
     end
 
-    # Triggers reconnect only when silence is being pumped, so a long candidate monologue doesn't kill the connection.
+    # Reconnect only while waiting for the model, with a fresh timeout after candidate speech.
     def ensure_inactivity_watchdog
       return if @inactivity_timer || @superseded
 
@@ -257,9 +245,9 @@ module Gemini
 
         now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         idle = now - @last_activity_at
-        next unless @silence_pumping && idle >= INACTIVITY_TIMEOUT
+        next unless @waiting_for_response && idle >= INACTIVITY_TIMEOUT
 
-        Rails.logger.warn("[Gemini::LiveClient] Inactivity detected (#{idle.round(1)}s, silence pumping) — forcing reconnect")
+        Rails.logger.warn("[Gemini::LiveClient] Inactivity detected (#{idle.round(1)}s waiting for response) — forcing reconnect")
         @inactivity_timer&.cancel
         @inactivity_timer = nil
         @inactivity_close = true
@@ -362,7 +350,8 @@ module Gemini
       parts.each do |part|
         next unless (inline = part['inlineData'])
 
-        stop_silence_pump unless @model_emitting_audio
+        @turn_gate_open = false
+        cancel_input_pause unless @model_emitting_audio
         @model_emitting_audio = true
         audio_bytes = Base64.strict_decode64(inline['data'])
         @on_audio&.call(audio_bytes)
@@ -382,6 +371,7 @@ module Gemini
       return unless output_tx
 
       text = output_tx.dig('parts', 0, 'text') || output_tx['text']
+      @turn_gate_open = false if text.present?
       @output_text_buffer << text.to_s
     end
 
@@ -399,14 +389,15 @@ module Gemini
       if emitted_audio
         @gate_timer&.cancel
         @gate_timer = EM::Timer.new(GATE_OPEN_DELAY) do
+          @gate_timer = nil
           unless @superseded
             Rails.logger.info('[Gemini::LiveClient] Gate open — firing on_model_turn_complete')
-            @on_model_turn_complete&.call
+            open_turn_gate
           end
         end
       else
         Rails.logger.debug('[Gemini::LiveClient] Empty generationComplete (0 audio)')
-        @on_model_turn_complete&.call
+        open_turn_gate
       end
     end
 
@@ -417,36 +408,40 @@ module Gemini
       @model_emitting_audio = false
       @model_interrupted = true
       @gate_timer&.cancel
+      @gate_timer = nil
       Rails.logger.info('[Gemini::LiveClient] Model interrupted — resetting audio gate immediately')
       flush_output_buffer
-      @on_model_turn_complete&.call
+      open_turn_gate
     end
 
     def handle_turn_complete(data)
       return unless data.dig('serverContent', 'turnComplete')
 
-      if @model_emitting_audio
-        # turnComplete without generationComplete — model interrupted or generation ended abruptly.
-        @model_emitting_audio = false
-        Rails.logger.info('[Gemini::LiveClient] Model interrupted — turnComplete without generationComplete')
-        flush_output_buffer
-        @on_model_turn_complete&.call
-      elsif @model_interrupted
-        # Stale post-interruption turnComplete — already handled via `interrupted`.
-        @model_interrupted = false
-      else
-        # User's turn complete (or harmless stale model turnComplete after generationComplete).
-        Rails.logger.info("[Gemini::LiveClient] User turnComplete — input_buffer=#{@input_text_buffer.length}chars silence_pumping=#{@silence_pumping}")
-        stop_silence_pump
-        flush_input_buffer
-      end
+      # turnComplete ends the MODEL turn, including turns with no audio or generationComplete.
+      @model_emitting_audio = false
+      @model_interrupted = false
+      cancel_input_pause
+      flush_input_buffer
+      flush_output_buffer
+      open_turn_gate unless @gate_timer
+    end
+
+    def open_turn_gate
+      return if @turn_gate_open || @superseded
+
+      @turn_gate_open = true
+      @on_model_turn_complete&.call
     end
 
     def handle_resumption_update(data)
       resumption = data['sessionResumption'] || data['sessionResumptionUpdate']
       return unless resumption
 
-      Rails.logger.debug("[Gemini::LiveClient] Resumption data: #{resumption.to_json}")
+      if resumption['resumable'] == false
+        @resumption_token = nil
+        @on_resumption_token_update&.call(nil)
+        return
+      end
       handle = resumption['newHandle'] || resumption['handle'] || resumption['token']
       return unless handle.present?
 

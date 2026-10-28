@@ -1,0 +1,9 @@
+# Keep rendered artifacts byte-for-byte intact across Windows checkouts.
+*.pdf binary
+*.png binary
+
+# Markdown uses trailing spaces for explicit line breaks.
+*.md whitespace=-blank-at-eol
+
+# Historical command output is evidence; preserve its whitespace.
+assessment/evidence/*.txt whitespace=-blank-at-eol,-blank-at-eof

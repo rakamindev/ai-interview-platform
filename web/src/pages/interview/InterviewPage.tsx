@@ -19,6 +19,7 @@ import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useAudioCapture } from "@/hooks/useAudioCapture";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
+import { isNormalInterviewEnd } from "@/utils/interviewOutcome";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
@@ -28,7 +29,7 @@ export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
-  const [interviewState, setInterviewState] = useState<InterviewState>("idle");
+  const [interviewState, setInterviewState] = useState<InterviewState>("loading");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
@@ -37,24 +38,44 @@ export default function InterviewPage() {
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const micMutedRef = useRef(false);
 
-  // Fetch candidate info
-  useEffect(() => {
-    if (!token) return;
-    sessionsApi.getCandidateInfo(token)
-      .then((res) => {
-        setCandidateInfo(res.data);
-        setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
-      })
-      .catch(() => setInterviewState("complete"));
+  const endAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadVersionRef = useRef(0);
+  const loadCandidate = useCallback(async () => {
+    const version = ++loadVersionRef.current;
+    setInterviewState("loading");
+    try {
+      if (!token) throw new Error("Missing invitation");
+      const { data } = await sessionsApi.getCandidateInfo(token);
+      if (version !== loadVersionRef.current) return;
+      setCandidateInfo(data);
+      setSessionId(data.session_id);
+      setSpeaker(null);
+      setInterviewState(data.session_status === "ended"
+        ? isNormalInterviewEnd(data.end_reason) ? "complete" : "failed"
+        : "idle");
+    } catch {
+      if (version === loadVersionRef.current) setInterviewState("load_error");
+    }
   }, [token]);
+
+  useEffect(() => {
+    loadCandidate();
+    return () => { loadVersionRef.current += 1; };
+  }, [loadCandidate]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
 
   const handleStateChange = useCallback((state: InterviewState) => {
+    if (endAckTimerRef.current) {
+      // Reconnecting is not an acknowledgement of the candidate's End request.
+      if (!["complete", "failed", "connection_lost"].includes(state)) return;
+      clearTimeout(endAckTimerRef.current);
+      endAckTimerRef.current = null;
+    }
     setInterviewState(state);
 
     if (state === "draining_audio") {
@@ -80,7 +101,6 @@ export default function InterviewPage() {
         connectionLostTimerRef.current = null;
       }
       setConnectionLostLong(false);
-      if (state === "active" && !micMutedRef.current) unmuteRef.current?.();
     }
   }, []);
 
@@ -94,8 +114,10 @@ export default function InterviewPage() {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
 
-  const { playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
+  const { prepare: preparePlayback, playChunk, stop: stopPlayback, scheduleAfterPlayback, waitForDrain, cancelDrain } = useAudioPlayback();
   const audioCompleteCalledRef = useRef(false);
+  const audioCompleteRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageMountedRef = useRef(true);
   const audioCompleteSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const callAudioComplete = useCallback(async () => {
@@ -112,7 +134,8 @@ export default function InterviewPage() {
       try {
         await sessionsApi.audioComplete(token);
       } catch {
-        setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
+        if (!pageMountedRef.current) return;
+        audioCompleteRetryRef.current = setTimeout(() => attempt(Math.min(delay * 2, 8000)), delay);
       }
     };
     attempt(2000);
@@ -140,12 +163,32 @@ export default function InterviewPage() {
     onReconnected: handleReconnected,
   });
 
-  const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
+  const { start: startCapture, stop: stopCapture, mute, unmute, hasInputAudio } = useAudioCapture({
     onFrame: send,
   });
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+
+  useEffect(() => {
+    if (["complete", "failed", "connection_lost", "load_error"].includes(interviewState)) {
+      stopCapture();
+      stopPlayback();
+      disconnect();
+    }
+  }, [interviewState, stopCapture, stopPlayback, disconnect]);
+
+  useEffect(() => {
+    pageMountedRef.current = true;
+    return () => {
+      pageMountedRef.current = false;
+      if (endAckTimerRef.current) clearTimeout(endAckTimerRef.current);
+      if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
+      if (connectionLostTimerRef.current) clearTimeout(connectionLostTimerRef.current);
+      if (audioCompleteSafetyTimerRef.current) clearTimeout(audioCompleteSafetyTimerRef.current);
+      if (audioCompleteRetryRef.current) clearTimeout(audioCompleteRetryRef.current);
+    };
+  }, []);
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
@@ -161,14 +204,21 @@ export default function InterviewPage() {
 
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
+    setAudioError(null);
     setInterviewState("connecting");
-    connect();
-    await startCapture();
-    // Start muted — only unmute when backend sends speaker_changed: candidate.
-    // This prevents mic audio from being sent during AI speech, since separate
-    // AudioContexts for capture/playback break the browser's echo cancellation.
+    // Mute before startup; a late permission result must not override a server turn change.
     muteRef.current?.();
-  }, [sessionId, connect, startCapture]);
+    try {
+      const [, capturing] = await Promise.all([preparePlayback(), startCapture()]);
+      if (!capturing) throw new Error("Microphone did not start");
+      connect();
+    } catch {
+      stopCapture();
+      stopPlayback();
+      setAudioError("Microphone or speaker could not start. Check browser permissions and audio devices, then try again.");
+      setInterviewState("idle");
+    }
+  }, [sessionId, connect, startCapture, preparePlayback, stopCapture, stopPlayback]);
 
   const endInterview = useCallback(async () => {
     setInterviewState("ending");
@@ -176,8 +226,12 @@ export default function InterviewPage() {
     stopCapture();
     stopPlayback();
     sendJson({ type: "end_session" });
-    disconnect();
-    setInterviewState("complete");
+    // A request is not an acknowledgement that the session actually ended.
+    endAckTimerRef.current = setTimeout(() => {
+      endAckTimerRef.current = null;
+      disconnect();
+      setInterviewState("connection_lost");
+    }, 10_000);
   }, [stopCapture, stopPlayback, sendJson, disconnect]);
 
   const wsConnectionStatus =
@@ -186,6 +240,26 @@ export default function InterviewPage() {
       : connectionState === "connected"
       ? "connected"
       : "reconnecting";
+
+  if (interviewState === "loading" || interviewState === "ending") {
+    return <div role="status" className="max-w-xl mx-auto px-4 py-16 text-center text-muted-foreground">
+      {interviewState === "ending" ? "Ending interview..." : "Loading interview..."}
+    </div>;
+  }
+
+  if (["failed", "load_error", "connection_lost"].includes(interviewState)) {
+    const loadError = interviewState === "load_error";
+    const lost = interviewState === "connection_lost";
+    return <div className="max-w-xl mx-auto px-4 py-16 space-y-4">
+      <h2 className="text-xl font-semibold">{loadError ? "Unable to load interview" : lost ? "Connection lost" : "Interview interrupted"}</h2>
+      <p role="alert" className="text-sm text-muted-foreground">
+        {loadError ? "We could not check this invitation. Check your connection and try again."
+          : lost ? "We could not confirm the session status. Check your connection, then check the session status before continuing."
+          : "This session ended without a confirmed normal completion. Contact the hiring team for help or a new invitation."}
+      </p>
+      {(loadError || lost) && <Button variant="outline" onClick={loadCandidate}>{loadError ? "Try again" : "Check session status"}</Button>}
+    </div>;
+  }
 
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
@@ -199,6 +273,8 @@ export default function InterviewPage() {
             </p>
           )}
         </div>
+
+        {audioError && <p role="alert" className="text-sm text-destructive">{audioError}</p>}
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
@@ -233,9 +309,9 @@ export default function InterviewPage() {
         <div className="text-4xl">✅</div>
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
+          Thank you. This interview has ended.
           <br />
-          The hiring team will review your results and follow up with you.
+          The hiring team can review the available responses and follow up with you.
         </p>
       </div>
     );
@@ -246,13 +322,13 @@ export default function InterviewPage() {
   const candidateSpeaking = speaker === "candidate";
 
   return (
-    <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
+    <div className="w-full min-w-0 max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
-            totalSeconds={candidateInfo.time_limit_min * 60}
+            totalSeconds={candidateInfo.remaining_seconds ?? candidateInfo.time_limit_min * 60}
             running={interviewState === "active"}
             onExpired={endInterview}
           />
@@ -301,8 +377,8 @@ export default function InterviewPage() {
 
             {candidateSpeaking && (
               <VoiceBars
-                active={true}
-                label="You're speaking"
+                active={hasInputAudio && !micMuted}
+                label={micMuted ? "Microphone muted" : hasInputAudio ? "Sound detected" : "Your turn — microphone ready"}
                 variant="candidate"
               />
             )}
@@ -320,13 +396,14 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-white">
         <ConnectionStatus state={wsConnectionStatus} />
 
-        <div className="flex items-center gap-3">
+        <div className="ml-auto flex max-w-full flex-wrap items-center gap-2 sm:gap-3">
           <Button
             variant={micMuted ? "destructive" : "outline"}
             size="sm"
+            className="min-h-11 sm:min-h-8"
             onClick={toggleMic}
           >
             {micMuted ? (
@@ -338,7 +415,7 @@ export default function InterviewPage() {
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">End Interview</Button>
+            <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8">End Interview</Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>

@@ -1,0 +1,15 @@
+.git
+.bundle
+vendor/bundle
+.env
+.env.*
+config/application.yml
+config/master.key
+config/credentials.yml.enc
+config/credentials/
+config/secrets.yml
+*.pem
+*.key
+log/*
+tmp/*
+coverage/

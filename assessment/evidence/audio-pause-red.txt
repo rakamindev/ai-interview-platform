@@ -1,0 +1,53 @@
+
+Gemini::LiveClient
+  signals the end of a paused audio stream and accepts the next answer (FAILED - 1)
+  waits for a full pause after the most recent audio rather than cutting speech mid-turn (FAILED - 2)
+  gives Gemini a fresh response timeout after a long candidate answer (FAILED - 3)
+  returns the microphone to the candidate for a text-only completed model turn
+  persists candidate transcription when audio ends without generationComplete
+  opens the microphone only once after the generationComplete drain delay
+
+Failures:
+
+  1) Gemini::LiveClient signals the end of a paused audio stream and accepts the next answer
+     Failure/Error: expect(messages.last).to eq('realtimeInput' => { 'audioStreamEnd' => true })
+
+       expected: {"realtimeInput"=>{"audioStreamEnd"=>true}}
+            got: {"realtimeInput"=>{"audio"=>{"data"=>"AQA=", "mimeType"=>"audio/pcm;rate=16000"}}}
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -"realtimeInput" => {"audioStreamEnd"=>true},
+       +"realtimeInput" => {"audio"=>{"data"=>"AQA=", "mimeType"=>"audio/pcm;rate=16000"}},
+     # /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:65:in `block (2 levels) in <top (required)>'
+
+  2) Gemini::LiveClient waits for a full pause after the most recent audio rather than cutting speech mid-turn
+     Failure/Error: expect(messages.last).to eq('realtimeInput' => { 'audioStreamEnd' => true })
+
+       expected: {"realtimeInput"=>{"audioStreamEnd"=>true}}
+            got: {"realtimeInput"=>{"audio"=>{"data"=>"AgA=", "mimeType"=>"audio/pcm;rate=16000"}}}
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -"realtimeInput" => {"audioStreamEnd"=>true},
+       +"realtimeInput" => {"audio"=>{"data"=>"AgA=", "mimeType"=>"audio/pcm;rate=16000"}},
+     # /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:89:in `block (2 levels) in <top (required)>'
+
+  3) Gemini::LiveClient gives Gemini a fresh response timeout after a long candidate answer
+     Failure/Error: expect(closed_connections).to be_empty
+       expected `[:closed].empty?` to be truthy, got false
+     # /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:104:in `block (2 levels) in <top (required)>'
+
+Finished in 0.10223 seconds (files took 0.36055 seconds to load)
+6 examples, 3 failures
+
+Failed examples:
+
+rspec /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:57 # Gemini::LiveClient signals the end of a paused audio stream and accepts the next answer
+rspec /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:75 # Gemini::LiveClient waits for a full pause after the most recent audio rather than cutting speech mid-turn
+rspec /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:92 # Gemini::LiveClient gives Gemini a fresh response timeout after a long candidate answer
+

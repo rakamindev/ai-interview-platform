@@ -32,8 +32,8 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
+      <div role="region" aria-label="Skill comparison" tabIndex={0} className="max-w-full overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-[32rem] text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="text-left px-4 py-2.5 font-medium">Skill</th>
@@ -45,7 +45,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
           <tbody>
             {comparisons.map((c, i) => (
               <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
+                <td className="max-w-xs break-words [overflow-wrap:anywhere] px-4 py-2.5">{c.skill_label}</td>
                 <td className="px-4 py-2.5 text-center text-muted-foreground">
                   {LEVEL_LABELS[c.required_level]}
                 </td>
@@ -69,11 +69,11 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+        <span className="sm:ml-auto">✏ = human override applied</span>
       </div>
     </div>
   );

@@ -1,0 +1,37 @@
+[
+  {
+    "file": "interview-speaking.png",
+    "sha256": "53ba8aab0afd28c72c4aa155ad00b25179a995602ef73117d536011b745fcb23",
+    "provenance": "Screenshot supplied by user during local testing on 2026-10-27",
+    "processing": "Cropped document raster; opaque irreversible redaction where specified; UI content not regenerated",
+    "redaction": false
+  },
+  {
+    "file": "portfolio-failed.png",
+    "sha256": "1b0e57977d743d1e30c062a869339938eb18e264152dbcdcc520b1a3e260586b",
+    "provenance": "Screenshot supplied by user during local testing on 2026-10-27",
+    "processing": "Cropped document raster; opaque irreversible redaction where specified; UI content not regenerated",
+    "redaction": true
+  },
+  {
+    "file": "fitgap-report.png",
+    "sha256": "8d566a6a6666e3f2907d0579d4f8c5617295a560801141db2be06386a67a4232",
+    "provenance": "Screenshot supplied by user during local testing on 2026-10-27",
+    "processing": "Cropped document raster; opaque irreversible redaction where specified; UI content not regenerated",
+    "redaction": false
+  },
+  {
+    "file": "precheck-failed.png",
+    "sha256": "67ff0e675ced4be9ce4e25cf2b3aaa9bc5efad551ff697405e9f48f2620f868d",
+    "provenance": "Screenshot supplied by user during local testing on 2026-10-27",
+    "processing": "Cropped document raster; opaque irreversible redaction where specified; UI content not regenerated",
+    "redaction": true
+  },
+  {
+    "file": "api-health.png",
+    "sha256": "d159d9473857f5cc10ba5b8217182c6b2450d2b8763cd6042fce0c368e5d7b25",
+    "provenance": "Screenshot supplied by user during local testing on 2026-10-27",
+    "processing": "Cropped document raster; opaque irreversible redaction where specified; UI content not regenerated",
+    "redaction": false
+  }
+]

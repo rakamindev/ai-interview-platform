@@ -1,0 +1,3 @@
+722cec0 revert: restore candidate turn signal after seeded fault
+c533d0d test: seed missing candidate turn signal on browser resume
+5fa769d test: snapshot verified backend for seeded fault exercise

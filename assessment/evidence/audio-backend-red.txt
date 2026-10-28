@@ -1,0 +1,39 @@
+
+Gemini::LiveClient
+  returns the microphone to the candidate for a text-only completed model turn (FAILED - 1)
+  persists candidate transcription when audio ends without generationComplete (FAILED - 2)
+  opens the microphone only once after the generationComplete drain delay
+
+Failures:
+
+  1) Gemini::LiveClient returns the microphone to the candidate for a text-only completed model turn
+     Failure/Error: expect(turns).to eq([:candidate])
+
+       expected: [:candidate]
+            got: []
+
+       (compared using ==)
+
+       Diff:
+       @@ -1 +1 @@
+       -[:candidate]
+       +[]
+     # /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:47:in `block (2 levels) in <top (required)>'
+
+  2) Gemini::LiveClient persists candidate transcription when audio ends without generationComplete
+     Failure/Error: expect(candidate_text).to eq(['I measured the rendering cost.'])
+
+       expected: ["I measured the rendering cost."]
+            got: []
+
+       (compared using ==)
+     # /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:58:in `block (2 levels) in <top (required)>'
+
+Finished in 0.06653 seconds (files took 0.70803 seconds to load)
+3 examples, 2 failures
+
+Failed examples:
+
+rspec /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:43 # Gemini::LiveClient returns the microphone to the candidate for a text-only completed model turn
+rspec /tmp/audio-tests/spec/clients/gemini/live_client_spec.rb:51 # Gemini::LiveClient persists candidate transcription when audio ends without generationComplete
+

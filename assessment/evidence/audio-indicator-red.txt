@@ -1,0 +1,389 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition 245ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible 39ms
+ × src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows whose turn it is without claiming a silent candidate is speaking 54ms
+   → Unable to find an element with the text: Your turn — microphone ready. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 flex flex-col h-full"
+    >
+      <div
+        class="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10"
+      >
+        <span
+          class="text-sm font-medium"
+        >
+          AI Interview
+        </span>
+        <span
+          class="font-mono text-sm font-medium tabular-nums text-foreground"
+        >
+          ⏱ 
+          45:00
+        </span>
+      </div>
+      <div
+        class="flex-1 flex flex-col items-center justify-center gap-6 py-8"
+      >
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Listening...
+          </span>
+        </div>
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0s; animation-duration: 0.6s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.1s; animation-duration: 0.8s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.2s; animation-duration: 1s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.30000000000000004s; animation-duration: 0.6s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.4s; animation-duration: 0.8s;"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            You're speaking
+          </span>
+        </div>
+      </div>
+      <div
+        class="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white"
+      >
+        <div
+          class="flex items-center gap-1.5 text-xs text-green-600"
+        >
+          <span
+            class="h-1.5 w-1.5 rounded-full bg-green-500"
+          />
+          Connected
+        </div>
+        <div
+          class="flex items-center gap-3"
+        >
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-mic h-3.5 w-3.5 mr-1.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"
+              />
+              <path
+                d="M19 10v2a7 7 0 0 1-14 0v-2"
+              />
+              <line
+                x1="12"
+                x2="12"
+                y1="19"
+                y2="22"
+              />
+            </svg>
+             Mic On
+          </button>
+          <button
+            aria-expanded="false"
+            aria-haspopup="dialog"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            data-state="closed"
+            type="button"
+          >
+            End Interview
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"
+          >
+            ⚡ Force reconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session 43ms
+ × src/hooks/useAudioCapture.test.ts > microphone capture > reports input activity from PCM energy and clears it when frames stop 48ms
+   → expected undefined to be false // Object.is equality
+ × src/hooks/useAudioCapture.test.ts > microphone capture > clears input activity when the candidate mutes the microphone 8ms
+   → expected undefined to be true // Object.is equality
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph 9ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn 8ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails 8ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts 6ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > converts PCM16 and schedules chunks without overlap 35ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/hooks/useAudioCapture.test.ts > microphone capture > reports input activity from PCM energy and clears it when frames stop
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected:
+false
+
++ Received:
+undefined
+
+ ❯ src/hooks/useAudioCapture.test.ts:25:42
+     23|     const { result } = renderHook(() => useAudioCapture({ onFrame: () …
+     24|     await act(async () => { await result.current.start(); });
+     25|     expect(result.current.hasInputAudio).toBe(false);
+       |                                          ^
+     26|     act(() => FakeWorklet.instances[0].emit(new Int16Array([1000, -100…
+     27|     expect(result.current.hasInputAudio).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/hooks/useAudioCapture.test.ts > microphone capture > clears input activity when the candidate mutes the microphone
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ src/hooks/useAudioCapture.test.ts:37:42
+     35|     await act(async () => { await result.current.start(); });
+     36|     act(() => FakeWorklet.instances[0].emit(new Int16Array([2000, -200…
+     37|     expect(result.current.hasInputAudio).toBe(true);
+       |                                          ^
+     38|     act(() => result.current.mute());
+     39|     expect(result.current.hasInputAudio).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows whose turn it is without claiming a silent candidate is speaking
+TestingLibraryElementError: Unable to find an element with the text: Your turn — microphone ready. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 flex flex-col h-full"
+    >
+      <div
+        class="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10"
+      >
+        <span
+          class="text-sm font-medium"
+        >
+          AI Interview
+        </span>
+        <span
+          class="font-mono text-sm font-medium tabular-nums text-foreground"
+        >
+          ⏱ 
+          45:00
+        </span>
+      </div>
+      <div
+        class="flex-1 flex flex-col items-center justify-center gap-6 py-8"
+      >
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Listening...
+          </span>
+        </div>
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0s; animation-duration: 0.6s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.1s; animation-duration: 0.8s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.2s; animation-duration: 1s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.30000000000000004s; animation-duration: 0.6s;"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary animate-voice-bar"
+              style="animation-delay: 0.4s; animation-duration: 0.8s;"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            You're speaking
+          </span>
+        </div>
+      </div>
+      <div
+        class="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white"
+      >
+        <div
+          class="flex items-center gap-1.5 text-xs text-green-600"
+        >
+          <span
+            class="h-1.5 w-1.5 rounded-full bg-green-500"
+          />
+          Connected
+        </div>
+        <div
+          class="flex items-center gap-3"
+        >
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-mic h-3.5 w-3.5 mr-1.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"
+              />
+              <path
+                d="M19 10v2a7 7 0 0 1-14 0v-2"
+              />
+              <line
+                x1="12"
+                x2="12"
+                y1="19"
+                y2="22"
+              />
+            </svg>
+             Mic On
+          </button>
+          <button
+            aria-expanded="false"
+            aria-haspopup="dialog"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            data-state="closed"
+            type="button"
+          >
+            End Interview
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"
+          >
+            ⚡ Force reconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewPage.test.tsx:94:19
+     92|       ws.receive({ type: "speaker_changed", speaker: "candidate" });
+     93|     });
+     94|     expect(screen.getByText("Your turn — microphone ready")).toBeTruth…
+       |                   ^
+     95|     expect(screen.queryByText("You're speaking")).toBeNull();
+     96|     act(() => FakeWorklet.instances[0].emit(new Int16Array([1000, -100…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  3 failed | 9 passed (12)
+   Start at  17:54:21
+   Duration  7.98s (environment 62%, import 26%, tests 8%, transform 4%, worker 1%)
+
+Environment  jsdom was created 3 times · 4.17s total, 62% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

@@ -1,0 +1,85 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run src/components/HardwareCheck.test.tsx --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ × src/components/HardwareCheck.test.tsx > hardware check retry > reruns OS and internet after failure and enables Start only after the new checks pass 541ms
+   → expected "vi.fn()" to be called 2 times, but got 1 times
+ × src/components/HardwareCheck.test.tsx > hardware check retry > recovers from a denied microphone on Retry without reloading the page 75ms
+   → expected "vi.fn()" to be called 2 times, but got 1 times
+ × src/components/HardwareCheck.test.tsx > hardware check retry > releases a microphone permission result arriving after the component unmounts 26ms
+   → expected "vi.fn()" to be called once, but got 0 times
+ × src/components/HardwareCheck.test.tsx > hardware check retry > stops the precheck stream, audio contexts, and animation when it unmounts 47ms
+   → expected "vi.fn()" to be called once, but got 0 times
+ × src/components/HardwareCheck.test.tsx > hardware check retry > releases resources from a failed audio attempt before Retry starts fresh 70ms
+   → expected "vi.fn()" to be called once, but got 0 times
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/HardwareCheck.test.tsx > hardware check retry > reruns OS and internet after failure and enables Start only after the new checks pass
+AssertionError: expected "vi.fn()" to be called 2 times, but got 1 times
+ ❯ src/components/HardwareCheck.test.tsx:57:19
+     55|     expect((screen.getByRole("button", { name: "Start Interview" }) as…
+     56|     await advanceCheck();
+     57|     expect(speed).toHaveBeenCalledTimes(2);
+       |                   ^
+     58|     expect(row("OS & browser").textContent).toContain("Passed");
+     59|     expect(row("Microphone").textContent).toContain("Passed");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/components/HardwareCheck.test.tsx > hardware check retry > recovers from a denied microphone on Retry without reloading the page
+AssertionError: expected "vi.fn()" to be called 2 times, but got 1 times
+ ❯ src/components/HardwareCheck.test.tsx:68:17
+     66|     expect(row("Microphone").textContent).toContain("Failed");
+     67|     fireEvent.click(screen.getByRole("button", { name: "Retry" })); aw…
+     68|     expect(mic).toHaveBeenCalledTimes(2);
+       |                 ^
+     69|     expect((screen.getByRole("button", { name: "Start Interview" }) as…
+     70|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/components/HardwareCheck.test.tsx > hardware check retry > releases a microphone permission result arriving after the component unmounts
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/components/HardwareCheck.test.tsx:76:23
+     74|     render(<HardwareCheck />); await advanceCheck(); cleanup();
+     75|     await act(async () => grant(stream));
+     76|     expect(trackStop).toHaveBeenCalledOnce();
+       |                       ^
+     77|     expect(PrecheckAudioContext.instances).toHaveLength(0);
+     78|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/components/HardwareCheck.test.tsx > hardware check retry > stops the precheck stream, audio contexts, and animation when it unmounts
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/components/HardwareCheck.test.tsx:81:23
+     79|   it("stops the precheck stream, audio contexts, and animation when it…
+     80|     render(<HardwareCheck />); await advanceCheck(); cleanup();
+     81|     expect(trackStop).toHaveBeenCalledOnce();
+       |                       ^
+     82|     expect(PrecheckAudioContext.instances.every(context => context.sta…
+     83|     expect(cancelAnimationFrame).toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/components/HardwareCheck.test.tsx > hardware check retry > releases resources from a failed audio attempt before Retry starts fresh
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/components/HardwareCheck.test.tsx:92:23
+     90|     PrecheckAudioContext.failPlayback = false;
+     91|     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+     92|     expect(trackStop).toHaveBeenCalledOnce();
+       |                       ^
+     93|     expect(oldContexts.every(context => context.state === "closed")).t…
+     94|     await advanceCheck();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  11:03:04
+   Duration  4.16s (environment 43%, import 21%, tests 20%, transform 16%)
+
+process_exit_code=1

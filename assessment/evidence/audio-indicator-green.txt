@@ -1,0 +1,27 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition 164ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible 22ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows whose turn it is without claiming a silent candidate is speaking 43ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session 26ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > reports input activity from PCM energy and clears it when frames stop 26ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > clears input activity when the candidate mutes the microphone 4ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph 4ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn 5ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails 5ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts 2ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > converts PCM16 and schedules chunks without overlap 23ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped 7ms
+
+ Test Files  3 passed (3)
+      Tests  12 passed (12)
+   Start at  17:55:18
+   Duration  5.45s (environment 61%, import 26%, tests 7%, transform 5%, worker 1%)
+
+Environment  jsdom was created 3 times · 2.86s total, 61% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

@@ -1,0 +1,23 @@
+
+Randomized with seed 44812
+
+AudioWebSocketMiddleware
+  opens the candidate microphone when a browser resumes an existing session
+
+Gemini::HttpClient
+  sends preview model generation to the documented beta endpoint
+
+Gemini::LiveClient
+  returns the microphone to the candidate for a text-only completed model turn
+  persists candidate transcription when audio ends without generationComplete
+  signals the end of a paused audio stream and accepts the next answer
+  opens the microphone only once after the generationComplete drain delay
+  waits for a full pause after the most recent audio rather than cutting speech mid-turn
+  gives Gemini a fresh response timeout after a long candidate answer
+
+Finished in 0.17076 seconds (files took 4.43 seconds to load)
+8 examples, 0 failures
+
+Randomized with seed 44812
+
+process_exit_code=0

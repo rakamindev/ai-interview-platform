@@ -1,0 +1,17 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run src/components/HardwareCheck.test.tsx --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ ✓ src/components/HardwareCheck.test.tsx > hardware check retry > reruns OS and internet after failure and enables Start only after the new checks pass 283ms
+ ✓ src/components/HardwareCheck.test.tsx > hardware check retry > recovers from a denied microphone on Retry without reloading the page 46ms
+ ✓ src/components/HardwareCheck.test.tsx > hardware check retry > releases a microphone permission result arriving after the component unmounts 12ms
+ ✓ src/components/HardwareCheck.test.tsx > hardware check retry > stops the precheck stream, audio contexts, and animation when it unmounts 17ms
+ ✓ src/components/HardwareCheck.test.tsx > hardware check retry > releases resources from a failed audio attempt before Retry starts fresh 47ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  11:03:50
+   Duration  2.87s (environment 49%, import 21%, tests 16%, transform 14%)
+
+process_exit_code=0

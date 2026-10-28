@@ -1,0 +1,63 @@
+{
+  "recorded_at_utc": "2026-10-27T14:34:26.6039688Z",
+  "branch": "loma/project-setup",
+  "head": "b836d02f45c6300b238b98ad50e66ead706723b6",
+  "uncommitted_changes_present": true,
+  "frontend": "25 passed; exit 0",
+  "backend": "18 examples, 0 failures; exit 0",
+  "backend_image_id": "sha256:89a5c7fb459fec0a462c6a2e267c025a6a6e75683b5b7905c553941b3e4498a0",
+  "browser_ui": "PASS with synthetic HTTP responses; 1280/390px",
+  "live_gemini_after_patch": "pending user verification",
+  "existing_ended_sessions_reopened": false,
+  "database_migrations": false,
+  "source_files": [
+    {
+      "path": "api/app/channels/audio_websocket_middleware.rb",
+      "sha256": "572e8b09c34e4a3e3261028ff89ad5049b84b9fd02bcd4fd33174a046488836b"
+    },
+    {
+      "path": "api/app/clients/gemini/live_client.rb",
+      "sha256": "61fb27976e32cf93c4870e554e5fb4899b20e29ab1f2ee1250862d3d246e7566"
+    },
+    {
+      "path": "api/app/controllers/api/v1/sessions_controller.rb",
+      "sha256": "2668ae4ef3546be52d3ab308270962f5177b9132bdd7a71024044460c42c890f"
+    },
+    {
+      "path": "api/spec/channels/audio_lifecycle_spec.rb",
+      "sha256": "8c15bcbd32ef57bc9b5c6aa7eefca6849fc8ad9510d400ed942e7e55138eca69"
+    },
+    {
+      "path": "api/spec/controllers/candidate_info_spec.rb",
+      "sha256": "e07d5f28e6778291bc16fee323b5ba712b13583840525af19cbb462130a40b13"
+    },
+    {
+      "path": "api/spec/clients/gemini/live_client_spec.rb",
+      "sha256": "8ef0b2c8e71dc6b9910e4c9d9d9ed1eb38959e8d5dad99495708f17da8953b2c"
+    },
+    {
+      "path": "web/src/pages/interview/InterviewPage.tsx",
+      "sha256": "95cd28e90cf85809391fa1bcd2a275e7d085e76752107879f805c1b445c01a30"
+    },
+    {
+      "path": "web/src/pages/interview/InterviewRecovery.test.tsx",
+      "sha256": "b718c97c9f573994813ee700373881c24e89fd766e3c513b1c8e16738f4646e5"
+    },
+    {
+      "path": "web/src/hooks/useAudioWebSocket.ts",
+      "sha256": "da4934825db2dc8fd5a6e40e34665c857761b56b1414525c7856462fb4c3ddb3"
+    },
+    {
+      "path": "web/src/utils/interviewOutcome.ts",
+      "sha256": "d440dc2010e4c5b61a732e00f3994a99cefb33124b3a19ae9743052868144006"
+    },
+    {
+      "path": "web/src/types/index.ts",
+      "sha256": "1ccf17616b93869adf51e2aab9246718b2f90a813419319d163a39cab7a8a1e7"
+    },
+    {
+      "path": "web/scripts/interview-recovery-smoke.mjs",
+      "sha256": "a837ddd34f30da33f06ba8905260a38a5cc3a9317fdb26a07d7ef1499defa00b"
+    }
+  ]
+}

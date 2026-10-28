@@ -20,15 +20,15 @@ export default function SkillPortfolioCard({
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <LevelBadge level={effectiveLevel} />
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <LevelBadge level={effectiveLevel} className="shrink-0" />
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <span className="min-w-0 break-words font-semibold">{skill.skill_label}</span>
                 {skill.is_discovered && (
                   <span className="flex items-center gap-0.5 text-xs text-amber-600">
                     <Zap className="h-3 w-3" /> Discovered
@@ -56,7 +56,7 @@ export default function SkillPortfolioCard({
             </span>
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
-                <li key={i} className="text-sm text-foreground">
+                <li key={i} className="break-words text-sm text-foreground">
                   • "{quote}"
                 </li>
               ))}
@@ -70,7 +70,7 @@ export default function SkillPortfolioCard({
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Competency summary
             </span>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="break-words text-sm text-muted-foreground leading-relaxed">
               {skill.competency_summary}
             </p>
           </div>

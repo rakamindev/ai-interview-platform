@@ -1,0 +1,41 @@
+{
+  "recorded_at_utc": "2026-10-27T12:45:12.5619712Z",
+  "branch": "loma/seeded-fault-resume",
+  "scratch_worktree": "C:/Users/ahmad/Documents/Codex/2026-10-26/the-product-please-refer-to-https/seeded-fault-resume",
+  "application_branch": "loma/project-setup",
+  "baseline_commit": "5fa769d8d8df996c05102a80c6f92762684d5fdb",
+  "fault_commit": "c533d0d31fa9916ef11bda18fb1c22b05b835b49",
+  "restoration_commit": "722cec042f0e606ef62bc0d3e42b53ee4f632bac",
+  "fault": "Remove one speaker_changed:candidate send in existing-session ready callback",
+  "changed_lines": {
+    "restore": "1 insertion",
+    "fault": "1 deletion"
+  },
+  "baseline_result": "8 examples, 0 failures; exit 0",
+  "fault_result": "8 examples, 1 failure; exit 1",
+  "restoration_result": "8 examples, 0 failures; exit 0",
+  "test_file": "api/spec/channels/audio_resume_spec.rb",
+  "test_blobs": [
+    {
+      "commit": "5fa769d8d8df996c05102a80c6f92762684d5fdb",
+      "test_git_blob": "4821a061a72b56ce5066c9e3c4e309fbe0597da3"
+    },
+    {
+      "commit": "c533d0d31fa9916ef11bda18fb1c22b05b835b49",
+      "test_git_blob": "4821a061a72b56ce5066c9e3c4e309fbe0597da3"
+    },
+    {
+      "commit": "722cec042f0e606ef62bc0d3e42b53ee4f632bac",
+      "test_git_blob": "4821a061a72b56ce5066c9e3c4e309fbe0597da3"
+    }
+  ],
+  "assertions_unchanged": true,
+  "restored_api_equals_baseline": true,
+  "scratch_source_equals_application_for_tested_paths": true,
+  "scratch_clean": true,
+  "docker_image_id": "sha256:3d3bec6344a6174375bcebda23eda84290a57576355e1d811a83f140030b9ccd",
+  "network": "none",
+  "secret_mounts": false,
+  "live_runtime_modified": false,
+  "published_to_github": false
+}

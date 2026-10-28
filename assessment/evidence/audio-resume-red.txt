@@ -1,0 +1,36 @@
+
+Randomized with seed 25413
+
+AudioWebSocketMiddleware
+  opens the candidate microphone when a browser resumes an existing session (FAILED - 1)
+
+Gemini::LiveClient
+  signals the end of a paused audio stream and accepts the next answer
+  returns the microphone to the candidate for a text-only completed model turn
+  gives Gemini a fresh response timeout after a long candidate answer
+  waits for a full pause after the most recent audio rather than cutting speech mid-turn
+  opens the microphone only once after the generationComplete drain delay
+  persists candidate transcription when audio ends without generationComplete
+
+Failures:
+
+  1) AudioWebSocketMiddleware opens the candidate microphone when a browser resumes an existing session
+     Failure/Error: expect(messages).to include(type: 'speaker_changed', speaker: 'candidate')
+
+       expected [{:session_id => 123, :type => "session_started"}] to include {:type => "speaker_changed", :speaker => "candidate"}
+       Diff:
+       @@ -1,2 +1 @@
+       -:speaker => "candidate",
+       -:type => "speaker_changed",
+       +[{:session_id=>123, :type=>"session_started"}]
+     # ./spec/channels/audio_resume_spec.rb:17:in `block (2 levels) in <top (required)>'
+
+Finished in 0.19297 seconds (files took 1.45 seconds to load)
+7 examples, 1 failure
+
+Failed examples:
+
+rspec ./spec/channels/audio_resume_spec.rb:7 # AudioWebSocketMiddleware opens the candidate microphone when a browser resumes an existing session
+
+Randomized with seed 25413
+

@@ -1,0 +1,40 @@
+
+Randomized with seed 12690
+
+Gemini::LiveClient
+  gives Gemini a fresh response timeout after a long candidate answer
+  persists candidate transcription when audio ends without generationComplete
+  opens the microphone only once after the generationComplete drain delay
+  signals the end of a paused audio stream and accepts the next answer
+  waits for a full pause after the most recent audio rather than cutting speech mid-turn
+  returns the microphone to the candidate for a text-only completed model turn
+
+AudioWebSocketMiddleware
+  opens the candidate microphone when a browser resumes an existing session
+
+Gemini::HttpClient
+  sends preview model generation to the documented beta endpoint (FAILED - 1)
+
+Failures:
+
+  1) Gemini::HttpClient sends preview model generation to the documented beta endpoint
+     Failure/Error:
+       expect(requests).to eq([
+         'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent'
+       ])
+
+       expected: ["https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent"]
+            got: ["https://generativelanguage.googleapis.com/v1/models/gemini-3.1-pro-preview:generateContent"]
+
+       (compared using ==)
+     # ./spec/clients/gemini/http_client_spec.rb:15:in `block (2 levels) in <top (required)>'
+
+Finished in 0.08733 seconds (files took 1.68 seconds to load)
+8 examples, 1 failure
+
+Failed examples:
+
+rspec ./spec/clients/gemini/http_client_spec.rb:5 # Gemini::HttpClient sends preview model generation to the documented beta endpoint
+
+Randomized with seed 12690
+

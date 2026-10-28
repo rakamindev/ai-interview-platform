@@ -1,0 +1,192 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ × src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition 401ms
+   → expected [ FakeWebSocket{ …(8) } ] to have a length of +0 but got 1
+ × src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible 97ms
+   → expected 'suspended' to be 'running' // Object.is equality
+ × src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session 51ms
+   → expected [ FakeWebSocket{ …(8) } ] to have a length of +0 but got 1
+ × src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph 22ms
+   → expected [] to deeply equal [ [ 1024, -1024 ] ]
+ × src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn 4ms
+   → expected [] to deeply equal [ [ 200 ] ]
+ × src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails 3ms
+   → expected "vi.fn()" to be called once, but got 0 times
+ × src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts 2ms
+   → expected "vi.fn()" to be called once, but got 0 times
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > converts PCM16 and schedules chunks without overlap 29ms
+ × src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped 25ms
+   → expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph
+AssertionError: expected [] to deeply equal [ [ 1024, -1024 ] ]
+
+- Expected
++ Received
+
+- [
+-   [
+-     1024,
+-     -1024,
+-   ],
+- ]
++ []
+
+ ❯ src/hooks/useAudioCapture.test.ts:27:70
+     25|     await act(async () => { await result.current.start(); });
+     26|     act(() => FakeWorklet.instances[0].emit(new Int16Array([1024, -102…
+     27|     expect(frames.map((frame) => Array.from(new Int16Array(frame)))).t…
+       |                                                                      ^
+     28|     act(() => result.current.stop());
+     29|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn
+AssertionError: expected [] to deeply equal [ [ 200 ] ]
+
+- Expected
++ Received
+
+- [
+-   [
+-     200,
+-   ],
+- ]
++ []
+
+ ❯ src/hooks/useAudioCapture.test.ts:40:70
+     38|     act(() => result.current.unmute());
+     39|     act(() => FakeWorklet.instances[0].emit(new Int16Array([200])));
+     40|     expect(frames.map((frame) => Array.from(new Int16Array(frame)))).t…
+       |                                                                      ^
+     41|     act(() => result.current.stop());
+     42|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/hooks/useAudioCapture.test.ts:50:24
+     48|     const consoleError = vi.spyOn(console, "error").mockImplementation…
+     49|     await act(async () => { await result.current.start(); });
+     50|     expect(track.stop).toHaveBeenCalledOnce();
+       |                        ^
+     51|     expect(FakeAudioContext.instances[0].state).toBe("closed");
+     52|     expect(result.current.isCapturing).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/hooks/useAudioCapture.test.ts:61:24
+     59|     await act(async () => { await result.current.start(); });
+     60|     unmount();
+     61|     expect(track.stop).toHaveBeenCalledOnce();
+       |                        ^
+     62|     expect(FakeAudioContext.instances[0].state).toBe("closed");
+     63|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+ ❯ src/hooks/useAudioPlayback.test.ts:33:34
+     31|     act(() => result.current.stop());
+     32|     act(() => vi.advanceTimersByTime(1100));
+     33|     expect(reopenMicrophone).not.toHaveBeenCalled();
+       |                                  ^
+     34|   });
+     35| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition
+AssertionError: expected [ FakeWebSocket{ …(8) } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/pages/interview/InterviewPage.test.tsx:51:37
+     49|   it("waits for the microphone before Gemini can send a turn transitio…
+     50|     await renderPage();
+     51|     expect(FakeWebSocket.instances).toHaveLength(0);
+       |                                     ^
+     52|     await act(async () => grantMicrophone(stream));
+     53|     expect(FakeWebSocket.instances).toHaveLength(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible
+AssertionError: expected 'suspended' to be 'running' // Object.is equality
+
+Expected: "running"
+Received: "suspended"
+
+ ❯ src/pages/interview/InterviewPage.test.tsx:81:29
+     79|     });
+     80|     const playback = FakeAudioContext.instances.find((ctx) => ctx.samp…
+     81|     expect(playback?.state).toBe("running");
+       |                             ^
+     82|     expect(Array.from(playback!.scheduled[0].samples)).toEqual([0.5, -…
+     83|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session
+AssertionError: expected [ FakeWebSocket{ …(8) } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/pages/interview/InterviewPage.test.tsx:89:37
+     87|     await renderPage();
+     88|     await act(async () => rejectMicrophone(new Error("Permission denie…
+     89|     expect(FakeWebSocket.instances).toHaveLength(0);
+       |                                     ^
+     90|     expect(screen.getByRole("alert").textContent).toMatch(/microphone|…
+     91|     expect(screen.getByRole("button", { name: "Start Interview" })).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  8 failed | 1 passed (9)
+   Start at  17:06:16
+   Duration  6.46s (environment 53%, import 25%, tests 12%, transform 10%)
+
+Environment  jsdom was created 3 times · 2.91s total, 53% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

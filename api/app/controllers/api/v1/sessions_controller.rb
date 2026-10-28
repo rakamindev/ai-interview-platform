@@ -149,7 +149,9 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          end_reason:      session.end_reason,
+          remaining_seconds: [assessment.time_limit_min * 60 - (session.started_at ? (Time.current - session.started_at).to_i : 0), 0].max
         )
       end
 

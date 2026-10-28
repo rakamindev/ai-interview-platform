@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'faye/websocket'
+require 'set'
 
 # Rack middleware that proxies a WebSocket at /ws/sessions/:id/audio between the browser (16kHz PCM)
 # and Gemini Live (24kHz PCM). Audio is buffered in a ring buffer for reconnection replay.
@@ -9,7 +10,6 @@ class AudioWebSocketMiddleware
 
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
-  BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
@@ -72,6 +72,8 @@ class AudioWebSocketMiddleware
 
   # Forward audio frame to Gemini when ready; suppress while model is speaking to prevent echo loop.
   def forward_audio_frame(data, state, session_id)
+    return if state.detached
+
     if state.model_speaking
       # Server-side audio gate: suppress mic while model is speaking to prevent speaker echo loop.
       unless state.logged_gate_suppressed
@@ -92,15 +94,29 @@ class AudioWebSocketMiddleware
 
   def handle_browser_close(event, browser_ws, state, session_id)
     Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code}")
+    # A browser reload releases this connection; it does not end the stored interview.
+    state.detached = true
     state.browser_disconnected_at = Time.current
-    state.proactive_reconnect_timer&.cancel
-
-    # Keep Gemini alive during grace period in case candidate reconnects via page refresh.
-    schedule_graceful_end(browser_ws, state)
+    [state.proactive_reconnect_timer, state.retry_timer, state.time_ceiling_timer,
+     state.coverage_end_timer].compact.each(&:cancel)
+    state.gemini_client&.supersede!
+    state.gemini_client&.close
+    # Persist the newest checkpoint rather than the last throttled background write.
+    state.session&.update_column(:gemini_resumption_token, state.latest_resumption_token) if state.token_seen || state.latest_resumption_token
+  rescue StandardError => e
+    Rails.logger.error("[AudioWS] Disconnect checkpoint failed: #{e.class}")
   end
 
   def connect_to_gemini(browser_ws, state)
     session = state.session
+    state.resuming_session = session.active?
+    if session.started_at && Time.current - session.started_at >= session.assessment.time_limit_min * 60
+      state.ending_scheduled = true
+      Sessions::EndHandler.new(session).call(reason: 'time_ceiling')
+      send_json(browser_ws, type: 'session_ended', reason: 'time_ceiling')
+      browser_ws.close
+      return
+    end
 
     ensure_system_prompt(session)
 
@@ -121,7 +137,9 @@ class AudioWebSocketMiddleware
     state.last_coverage_digest = injector.coverage_fingerprint
 
     build_gemini_client(browser_ws, state)
-    state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
+    token = session.gemini_resumption_token.presence
+    state.rebuild_context = state.resuming_session && !token
+    connect_gemini(state, token)
   end
 
   def ensure_system_prompt(session)
@@ -152,6 +170,7 @@ class AudioWebSocketMiddleware
 
   def build_on_audio(browser_ws, state)
     lambda { |pcm_bytes|
+      next if state.detached
       # First audio frame of a turn → frontend mutes mic to prevent speaker feedback.
       unless state.model_speaking
         state.model_speaking = true
@@ -173,6 +192,7 @@ class AudioWebSocketMiddleware
   # Fires once per complete candidate turn (full sentence accumulated).
   def build_on_input_transcription(browser_ws, state, session)
     lambda { |text|
+      next if state.detached
       next unless text.present?
 
       turn_number = state.increment_turn!
@@ -224,6 +244,7 @@ class AudioWebSocketMiddleware
 
   def build_on_output_transcription(browser_ws, state, session)
     lambda { |text|
+      next if state.detached
       next unless text.present?
 
       text = sanitize_output_transcription(text)
@@ -285,6 +306,7 @@ class AudioWebSocketMiddleware
   # Fires after the model's turnComplete — safe to tell the frontend to unmute the mic.
   def build_on_model_turn_complete(browser_ws, state, session)
     lambda {
+      next if state.detached
       Rails.logger.info("[AudioWS] Model turn complete — ai_audio_chunks=#{state.ai_audio_chunks || 0} sending speaker_changed:candidate")
       state.model_speaking = false
       state.ai_audio_chunks = 0
@@ -305,14 +327,17 @@ class AudioWebSocketMiddleware
   # Debounce DB writes — Gemini rotates the token every turn but we only need it persisted as crash-recovery.
   def build_on_resumption_token_update(state, session)
     lambda { |token|
+      next if state.detached
+      state.token_seen = true
       state.latest_resumption_token = token
 
       now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      next if state.last_token_persisted_at && (now - state.last_token_persisted_at) < 60
+      next if token && state.last_token_persisted_at && (now - state.last_token_persisted_at) < 60
 
       state.last_token_persisted_at = now
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
+          next if state.detached || state.latest_resumption_token != token
           session.update_column(:gemini_resumption_token, token)
         end
       rescue StandardError => e
@@ -323,6 +348,14 @@ class AudioWebSocketMiddleware
 
   def build_on_ready(browser_ws, state, session)
     lambda {
+      next if state.detached
+      if state.rebuild_context
+        history = session.transcript_turns.ordered.last(40).map do |turn|
+          { role: turn.speaker == 'ai' ? 'model' : 'user', parts: [{ text: turn.text }] }
+        end
+        state.gemini_client.restore_context(history) unless history.empty?
+        state.rebuild_context = false
+      end
       state.logged_not_ready = false
       if state.reconnecting
         Rails.logger.info("[AudioWS] Gemini reconnected for session #{session.id}")
@@ -332,10 +365,13 @@ class AudioWebSocketMiddleware
         send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
       else
         Rails.logger.info("[AudioWS] Gemini ready — sending session_started for session #{session.id}")
-        unless session.gemini_resumption_token.present?
+        unless state.resuming_session || state.context_rebuilt || state.used_resumption_handle
           state.model_speaking = true
           send_json(browser_ws, type: 'speaker_changed', speaker: 'ai')
           state.gemini_client.trigger_opening
+        else
+          state.model_speaking = false
+          send_json(browser_ws, type: 'speaker_changed', speaker: 'candidate')
         end
         send_json(browser_ws, type: 'session_started', session_id: session.id)
       end
@@ -346,6 +382,7 @@ class AudioWebSocketMiddleware
 
   # Handles Gemini GoAway — transparent reconnection using resumption token, audio buffered for replay.
   def handle_go_away(browser_ws, state, resumption_token)
+    return if state.detached
     session = state.session
     return unless resumption_token.present?
 
@@ -368,12 +405,23 @@ class AudioWebSocketMiddleware
     old_client&.supersede!
 
     build_gemini_client(browser_ws, state)
-    state.gemini_client.connect(resumption_handle: resumption_token)
+    connect_gemini(state, resumption_token)
     old_client&.close
   end
 
   # Handles unexpected Gemini WebSocket close (not GoAway). Audio is buffered during the gap and replayed.
   def handle_gemini_close(browser_ws, state, code:, reason:)
+    return if state.detached || state.ending_scheduled || state.session.ended?
+
+    # A rejected handle cannot recover by retrying the identical checkpoint.
+    if code == 1008 && state.used_resumption_handle && !state.context_rebuilt &&
+       reason.to_s.match?(/session (?:not found|.*expired)/i)
+      state.context_rebuilt = true
+      state.rebuild_context = true
+      state.latest_resumption_token = nil
+      state.session.update_column(:gemini_resumption_token, nil)
+      Rails.logger.warn('[AudioWS] Resume checkpoint rejected; rebuilding from persisted conversation once')
+    end
     # Normal close (1000) is intentional unless flagged as inactivity_close (which also uses 1000).
     return if code == 1000 && !state.gemini_client&.inactivity_close
 
@@ -384,6 +432,7 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
+      state.ending_scheduled = true
       Sessions::EndHandler.new(state.session).call(reason: 'error')
       send_json(browser_ws, type: 'session_ended', reason: 'error',
                             message: 'The session encountered a problem. Please contact the interviewer.')
@@ -404,18 +453,26 @@ class AudioWebSocketMiddleware
     end
 
     expected_client = state.gemini_client
-    EM.add_timer(backoff) do
+    state.retry_timer = EM.add_timer(backoff) do
+      next if state.detached
       next unless state.gemini_client.equal?(expected_client)
       next if state.session.ended?
 
       state.gemini_client&.supersede!
       build_gemini_client(browser_ws, state)
-      token = state.latest_resumption_token || state.session.gemini_resumption_token.presence
-      state.gemini_client.connect(resumption_handle: token)
+      token = state.rebuild_context ? nil : (state.latest_resumption_token || state.session.gemini_resumption_token.presence)
+      state.rebuild_context = true if !token && state.session.active?
+      connect_gemini(state, token)
     end
   end
 
+  def connect_gemini(state, token)
+    state.used_resumption_handle = token.present?
+    state.gemini_client.connect(resumption_handle: token)
+  end
+
   def handle_browser_message(data, browser_ws, state)
+    return if state.detached
     message = JSON.parse(data)
 
     case message['type']
@@ -427,8 +484,8 @@ class AudioWebSocketMiddleware
         old_client&.close
       end
     when 'end_session'
+      state.ending_scheduled = true
       state.proactive_reconnect_timer&.cancel
-      state.graceful_end_timer&.cancel
       state.time_ceiling_timer&.cancel
       state.coverage_end_timer&.cancel
       Sessions::EndHandler.new(state.session).call(reason: 'manual_candidate')
@@ -452,6 +509,7 @@ class AudioWebSocketMiddleware
 
   # Starts a new Gemini connection while the old one is still live; swaps in on_ready and replays audio.
   def initiate_proactive_reconnect(browser_ws, state)
+    return if state.detached
     if state.reconnecting
       Rails.logger.info("[AudioWS] Proactive reconnect skipped — already reconnecting (session #{state.session.id})")
       return
@@ -472,8 +530,8 @@ class AudioWebSocketMiddleware
       return
     end
 
-    # If candidate may still be speaking (silence pump not active), defer until next model turn.
-    if state.gemini_client&.connected && !state.gemini_client&.silence_pumping?
+    # If candidate may still be speaking (not waiting for a response), defer until next model turn.
+    if state.gemini_client&.connected && !state.gemini_client&.waiting_for_response?
       Rails.logger.info("[AudioWS] Proactive reconnect deferred — candidate may be speaking (session #{state.session.id})")
       state.reconnect_after_turn = true
       return
@@ -492,28 +550,9 @@ class AudioWebSocketMiddleware
     old_client = state.gemini_client
     old_client&.supersede!
     build_gemini_client(browser_ws, state)
-    state.gemini_client.connect(resumption_handle: token)
+    connect_gemini(state, token)
     # Close old connection after new one is set up to minimise the gap.
     EM.add_timer(2) { old_client&.close }
-  end
-
-  # Cancellable EM timer (vs Thread.new+sleep) — releases on session end without holding a thread for 2min.
-  def schedule_graceful_end(browser_ws, state)
-    return unless state.session
-
-    state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
-      Thread.new do
-        ActiveRecord::Base.connection_pool.with_connection do
-          next if state.session.reload.ended?
-
-          Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
-          EM.schedule { state.gemini_client&.close }
-        end
-      rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")
-      end
-    end
   end
 
   # Sends session_ended then closes both connections; 300ms delay lets the frontend process the JSON
@@ -574,7 +613,7 @@ class AudioWebSocketMiddleware
 
     state.coverage_end_timer&.cancel
     state.coverage_end_timer = EM::Timer.new(20) do
-      next if state.ending_scheduled || state.wrap_up_injected
+      next if state.detached || state.ending_scheduled || state.wrap_up_injected
 
       delivered = state.gemini_client&.inject_context(WRAP_UP_SIGNAL)
       if delivered
@@ -598,11 +637,13 @@ class AudioWebSocketMiddleware
     max_attempts = 30
 
     EM.add_timer(1) do
+      next if state.detached
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
+          next if state.detached
           if session.reload.ended?
             Rails.logger.info("[AudioWS] Session #{session.id} ended via audio_complete — closing WebSocket")
-            close_session_after_end(browser_ws, state, reason: 'all_covered')
+            close_session_after_end(browser_ws, state, reason: session.end_reason)
           elsif attempts >= max_attempts
             Rails.logger.warn("[AudioWS] audio_complete poll timed out — ending session #{session.id} directly")
             Sessions::EndHandler.new(session).call(reason: 'all_covered')
@@ -634,6 +675,7 @@ class AudioWebSocketMiddleware
     elapsed     = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond) - started
 
     EM.schedule do
+      next if state.detached
       state.last_coverage_digest = fingerprint
       state.cached_coverage_text = text
 
@@ -685,6 +727,7 @@ class AudioWebSocketMiddleware
     state.ending_scheduled = true
 
     state.time_ceiling_timer = EM::Timer.new(60) do
+      next if state.detached
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           next if session.reload.ended?
@@ -780,7 +823,8 @@ class AudioWebSocketMiddleware
                   :sent_time_warnings, :ai_audio_chunks,
                   :cached_coverage_text, :last_injected_digest,
                   :logged_gate_suppressed, :reconnect_after_turn,
-                  :graceful_end_timer, :time_ceiling_timer,
+                  :retry_timer, :time_ceiling_timer,
+                  :detached, :resuming_session, :rebuild_context, :context_rebuilt, :used_resumption_handle, :token_seen,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
                   :waiting_for_candidate_response

@@ -1,0 +1,390 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run src/pages/interview/InterviewRecovery.test.tsx -t keeps the end acknowledgement deadline --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows a technical failure for ended/error instead of success after reload
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > only shows normal completion when the server supplies a normal end reason
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not infer a successful interview from an unknown legacy end reason
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > offers a status retry on load failure instead of claiming the interview was recorded
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > uses the server remaining time after a page reload
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows interrupted on terminal model error and releases audio
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > waits for the server acknowledgement before showing manual completion
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > treats an unacknowledged end request as an unknown connection outcome
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > keeps the end acknowledgement deadline when the socket reconnects 250ms
+   → Unable to find an accessible element with the role "status"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Mic On":
+  [36m<button[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"[39m
+  [36m/>[39m
+
+  Name "End Interview":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-haspopup[39m=[32m"dialog"[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"[39m
+    [33mdata-state[39m=[32m"closed"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "⚡ Force reconnect":
+  [36m<button[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"max-w-xl mx-auto px-4 flex flex-col h-full"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"text-sm font-medium"[39m
+        [36m>[39m
+          [0mAI Interview[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"font-mono text-sm font-medium tabular-nums text-amber-500"[39m
+        [36m>[39m
+          [0m⏱ [0m
+          [0m02:00[0m
+        [36m</span>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex-1 flex flex-col items-center justify-center gap-6 py-8"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col items-center gap-3"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-end gap-1 h-10"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+          [36m>[39m
+            [0mListening...[0m
+          [36m</span>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col items-center gap-3"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-end gap-1 h-10"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"text-sm text-muted-foreground"[39m
+          [36m>[39m
+            [0mYour turn — microphone ready[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-1.5 text-xs text-green-600"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"h-1.5 w-1.5 rounded-full bg-green-500"[39m
+          [36m/>[39m
+          [0mConnected[0m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-3"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"lucide lucide-mic h-3.5 w-3.5 mr-1.5"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M19 10v2a7 7 0 0 1-14 0v-2"[39m
+              [36m/>[39m
+              [36m<line[39m
+                [33mx1[39m=[32m"12"[39m
+                [33mx2[39m=[32m"12"[39m
+                [33my1[39m=[32m"19"[39m
+                [33my2[39m=[32m"22"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0m Mic On[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-expanded[39m=[32m"false"[39m
+            [33maria-haspopup[39m=[32m"dialog"[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"[39m
+            [33mdata-state[39m=[32m"closed"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mEnd Interview[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"[39m
+          [36m>[39m
+            [0m⚡ Force reconnect[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > cancels audio-complete retries owned by a page that was unloaded
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not reconnect a socket closed by page unmount
+ ↓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > stops at a connection error after retries are exhausted without claiming success
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > keeps the end acknowledgement deadline when the socket reconnects
+TestingLibraryElementError: Unable to find an accessible element with the role "status"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Mic On":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  Name "End Interview":
+  <button
+    aria-expanded="false"
+    aria-haspopup="dialog"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+    data-state="closed"
+    type="button"
+  />
+
+  Name "⚡ Force reconnect":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="max-w-xl mx-auto px-4 flex flex-col h-full"
+    >
+      <div
+        class="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10"
+      >
+        <span
+          class="text-sm font-medium"
+        >
+          AI Interview
+        </span>
+        <span
+          class="font-mono text-sm font-medium tabular-nums text-amber-500"
+        >
+          ⏱ 
+          02:00
+        </span>
+      </div>
+      <div
+        class="flex-1 flex flex-col items-center justify-center gap-6 py-8"
+      >
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-primary h-1 opacity-30"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Listening...
+          </span>
+        </div>
+        <div
+          class="flex flex-col items-center gap-3"
+        >
+          <div
+            class="flex items-end gap-1 h-10"
+          >
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+            <div
+              class="w-1.5 rounded-full transition-all bg-secondary h-1 opacity-30"
+            />
+          </div>
+          <span
+            class="text-sm text-muted-foreground"
+          >
+            Your turn — microphone ready
+          </span>
+        </div>
+      </div>
+      <div
+        class="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white"
+      >
+        <div
+          class="flex items-center gap-1.5 text-xs text-green-600"
+        >
+          <span
+            class="h-1.5 w-1.5 rounded-full bg-green-500"
+          />
+          Connected
+        </div>
+        <div
+          class="flex items-center gap-3"
+        >
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-mic h-3.5 w-3.5 mr-1.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"
+              />
+              <path
+                d="M19 10v2a7 7 0 0 1-14 0v-2"
+              />
+              <line
+                x1="12"
+                x2="12"
+                y1="19"
+                y2="22"
+              />
+            </svg>
+             Mic On
+          </button>
+          <button
+            aria-expanded="false"
+            aria-haspopup="dialog"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            data-state="closed"
+            type="button"
+          >
+            End Interview
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs opacity-50"
+          >
+            ⚡ Force reconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:89:19
+     87|     const resumed = FakeWebSocket.instances[FakeWebSocket.instances.le…
+     88|     act(() => { resumed.open(); resumed.receive({ type: "session_start…
+     89|     expect(screen.getByRole("status").textContent).toContain("Ending i…
+       |                   ^
+     90|     act(() => vi.advanceTimersByTime(10000));
+     91|     expect(screen.getByRole("heading", { name: "Connection lost" })).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  06:00:46
+   Duration  1.79s (environment 41%, import 29%, tests 16%, transform 13%, worker 1%)
+
+process_exit_code=1

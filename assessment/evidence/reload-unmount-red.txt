@@ -1,0 +1,56 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows a technical failure for ended/error instead of success after reload 156ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > only shows normal completion when the server supplies a normal end reason 25ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not infer a successful interview from an unknown legacy end reason 12ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > offers a status retry on load failure instead of claiming the interview was recorded 55ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > uses the server remaining time after a page reload 62ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > shows interrupted on terminal model error and releases audio 35ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > waits for the server acknowledgement before showing manual completion 107ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > treats an unacknowledged end request as an unknown connection outcome 77ms
+ × src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > cancels audio-complete retries owned by a page that was unloaded 42ms
+   → expected "vi.fn()" to be called 1 times, but got 2 times
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > does not reconnect a socket closed by page unmount 20ms
+ ✓ src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > stops at a connection error after retries are exhausted without claiming success 31ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition 205ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible 34ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows whose turn it is without claiming a silent candidate is speaking 56ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session 39ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > reports input activity from PCM energy and clears it when frames stop 34ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > clears input activity when the candidate mutes the microphone 6ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph 6ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn 7ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails 6ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts 3ms
+ ✓ src/test/audioWorklet.test.js > actual PCM worklet > preserves quiet microphone samples instead of replacing them with zeros 7ms
+ ✓ src/test/audioWorklet.test.js > actual PCM worklet > keeps silence flowing so upstream automatic VAD can observe the full pause 20ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > converts PCM16 and schedules chunks without overlap 18ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/interview/InterviewRecovery.test.tsx > candidate outcome and resume > cancels audio-complete retries owned by a page that was unloaded
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ src/pages/interview/InterviewRecovery.test.tsx:88:31
+     86|     cleanup();
+     87|     await act(async () => vi.advanceTimersByTime(15000));
+     88|     expect(api.audioComplete).toHaveBeenCalledTimes(1);
+       |                               ^
+     89|   });
+     90|   it("does not reconnect a socket closed by page unmount", async () =>…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 24 passed (25)
+   Start at  21:31:35
+   Duration  9.74s (environment 58%, import 24%, tests 13%, transform 4%, worker 1%)
+
+Environment  jsdom was created 5 times · 4.79s total, 58% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

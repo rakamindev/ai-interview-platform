@@ -1,0 +1,86 @@
+{
+  "recorded_at_utc": "2026-10-27T12:35:08.8548259Z",
+  "branch": "loma/project-setup",
+  "head": "b836d02f45c6300b238b98ad50e66ead706723b6",
+  "uncommitted_changes_present": true,
+  "note": "HEAD is baseline commit; source hashes identify current uncommitted files. No credential files were read.",
+  "node": "v24.21.0",
+  "backend_image_id": "sha256:3d3bec6344a6174375bcebda23eda84290a57576355e1d811a83f140030b9ccd",
+  "verification": {
+    "frontend": "14 passed; exit 0",
+    "browser": "PASS; synthetic input; no real microphone or Gemini",
+    "backend": "8 examples, 0 failures; exit 0",
+    "typecheck": "exit 0",
+    "vite_build": "exit 0; envDir false"
+  },
+  "source_files": [
+    {
+      "path": "api/app/channels/audio_websocket_middleware.rb",
+      "sha256": "b141fc647351efd96873fb36a49984d519f70b3a2aabbecad27b736bbe5d57d5"
+    },
+    {
+      "path": "api/app/clients/gemini/live_client.rb",
+      "sha256": "204c55d178d5236b61a24bd7e83061d3b6e73c86ecfe493dfd5f24c8d0d94e4f"
+    },
+    {
+      "path": "api/app/clients/gemini/http_client.rb",
+      "sha256": "079a1f29e3373f50f077798e732270e6472998c44c91a03d46bc1dccb2dad106"
+    },
+    {
+      "path": "api/spec/clients/gemini/live_client_spec.rb",
+      "sha256": "b8622eeeec840e976a0cb7c415b9bbaf3fd780d32ea932d40aed5e094cdf7b5b"
+    },
+    {
+      "path": "api/spec/clients/gemini/http_client_spec.rb",
+      "sha256": "fd5ee032e318d047ce34db03c1d01b118dfafa28b28d89608ff49a9449d5b9f7"
+    },
+    {
+      "path": "api/spec/channels/audio_resume_spec.rb",
+      "sha256": "63d6f5cde8a09c9032c4dc7580ab5ab9eb5af8a98a49e065017bb6142c69f654"
+    },
+    {
+      "path": "web/src/hooks/useAudioCapture.ts",
+      "sha256": "6360a910c3935308287a1eeb1342634b87bca0116ce6410a21608196525f169f"
+    },
+    {
+      "path": "web/src/hooks/useAudioPlayback.ts",
+      "sha256": "5f0cd539c80d1a5504598029dbb6764b7e50d8329b5c68eaf6ff98c2a4e1f75f"
+    },
+    {
+      "path": "web/src/pages/interview/InterviewPage.tsx",
+      "sha256": "7bc650f20c8ad8f35312b94178584fad52e27d052ef5816ee9a3fb21c3288945"
+    },
+    {
+      "path": "web/public/audio-worklet-processor.js",
+      "sha256": "56af357d54d0b36428f35b4b3c02461a3c78bdd2c1ac52dffd0ce02af67b6e41"
+    },
+    {
+      "path": "web/src/test/audioWorklet.test.js",
+      "sha256": "40611869af9a9b5f734c77fb49468043858def6686863ca54b4b28e911a6e008"
+    },
+    {
+      "path": "web/src/hooks/useAudioCapture.test.ts",
+      "sha256": "15f563070ef58c5ccf1d7881c44a3eadc8a38edb5196d69a6ea014d3da119172"
+    },
+    {
+      "path": "web/src/hooks/useAudioPlayback.test.ts",
+      "sha256": "4620417585ba9f872191af8194e8a42287419f323f302a5f4d7e45bf277726f5"
+    },
+    {
+      "path": "web/src/pages/interview/InterviewPage.test.tsx",
+      "sha256": "c415f5f0da0c16a989fce558261ebacf09a6c99fc22f0c584b1cc7f563a835e9"
+    },
+    {
+      "path": "web/scripts/audio-browser-smoke.mjs",
+      "sha256": "cad37fa580cb1360fe583940953deb728fa1d6f3c61302909e8f82176222e026"
+    },
+    {
+      "path": "web/vitest.config.ts",
+      "sha256": "8dbf1b4a01e6c14a392909c2757341f031dbf14ae5e4f68025bd02da0d5555bd"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "411d103e52b3c24e191a115f0a4652872ea5bcf31e1ea368453148f700cc8e5f"
+    }
+  ]
+}

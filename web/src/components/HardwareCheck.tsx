@@ -34,7 +34,7 @@ function stateLabel(state: ProctoringState) {
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
-const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
+const HardwareCheckAttempt: React.FC<HardwareCheckProps & { onRetry: () => void }> = ({ onStart, onRetry }) => {
     const [progress, setProgress] = useState<HardwareCheckingProgress>({
         osAndBrowser: ProctoringState.WAITING,
         internet: ProctoringState.WAITING,
@@ -47,6 +47,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const monitorContextRef = useRef<AudioContext | null>(null);
+    const outputContextRef = useRef<AudioContext | null>(null);
+    const animationRef = useRef<number | null>(null);
+
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -64,20 +69,29 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }, [videoStream]);
 
     useEffect(() => {
-        return () => { videoStream?.getTracks().forEach((t) => t.stop()); };
-    }, [videoStream]);
+        return () => {
+            streamRef.current?.getTracks().forEach((track) => track.stop());
+            if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+            for (const context of [monitorContextRef.current, outputContextRef.current]) {
+                if (context && context.state !== "closed") void context.close().catch(() => {});
+            }
+        };
+    }, []);
 
     const checkAudioPlayback = async (): Promise<boolean> => {
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const ctx = new AudioCtx();
+            outputContextRef.current = ctx;
             if (ctx.state === "suspended") await ctx.resume();
+            if (ctx.state === "closed") return false;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
             gain.connect(ctx.destination);
             gain.gain.setValueAtTime(0.01, ctx.currentTime);
             osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.onended = () => { if (ctx.state !== "closed") void ctx.close().catch(() => {}); };
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.1);
             return true;
@@ -88,6 +102,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const ctx = new AudioCtx();
+            monitorContextRef.current = ctx;
             const source = ctx.createMediaStreamSource(stream);
             const analyser = ctx.createAnalyser();
             analyser.fftSize = 256;
@@ -96,7 +111,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             const update = () => {
                 analyser.getByteFrequencyData(data);
                 setAudioLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
-                requestAnimationFrame(update);
+                animationRef.current = requestAnimationFrame(update);
             };
             update();
         } catch { /* silent */ }
@@ -105,7 +120,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     // Step 1: OS & browser
     useEffect(() => {
         setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             getBrowserInfo();
             getOSInfo();
             getCurrentTime();
@@ -115,12 +130,15 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 internet: ProctoringState.LOADING,
             }));
         }, 800);
+        return () => clearTimeout(timer);
     }, []);
 
     // Step 2: Internet
     useEffect(() => {
         if (progress.internet !== ProctoringState.LOADING) return;
+        let active = true;
         testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
+            if (!active) return;
             setInternetResult(result);
             setProgress((p) => ({
                 ...p,
@@ -131,7 +149,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
                     : {}),
             }));
+        }, () => {
+            if (active) setProgress((p) => ({ ...p, internet: ProctoringState.ERROR }));
         });
+        return () => { active = false; };
     }, [progress.internet]);
 
     // Step 3: Camera + microphone (or microphone-only when camera disabled)
@@ -140,12 +161,18 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         const micLoading = !REQUIRE_CAMERA && progress.microphone === ProctoringState.LOADING;
         if (!cameraLoading && !micLoading) return;
 
+        let active = true;
         const getStream = REQUIRE_CAMERA
             ? checkCamera()
-            : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+            : navigator.mediaDevices?.getUserMedia({ audio: true }).catch(() => null) ?? Promise.resolve(null);
 
         getStream.then((stream) => {
+            if (!active) {
+                stream?.getTracks().forEach((track) => track.stop());
+                return;
+            }
             if (stream) {
+                streamRef.current = stream;
                 if (REQUIRE_CAMERA) setVideoStream(stream);
                 startAudioLevelMonitoring(stream);
                 setProgress((p) => ({
@@ -162,31 +189,22 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 }));
             }
         });
+        return () => { active = false; };
     }, [progress.camera, progress.microphone]);
 
     // Step 4: Audio output
     useEffect(() => {
         if (progress.audio !== ProctoringState.LOADING) return;
+        let active = true;
         checkAudioPlayback().then((ok) => {
+            if (!active) return;
             setProgress((p) => ({
                 ...p,
                 audio: ok ? ProctoringState.PASSED : ProctoringState.ERROR,
             }));
         });
+        return () => { active = false; };
     }, [progress.audio]);
-
-    const retryAll = () => {
-        videoStream?.getTracks().forEach((t) => t.stop());
-        setVideoStream(null);
-        setInternetResult(null);
-        setProgress({
-            osAndBrowser: ProctoringState.LOADING,
-            internet: ProctoringState.WAITING,
-            camera: ProctoringState.WAITING,
-            audio: ProctoringState.WAITING,
-            microphone: ProctoringState.WAITING,
-        });
-    };
 
     const thresholds = DEFAULT_THRESHOLDS;
 
@@ -273,7 +291,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             {/* Footer */}
             <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
                 {hasError && (
-                    <Button variant="outline" size="sm" onClick={retryAll}>
+                    <Button variant="outline" size="sm" onClick={onRetry}>
                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                         Retry
                     </Button>
@@ -289,6 +307,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
             </div>
         </div>
     );
+};
+
+const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
+    const [attempt, setAttempt] = useState(0);
+    // A retry owns fresh checklist state, timers, and media resources.
+    return <HardwareCheckAttempt key={attempt} onStart={onStart} onRetry={() => setAttempt((value) => value + 1)} />;
 };
 
 export default HardwareCheck;

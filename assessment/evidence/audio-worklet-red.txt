@@ -1,0 +1,76 @@
+npm notice run ai-interview-web@0.0.0 test
+npm notice run vitest run --reporter=verbose
+
+ RUN  v5.0.5 D:/ai-interview-platform/web
+
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > waits for the microphone before Gemini can send a turn transition 199ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > unlocks playback on Start so later Gemini audio is audible 26ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows whose turn it is without claiming a silent candidate is speaking 52ms
+ ✓ src/pages/interview/InterviewPage.test.tsx > interview audio startup > shows a recoverable device error instead of opening a silent session 34ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > reports input activity from PCM energy and clears it when frames stop 32ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > clears input activity when the candidate mutes the microphone 6ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > resumes a suspended context and forwards PCM through an active graph 7ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > keeps the candidate muted during AI speech and forwards the next turn 7ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases the microphone when loading the worklet fails 6ms
+ ✓ src/hooks/useAudioCapture.test.ts > microphone capture > releases audio resources when the page unmounts 3ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > converts PCM16 and schedules chunks without overlap 32ms
+ ✓ src/hooks/useAudioPlayback.test.ts > AI playback > does not reopen the microphone after playback has stopped 9ms
+ × src/test/audioWorklet.test.ts > actual PCM worklet > preserves quiet microphone samples instead of replacing them with zeros 17ms
+   → expected [ +0, +0 ] to deeply equal [ 163, -163 ]
+ × src/test/audioWorklet.test.ts > actual PCM worklet > keeps silence flowing so upstream automatic VAD can observe the full pause 7ms
+   → expected [ …(7) ] to have a length of 200 but got 7
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/test/audioWorklet.test.ts > actual PCM worklet > preserves quiet microphone samples instead of replacing them with zeros
+AssertionError: expected [ +0, +0 ] to deeply equal [ 163, -163 ]
+
+- Expected
++ Received
+
+  [
+-   163,
+-   -163,
++   0,
++   0,
+  ]
+
+ ❯ src/test/audioWorklet.test.ts:22:23
+     20|     const { instance, frames } = processor();
+     21|     instance.process([[new Float32Array([0.005, -0.005])]]);
+     22|     expect(frames[0]).toEqual([163, -163]);
+       |                       ^
+     23|   });
+     24|   it("keeps silence flowing so upstream automatic VAD can observe the …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/test/audioWorklet.test.ts > actual PCM worklet > keeps silence flowing so upstream automatic VAD can observe the full pause
+AssertionError: expected [ …(7) ] to have a length of 200 but got 7
+
+- Expected
++ Received
+
+- 200
++ 7
+
+ ❯ src/test/audioWorklet.test.ts:27:20
+     25|     const { instance, frames } = processor();
+     26|     for (let i = 0; i < 200; i++) instance.process([[new Float32Array(…
+     27|     expect(frames).toHaveLength(200);
+       |                    ^
+     28|     expect(frames.every(frame => frame.every(sample => sample === 0)))…
+     29|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  2 failed | 12 passed (14)
+   Start at  18:28:04
+   Duration  7.29s (environment 68%, import 20%, tests 8%, transform 3%, worker 1%)
+
+Environment  jsdom was created 4 times · 4.06s total, 68% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

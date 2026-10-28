@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 
 const PLAYBACK_SAMPLE_RATE = 24000; // Gemini outputs 24kHz
 
@@ -7,6 +7,7 @@ export function useAudioPlayback() {
   const nextPlayTimeRef = useRef<number>(0);
   const onDrainedRef = useRef<(() => void) | null>(null);
   const drainCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playbackCallbacksRef = useRef(new Set<ReturnType<typeof setTimeout>>());
 
   const getCtx = () => {
     if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
@@ -15,6 +16,12 @@ export function useAudioPlayback() {
     }
     return audioCtxRef.current;
   };
+
+  // Called from Start, before asynchronous device permission or WebSocket events.
+  const prepare = useCallback(async () => {
+    const ctx = getCtx();
+    if (ctx.state === "suspended") await ctx.resume();
+  }, []);
 
   const playChunk = useCallback(async (raw: ArrayBuffer) => {
     const ctx = getCtx();
@@ -74,15 +81,23 @@ export function useAudioPlayback() {
     if (!ctx) { fn(); return; }
     const remaining = (nextPlayTimeRef.current - ctx.currentTime) * 1000;
     if (remaining <= 0) { fn(); return; }
-    setTimeout(fn, remaining);
+    const timer = setTimeout(() => {
+      playbackCallbacksRef.current.delete(timer);
+      fn();
+    }, remaining);
+    playbackCallbacksRef.current.add(timer);
   }, []);
 
   const stop = useCallback(() => {
     cancelDrain();
+    playbackCallbacksRef.current.forEach(clearTimeout);
+    playbackCallbacksRef.current.clear();
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
     nextPlayTimeRef.current = 0;
   }, [cancelDrain]);
 
-  return { playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain };
+  useEffect(() => stop, [stop]);
+
+  return { prepare, playChunk, stop, scheduleAfterPlayback, waitForDrain, cancelDrain };
 }
