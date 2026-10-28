@@ -7,15 +7,22 @@ export interface AuthState {
 const STORAGE_KEY = "auth_token";
 
 export function getStoredToken(): string | null {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") {
+    return import.meta.env.VITE_DEV_TOKEN ?? null;
+  }
   return localStorage.getItem(STORAGE_KEY) ?? import.meta.env.VITE_DEV_TOKEN ?? null;
 }
 
 export function saveToken(token: string) {
-  localStorage.setItem(STORAGE_KEY, token);
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, token);
+  }
 }
 
 export function clearToken() {
-  localStorage.removeItem(STORAGE_KEY);
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(STORAGE_KEY);
+  }
 }
 
 export const authAtom = atom<AuthState>({

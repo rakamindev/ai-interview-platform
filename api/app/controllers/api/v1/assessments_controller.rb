@@ -9,9 +9,30 @@ module Api
 
       # GET /api/v1/assessments
       def index
-        assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
-        )
+        scope = Assessment.includes(:sessions)
+
+        if params[:search].present?
+          scope = scope.where("assessments.name ILIKE ?", "%#{params[:search].strip}%")
+        end
+
+        if params[:status] == "uncomplete"
+          # Assessments where at least one candidate hasn't finished (pending or active)
+          incomplete_ids = Session.where(status: %w[pending active]).select(:assessment_id)
+          scope = scope.where(id: incomplete_ids)
+        elsif params[:status] == "completed"
+          # Assessments with candidates and all of them ended
+          completed_ids = Session.where(status: "ended").select(:assessment_id)
+          incomplete_ids = Session.where(status: %w[pending active]).select(:assessment_id)
+          scope = scope.where(id: completed_ids).where.not(id: incomplete_ids)
+        elsif params[:status] == "no_candidates"
+          scope = scope.where.not(id: Session.select(:assessment_id))
+        end
+
+        # Sorting: newest by created_at (default) or updated_at
+        sort_field = params[:sort_by] == "updated_at" ? :updated_at : :created_at
+        scope = scope.order(sort_field => :desc, :id => :desc)
+
+        assessments = paginate(scope)
 
         json_response(
           assessments: assessments.map(&method(:assessment_json)),
@@ -77,17 +98,44 @@ module Api
 
       def assessment_json(assessment)
         latest = assessment.sessions.max_by(&:created_at)
+        sessions = assessment.sessions
+        total_candidates = sessions.size
+        active_count = sessions.count { |s| s.status == "active" }
+        pending_count = sessions.count { |s| s.status == "pending" }
+        completed_count = sessions.count { |s| s.status == "ended" }
+
+        # Overall candidate status:
+        # If any candidate is not ended, it's 'uncomplete' (or 'active' if currently live)
+        # If all candidates ended and > 0, it's 'completed'
+        # If no candidates, it's 'no_candidates'
+        overall_status = if total_candidates.zero?
+                           "no_candidates"
+                         elsif active_count.positive?
+                           "active"
+                         elsif pending_count.positive?
+                           "uncomplete"
+                         else
+                           "completed"
+                         end
 
         {
-          id:             assessment.id,
-          name:           assessment.name,
-          time_limit_min: assessment.time_limit_min,
-          language:       assessment.language || 'en',
-          system_prompt:  assessment.system_prompt,
-          created_by:     assessment.created_by,
-          created_at:     assessment.created_at,
-          updated_at:     assessment.updated_at,
-          latest_session: latest && {
+          id:                 assessment.id,
+          name:               assessment.name,
+          time_limit_min:     assessment.time_limit_min,
+          language:           assessment.language || "en",
+          system_prompt:      assessment.system_prompt,
+          created_by:         assessment.created_by,
+          created_at:         assessment.created_at,
+          updated_at:         assessment.updated_at,
+          candidate_count:    total_candidates,
+          overall_status:     overall_status,
+          candidates_summary: {
+            total:     total_candidates,
+            active:    active_count,
+            pending:   pending_count,
+            completed: completed_count
+          },
+          latest_session:     latest && {
             id:         latest.id,
             status:     latest.status,
             end_reason: latest.end_reason

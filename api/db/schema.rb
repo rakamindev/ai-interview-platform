@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_29_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -126,8 +126,27 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.string "context_status", limit: 30, default: "relevant", null: false
+    t.text "context_notes"
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
+    t.index ["context_status"], name: "idx_portfolios_context_status"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+  end
+
+  create_table "session_feedbacks", force: :cascade do |t|
+    t.bigint "session_id", null: false
+    t.bigint "tenant_id", null: false
+    t.integer "rating", null: false
+    t.string "experience_tag", limit: 50
+    t.text "feedback_text"
+    t.boolean "has_complaint", default: false, null: false
+    t.text "complaint_text"
+    t.datetime "submitted_at", default: -> { "now()" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_id"], name: "idx_session_feedbacks_session_id", unique: true
+    t.index ["tenant_id"], name: "idx_session_feedbacks_tenant_id"
+    t.check_constraint "rating >= 1 AND rating <= 5", name: "chk_feedback_rating"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -143,10 +162,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "gemini_resumption_token"
     t.datetime "created_at", default: -> { "now()" }, null: false
     t.string "candidate_name", limit: 255
+    t.string "pipeline_stage", limit: 20
     t.index ["assessment_id"], name: "index_sessions_on_assessment_id"
     t.index ["candidate_id"], name: "index_sessions_on_candidate_id"
     t.index ["invite_token"], name: "idx_sessions_invite_token", unique: true
+    t.index ["pipeline_stage"], name: "idx_sessions_pipeline_stage"
     t.index ["tenant_id", "status"], name: "idx_sessions_tenant_status"
+    t.check_constraint "pipeline_stage IS NULL OR (pipeline_stage::text = ANY (ARRAY['shortlisted'::character varying, 'hired'::character varying, 'rejected'::character varying]::text[]))", name: "chk_sessions_pipeline_stage"
   end
 
   create_table "skill_taxonomies", force: :cascade do |t|
@@ -212,6 +234,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   add_foreign_key "fit_gap_reports", "vacancies"
   add_foreign_key "portfolio_skills", "portfolios"
   add_foreign_key "portfolios", "sessions"
+  add_foreign_key "session_feedbacks", "sessions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"
   add_foreign_key "vacancy_skills", "vacancies"

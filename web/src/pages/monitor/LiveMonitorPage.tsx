@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
@@ -27,6 +28,7 @@ import {
 import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -59,6 +61,8 @@ export default function LiveMonitorPage() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
   const [sessionActive, setSessionActive] = useState(true);
+  usePageTitle(assessmentName ? `Live Monitor · ${assessmentName}` : "Live Monitor");
+
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -130,6 +134,7 @@ export default function LiveMonitorPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
+        <Skeleton className="h-5 w-48" />
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
@@ -142,6 +147,15 @@ export default function LiveMonitorPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb
+        items={[
+          { label: "Assessments", href: "/assessments" },
+          { label: assessmentName || "Assessment", href: `/assessments/${id}/invite` },
+          { label: "Live Monitor" },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -217,8 +231,8 @@ export default function LiveMonitorPage() {
                   className="h-2"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    "{skill.last_signal}"
+                  <p className="text-xs text-muted-foreground truncate italic">
+                    &ldquo;{skill.last_signal}&rdquo;
                   </p>
                 )}
               </div>
@@ -253,8 +267,8 @@ export default function LiveMonitorPage() {
                       className="h-2"
                     />
                     {skill.last_signal && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        "{skill.last_signal}"
+                      <p className="text-xs text-muted-foreground truncate italic">
+                        &ldquo;{skill.last_signal}&rdquo;
                       </p>
                     )}
                   </div>
@@ -270,15 +284,13 @@ export default function LiveMonitorPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Live Transcript</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           {transcript.length === 0 ? (
             <p className="text-sm text-muted-foreground">No transcript yet.</p>
           ) : (
-            <div className="space-y-2">
-              {transcript.map((turn) => (
-                <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
-              ))}
-            </div>
+            transcript.map((turn) => (
+              <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
+            ))
           )}
         </CardContent>
       </Card>

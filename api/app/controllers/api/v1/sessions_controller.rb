@@ -6,14 +6,30 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show update destroy end_session coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        scope = assessment.sessions.order(created_at: :desc)
 
-        json_response(sessions: sessions.map(&method(:session_json)))
+        if params[:search].present?
+          scope = scope.where("candidate_name ILIKE ?", "%#{params[:search].strip}%")
+        end
+
+        if params[:status].present? && Session::STATUSES.include?(params[:status])
+          scope = scope.where(status: params[:status])
+        end
+
+        if params[:all] == 'true' || params[:paginate] == 'false'
+          json_response(sessions: scope.map(&method(:session_json)))
+        else
+          sessions = paginate(scope)
+          json_response(
+            sessions: sessions.map(&method(:session_json)),
+            meta: pagination_meta(sessions)
+          )
+        end
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -54,6 +70,22 @@ module Api
             }
           )
         )
+      end
+
+      # PATCH/PUT /api/v1/sessions/:id
+      def update
+        permitted = params.require(:session).permit(:candidate_name, :pipeline_stage)
+        if @session.update(permitted)
+          json_response(session: session_json(@session))
+        else
+          json_error(@session.errors.full_messages.first, :unprocessable_entity)
+        end
+      end
+
+      # DELETE /api/v1/sessions/:id
+      def destroy
+        @session.destroy
+        json_response(message: "Candidate session deleted")
       end
 
       # POST /api/v1/sessions/:id/end
@@ -146,10 +178,11 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:         session.id,
+          role_title:         assessment.name,
+          time_limit_min:     assessment.time_limit_min,
+          session_status:     session.status,
+          feedback_submitted: session.session_feedback.present?
         )
       end
 
@@ -172,6 +205,7 @@ module Api
           invite_url:       session.invite_url,
           status:           session.status,
           end_reason:       session.end_reason,
+          pipeline_stage:   session.pipeline_stage,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,

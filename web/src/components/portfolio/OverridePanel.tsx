@@ -8,6 +8,8 @@ import { portfoliosApi } from "@/services/portfolios";
 import { Loader2, Pencil } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
+import { useToast } from "@/components/ui/toast";
+
 
 interface OverridePanelProps {
   skill: PortfolioSkill;
@@ -21,6 +23,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const { toast } = useToast();
+
 
   const hasOverride = !!existingOverride;
 
@@ -34,6 +38,8 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       });
       onSaved(res.data.override);
       setOpen(false);
+      toast(`Override saved for ${skill.skill_label}`);
+
     } catch {
       setSaveError(true);
     } finally {

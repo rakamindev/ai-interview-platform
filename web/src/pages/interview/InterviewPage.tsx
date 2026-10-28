@@ -21,6 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
+import CandidateFeedbackForm from "@/components/interview/CandidateFeedbackForm";
 import { CheckCircle, Mic, MicOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
@@ -34,6 +35,7 @@ export default function InterviewPage() {
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
@@ -46,6 +48,9 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        if (res.data.feedback_submitted) {
+          setFeedbackSubmitted(true);
+        }
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
       .catch(() => setInterviewState("complete"));
@@ -229,14 +234,24 @@ export default function InterviewPage() {
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
+      <div className="max-w-xl mx-auto px-4 py-12 space-y-6 animate-in fade-in duration-300">
+        <div className="text-center space-y-2">
+          <div className="text-4xl">✅</div>
+          <h2 className="text-xl font-semibold">Interview Complete</h2>
+          <p className="text-sm text-muted-foreground">
+            Thank you. Your interview responses have been recorded.
+            <br />
+            The hiring team will review your results and follow up with you.
+          </p>
+        </div>
+
+        {token && (
+          <CandidateFeedbackForm
+            token={token}
+            alreadySubmitted={feedbackSubmitted || candidateInfo?.feedback_submitted}
+            onSuccess={() => setFeedbackSubmitted(true)}
+          />
+        )}
       </div>
     );
   }
@@ -248,7 +263,7 @@ export default function InterviewPage() {
   return (
     <div className="max-w-xl mx-auto px-4 flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-white z-10">
+      <div className="flex items-center justify-between py-3 border-b sticky top-12 bg-background z-10">
         <span className="text-sm font-medium">AI Interview</span>
         {candidateInfo && (
           <InterviewTimer
@@ -320,7 +335,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-white">
+      <div className="border-t py-3 flex items-center justify-between gap-4 sticky bottom-0 bg-background">
         <ConnectionStatus state={wsConnectionStatus} />
 
         <div className="flex items-center gap-3">

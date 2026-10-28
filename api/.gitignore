@@ -23,7 +23,8 @@
 *.env
 config/application.yml
 vertex_ai_credentials.json
-
+mkmf.log
+scratch_*.rb
 
 # Ignore Public Docs
 /tech-docs

@@ -10,6 +10,12 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
+      # Dashboard
+      get  'dashboard', to: 'dashboards#show'
+
+      # Pipeline (Kanban)
+      get  'pipeline', to: 'pipeline#index'
+
       # Upload speed test — accepts any payload, discards it, returns bytes received
       post 'speed_test', to: proc { |env|
         bytes = env['CONTENT_LENGTH'].to_i
@@ -19,22 +25,27 @@ Rails.application.routes.draw do
       # Assessments
       resources :assessments do
         resources :sessions, only: %i[index create]
+        member do
+          get :summary, to: 'assessment_summaries#show'
+        end
       end
 
       # Sessions
-      resources :sessions, only: %i[show] do
+      resources :sessions, only: %i[show update destroy] do
         member do
           post :end_session
           get  :coverage
           get  :transcript
           get  :portfolio, to: 'portfolios#show'
           post 'portfolio/regenerate', to: 'portfolios#regenerate'
+          get  :feedback, to: 'session_feedbacks#show'
         end
       end
 
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      post 'sessions/:token/feedback',       to: 'session_feedbacks#create'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

@@ -10,6 +10,9 @@ import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+import { useToast } from "@/components/ui/toast";
+import { usePageTitle } from "@/hooks/usePageTitle";
+
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -24,6 +27,9 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const { toast } = useToast();
+  usePageTitle("Fit/Gap Report");
+
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -88,6 +94,7 @@ export default function FitGapReportPage() {
       a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+      toast(`Fit/Gap report exported as ${format.toUpperCase()}`);
     } finally {
       setExporting(null);
     }

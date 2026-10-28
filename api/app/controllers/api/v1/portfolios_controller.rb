@@ -10,7 +10,35 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        if @portfolio.nil?
+          if @session.ended?
+            candidate_turns = @session.transcript_turns.where(speaker: 'candidate')
+            if @session.transcript_turns.empty? || candidate_turns.empty? || candidate_turns.all? { |t| t.text.blank? }
+              @portfolio = @session.create_portfolio!(
+                candidate_id:      @session.candidate_id,
+                generation_status: 'failed',
+                context_status:    'empty_transcript',
+                context_notes:     'Sesi interview tidak memiliki rekaman percakapan atau transkrip kosong. Kandidat belum memberikan respon atau sesi langsung diakhiri.',
+                generation_error:  'Transkrip interview kosong. Kandidat belum memberikan jawaban yang dapat dinilai.'
+              )
+              return json_response(
+                portfolio: portfolio_json(@portfolio),
+                error:     @portfolio.generation_error
+              )
+            else
+              @portfolio = @session.create_portfolio!(
+                candidate_id:      @session.candidate_id,
+                generation_status: 'pending'
+              )
+              PortfolioGeneratorWorker.perform_async(@session.id)
+              return render json: { status: "generating" }, status: :accepted
+            end
+          else
+            return json_error("Session has not ended yet", :unprocessable_entity)
+          end
+        end
+
+        if @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
 
@@ -29,11 +57,41 @@ module Api
         portfolio = @session.portfolio
 
         if portfolio.nil?
-          return json_error("No portfolio found for this session", :not_found)
+          if @session.ended?
+            candidate_turns = @session.transcript_turns.where(speaker: 'candidate')
+            if @session.transcript_turns.empty? || candidate_turns.empty? || candidate_turns.all? { |t| t.text.blank? }
+              return json_error("Cannot generate portfolio: transcript is empty", :unprocessable_entity)
+            end
+
+            portfolio = @session.create_portfolio!(
+              candidate_id:      @session.candidate_id,
+              generation_status: "pending",
+              generation_error:  nil
+            )
+            PortfolioGeneratorWorker.perform_async(@session.id)
+
+            return json_response(
+              message:   "Portfolio generation queued",
+              portfolio: portfolio_json(portfolio)
+            )
+          else
+            return json_error("No portfolio found for this session", :not_found)
+          end
         end
 
         unless portfolio.failed?
           return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        end
+
+        candidate_turns = @session.transcript_turns.where(speaker: 'candidate')
+        if @session.transcript_turns.empty? || candidate_turns.empty? || candidate_turns.all? { |t| t.text.blank? }
+          portfolio.update!(
+            generation_status: 'failed',
+            context_status:    'empty_transcript',
+            context_notes:     'Sesi interview tidak memiliki rekaman percakapan atau transkrip kosong. Kandidat belum memberikan respon atau sesi langsung diakhiri.',
+            generation_error:  'Transkrip interview kosong. Kandidat belum memberikan jawaban yang dapat dinilai.'
+          )
+          return json_error("Cannot regenerate portfolio: transcript is empty", :unprocessable_entity)
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
@@ -165,6 +223,8 @@ module Api
           session_id:        portfolio.session_id,
           candidate_id:      portfolio.candidate_id,
           generation_status: portfolio.generation_status,
+          context_status:    portfolio.context_status,
+          context_notes:     portfolio.context_notes,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),

@@ -8,11 +8,27 @@ export interface VacancyPayload {
   vacancy_skills_attributes: Partial<VacancySkill>[];
 }
 
+export interface VacancyListParams {
+  page?: number;
+  search?: string;
+  sort_by?: "created_at" | "updated_at";
+}
+
 export const vacanciesApi = {
-  list: (page = 1) =>
-    api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
-      params: { page },
-    }),
+  list: (params?: VacancyListParams | number, search?: string) => {
+    const options: VacancyListParams =
+      typeof params === "number"
+        ? { page: params, search }
+        : params || {};
+
+    return api.get<{ vacancies: Vacancy[]; meta: PaginationMeta }>("/vacancies", {
+      params: {
+        page: options.page ?? 1,
+        search: options.search?.trim() || undefined,
+        sort_by: options.sort_by || undefined,
+      },
+    });
+  },
 
   get: (id: number) =>
     api.get<{ vacancy: Vacancy }>(`/vacancies/${id}`),

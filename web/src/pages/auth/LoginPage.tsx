@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
+
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -15,6 +17,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  usePageTitle("Sign in");
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

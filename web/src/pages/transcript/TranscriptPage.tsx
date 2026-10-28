@@ -2,16 +2,22 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { sessionsApi } from "@/services/sessions";
 import { ArrowLeft, Download } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useToast } from "@/components/ui/toast";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  const [assessmentName, setAssessmentName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  usePageTitle(candidateName ? `Transcript · ${candidateName}` : "Transcript");
+  const { toast } = useToast();
 
   useEffect(() => {
     Promise.all([
@@ -21,6 +27,7 @@ export default function TranscriptPage() {
       .then(([tRes, sRes]) => {
         setTurns(tRes.data.turns);
         setCandidateName(sRes.data.session.candidate_name ?? null);
+        setAssessmentName(sRes.data.session.assessment?.name ?? null);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -38,10 +45,21 @@ export default function TranscriptPage() {
     a.download = `transcript-session-${sessionId}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    toast("Transcript downloaded");
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb
+        items={[
+          { label: "Assessments", href: "/assessments" },
+          { label: assessmentName || "Assessment", href: `/assessments/${id}/invite` },
+          { label: candidateName || `Candidate #${sessionId}`, href: `/assessments/${id}/sessions/${sessionId}/portfolio` },
+          { label: "Transcript" },
+        ]}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link

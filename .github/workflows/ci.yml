@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  test-api:
+    name: Backend Tests (RSpec)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 123
+          POSTGRES_DB: rakamin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.2'
+          bundler-cache: true
+          working-directory: api
+
+      - name: Set up Database & Run RSpec
+        env:
+          RAILS_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: 123
+          DB_NAME: rakamin_test
+          ALLOWED_ORIGINS: "*"
+          SECRET_KEY_BASE: "ci_secret_key_base_for_test_environment"
+          GEMINI_API_KEY: dummy_key_for_testing
+          GEMINI_LIVE_MODEL: gemini-3.1-flash-live-preview
+          GEMINI_FLASH_MODEL: gemini-3.5-flash
+          GEMINI_PRO_MODEL: gemini-3.5-flash
+        run: |
+          bundle exec rails db:test:prepare
+          bundle exec rspec
+
+  test-web:
+    name: Frontend Tests (Vitest & Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Typecheck & Build
+        run: npm run build

@@ -7,6 +7,14 @@ export interface Assessment {
   created_by?: number;
   created_at?: string;
   updated_at?: string;
+  candidate_count?: number;
+  overall_status?: "no_candidates" | "active" | "uncomplete" | "completed";
+  candidates_summary?: {
+    total: number;
+    active: number;
+    pending: number;
+    completed: number;
+  };
   skills?: AssessmentSkill[];
   latest_session?: {
     status: "pending" | "active" | "ended";
@@ -45,6 +53,11 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  assessment?: {
+    id: number;
+    name: string;
+    time_limit_min: number;
+  };
 }
 
 export interface CoverageSkill {
@@ -79,6 +92,8 @@ export interface Portfolio {
   session_id: number;
   candidate_id?: number;
   generation_status: "pending" | "generating" | "complete" | "failed";
+  context_status?: "relevant" | "empty_transcript" | "out_of_context";
+  context_notes?: string | null;
   generated_at?: string;
   generation_error?: string;
   skills: PortfolioSkill[];
@@ -164,6 +179,25 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  feedback_submitted?: boolean;
+}
+
+export type FeedbackExperienceTag =
+  | "smooth"
+  | "technical_issue"
+  | "confusing"
+  | "too_long"
+  | "other";
+
+export interface CandidateFeedback {
+  id?: number;
+  session_id?: number;
+  rating: number; // 1 to 5
+  experience_tag?: FeedbackExperienceTag | string;
+  feedback_text?: string;
+  has_complaint: boolean;
+  complaint_text?: string;
+  submitted_at?: string;
 }
 
 export interface PaginationMeta {

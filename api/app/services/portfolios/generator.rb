@@ -20,15 +20,32 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      # 1. Check for empty transcript
+      candidate_turns = @session.transcript_turns.where(speaker: 'candidate')
+      if @session.transcript_turns.empty? || candidate_turns.empty? || candidate_turns.all? { |t| t.text.blank? }
+        portfolio.update!(
+          generation_status: 'failed',
+          context_status:    'empty_transcript',
+          context_notes:     'Sesi interview tidak memiliki rekaman percakapan atau transkrip kosong. Kandidat belum memberikan respon atau sesi langsung diakhiri.',
+          generation_error:  'Transkrip interview kosong. Kandidat belum memberikan jawaban yang dapat dinilai.'
+        )
+        Rails.logger.warn("[N10] Portfolio generation skipped for session #{@session.id}: empty transcript")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
 
       save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      portfolio.update!(
+        generation_status: 'complete',
+        generated_at:      Time.current,
+        generation_error:  nil
+      )
 
-      Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
+      Rails.logger.info("[N10] Portfolio generated for session #{@session.id} (context: #{portfolio.context_status})")
       portfolio
     rescue => e
       portfolio&.update!(generation_status: 'failed', generation_error: e.message)
@@ -39,7 +56,7 @@ module Portfolios
     private
 
     def build_prompt
-      assessment       = @session.assessment
+      assessment        = @session.assessment
       configured_skills = assessment.assessment_skills.order(:display_order)
       coverage_maps     = @session.coverage_maps.order(:id)
       turns             = @session.transcript_turns.ordered
@@ -78,42 +95,38 @@ module Portfolios
         TASK
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        For EACH skill in the coverage map (both configured and discovered):
+        1. RELEVANCE & CONTEXT CHECK:
+           Evaluate whether the candidate's answers actually pertain to the interview for #{assessment.name}.
+           If the candidate's responses are completely nonsensical, off-topic, gibberish, or entirely unrelated to the role being assessed, flag:
+           "context_status": "out_of_context",
+           "context_notes": "Explain why the candidate's answers are outside the context of #{assessment.name}"
+           Otherwise, set:
+           "context_status": "relevant",
+           "context_notes": null
 
-        1. FIND THE EVIDENCE
-           Read all transcript turns where this skill was discussed.
-           Identify the 2-3 most revealing quotes from the CANDIDATE (not the AI).
-           A quote is revealing if it shows HOW they think, not just WHAT they know.
-
-        2. ASSIGN A LEVEL
-           Compare the candidate's actual behavior to the L1-L5 anchors.
-           Assign the highest level where you see CONSISTENT evidence, not just one strong moment.
-           If evidence is mixed (mostly L2 with one L3 moment), assign L2.
-
-        3. WRITE THE COMPETENCY SUMMARY
-           2-3 sentences. Focus on patterns, not individual answers.
-           What does this person reliably do at this skill? What's the ceiling? What's missing?
-
-        4. ASSIGN CONFIDENCE
-           high — probe_count >= 3 AND state = covered
-           medium — probe_count = 2 OR state = partial
-           low — probe_count <= 1 OR state = initiated
+        2. FOR EACH SKILL (configured and discovered):
+           - FIND THE EVIDENCE: 2-3 most revealing quotes from the CANDIDATE.
+           - ASSIGN A LEVEL: L1 to L5 based on anchors.
+           - WRITE THE COMPETENCY SUMMARY: 2-3 sentences.
+           - ASSIGN CONFIDENCE: high, medium, or low.
 
         OUTPUT (JSON only, no prose):
         {
+          "context_status": "relevant",
+          "context_notes": null,
           "configured_skills": [
             {
               "skill_id": "sk-eng-001",
-              "skill_label": "React / Frontend Development",
+              "skill_label": "Skill Name",
               "level": 3,
               "confidence": "high",
-              "evidence": ["quote 1", "quote 2", "quote 3"],
+              "evidence": ["quote 1", "quote 2"],
               "competency_summary": "2-3 sentence summary"
             }
           ],
           "discovered_skills": [
             {
-              "skill_label": "Micro-frontend Architecture",
+              "skill_label": "Discovered Skill",
               "level": 2,
               "confidence": "low",
               "evidence": ["quote 1"],
@@ -139,16 +152,23 @@ module Portfolios
 
     def coverage_json(map)
       {
-        id:          map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
-        label:       map.skill_label,
-        state:       map.state,
-        probe_count: map.probe_count,
+        id:            map.skill_id || map.skill_label.downcase.gsub(/\s+/, '-'),
+        label:         map.skill_label,
+        state:         map.state,
+        probe_count:   map.probe_count,
         is_discovered: map.is_discovered
       }
     end
 
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
+
+      # Save context relevance status
+      is_out_of_context = data['context_status'].to_s == 'out_of_context'
+      portfolio.update!(
+        context_status: is_out_of_context ? 'out_of_context' : 'relevant',
+        context_notes:  data['context_notes'].presence
+      )
 
       # Destroy existing skills (idempotent regeneration)
       portfolio.portfolio_skills.destroy_all
