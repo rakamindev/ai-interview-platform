@@ -62,7 +62,7 @@ module Api
       end
 
       def assessment_params
-        params.require(:assessment).permit(
+        permitted = params.require(:assessment).permit(
           :name,
           :time_limit_min,
           :language,
@@ -73,6 +73,24 @@ module Api
             expected_level display_order _destroy
           ]
         )
+
+        # Fallback safeguard: guarantee anchor presence for any skill
+        if permitted[:assessment_skills_attributes].present?
+          permitted[:assessment_skills_attributes].each do |_idx, skill_attr|
+            # Handle both array and hash params format from Rails
+            item = skill_attr.is_a?(ActionController::Parameters) || skill_attr.is_a?(Hash) ? skill_attr : _idx
+            next unless item.is_a?(ActionController::Parameters) || item.is_a?(Hash)
+
+            label = item[:skill_label].presence || "this competency"
+            item[:l1_anchor] = item[:l1_anchor].presence || "Demonstrates foundational understanding of #{label} with guidance."
+            item[:l2_anchor] = item[:l2_anchor].presence || "Applies #{label} independently for standard requirements."
+            item[:l3_anchor] = item[:l3_anchor].presence || "Executes complex #{label} tasks proficiently with consistent quality."
+            item[:l4_anchor] = item[:l4_anchor].presence || "Shows advanced mastery of #{label}, guiding peers and optimizing approaches."
+            item[:l5_anchor] = item[:l5_anchor].presence || "Demonstrates expert, strategic command of #{label} across the organization."
+          end
+        end
+
+        permitted
       end
 
       def assessment_json(assessment)
@@ -87,6 +105,7 @@ module Api
           created_by:     assessment.created_by,
           created_at:     assessment.created_at,
           updated_at:     assessment.updated_at,
+          sessions_count: assessment.sessions.size,
           latest_session: latest && {
             id:         latest.id,
             status:     latest.status,

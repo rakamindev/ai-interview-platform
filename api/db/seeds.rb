@@ -348,6 +348,104 @@ B7_SKILLS = [
     l3_anchor: "Writes design docs and ADRs proactively. Creates runbooks and onboarding guides. Improves existing docs.",
     l4_anchor: "Defines documentation standards for the team. Reviews docs for clarity and completeness. Drives documentation culture.",
     l5_anchor: "Shapes org-wide documentation strategy. Defines what gets documented, how, and where. Invests in tooling and standards."
+  },
+
+  # ── General Skills ────────────────────────────────────────────────────────────
+  {
+    skill_id:     "SK-GEN-001",
+    skill_label:  "Critical Thinking & Decision Making",
+    category:     "general",
+    scope_include: "Cognitive bias mitigation, structured decision matrices, second-order thinking, risk assessment",
+    scope_exclude: "Impulsive choices",
+    l1_anchor: "Evaluates obvious pros and cons when presented with options. Reaches decisions with guidance.",
+    l2_anchor: "Applies structured criteria to compare alternatives. Identifies hidden assumptions and failure modes.",
+    l3_anchor: "Makes high-quality decisions under incomplete information. Uses second-order thinking.",
+    l4_anchor: "Establishes decision-making frameworks for teams. Coaches others on bias reduction.",
+    l5_anchor: "Shapes organizational decision governance and risk tolerance for pivotal strategic bets."
+  },
+  {
+    skill_id:     "SK-GEN-002",
+    skill_label:  "Customer Empathy & Client Relations",
+    category:     "general",
+    scope_include: "User interview synthesis, managing client expectations, active listening, turning friction into advocacy",
+    scope_exclude: "Cold sales pitching",
+    l1_anchor: "Listens respectfully to customer feedback. Escalates user complaints accurately.",
+    l2_anchor: "Interacts directly with clients with professional poise. Synthesizes user pain points.",
+    l3_anchor: "Proactively identifies unmet customer needs. Translates user feedback into product enhancements.",
+    l4_anchor: "Builds strong executive relationships with enterprise clients. Resolves high-risk escalations.",
+    l5_anchor: "Champions a relentless customer-obsessed culture across product and engineering."
+  },
+  {
+    skill_id:     "SK-GEN-003",
+    skill_label:  "Problem Solving & Troubleshooting",
+    category:     "general",
+    scope_include: "Root cause analysis, systematic diagnosis, breaking down ambiguity, structured debugging, data-backed solutions",
+    scope_exclude: "Superficial patching without diagnosis",
+    l1_anchor: "Solves simple, well-defined issues following standard guidance. Escalates blockers early.",
+    l2_anchor: "Diagnoses routine problems independently. Breaks down symptoms to locate underlying root causes.",
+    l3_anchor: "Tackles ambiguous, multifaceted problems end-to-end. Formulates and tests hypotheses methodically.",
+    l4_anchor: "Establishes troubleshooting protocols and frameworks for the team. Prevents recurrence of systemic issues.",
+    l5_anchor: "Pioneers organizational problem-solving methodologies for company-critical challenges."
+  },
+  {
+    skill_id:     "SK-GEN-004",
+    skill_label:  "Professional Work Ethic & Accountability",
+    category:     "general",
+    scope_include: "Commitment delivery, taking ownership, deadline discipline, resilience under pressure, proactive follow-through",
+    scope_exclude: "Blaming others, passive waiting",
+    l1_anchor: "Completes assigned tasks with reminders. Follows established guidelines reliably.",
+    l2_anchor: "Consistently meets commitments on time. Takes ownership of mistakes and rectifies them promptly.",
+    l3_anchor: "Demonstrates high autonomy and initiative. Anticipates roadblocks and resolves them before impact.",
+    l4_anchor: "Sets the benchmark for accountability across the team. Inspires peer commitment and dependability.",
+    l5_anchor: "Cultivates an organization-wide culture of integrity, high performance, and relentless execution."
+  },
+  {
+    skill_id:     "SK-GEN-005",
+    skill_label:  "Cross-Functional Collaboration & Teamwork",
+    category:     "general",
+    scope_include: "Inter-department coordination, constructive feedback, empathy, alignment building, collective success",
+    scope_exclude: "Siloed working, territorial mindset",
+    l1_anchor: "Participates effectively in team discussions. Cooperates on team goals when prompted.",
+    l2_anchor: "Proactively shares updates and unblocks colleagues. Gives and receives feedback constructively.",
+    l3_anchor: "Bridges cross-functional gaps between technical and business teams. Drives smooth collaborative workflows.",
+    l4_anchor: "Fosters psychological safety and cross-squad trust. Resolves inter-team frictions constructively.",
+    l5_anchor: "Shapes organizational collaboration standards, breaking down silos across departments."
+  },
+  {
+    skill_id:     "SK-GEN-006",
+    skill_label:  "Business Communication & Reporting",
+    category:     "general",
+    scope_include: "Concise executive briefing, structured written memos, active listening, presentation, data storytelling",
+    scope_exclude: "Informal chatter, jargon-heavy vagueness",
+    l1_anchor: "Communicates project updates clearly within the direct team. Writes coherent status notes.",
+    l2_anchor: "Structures written reports logically. Tailors tone appropriately for internal vs external audiences.",
+    l3_anchor: "Delivers compelling business presentations. Synthesizes complex findings into actionable executive summaries.",
+    l4_anchor: "Aligns diverse senior stakeholders through persuasive and empathetic communication.",
+    l5_anchor: "Directs organizational communication strategy and high-stakes investor/client presentations."
+  },
+  {
+    skill_id:     "SK-GEN-007",
+    skill_label:  "Time Management & Prioritization",
+    category:     "general",
+    scope_include: "Eisenhower matrix, capacity planning, focus management, avoiding context-switching, milestone pacing",
+    scope_exclude: "Unchecked procrastination",
+    l1_anchor: "Manages daily task list with supervisor guidance. Meets basic deadlines.",
+    l2_anchor: "Prioritizes high-impact tasks independently. Flags conflicting deadlines proactively.",
+    l3_anchor: "Balances urgent vs important priorities effortlessly. Delivers multiple parallel initiatives on schedule.",
+    l4_anchor: "Optimizes workload distribution across team members. Streamlines redundant meetings and bottlenecks.",
+    l5_anchor: "Architects org-wide time management and productivity frameworks, maximizing team focus."
+  },
+  {
+    skill_id:     "SK-GEN-008",
+    skill_label:  "Adaptability & Continuous Learning",
+    category:     "general",
+    scope_include: "Growth mindset, rapidly adopting new tools/technologies, thriving in ambiguity, iterating from feedback",
+    scope_exclude: "Resistance to process evolution",
+    l1_anchor: "Adapts to new tools and processes with training and supportive guidance.",
+    l2_anchor: "Quickly learns required tools and frameworks. Embraces procedural adjustments constructively.",
+    l3_anchor: "Thrives in fast-paced, ambiguous startup environments. Autonomously upskills in emerging methodologies.",
+    l4_anchor: "Guides teams smoothly through organizational changes, role pivots, and strategy adjustments.",
+    l5_anchor: "Champions institutional agility and lifelong learning culture across the company."
   }
 ].freeze
 
