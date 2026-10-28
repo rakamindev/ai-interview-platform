@@ -1,0 +1,23 @@
+Runtime check after AC1-AC3 + AC6.1-6.2, 2026-10-24, local dev, fake data, real Gemini (gemini-2.5-flash).
+Same sessions as the Task B "before" evidence.
+
+Session 1 "Rina Pratama (fake)" (had an assessor override L1 -> L2 on Communication)
+  React          assessed      L3 high   ev=3
+  TypeScript     assessed      L3 medium ev=2
+  Testing        assessed      L2 low    ev=1
+  Communication  not_assessed  -  -      ev=0  override=L2 kept   reason "Not discussed in the interview."
+  Web Accessibility (discovered) assessed L2 low ev=1
+
+Session 2 "Budi Santoso (fake)" (one candidate turn, audio problem)
+  all 4 skills   not_assessed  -  -      ev=0  (no model call made)
+  existing rows with lowercase skill_id "sk-eng-001" were updated in place, no duplicates
+
+Fit/gap vs vacancy 1
+  Portfolio 2 BEFORE: Gap -1 on all 4 skills; "...they are not yet at the level to independently
+                      contribute small features..."
+  Portfolio 2 AFTER:  not_assessed on all 5 rows; "...were not evaluated, a comprehensive hiring
+                      recommendation cannot be made at this time. It is recommended to proceed with
+                      a follow-up interview..."
+  Portfolio 1 AFTER:  Communication match via the assessor's L2 override; Security named as a
+                      follow-up topic, not a weakness.
+  Still open (AC4.2, planned): Testing (1 probe, low) shows as a plain "match".

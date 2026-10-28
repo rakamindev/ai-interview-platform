@@ -1,0 +1,141 @@
+2026-10-23T15:42:02.165Z pid=94393 tid=1wdp INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+FFF.FFF.FF.................FFFFFF.F
+
+Failures:
+
+  1) Fit/gap generation enqueues one job for two requests in a row (two tabs)
+     Failure/Error: expect(json['message']).to eq('Fit/gap report is already being generated')
+
+       expected: "Fit/gap report is already being generated"
+            got: "Fit/gap report generation queued"
+
+       (compared using ==)
+     # ./spec/requests/fit_gap_generation_spec.rb:31:in `block (2 levels) in <top (required)>'
+
+  2) Fit/gap generation answers 202 while generating and 404 when nothing was ever requested
+     Failure/Error: expect(response).to have_http_status(:accepted)
+       expected the response to have status code :accepted (202) but it was :not_found (404)
+     # ./spec/requests/fit_gap_generation_spec.rb:41:in `block (2 levels) in <top (required)>'
+
+  3) Fit/gap generation keeps serving the existing report during a regeneration, flagged as generating
+     Failure/Error: expect(response).to have_http_status(:ok)
+       expected the response to have status code :ok (200) but it was :not_found (404)
+     # ./spec/requests/fit_gap_generation_spec.rb:54:in `block (2 levels) in <top (required)>'
+
+  4) Portfolio generation status refuses to start a second run while one is in progress
+     Failure/Error: create(:portfolio, session: session, generation_status: 'generating', generation_started_at: 2.minutes.ago)
+
+     NoMethodError:
+       undefined method `generation_started_at=' for an instance of Portfolio
+     # ./spec/requests/portfolio_generation_status_spec.rb:21:in `block (2 levels) in <main>'
+
+  5) Portfolio generation status restarts a run that has stalled, and resets the attempt count
+     Failure/Error:
+       portfolio = create(:portfolio, session: session, generation_status: 'generating', generation_attempts: 2,
+                                      generation_started_at: 25.minutes.ago)
+
+     NoMethodError:
+       undefined method `generation_attempts=' for an instance of Portfolio
+     # ./spec/requests/portfolio_generation_status_spec.rb:30:in `block (2 levels) in <main>'
+
+  6) Portfolio generation status treats a pending portfolio that never started as stalled after the timeout
+     Failure/Error: create(:portfolio, session: session, generation_status: 'pending', generation_started_at: nil)
+
+     NoMethodError:
+       undefined method `generation_started_at=' for an instance of Portfolio
+     # ./spec/requests/portfolio_generation_status_spec.rb:41:in `block (2 levels) in <main>'
+
+  7) Portfolio generation status reports progress while generating
+     Failure/Error:
+       create(:portfolio, session: session, generation_status: 'generating', generation_attempts: 2,
+                          generation_started_at: 1.minute.ago, generation_error: 'The AI model is overloaded (HTTP 503).')
+
+     NoMethodError:
+       undefined method `generation_attempts=' for an instance of Portfolio
+     # ./spec/requests/portfolio_generation_status_spec.rb:57:in `block (2 levels) in <main>'
+
+  8) Portfolio generation status flags a stalled run in the payload
+     Failure/Error: create(:portfolio, session: session, generation_status: 'generating', generation_started_at: 30.minutes.ago)
+
+     NoMethodError:
+       undefined method `generation_started_at=' for an instance of Portfolio
+     # ./spec/requests/portfolio_generation_status_spec.rb:69:in `block (2 levels) in <main>'
+
+  9) Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for ApiError
+     Failure/Error:
+       expect(session.portfolio.reload).to have_attributes(generation_status: 'generating', generation_attempts: 1,
+                                                           generation_error: reason)
+
+       expected #<Portfolio id: 94, session_id: 102, candidate_id: 4242, generation_status: "failed", generated_at: nil, generation_error: "API returned 503"> to respond to :generation_attempts with 0 arguments
+     # ./spec/services/portfolios/generator_spec.rb:248:in `block (4 levels) in <main>'
+
+  10) Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for ApiError
+      Failure/Error:
+        expect(session.portfolio.reload).to have_attributes(generation_status: 'generating', generation_attempts: 1,
+                                                            generation_error: reason)
+
+        expected #<Portfolio id: 95, session_id: 103, candidate_id: 4242, generation_status: "failed", generated_at: nil, generation_error: "API returned 404"> to respond to :generation_attempts with 0 arguments
+      # ./spec/services/portfolios/generator_spec.rb:248:in `block (4 levels) in <main>'
+
+  11) Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for RateLimitError
+      Failure/Error:
+        expect(session.portfolio.reload).to have_attributes(generation_status: 'generating', generation_attempts: 1,
+                                                            generation_error: reason)
+
+        expected #<Portfolio id: 96, session_id: 104, candidate_id: 4242, generation_status: "failed", generated_at: nil, generation_error: "Rate limited"> to respond to :generation_attempts with 0 arguments
+      # ./spec/services/portfolios/generator_spec.rb:248:in `block (4 levels) in <main>'
+
+  12) Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for TimeoutError
+      Failure/Error:
+        expect(session.portfolio.reload).to have_attributes(generation_status: 'generating', generation_attempts: 1,
+                                                            generation_error: reason)
+
+        expected #<Portfolio id: 97, session_id: 105, candidate_id: 4242, generation_status: "failed", generated_at: nil, generation_error: "timeout"> to respond to :generation_attempts with 0 arguments
+      # ./spec/services/portfolios/generator_spec.rb:248:in `block (4 levels) in <main>'
+
+  13) Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for RuntimeError
+      Failure/Error:
+        expect(session.portfolio.reload).to have_attributes(generation_status: 'generating', generation_attempts: 1,
+                                                            generation_error: reason)
+
+        expected #<Portfolio id: 98, session_id: 106, candidate_id: 4242, generation_status: "failed", generated_at: nil, generation_error: "secret internals"> to respond to :generation_attempts with 0 arguments
+      # ./spec/services/portfolios/generator_spec.rb:248:in `block (4 levels) in <main>'
+
+  14) Portfolios::Generator when an attempt fails (AC7.3) counts attempts and records when the latest one started
+      Failure/Error: expect(session.portfolio.reload.generation_attempts).to eq(2)
+
+      NoMethodError:
+        undefined method `generation_attempts' for an instance of Portfolio
+      # ./spec/services/portfolios/generator_spec.rb:256:in `block (3 levels) in <main>'
+
+  15) PortfolioGeneratorWorker marks the portfolio failed when retries are exhausted, keeping the last reason
+      Failure/Error:
+        create(:portfolio, generation_status: 'generating', generation_attempts: 4,
+                           generation_error: 'The AI model is overloaded (HTTP 503).')
+
+      NoMethodError:
+        undefined method `generation_attempts=' for an instance of Portfolio
+      # ./spec/workers/portfolio_generator_worker_spec.rb:8:in `block (2 levels) in <main>'
+      # ./spec/workers/portfolio_generator_worker_spec.rb:13:in `block (2 levels) in <main>'
+
+Finished in 0.64167 seconds (files took 1.11 seconds to load)
+35 examples, 15 failures
+
+Failed examples:
+
+rspec ./spec/requests/fit_gap_generation_spec.rb:26 # Fit/gap generation enqueues one job for two requests in a row (two tabs)
+rspec ./spec/requests/fit_gap_generation_spec.rb:35 # Fit/gap generation answers 202 while generating and 404 when nothing was ever requested
+rspec ./spec/requests/fit_gap_generation_spec.rb:45 # Fit/gap generation keeps serving the existing report during a regeneration, flagged as generating
+rspec ./spec/requests/portfolio_generation_status_spec.rb:20 # Portfolio generation status refuses to start a second run while one is in progress
+rspec ./spec/requests/portfolio_generation_status_spec.rb:29 # Portfolio generation status restarts a run that has stalled, and resets the attempt count
+rspec ./spec/requests/portfolio_generation_status_spec.rb:40 # Portfolio generation status treats a pending portfolio that never started as stalled after the timeout
+rspec ./spec/requests/portfolio_generation_status_spec.rb:56 # Portfolio generation status reports progress while generating
+rspec ./spec/requests/portfolio_generation_status_spec.rb:68 # Portfolio generation status flags a stalled run in the payload
+rspec './spec/services/portfolios/generator_spec.rb[1:6:1]' # Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for ApiError
+rspec './spec/services/portfolios/generator_spec.rb[1:6:2]' # Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for ApiError
+rspec './spec/services/portfolios/generator_spec.rb[1:6:3]' # Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for RateLimitError
+rspec './spec/services/portfolios/generator_spec.rb[1:6:4]' # Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for TimeoutError
+rspec './spec/services/portfolios/generator_spec.rb[1:6:5]' # Portfolios::Generator when an attempt fails (AC7.3) keeps the portfolio generating with a readable reason for RuntimeError
+rspec ./spec/services/portfolios/generator_spec.rb:253 # Portfolios::Generator when an attempt fails (AC7.3) counts attempts and records when the latest one started
+rspec ./spec/workers/portfolio_generator_worker_spec.rb:12 # PortfolioGeneratorWorker marks the portfolio failed when retries are exhausted, keeping the last reason
+

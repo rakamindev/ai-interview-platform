@@ -1,0 +1,78 @@
+{
+  "id": 12,
+  "portfolio_id": 4,
+  "vacancy_id": 2,
+  "skill_comparisons": [
+    {
+      "skill_label": "React / Frontend Development Core",
+      "skill_id": "SK-ENG-001",
+      "expected_level": 2,
+      "candidate_level": 3,
+      "ai_level": 3,
+      "result": "exceed",
+      "delta": 1,
+      "confidence": "high",
+      "provisional": false,
+      "overridden": false,
+      "assessment_status": "assessed"
+    },
+    {
+      "skill_label": "Testing & Quality Assurance",
+      "skill_id": "SK-ENG-006",
+      "expected_level": 2,
+      "candidate_level": 2,
+      "ai_level": 2,
+      "result": "match",
+      "delta": 0,
+      "confidence": "low",
+      "provisional": true,
+      "overridden": false,
+      "assessment_status": "assessed"
+    },
+    {
+      "skill_label": "Communication",
+      "skill_id": "SK-SOFT-001",
+      "expected_level": 2,
+      "candidate_level": 2,
+      "ai_level": null,
+      "result": "match",
+      "delta": 0,
+      "confidence": null,
+      "provisional": false,
+      "overridden": true,
+      "assessment_status": "not_assessed"
+    },
+    {
+      "skill_label": "TypeScript & Type Systems",
+      "skill_id": "SK-ENG-009",
+      "expected_level": 2,
+      "candidate_level": null,
+      "ai_level": null,
+      "result": "needs_review",
+      "delta": null,
+      "confidence": "medium",
+      "provisional": false,
+      "overridden": false,
+      "assessment_status": "needs_review"
+    },
+    {
+      "skill_label": "Security Engineering",
+      "skill_id": "SK-ENG-010",
+      "expected_level": 1,
+      "candidate_level": null,
+      "ai_level": null,
+      "result": "not_assessed",
+      "delta": null,
+      "confidence": null,
+      "provisional": false,
+      "overridden": false,
+      "assessment_status": null
+    }
+  ],
+  "culture_narrative": "Draft text written by the model about culture and competency fit.",
+  "overall_narrative": "Draft text written by the model with an overall recommendation.",
+  "generated_at": "2026-10-26T09:30:00Z",
+  "stale": false,
+  "outdated": false,
+  "generating": false
+}

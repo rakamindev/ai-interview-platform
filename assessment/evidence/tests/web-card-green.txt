@@ -1,0 +1,14 @@
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+ ✓ src/components/portfolio/ConfidenceIndicator.test.tsx (1 test) 29ms
+ ✓ src/components/fitgap/ComparisonTable.test.tsx (6 tests) 278ms
+ ✓ src/components/portfolio/SkillPortfolioCard.test.tsx (7 tests) 199ms
+ ✓ src/hooks/useFitGapReport.test.ts (7 tests) 514ms
+ ✓ src/components/portfolio/OverridePanel.test.tsx (5 tests) 465ms
+
+ Test Files  5 passed (5)
+      Tests  26 passed (26)
+   Start at  23:11:29
+   Duration  1.80s (transform 277ms, setup 808ms, collect 789ms, tests 1.49s, environment 2.26s, prepare 380ms)
+

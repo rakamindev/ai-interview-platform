@@ -1,0 +1,32 @@
+Runtime evidence, 2026-10-23, local dev, fake data. Portfolio 1 (session 1, "Rina Pratama (fake)"), vacancy 1.
+Local model override: GEMINI_PRO_MODEL / GEMINI_FLASH_MODEL = gemini-2.5-flash (sample ids return 404, see 01-setup-notes).
+
+A) One page view of /assessments/1/sessions/1/fitgap/1 (log/development.log, in order):
+   GET  /api/v1/portfolios/1/fitgap/1  -> 404
+   POST /api/v1/portfolios/1/fitgap    -> 202   (job 1 enqueued)
+   GET  /api/v1/portfolios/1/fitgap/1  -> 404   (5 s poll, job 1 still running)
+   POST /api/v1/portfolios/1/fitgap    -> 202   (job 2 enqueued)
+   [N13] Fit/gap report generated: portfolio=1 vacancy=1
+   GET  /api/v1/portfolios/1/fitgap/1  -> 200
+   [N13] Fit/gap report generated: portfolio=1 vacancy=1   (job 2 overwrote job 1)
+   => 2 Gemini calls for one view; the narrative the user is reading was replaced afterwards
+      (UI text "strong technical ownership..." vs stored text "strong technical foundations...").
+
+B) Stored skill_comparisons (API payload):
+   React       expected 2, candidate 3, exceed, confidence high
+   TypeScript  expected 2, candidate 3, exceed, confidence medium
+   Testing     expected 2, candidate 2, match,  confidence low     (coverage: initiated, probe_count 1)
+   Communication expected 2, candidate 1, gap, confidence low     (coverage: not_yet, probe_count 0, 0 evidence quotes)
+   Security    expected 1, candidate nil, not_assessed            (not in the assessment at all)
+   UI renders: "Required" column blank on all rows (reads c.required_level, API sends expected_level);
+   confidence never shown; summary row omits not_assessed.
+
+C) Narratives generated from (B):
+   overall: "... While their async communication skills are currently below expectations, this is a
+   coachable area for an intern ... they are a recommended hire with a focus on developing their communication."
+   => a weakness the interview never measured is stated as fact in the hiring recommendation.
+   overall_narrative is not displayed in the UI at all; it is included in the JSON export.
+
+D) Portfolio 2 ("Budi Santoso (fake)", one candidate turn: audio problem, all coverage not_yet, probe_count 0):
+   all 4 configured skills stored as ai_level 1 / low, competency_summary "No evidence was gathered ...".
+   Portfolio 2 skill_id values came back lowercase ("sk-eng-001") while portfolio 1 kept "SK-ENG-001".

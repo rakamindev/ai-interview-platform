@@ -1,0 +1,31 @@
+Seeded fault 2 of 3 (branch scratch/seeded-fault)
+Fault commit : 3c788f2  seeded fault: load the exported portfolio without the tenant scope
+Revert commit: 55382aa
+Change: PortfoliosController#set_portfolio back to Portfolio.find(params[:id]) (the F1 P0).
+Result: 2 of 144 RSpec examples fail: cross-tenant JSON export returns 200 and PDF export 500 instead of 404.
+After revert: 144 examples, 0 failures.
+
+---- bundle exec rspec (with the fault) ----
+2026-10-23T16:38:09.901Z pid=3641 tid=85p INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+..................................................FF............................................................................................
+
+Failures:
+
+  1) Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as JSON
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 200
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:29:in `block (3 levels) in <main>'
+
+  2) Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as PDF
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 500
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:36:in `block (3 levels) in <main>'
+
+Finished in 1.81 seconds (files took 0.91132 seconds to load)
+144 examples, 2 failures
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:26 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as JSON
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:33 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as PDF
+

@@ -1,0 +1,6 @@
+......................2026-10-23T15:04:41.172Z pid=90778 tid=1se2 INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+..
+
+Finished in 0.51931 seconds (files took 1.1 seconds to load)
+24 examples, 0 failures
+

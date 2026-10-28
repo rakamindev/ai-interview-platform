@@ -1,0 +1,32 @@
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/hooks/useFitGapReport.test.ts [ src/hooks/useFitGapReport.test.ts ]
+Error: Failed to resolve import "./useFitGapReport" from "src/hooks/useFitGapReport.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: ~/Desktop/Rakamin/ai-interview-platform/web/src/hooks/useFitGapReport.test.ts:3:0
+  3  |  }));
+  4  |  const __vi_import_0__ = await import("@testing-library/react");
+  5  |  const __vi_import_1__ = await import("./useFitGapReport");
+     |                                       ^
+  6  |  const __vi_import_2__ = await import("@/services/portfolios");
+  7  |  const __vi_import_3__ = await import("../../../contracts/fit_gap_report.example.json");
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42846:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42843:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:40820:23
+ ❯ node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:40939:37
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:40866:7
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42641:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:36053:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  23:05:32
+   Duration  678ms (transform 19ms, setup 66ms, collect 0ms, tests 0ms, environment 191ms, prepare 58ms)
+

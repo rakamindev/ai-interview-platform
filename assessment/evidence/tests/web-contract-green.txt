@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+ ✓ src/components/fitgap/ComparisonTable.test.tsx (6 tests) 173ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  23:05:02
+   Duration  982ms (transform 46ms, setup 95ms, collect 37ms, tests 173ms, environment 277ms, prepare 77ms)
+

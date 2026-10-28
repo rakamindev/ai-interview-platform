@@ -1,0 +1,1513 @@
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+ ✓ src/components/portfolio/ConfidenceIndicator.test.tsx (1 test) 19ms
+stderr | src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > shows a skill the interview never reached as not assessed, never as L1 (AC1.5)
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at SkillPortfolioCard (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx:20:54)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at SkillPortfolioCard (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx:20:54)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+The above error occurred in the <SkillPortfolioCard> component:
+
+    at SkillPortfolioCard (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx:10:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > flags model output that needs review, with the reason, and keeps its evidence
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at SkillPortfolioCard (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx:20:54)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at SkillPortfolioCard (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx:20:54)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+The above error occurred in the <SkillPortfolioCard> component:
+
+    at SkillPortfolioCard (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx:10:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > shows an override with the AI's rating, the note and when it was made (AC6.5)
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at OverridePanel (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/OverridePanel.tsx:50:34)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at OverridePanel (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/OverridePanel.tsx:50:34)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+The above error occurred in the <OverridePanel> component:
+
+    at OverridePanel (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/OverridePanel.tsx:12:26)
+    at div
+    at div
+    at ~/Desktop/Rakamin/ai-interview-platform/web/src/components/ui/card.tsx:54:6
+    at div
+    at ~/Desktop/Rakamin/ai-interview-platform/web/src/components/ui/card.tsx:11:6
+    at SkillPortfolioCard (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/SkillPortfolioCard.tsx:10:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/components/portfolio/OverridePanel.test.tsx > OverridePanel > asks for a level and a note when the skill was not assessed (AC6.3)
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at OverridePanel (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/OverridePanel.tsx:20:90)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+Error: Uncaught [TypeError: Cannot read properties of null (reading 'replace')]
+    at reportException (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: Cannot read properties of null (reading 'replace')
+    at parseLevel (~/Desktop/Rakamin/ai-interview-platform/web/src/utils/constants.ts:6:28)
+    at OverridePanel (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/OverridePanel.tsx:20:90)
+    at renderWithHooks (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (~/Desktop/Rakamin/ai-interview-platform/web/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+The above error occurred in the <OverridePanel> component:
+
+    at OverridePanel (~/Desktop/Rakamin/ai-interview-platform/web/src/components/portfolio/OverridePanel.tsx:12:26)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ ❯ src/components/portfolio/OverridePanel.test.tsx (5 tests | 5 failed) 89ms
+   × OverridePanel > starts from the AI level and saves the chosen level 61ms
+     → Unable to find an accessible element with the role "radio" and name "L3"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+   × OverridePanel > asks for a level and a note when the skill was not assessed (AC6.3) 10ms
+     → Cannot read properties of null (reading 'replace')
+   × OverridePanel > counts characters and stops at the 2,000 limit (AC6.4) 5ms
+     → Unable to find an accessible element with the role "textbox"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+   × OverridePanel > shows the API's reason when saving fails 5ms
+     → Unable to find an accessible element with the role "button" and name "Save override"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+     → undefined
+   × OverridePanel > keeps the radio buttons of two open panels independent 8ms
+     → Unable to find an accessible element with the role "radio" and name "L4"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+ ❯ src/components/portfolio/SkillPortfolioCard.test.tsx (7 tests | 7 failed) 108ms
+   × SkillPortfolioCard > shows the level and confidence of an assessed skill 32ms
+     → Unable to find an element with the text: “I profile before I memoize.”. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+            >
+              <span>
+                L3
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Proficient
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-green-600"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-green-500"
+                />
+                Confidence: HIGH
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+        <div
+          class="space-y-1"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Competency summary
+          </span>
+          <p
+            class="text-sm text-muted-foreground leading-relaxed"
+          >
+            Consistent L3 behaviour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+   × SkillPortfolioCard > shows a skill the interview never reached as not assessed, never as L1 (AC1.5) 8ms
+     → Cannot read properties of null (reading 'replace')
+   × SkillPortfolioCard > flags model output that needs review, with the reason, and keeps its evidence 2ms
+     → Cannot read properties of null (reading 'replace')
+   × SkillPortfolioCard > caveats a low-confidence rating 3ms
+     → Unable to find an element with the text: Briefly explored. Treat this rating as provisional.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-blue-100 text-blue-700"
+            >
+              <span>
+                L2
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Functional
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-destructive"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-destructive"
+                />
+                Confidence: LOW
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2"
+        >
+          Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+        <div
+          class="space-y-1"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Competency summary
+          </span>
+          <p
+            class="text-sm text-muted-foreground leading-relaxed"
+          >
+            Consistent L3 behaviour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+   × SkillPortfolioCard > says when there is no summary 2ms
+     → Unable to find an element with the text: No summary provided.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+            >
+              <span>
+                L3
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Proficient
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-green-600"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-green-500"
+                />
+                Confidence: HIGH
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+   × SkillPortfolioCard > shows an override with the AI's rating, the note and when it was made (AC6.5) 6ms
+     → Cannot read properties of null (reading 'replace')
+   × SkillPortfolioCard > opens the override form below the card content, not in the header 54ms
+     → Unable to find an accessible element with the role "button" and name "Override rating"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  <ul
+    class="space-y-1"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="text-sm text-foreground"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-sm text-muted-foreground leading-relaxed"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+            >
+              <span>
+                L3
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Proficient
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-green-600"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-green-500"
+                />
+                Confidence: HIGH
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+        <div
+          class="space-y-1"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Competency summary
+          </span>
+          <p
+            class="text-sm text-muted-foreground leading-relaxed"
+          >
+            Consistent L3 behaviour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/portfolio/OverridePanel.test.tsx > OverridePanel > starts from the AI level and saves the chosen level
+TestingLibraryElementError: Unable to find an accessible element with the role "radio" and name "L3"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/portfolio/OverridePanel.test.tsx:32:19
+     30|     const onSaved = renderPanel(assessed);
+     31| 
+     32|     expect(screen.getByRole("radio", { name: "L3" })).toBeChecked();
+       |                   ^
+     33|     await userEvent.click(screen.getByRole("radio", { name: "L4" }));
+     34|     await userEvent.click(screen.getByRole("button", { name: "Save ove…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  src/components/portfolio/OverridePanel.test.tsx > OverridePanel > asks for a level and a note when the skill was not assessed (AC6.3)
+TypeError: Cannot read properties of null (reading 'replace')
+ ❯ parseLevel src/utils/constants.ts:6:28
+      4| export function parseLevel(level: string | number): number {
+      5|   if (typeof level === "number") return level;
+      6|   const n = parseInt(level.replace(/\D/g, ""), 10);
+       |                            ^
+      7|   return isNaN(n) ? 1 : n;
+      8| }
+ ❯ OverridePanel src/components/portfolio/OverridePanel.tsx:20:90
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ❯ mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ❯ beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ❯ beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+ ❯ recoverFromConcurrentError node_modules/react-dom/cjs/react-dom.development.js:25889:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  src/components/portfolio/OverridePanel.test.tsx > OverridePanel > counts characters and stops at the 2,000 limit (AC6.4)
+TestingLibraryElementError: Unable to find an accessible element with the role "textbox"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/portfolio/OverridePanel.test.tsx:58:26
+     56|     renderPanel(assessed);
+     57| 
+     58|     const notes = screen.getByRole("textbox");
+       |                          ^
+     59|     await userEvent.type(notes, "Twelve chars");
+     60| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  src/components/portfolio/OverridePanel.test.tsx > OverridePanel > shows the API's reason when saving fails
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Save override"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/portfolio/OverridePanel.test.tsx:69:34
+     67|     renderPanel(assessed);
+     68| 
+     69|     await userEvent.click(screen.getByRole("button", { name: "Save ove…
+       |                                  ^
+     70| 
+     71|     expect(await screen.findByText("Override level must be in 1..5")).…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  src/components/portfolio/OverridePanel.test.tsx > OverridePanel > shows the API's reason when saving fails
+{ response: { data: { errors: [Array] } }, stacks: [] }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  src/components/portfolio/OverridePanel.test.tsx > OverridePanel > keeps the radio buttons of two open panels independent
+TestingLibraryElementError: Unable to find an accessible element with the role "radio" and name "L4"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+      >
+        Override rating ▼
+      </button>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:109:15
+ ❯ src/components/portfolio/OverridePanel.test.tsx:82:36
+     80|     );
+     81| 
+     82|     const [first, second] = screen.getAllByRole("radio", { name: "L4" …
+       |                                    ^
+     83|     expect(first).not.toBe(second);
+     84|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > shows the level and confidence of an assessed skill
+TestingLibraryElementError: Unable to find an element with the text: “I profile before I memoize.”. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+            >
+              <span>
+                L3
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Proficient
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-green-600"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-green-500"
+                />
+                Confidence: HIGH
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+        <div
+          class="space-y-1"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Competency summary
+          </span>
+          <p
+            class="text-sm text-muted-foreground leading-relaxed"
+          >
+            Consistent L3 behaviour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/portfolio/SkillPortfolioCard.test.tsx:45:19
+     43|     expect(screen.getByText("L3")).toBeInTheDocument();
+     44|     expect(screen.getByText("Confidence: HIGH")).toBeInTheDocument();
+     45|     expect(screen.getByText("“I profile before I memoize.”")).toBeInTh…
+       |                   ^
+     46|   });
+     47| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > shows a skill the interview never reached as not assessed, never as L1 (AC1.5)
+ FAIL  src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > flags model output that needs review, with the reason, and keeps its evidence
+TypeError: Cannot read properties of null (reading 'replace')
+ ❯ parseLevel src/utils/constants.ts:6:28
+      4| export function parseLevel(level: string | number): number {
+      5|   if (typeof level === "number") return level;
+      6|   const n = parseInt(level.replace(/\D/g, ""), 10);
+       |                            ^
+      7|   return isNaN(n) ? 1 : n;
+      8| }
+ ❯ SkillPortfolioCard src/components/portfolio/SkillPortfolioCard.tsx:20:54
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ❯ mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ❯ beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ❯ beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+ ❯ recoverFromConcurrentError node_modules/react-dom/cjs/react-dom.development.js:25889:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > caveats a low-confidence rating
+TestingLibraryElementError: Unable to find an element with the text: Briefly explored. Treat this rating as provisional.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-blue-100 text-blue-700"
+            >
+              <span>
+                L2
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Functional
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-destructive"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-destructive"
+                />
+                Confidence: LOW
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded px-3 py-2"
+        >
+          Only briefly explored. Confidence is low — warrants a dedicated session if this skill matters.
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+        <div
+          class="space-y-1"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Competency summary
+          </span>
+          <p
+            class="text-sm text-muted-foreground leading-relaxed"
+          >
+            Consistent L3 behaviour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/portfolio/SkillPortfolioCard.test.tsx:71:19
+     69|     renderCard(skill({ ai_level: 2, ai_confidence: "low" }));
+     70| 
+     71|     expect(screen.getByText("Briefly explored. Treat this rating as pr…
+       |                   ^
+     72|   });
+     73| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > says when there is no summary
+TestingLibraryElementError: Unable to find an element with the text: No summary provided.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+            >
+              <span>
+                L3
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Proficient
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-green-600"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-green-500"
+                />
+                Confidence: HIGH
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/portfolio/SkillPortfolioCard.test.tsx:77:19
+     75|     renderCard(skill({ competency_summary: "" }));
+     76| 
+     77|     expect(screen.getByText("No summary provided.")).toBeInTheDocument…
+       |                   ^
+     78|   });
+     79| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > shows an override with the AI's rating, the note and when it was made (AC6.5)
+TypeError: Cannot read properties of null (reading 'replace')
+ ❯ parseLevel src/utils/constants.ts:6:28
+      4| export function parseLevel(level: string | number): number {
+      5|   if (typeof level === "number") return level;
+      6|   const n = parseInt(level.replace(/\D/g, ""), 10);
+       |                            ^
+      7|   return isNaN(n) ? 1 : n;
+      8| }
+ ❯ OverridePanel src/components/portfolio/OverridePanel.tsx:50:34
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ❯ mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ❯ beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ❯ beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+ ❯ recoverFromConcurrentError node_modules/react-dom/cjs/react-dom.development.js:25889:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  src/components/portfolio/SkillPortfolioCard.test.tsx > SkillPortfolioCard > opens the override form below the card content, not in the header
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Override rating"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Override rating ▼":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+  />
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  <ul
+    class="space-y-1"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="text-sm text-foreground"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-sm text-muted-foreground leading-relaxed"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-xl border bg-card text-card-foreground shadow"
+    >
+      <div
+        class="p-4 space-y-4"
+      >
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+          <div
+            class="flex items-start gap-3"
+          >
+            <div
+              class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+            >
+              <span>
+                L3
+              </span>
+              <span
+                class="text-[10px] font-normal opacity-70"
+              >
+                Proficient
+              </span>
+            </div>
+            <div
+              class="space-y-0.5"
+            >
+              <div
+                class="flex items-center gap-1.5"
+              >
+                <span
+                  class="font-semibold"
+                >
+                  React / Frontend Development Core
+                </span>
+              </div>
+              <span
+                class="flex items-center gap-1 text-xs text-green-600"
+              >
+                <span
+                  class="h-2 w-2 rounded-full bg-green-500"
+                />
+                Confidence: HIGH
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <button
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+            >
+              Override rating ▼
+            </button>
+          </div>
+        </div>
+        <div
+          class="space-y-1.5"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Evidence from interview
+          </span>
+          <ul
+            class="space-y-1"
+          >
+            <li
+              class="text-sm text-foreground"
+            >
+              • "
+              I profile before I memoize.
+              "
+            </li>
+          </ul>
+        </div>
+        <div
+          class="space-y-1"
+        >
+          <span
+            class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+          >
+            Competency summary
+          </span>
+          <p
+            class="text-sm text-muted-foreground leading-relaxed"
+          >
+            Consistent L3 behaviour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/portfolio/SkillPortfolioCard.test.tsx:96:34
+     94|     renderCard(skill());
+     95| 
+     96|     await userEvent.click(screen.getByRole("button", { name: "Override…
+       |                                  ^
+     97| 
+     98|     expect(screen.getByRole("radiogroup", { name: "Your rating" })).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  12 failed | 1 passed (13)
+   Start at  23:08:27
+   Duration  1.17s (transform 121ms, setup 348ms, collect 432ms, tests 217ms, environment 1.07s, prepare 213ms)
+

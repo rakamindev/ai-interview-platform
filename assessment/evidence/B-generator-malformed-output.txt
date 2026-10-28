@@ -1,0 +1,16 @@
+Runtime evidence, 2026-10-23, local dev, fake data. Probe script injects a fake client through the
+existing Portfolios::Generator(gemini_client:) seam, inside a transaction that is rolled back afterwards.
+Target: portfolio 1 (5 skills, 1 assessor override on "Communication").
+
+Payload: 2 configured skills, the second with confidence "High" (capitalised).
+BEFORE: status=complete skills=5 overrides=1
+RAISED: ActiveRecord::RecordInvalid: Validation failed: Ai confidence is not included in the list
+AFTER:  status=failed skills=["React / Frontend Development Core"] overrides=0
+        error="Validation failed: Ai confidence is not included in the list"
+=> partial write (1 of 2 new skills saved, the 5 old ones destroyed), assessor override destroyed,
+   whole portfolio marked failed because of one field. Sidekiq would then retry the full Gemini call.
+
+Payload: level nil
+MISSING LEVEL -> stored ai_level=1     (nil.to_i.clamp(1, 5))
+
+ROLLED BACK: status=complete skills=5

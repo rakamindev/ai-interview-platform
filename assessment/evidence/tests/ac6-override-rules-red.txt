@@ -1,0 +1,41 @@
+.....FFF.2026-10-23T15:40:15.985Z pid=93944 tid=1s3c INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+F
+
+Failures:
+
+  1) POST /api/v1/portfolio_skills/:id/override rejects notes longer than 2,000 characters
+     Failure/Error: expect(response).to have_http_status(:unprocessable_entity)
+       expected the response to have status code :unprocessable_entity (422) but it was :created (201)
+     # ./spec/requests/portfolio_skill_override_spec.rb:47:in `block (2 levels) in <top (required)>'
+
+  2) POST /api/v1/portfolio_skills/:id/override requires a note when the skill was not assessed in the interview (AC6.3)
+     Failure/Error: expect(error_message).to eq('Add a note: this skill was not assessed in the interview, so say what your rating is based on.')
+
+       expected: "Add a note: this skill was not assessed in the interview, so say what your rating is based on."
+            got: "Ai level is not a number"
+
+       (compared using ==)
+     # ./spec/requests/portfolio_skill_override_spec.rb:55:in `block (2 levels) in <top (required)>'
+
+  3) POST /api/v1/portfolio_skills/:id/override accepts an override with a note on a skill that was not assessed (AC6.3)
+     Failure/Error: expect(response).to have_http_status(:created)
+       expected the response to have status code :created (201) but it was :unprocessable_entity (422)
+     # ./spec/requests/portfolio_skill_override_spec.rb:61:in `block (2 levels) in <top (required)>'
+
+  4) POST /api/v1/portfolio_skills/:id/override keeps the existing fit/gap report and queues a refresh (F8)
+     Failure/Error: expect(FitGapReport.exists?(report.id)).to be(true)
+
+       expected true
+            got false
+     # ./spec/requests/portfolio_skill_override_spec.rb:79:in `block (2 levels) in <top (required)>'
+
+Finished in 0.38357 seconds (files took 1.14 seconds to load)
+10 examples, 4 failures
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_skill_override_spec.rb:44 # POST /api/v1/portfolio_skills/:id/override rejects notes longer than 2,000 characters
+rspec ./spec/requests/portfolio_skill_override_spec.rb:51 # POST /api/v1/portfolio_skills/:id/override requires a note when the skill was not assessed in the interview (AC6.3)
+rspec ./spec/requests/portfolio_skill_override_spec.rb:58 # POST /api/v1/portfolio_skills/:id/override accepts an override with a note on a skill that was not assessed (AC6.3)
+rspec ./spec/requests/portfolio_skill_override_spec.rb:74 # POST /api/v1/portfolio_skills/:id/override keeps the existing fit/gap report and queues a refresh (F8)
+

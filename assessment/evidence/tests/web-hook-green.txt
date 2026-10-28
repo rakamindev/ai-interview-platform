@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+ ✓ src/hooks/useFitGapReport.test.ts (7 tests) 533ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  23:06:43
+   Duration  1.14s (transform 42ms, setup 65ms, collect 32ms, tests 533ms, environment 190ms, prepare 67ms)
+

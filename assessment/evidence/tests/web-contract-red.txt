@@ -1,0 +1,1289 @@
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+ ❯ src/components/fitgap/ComparisonTable.test.tsx (6 tests | 6 failed) 160ms
+   × ComparisonTable (contract) > shows the required level on every row 74ms
+     → Unable to find an element with the text: L2. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    React / Frontend Development Core
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span>
+      L3
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+    >
+      ⭐
+       
+      Exceeds
+       +1
+    </span>
+  </td>
+</tr>
+   × ComparisonTable (contract) > marks a low-confidence result as provisional 16ms
+     → Unable to find an element with the text: Match. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    Testing & Quality Assurance
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span>
+      L2
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+    >
+      ✅
+       
+      Match
+    </span>
+  </td>
+</tr>
+   × ComparisonTable (contract) > shows when an assessor set the level, and what the AI said 16ms
+     → Unable to find an element with the text: Set by assessor. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    Communication
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span>
+      L2
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+    >
+      ✅
+       
+      Match
+    </span>
+  </td>
+</tr>
+   × ComparisonTable (contract) > never shows an unmeasured or unreviewed skill as a gap 12ms
+     → Unable to find an element with the text: Not assessed. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    Security Engineering
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="text-muted-foreground"
+    >
+      —
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-neutral-500 bg-neutral-50"
+    >
+      —
+       
+      Not assessed
+    </span>
+  </td>
+</tr>
+   × ComparisonTable (contract) > counts every outcome in the summary 41ms
+     → Unable to find an accessible element with the role "list" and name "Summary"
+
+Here are the accessible roles:
+
+  table:
+
+  Name "":
+  <table
+    class="w-full text-sm"
+  />
+
+  --------------------------------------------------
+  rowgroup:
+
+  Name "":
+  <thead />
+
+  Name "":
+  <tbody />
+
+  --------------------------------------------------
+  row:
+
+  Name "Skill Required Candidate Result":
+  <tr
+    class="border-b bg-muted/50"
+  />
+
+  Name "React / Frontend Development Core L3 ⭐ Exceeds +1":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "Testing & Quality Assurance L2 ✅ Match":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "Communication L2 ✅ Match":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "TypeScript & Type Systems — —":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "Security Engineering — — Not assessed":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  --------------------------------------------------
+  columnheader:
+
+  Name "Skill":
+  <th
+    class="text-left px-4 py-2.5 font-medium"
+  />
+
+  Name "Required":
+  <th
+    class="text-center px-4 py-2.5 font-medium"
+  />
+
+  Name "Candidate":
+  <th
+    class="text-center px-4 py-2.5 font-medium"
+  />
+
+  Name "Result":
+  <th
+    class="text-center px-4 py-2.5 font-medium"
+  />
+
+  --------------------------------------------------
+  cell:
+
+  Name "React / Frontend Development Core":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "L3":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "⭐ Exceeds +1":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "Testing & Quality Assurance":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "L2":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "✅ Match":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "Communication":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "L2":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "✅ Match":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "TypeScript & Type Systems":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "—":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "—":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "Security Engineering":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "—":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "— Not assessed":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-3"
+    >
+      <div
+        class="overflow-x-auto rounded-lg border"
+      >
+        <table
+          class="w-full text-sm"
+        >
+          <thead>
+            <tr
+              class="border-b bg-muted/50"
+            >
+              <th
+                class="text-left px-4 py-2.5 font-medium"
+              >
+                Skill
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Required
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Candidate
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Result
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                React / Frontend Development Core
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span>
+                  L3
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+                >
+                  ⭐
+                   
+                  Exceeds
+                   +1
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                Testing & Quality Assurance
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span>
+                  L2
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+                >
+                  ✅
+                   
+                  Match
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                Communication
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span>
+                  L2
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+                >
+                  ✅
+                   
+                  Match
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                TypeScript & Type Systems
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="text-muted-foreground"
+                >
+                  —
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded"
+                >
+                  —
+                   
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                Security Engineering
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="text-muted-foreground"
+                >
+                  —
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-neutral-500 bg-neutral-50"
+                >
+                  —
+                   
+                  Not assessed
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div
+        class="flex items-center gap-4 text-xs text-muted-foreground"
+      >
+        <span>
+          ✅ Match: 
+          2
+           skill
+          s
+        </span>
+        <span>
+          ⭐ Exceeds: 
+          1
+           skill
+        </span>
+        <span
+          class="ml-auto"
+        >
+          ✏ = human override applied
+        </span>
+      </div>
+    </div>
+  </div>
+</body>
+   × ComparisonTable (contract) > explains an empty comparison instead of rendering an empty table 2ms
+     → Unable to find an element with the text: This vacancy has no required skills to compare against.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-3"
+    >
+      <div
+        class="overflow-x-auto rounded-lg border"
+      >
+        <table
+          class="w-full text-sm"
+        >
+          <thead>
+            <tr
+              class="border-b bg-muted/50"
+            >
+              <th
+                class="text-left px-4 py-2.5 font-medium"
+              >
+                Skill
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Required
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Candidate
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Result
+              </th>
+            </tr>
+          </thead>
+          <tbody />
+        </table>
+      </div>
+      <div
+        class="flex items-center gap-4 text-xs text-muted-foreground"
+      >
+        <span
+          class="ml-auto"
+        >
+          ✏ = human override applied
+        </span>
+      </div>
+    </div>
+  </div>
+</body>
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable (contract) > shows the required level on every row
+TestingLibraryElementError: Unable to find an element with the text: L2. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    React / Frontend Development Core
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span>
+      L3
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+    >
+      ⭐
+       
+      Exceeds
+       +1
+    </span>
+  </td>
+</tr>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:20:44
+     18| 
+     19|     for (const c of comparisons) {
+     20|       expect(within(rowFor(c.skill_label)).getByText(`L${c.expected_le…
+       |                                            ^
+     21|     }
+     22|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable (contract) > marks a low-confidence result as provisional
+TestingLibraryElementError: Unable to find an element with the text: Match. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    Testing & Quality Assurance
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span>
+      L2
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+    >
+      ✅
+       
+      Match
+    </span>
+  </td>
+</tr>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:28:16
+     26| 
+     27|     const row = within(rowFor("Testing & Quality Assurance"));
+     28|     expect(row.getByText("Match")).toBeInTheDocument();
+       |                ^
+     29|     expect(row.getByText("Provisional")).toBeInTheDocument();
+     30|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable (contract) > shows when an assessor set the level, and what the AI said
+TestingLibraryElementError: Unable to find an element with the text: Set by assessor. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    Communication
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span>
+      L2
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+    >
+      ✅
+       
+      Match
+    </span>
+  </td>
+</tr>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:36:16
+     34| 
+     35|     const row = within(rowFor("Communication"));
+     36|     expect(row.getByText("Set by assessor")).toBeInTheDocument();
+       |                ^
+     37|     expect(row.getByText("AI: not assessed")).toBeInTheDocument();
+     38|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable (contract) > never shows an unmeasured or unreviewed skill as a gap
+TestingLibraryElementError: Unable to find an element with the text: Not assessed. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<tr
+  class="border-b last:border-0"
+>
+  <td
+    class="px-4 py-2.5"
+  >
+    Security Engineering
+  </td>
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="text-muted-foreground"
+    >
+      —
+    </span>
+  </td>
+  <td
+    class="px-4 py-2.5 text-center"
+  >
+    <span
+      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-neutral-500 bg-neutral-50"
+    >
+      —
+       
+      Not assessed
+    </span>
+  </td>
+</tr>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:43:51
+     41|     render(<ComparisonTable comparisons={comparisons} />);
+     42| 
+     43|     expect(within(rowFor("Security Engineering")).getByText("Not asses…
+       |                                                   ^
+     44|     expect(within(rowFor("TypeScript & Type Systems")).getByText("Need…
+     45|     expect(screen.queryByText("Gap")).not.toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable (contract) > counts every outcome in the summary
+TestingLibraryElementError: Unable to find an accessible element with the role "list" and name "Summary"
+
+Here are the accessible roles:
+
+  table:
+
+  Name "":
+  <table
+    class="w-full text-sm"
+  />
+
+  --------------------------------------------------
+  rowgroup:
+
+  Name "":
+  <thead />
+
+  Name "":
+  <tbody />
+
+  --------------------------------------------------
+  row:
+
+  Name "Skill Required Candidate Result":
+  <tr
+    class="border-b bg-muted/50"
+  />
+
+  Name "React / Frontend Development Core L3 ⭐ Exceeds +1":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "Testing & Quality Assurance L2 ✅ Match":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "Communication L2 ✅ Match":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "TypeScript & Type Systems — —":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  Name "Security Engineering — — Not assessed":
+  <tr
+    class="border-b last:border-0"
+  />
+
+  --------------------------------------------------
+  columnheader:
+
+  Name "Skill":
+  <th
+    class="text-left px-4 py-2.5 font-medium"
+  />
+
+  Name "Required":
+  <th
+    class="text-center px-4 py-2.5 font-medium"
+  />
+
+  Name "Candidate":
+  <th
+    class="text-center px-4 py-2.5 font-medium"
+  />
+
+  Name "Result":
+  <th
+    class="text-center px-4 py-2.5 font-medium"
+  />
+
+  --------------------------------------------------
+  cell:
+
+  Name "React / Frontend Development Core":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "L3":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "⭐ Exceeds +1":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "Testing & Quality Assurance":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "L2":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "✅ Match":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "Communication":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "L2":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "✅ Match":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "TypeScript & Type Systems":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "—":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "—":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "Security Engineering":
+  <td
+    class="px-4 py-2.5"
+  />
+
+  Name "":
+  <td
+    class="px-4 py-2.5 text-center text-muted-foreground"
+  />
+
+  Name "—":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  Name "— Not assessed":
+  <td
+    class="px-4 py-2.5 text-center"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-3"
+    >
+      <div
+        class="overflow-x-auto rounded-lg border"
+      >
+        <table
+          class="w-full text-sm"
+        >
+          <thead>
+            <tr
+              class="border-b bg-muted/50"
+            >
+              <th
+                class="text-left px-4 py-2.5 font-medium"
+              >
+                Skill
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Required
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Candidate
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Result
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                React / Frontend Development Core
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span>
+                  L3
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+                >
+                  ⭐
+                   
+                  Exceeds
+                   +1
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                Testing & Quality Assurance
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span>
+                  L2
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+                >
+                  ✅
+                   
+                  Match
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                Communication
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span>
+                  L2
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-green-700 bg-green-50"
+                >
+                  ✅
+                   
+                  Match
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                TypeScript & Type Systems
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="text-muted-foreground"
+                >
+                  —
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded"
+                >
+                  —
+                   
+                </span>
+              </td>
+            </tr>
+            <tr
+              class="border-b last:border-0"
+            >
+              <td
+                class="px-4 py-2.5"
+              >
+                Security Engineering
+              </td>
+              <td
+                class="px-4 py-2.5 text-center text-muted-foreground"
+              />
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="text-muted-foreground"
+                >
+                  —
+                </span>
+              </td>
+              <td
+                class="px-4 py-2.5 text-center"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded text-neutral-500 bg-neutral-50"
+                >
+                  —
+                   
+                  Not assessed
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div
+        class="flex items-center gap-4 text-xs text-muted-foreground"
+      >
+        <span>
+          ✅ Match: 
+          2
+           skill
+          s
+        </span>
+        <span>
+          ⭐ Exceeds: 
+          1
+           skill
+        </span>
+        <span
+          class="ml-auto"
+        >
+          ✏ = human override applied
+        </span>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:51:35
+     49|     render(<ComparisonTable comparisons={comparisons} />);
+     50| 
+     51|     const summary = within(screen.getByRole("list", { name: "Summary" …
+       |                                   ^
+     52|     expect(summary.getByText("2 match")).toBeInTheDocument();
+     53|     expect(summary.getByText("1 exceeds")).toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable (contract) > explains an empty comparison instead of rendering an empty table
+TestingLibraryElementError: Unable to find an element with the text: This vacancy has no required skills to compare against.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-3"
+    >
+      <div
+        class="overflow-x-auto rounded-lg border"
+      >
+        <table
+          class="w-full text-sm"
+        >
+          <thead>
+            <tr
+              class="border-b bg-muted/50"
+            >
+              <th
+                class="text-left px-4 py-2.5 font-medium"
+              >
+                Skill
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Required
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Candidate
+              </th>
+              <th
+                class="text-center px-4 py-2.5 font-medium"
+              >
+                Result
+              </th>
+            </tr>
+          </thead>
+          <tbody />
+        </table>
+      </div>
+      <div
+        class="flex items-center gap-4 text-xs text-muted-foreground"
+      >
+        <span
+          class="ml-auto"
+        >
+          ✏ = human override applied
+        </span>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:62:19
+     60|     render(<ComparisonTable comparisons={[]} />);
+     61| 
+     62|     expect(screen.getByText("This vacancy has no required skills to co…
+       |                   ^
+     63|     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+     64|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  23:04:13
+   Duration  1.17s (transform 43ms, setup 101ms, collect 37ms, tests 160ms, environment 289ms, prepare 73ms)
+

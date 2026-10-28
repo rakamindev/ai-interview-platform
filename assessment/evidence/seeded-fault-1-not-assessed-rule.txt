@@ -1,0 +1,202 @@
+Seeded fault 1 of 3 (branch scratch/seeded-fault, off feat/candidate-assessment-revamp at 16e5e82)
+Fault commit : 2b67f0b  seeded fault: let not_yet skills be rated again
+Revert commit: c15c80d
+Change: removed `return not_assessed if @coverage.state == 'not_yet'` from Portfolios::SkillNormalizer#call (the F2 rule).
+Result: 13 of 144 RSpec examples fail. 9 of them fail inside skill.save! with RecordInvalid: the model's
+validation (an assessed skill needs a confidence, and not_yet has none) is a second layer behind the spec assertions.
+After revert: 144 examples, 0 failures.
+
+---- bundle exec rspec (with the fault) ----
+2026-10-23T16:37:35.188Z pid=3394 tid=8c6 INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+....................................................................................F.FF..FFFF...FF.F......F.FF.................................
+
+Failures:
+
+  1) Portfolios::Generator when the candidate never answered (AC1.2) does not call the model and marks every skill not assessed
+     Failure/Error: expect(portfolio.portfolio_skills.pluck(:assessment_status).uniq).to eq(['not_assessed'])
+
+       expected: ["not_assessed"]
+            got: ["needs_review"]
+
+       (compared using ==)
+     # ./spec/services/portfolios/generator_spec.rb:58:in `block (3 levels) in <main>'
+
+  2) Portfolios::Generator with a normal interview never rates a not_yet skill, whatever the model returns (AC1.1)
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:81:in `block (3 levels) in <main>'
+
+  3) Portfolios::Generator with a normal interview computes confidence from coverage and survives a capitalised model label (AC3, F5)
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:93:in `block (3 levels) in <main>'
+
+  4) Portfolios::Generator with a normal interview flags an invalid level instead of storing L1 (AC2.2)
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:123:in `block (3 levels) in <main>'
+
+  5) Portfolios::Generator with a normal interview ignores invented and duplicate skills, keeping the first occurrence (AC2.7)
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:134:in `block (3 levels) in <main>'
+
+  6) Portfolios::Generator with a normal interview stores discovered skills that exist in the coverage map
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:147:in `block (3 levels) in <main>'
+
+  7) Portfolios::Generator with a normal interview accepts a JSON string response
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:154:in `block (3 levels) in <main>'
+
+  8) Portfolios::Generator when a portfolio already exists updates skills in place and keeps the override (AC6.1)
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:189:in `block (3 levels) in <main>'
+
+  9) Portfolios::Generator when a portfolio already exists keeps the override when the skill becomes not assessed (AC6.2)
+     Failure/Error: skill.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+     # ./app/services/portfolios/generator.rb:214:in `each'
+     # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:210:in `save_skills'
+     # ./app/services/portfolios/generator.rb:33:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:199:in `block (3 levels) in <main>'
+
+  10) Portfolios::Generator when a portfolio already exists removes stale skills that are no longer in the coverage map, unless they carry an override
+      Failure/Error: skill.save!
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Ai confidence is not included in the list
+      # ./app/services/portfolios/generator.rb:222:in `block (2 levels) in save_skills'
+      # ./app/services/portfolios/generator.rb:214:in `each'
+      # ./app/services/portfolios/generator.rb:214:in `block in save_skills'
+      # ./app/services/portfolios/generator.rb:210:in `save_skills'
+      # ./app/services/portfolios/generator.rb:33:in `call'
+      # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+      # ./spec/services/portfolios/generator_spec.rb:227:in `block (3 levels) in <main>'
+
+  11) Portfolios::Generator when the session has no coverage map (ended before it started) lists the assessment skills as not assessed without calling the model
+      Failure/Error:
+        expect(portfolio.reload.portfolio_skills.map { |s| [s.skill_label, s.assessment_status] })
+          .to eq([['React / Frontend Development Core', 'not_assessed']])
+
+        expected: [["React / Frontend Development Core", "not_assessed"]]
+             got: [["React / Frontend Development Core", "needs_review"]]
+
+        (compared using ==)
+      # ./spec/services/portfolios/generator_spec.rb:273:in `block (3 levels) in <main>'
+
+  12) Portfolios::SkillNormalizer not assessed (AC1.1) ignores whatever the model says when coverage is not_yet
+      Failure/Error:
+        expect(result).to include(assessment_status: 'not_assessed', ai_level: nil, ai_confidence: nil,
+                                  evidence: [], competency_summary: '')
+
+        expected {:ai_confidence => nil, :ai_level => 1, :assessment_status => "assessed", :competency_summary => "Solid L3.",...se, :skill_id => "SK-ENG-001", :skill_label => "React / Frontend Development Core", :status_reason => nil} to include {:assessment_status => "not_assessed", :ai_level => nil, :evidence => [], :competency_summary => ""}
+        Diff:
+        @@ -1,5 +1,9 @@
+         :ai_confidence => nil,
+        -:ai_level => nil,
+        -:assessment_status => "not_assessed",
+        -:competency_summary => "",
+        -:evidence => [],
+        +:ai_level => 1,
+        +:assessment_status => "assessed",
+        +:competency_summary => "Solid L3.",
+        +:evidence => ["made up"],
+        +:is_discovered => false,
+        +:skill_id => "SK-ENG-001",
+        +:skill_label => "React / Frontend Development Core",
+        +:status_reason => nil,
+      # ./spec/services/portfolios/skill_normalizer_spec.rb:36:in `block (3 levels) in <main>'
+
+  13) Portfolios::SkillNormalizer not assessed (AC1.1) works without any model entry
+      Failure/Error: expect(normalize(nil, coverage(state: 'not_yet', probes: 0))[:assessment_status]).to eq('not_assessed')
+
+        expected: "not_assessed"
+             got: "needs_review"
+
+        (compared using ==)
+      # ./spec/services/portfolios/skill_normalizer_spec.rb:42:in `block (3 levels) in <main>'
+
+Finished in 1.77 seconds (files took 1.26 seconds to load)
+144 examples, 13 failures
+
+Failed examples:
+
+rspec ./spec/services/portfolios/generator_spec.rb:52 # Portfolios::Generator when the candidate never answered (AC1.2) does not call the model and marks every skill not assessed
+rspec ./spec/services/portfolios/generator_spec.rb:80 # Portfolios::Generator with a normal interview never rates a not_yet skill, whatever the model returns (AC1.1)
+rspec ./spec/services/portfolios/generator_spec.rb:89 # Portfolios::Generator with a normal interview computes confidence from coverage and survives a capitalised model label (AC3, F5)
+rspec ./spec/services/portfolios/generator_spec.rb:119 # Portfolios::Generator with a normal interview flags an invalid level instead of storing L1 (AC2.2)
+rspec ./spec/services/portfolios/generator_spec.rb:129 # Portfolios::Generator with a normal interview ignores invented and duplicate skills, keeping the first occurrence (AC2.7)
+rspec ./spec/services/portfolios/generator_spec.rb:142 # Portfolios::Generator with a normal interview stores discovered skills that exist in the coverage map
+rspec ./spec/services/portfolios/generator_spec.rb:153 # Portfolios::Generator with a normal interview accepts a JSON string response
+rspec ./spec/services/portfolios/generator_spec.rb:188 # Portfolios::Generator when a portfolio already exists updates skills in place and keeps the override (AC6.1)
+rspec ./spec/services/portfolios/generator_spec.rb:195 # Portfolios::Generator when a portfolio already exists keeps the override when the skill becomes not assessed (AC6.2)
+rspec ./spec/services/portfolios/generator_spec.rb:222 # Portfolios::Generator when a portfolio already exists removes stale skills that are no longer in the coverage map, unless they carry an override
+rspec ./spec/services/portfolios/generator_spec.rb:268 # Portfolios::Generator when the session has no coverage map (ended before it started) lists the assessment skills as not assessed without calling the model
+rspec ./spec/services/portfolios/skill_normalizer_spec.rb:33 # Portfolios::SkillNormalizer not assessed (AC1.1) ignores whatever the model says when coverage is not_yet
+rspec ./spec/services/portfolios/skill_normalizer_spec.rb:41 # Portfolios::SkillNormalizer not assessed (AC1.1) works without any model entry
+

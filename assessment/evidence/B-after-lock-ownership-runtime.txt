@@ -1,0 +1,13 @@
+Runtime check after the lock ownership fix, 2026-10-24, local dev, fake data, real Gemini.
+Sidekiq and Rails restarted first (setup note S8).
+
+1. Two POST /portfolios/2/fitgap in a row (no report yet):
+   1 -> 202 "Fit/gap report generation queued"
+   2 -> 202 "Fit/gap report is already being generated"
+   Redis value of fitgap:generating:2:1 while running: a UUID (the job's token)
+   GET -> 200; worker runs: 1; lock after the run: gone (released by its owner)
+
+2. The bug this fixes: an override refresh while another run holds the lock.
+   SET fitgap:generating:1:1 probe-token   (stands in for a run in progress)
+   POST /portfolio_skills/8/override -> 200; the refresh job ran once (no token, lock was taken)
+   Lock after the refresh: probe-token      (before the fix, the refresh's ensure deleted it)

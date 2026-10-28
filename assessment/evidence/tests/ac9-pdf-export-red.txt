@@ -1,0 +1,29 @@
+2026-10-23T15:43:47.044Z pid=95286 tid=1x9e INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+FFF
+
+Failures:
+
+  1) GET /api/v1/portfolios/:id/export?format=pdf exports a corrected portfolio with non-Latin text as a PDF
+     Failure/Error: expect(response).to have_http_status(:ok)
+       expected the response to have status code :ok (200) but it was :internal_server_error (500)
+     # ./spec/requests/portfolio_pdf_export_spec.rb:35:in `block (2 levels) in <top (required)>'
+
+  2) GET /api/v1/portfolios/:id/export?format=pdf exports the fit/gap section too
+     Failure/Error: expect(response).to have_http_status(:ok)
+       expected the response to have status code :ok (200) but it was :internal_server_error (500)
+     # ./spec/requests/portfolio_pdf_export_spec.rb:43:in `block (2 levels) in <top (required)>'
+
+  3) GET /api/v1/portfolios/:id/export?format=pdf embeds a Unicode font instead of the Windows-1252 built-ins
+     Failure/Error: expect(response.body).to include('NotoSans')
+       expected "{\"errors\":[{\"status\":500,\"message\":\"Your document includes text that's not compatible with th... set.\\nIf you need full UTF-8 support, use external fonts instead of PDF's built-in fonts.\\n\"}]}" to include "NotoSans"
+     # ./spec/requests/portfolio_pdf_export_spec.rb:50:in `block (2 levels) in <top (required)>'
+
+Finished in 0.22309 seconds (files took 0.82736 seconds to load)
+3 examples, 3 failures
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_pdf_export_spec.rb:32 # GET /api/v1/portfolios/:id/export?format=pdf exports a corrected portfolio with non-Latin text as a PDF
+rspec ./spec/requests/portfolio_pdf_export_spec.rb:40 # GET /api/v1/portfolios/:id/export?format=pdf exports the fit/gap section too
+rspec ./spec/requests/portfolio_pdf_export_spec.rb:47 # GET /api/v1/portfolios/:id/export?format=pdf embeds a Unicode font instead of the Windows-1252 built-ins
+

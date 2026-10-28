@@ -11,7 +11,8 @@ module Api
       # GET /api/v1/sessions/:id/portfolio
       def show
         if @portfolio.nil? || @portfolio.generating?
-          return render json: { status: "generating" }, status: :accepted
+          return render json: { status: "generating", portfolio: @portfolio && portfolio_json(@portfolio) },
+                        status: :accepted
         end
 
         if @portfolio.failed?
@@ -32,11 +33,17 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        if portfolio.in_progress? && !portfolio.stale?
+          return json_error("Portfolio is already being generated", :conflict)
         end
 
-        portfolio.update!(generation_status: "pending", generation_error: nil)
+        unless portfolio.failed? || portfolio.stale?
+          return json_error("Portfolio can only be regenerated when generation failed or stalled", :unprocessable_entity)
+        end
+
+        # The stale clock starts when the job is queued, not when the session ended.
+        portfolio.update!(generation_status: "pending", generation_error: nil, generation_attempts: 0,
+                          generation_started_at: Time.current)
         PortfolioGeneratorWorker.perform_async(@session.id)
 
         json_response(
@@ -79,7 +86,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.in_current_tenant.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -91,17 +98,15 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-
-        render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
+        # The current report stays readable (flagged generating) until the new one replaces it.
+        enqueue_fitgap(portfolio, vacancy, "Fit/gap report regeneration queued")
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.in_current_tenant.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -119,18 +124,21 @@ module Api
           return json_response(report: fit_gap_json(existing))
         end
 
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
-        render json: { status: "generating", message: "Fit/gap report generation queued" }, status: :accepted
+        enqueue_fitgap(portfolio, vacancy, "Fit/gap report generation queued")
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.in_current_tenant.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
+          if FitGap::GenerationLock.held?(portfolio.id, params[:vacancy_id])
+            return render json: { status: "generating" }, status: :accepted
+          end
+
           return json_error("Fit/gap report not found", :not_found)
         end
 
@@ -140,6 +148,22 @@ module Api
       end
 
       private
+
+      def enqueue_fitgap(portfolio, vacancy, message)
+        token = FitGap::GenerationLock.acquire(portfolio.id, vacancy.id)
+        unless token
+          return render json: { status: "generating", message: "Fit/gap report is already being generated" },
+                        status: :accepted
+        end
+
+        begin
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id, token)
+        rescue StandardError
+          FitGap::GenerationLock.release(portfolio.id, vacancy.id, token)
+          raise
+        end
+        render json: { status: "generating", message: message }, status: :accepted
+      end
 
       def set_session
         @session = Session.find(params[:id])
@@ -153,7 +177,7 @@ module Api
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.in_current_tenant.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
@@ -167,6 +191,8 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
+          generation_attempts: portfolio.generation_attempts,
+          stale:             portfolio.stale?,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
@@ -180,6 +206,8 @@ module Api
           is_discovered:     skill.is_discovered,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
+          assessment_status: skill.assessment_status,
+          status_reason:     skill.status_reason,
           evidence:          skill.evidence_quotes,
           competency_summary: skill.competency_summary
         }
@@ -198,15 +226,7 @@ module Api
       end
 
       def fit_gap_json(report)
-        {
-          id:                report.id,
-          portfolio_id:      report.portfolio_id,
-          vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
-          culture_narrative: report.culture_narrative,
-          overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
-        }
+        FitGap::ReportSerializer.call(report, generating: FitGap::GenerationLock.held?(report.portfolio_id, report.vacancy_id))
       end
 
       def build_export_json(portfolio, vacancy_id = nil)

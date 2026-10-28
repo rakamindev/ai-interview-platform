@@ -9,12 +9,17 @@ module Exports
   class PdfGenerator
     LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
+    STATUS_LABELS = { 'not_assessed' => 'Not assessed', 'needs_review' => 'Needs review' }.freeze
     RESULT_LABELS = {
       'match'        => 'Match',
       'gap'          => 'Gap',
       'exceed'       => 'Exceeds',
-      'not_assessed' => 'Not Assessed'
+      'not_assessed' => 'Not Assessed',
+      'needs_review' => 'Needs Review'
     }.freeze
+    # Prawn's built-in fonts only cover Windows-1252, which crashed on the override arrow and on
+    # non-Latin names (F10). Noto Sans covers Latin, Greek and Cyrillic; see OFL.txt for its licence.
+    FONT_DIR = Rails.root.join('app/assets/fonts')
 
     def initialize(portfolio:, vacancy: nil)
       @portfolio   = portfolio
@@ -24,9 +29,31 @@ module Exports
       @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
     end
 
+    # "Level: L4 (set by assessor; AI: L3)  |  Confidence: High". Words, not an arrow: Noto Sans has
+    # no glyph for one.
+    def self.level_text(skill)
+      override = skill.assessor_override
+      ai_text  = LEVEL_LABELS[skill.ai_level] || STATUS_LABELS[skill.assessment_status]
+
+      text = "Level: #{override ? LEVEL_LABELS[override.override_level] : ai_text}"
+      text += " (set by assessor; AI: #{ai_text})" if override
+      text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence]}" if skill.ai_confidence
+      text
+    end
+
+    # "Match (provisional)", "Match (set by assessor)", "Needs Review".
+    def self.result_text(comparison)
+      label = RESULT_LABELS[comparison['result']] || comparison['result']
+      return "#{label} (set by assessor)" if comparison['overridden']
+      return "#{label} (provisional)" if comparison['provisional']
+
+      label
+    end
+
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        use_unicode_font(pdf)
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -35,6 +62,13 @@ module Exports
     end
 
     private
+
+    def use_unicode_font(pdf)
+      pdf.font_families.update(
+        'NotoSans' => { normal: FONT_DIR.join('NotoSans-Regular.ttf').to_s, bold: FONT_DIR.join('NotoSans-Bold.ttf').to_s }
+      )
+      pdf.font('NotoSans')
+    end
 
     def render_header(pdf)
       pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
@@ -61,7 +95,7 @@ module Exports
       discovered = skills.select(&:is_discovered)
 
       if configured.any?
-        pdf.font_size(13) { pdf.text "Assessed Skills", style: :bold }
+        pdf.font_size(13) { pdf.text "Configured Skills", style: :bold }
         pdf.move_down 6
         configured.each { |skill| render_skill_card(pdf, skill) }
       end
@@ -76,15 +110,10 @@ module Exports
 
     def render_skill_card(pdf, skill)
       override = skill.assessor_override
-      effective_level = override ? override.override_level : skill.ai_level
 
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
-
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+        pdf.text self.class.level_text(skill)
       end
 
       pdf.move_down 4
@@ -119,7 +148,13 @@ module Exports
       pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
       pdf.move_down 8
 
-      comparisons = @fit_gap.skill_comparisons
+      report      = FitGap::ReportSerializer.call(@fit_gap)
+      comparisons = report[:skill_comparisons]
+
+      if report[:stale] || report[:outdated]
+        pdf.font_size(9) { pdf.text 'Generated before the latest rule change or rating override; regenerate for current results.', color: 'B45309' }
+        pdf.move_down 6
+      end
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
@@ -127,7 +162,7 @@ module Exports
           c['skill_label'],
           c['expected_level'] ? "L#{c['expected_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
+          self.class.result_text(c),
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
         ]
       end
@@ -139,8 +174,19 @@ module Exports
         t.cells.size = 10
       end
 
+      pdf.move_down 6
+      pdf.font_size(9) do
+        pdf.text 'Provisional: based on one interview question. Set by assessor: rating changed by a human reviewer.',
+                 color: '6B7280'
+      end
+
+      if @fit_gap.culture_narrative.present? || @fit_gap.overall_narrative.present?
+        pdf.move_down 10
+        pdf.font_size(9) { pdf.text 'The text below is an AI-written draft. Check it before sharing.', color: '6B7280' }
+      end
+
       if @fit_gap.culture_narrative.present?
-        pdf.move_down 12
+        pdf.move_down 8
         pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
         pdf.move_down 4
         pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }

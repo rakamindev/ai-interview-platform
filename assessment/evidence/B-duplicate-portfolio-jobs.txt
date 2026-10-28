@@ -1,0 +1,15 @@
+Runtime evidence, 2026-10-23, local dev, fake data (session 1 "Rina Pratama (fake)").
+
+1. Ended session 1 via POST /api/v1/sessions/1/end_session with the sample config
+   (GEMINI_PRO_MODEL=gemini-2.0-pro-001). Gemini returned 404 for that model id.
+2. GET /api/v1/sessions/1/portfolio -> generation_status "failed", generation_error "API returned 404".
+   UI shows only "Portfolio generation failed." (no reason), and still offers PDF/JSON export.
+3. Sidekiq retry set at that moment (job still alive, scheduled to retry):
+     PortfolioGeneratorWorker args=[1] retry_count=1
+4. Clicked "Retry" in the UI (POST /sessions/1/portfolio/regenerate is allowed because status is "failed").
+   Sidekiq retry set afterwards:
+     PortfolioGeneratorWorker args=[1] retry_count=0
+     PortfolioGeneratorWorker args=[1] retry_count=1
+   => two live jobs for the same session. Each re-sends the full transcript to Gemini Pro
+      (180 s timeout, plus 3 Faraday retries per call) and both run destroy_all + create! on the
+      same portfolio_skills.

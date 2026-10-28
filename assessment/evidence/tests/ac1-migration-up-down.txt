@@ -1,0 +1,17 @@
+Migration 20261024000000_add_assessment_status_to_portfolio_skills, run on the local dev DB
+(10 existing portfolio_skills rows from the Task B scenarios), 2026-10-24.
+
+db:migrate                 -> migrated; existing rows: assessed|10 (default applied, constraints satisfied)
+db:rollback                -> reverted cleanly (no unrated rows)
+db:migrate                 -> migrated again
+
+Refusal path:
+  inserted 1 row with assessment_status=not_assessed, ai_level NULL, ai_confidence NULL
+  db:rollback -> ActiveRecord::IrreversibleMigration:
+    "1 portfolio skill(s) have no level or confidence. Regenerate or delete them before rolling
+     back; this migration will not invent ratings."
+  schema still migrated: true; probe row deleted afterwards.
+
+DB invariant:
+  insert not_assessed with ai_level=2 -> ActiveRecord::StatementInvalid
+  (chk_portfolio_skills_level_iff_assessed)

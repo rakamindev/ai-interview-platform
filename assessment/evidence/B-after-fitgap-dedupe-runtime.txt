@@ -1,0 +1,16 @@
+Runtime check after AC7 (fit/gap lock), 2026-10-26, local dev, fake data, real Gemini.
+Portfolio 2 ("Budi Santoso (fake)") vs vacancy 1, no existing report.
+
+POST /portfolios/2/fitgap x3 in a row:
+  1 -> 202 "Fit/gap report generation queued"
+  2 -> 202 "Fit/gap report is already being generated"
+  3 -> 202 "Fit/gap report is already being generated"
+GET /portfolios/2/fitgap/1 -> 202 while running, 200 after ~12 s
+Worker runs ("Fit/gap report generated: portfolio=2"): 1        (before: 2 per page view, see B-fitgap-duplicate-jobs-and-seam.txt)
+Lock held after the run: false
+Report flags: stale=false outdated=false generating=false; every row not_assessed, none provisional.
+
+Note: the first attempt of this check failed because the Sidekiq process had been started before the
+engine change and was still running the old code (NoMethodError: undefined method `-' for nil, the
+exact crash old code would hit on unrated skills). Sidekiq does not reload code in this setup;
+restarting it fixed the run. Logged as setup note S8.

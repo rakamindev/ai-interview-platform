@@ -1,0 +1,116 @@
+
+An error occurred while loading ./spec/services/fit_gap/report_serializer_spec.rb.
+Failure/Error:
+  RSpec.describe FitGap::ReportSerializer do
+    let(:contract) { JSON.parse(Rails.root.join('../contracts/fit_gap_report.example.json').read) }
+    let(:org) { create(:organization) }
+    let(:portfolio) { create(:portfolio, organization: org) }
+    let(:vacancy) { create(:vacancy, organization: org) }
+  
+    def serialize(report)
+      JSON.parse(described_class.call(report).to_json)
+    end
+  
+
+NameError:
+  uninitialized constant FitGap::ReportSerializer
+# ./spec/services/fit_gap/report_serializer_spec.rb:8:in `<main>'
+
+
+Finished in 0.00004 seconds (files took 1.19 seconds to load)
+0 examples, 0 failures, 1 error occurred outside of examples
+
+....FFFF.
+
+Failures:
+
+  1) FitGap::Engine marks a low-confidence comparison as provisional (AC4.2)
+     Failure/Error: expect(row(run, 'Testing')).to include('result' => 'match', 'confidence' => 'low', 'provisional' => true)
+
+       expected {"candidate_level" => 2, "confidence" => "low", "delta" => 0, "expected_level" => 2, "result" => "match", "skill_id" => "SK-ENG-006", "skill_label" => "Testing"} to include {"provisional" => true}
+       Diff:
+
+
+       @@ -1,3 +1,7 @@
+       +"candidate_level" => 2,
+        "confidence" => "low",
+       -"provisional" => true,
+       +"delta" => 0,
+       +"expected_level" => 2,
+        "result" => "match",
+       +"skill_id" => "SK-ENG-006",
+       +"skill_label" => "Testing",
+     # ./spec/services/fit_gap/engine_spec.rb:61:in `block (2 levels) in <top (required)>'
+
+  2) FitGap::Engine flags overrides and keeps the AI level next to the effective one (AC4.3)
+     Failure/Error:
+       expect(row(run, 'React')).to include('candidate_level' => 2, 'ai_level' => 3, 'overridden' => true,
+                                            'result' => 'match', 'provisional' => false)
+
+       expected {"candidate_level" => 2, "confidence" => "high", "delta" => 0, "expected_level" => 2, "result" => "match", "skill_id" => "SK-ENG-001", "skill_label" => "React"} to include {"ai_level" => 3, "overridden" => true, "provisional" => false}
+       Diff:
+
+
+       @@ -1,5 +1,7 @@
+       -"ai_level" => 3,
+        "candidate_level" => 2,
+       -"overridden" => true,
+       -"provisional" => false,
+       +"confidence" => "high",
+       +"delta" => 0,
+       +"expected_level" => 2,
+        "result" => "match",
+       +"skill_id" => "SK-ENG-001",
+       +"skill_label" => "React",
+     # ./spec/services/fit_gap/engine_spec.rb:69:in `block (2 levels) in <top (required)>'
+
+  3) FitGap::Engine records the rules version it was generated with
+     Failure/Error: expect(run.rules_version).to eq(FitGap::Engine::RULES_VERSION)
+
+     NoMethodError:
+       undefined method `rules_version' for an instance of FitGapReport
+     # ./spec/services/fit_gap/engine_spec.rb:74:in `block (2 levels) in <top (required)>'
+
+  4) FitGap::Engine builds the narrative from competency summaries, as PRD-02 specifies (AC4.6)
+     Failure/Error: expect(client.prompts.first).to include('React (L3, high confidence): Consistent L3 behaviour across three probes.')
+
+       expected "You are writing a fit/gap analysis narrative for a candidate evaluation.\n\nROLE: Frontend Engineer ...n\nOUTPUT (JSON only):\n{\n  \"culture_narrative\": \"...\",\n  \"overall_narrative\": \"...\"\n}\n" to include "React (L3, high confidence): Consistent L3 behaviour across three probes."
+       Diff:
+       @@ -1 +1,24 @@
+       -React (L3, high confidence): Consistent L3 behaviour across three probes.
+       +You are writing a fit/gap analysis narrative for a candidate evaluation.
+       +
+       +ROLE: Frontend Engineer Intern (fake)
+       +
+       +
+       +
+       +SKILL COMPARISON RESULTS:
+       +- Matches (0): 
+       +- Gaps (0): 
+       +- Exceeds (1): React: candidate L3 vs expected L2 (+1)
+       +- Not assessed (1): Communication
+       +- Needs review (1): TypeScript
+       +
+       +Skills under Not assessed or Needs review were not measured in this interview: do not describe them as strengths or weaknesses, only as open questions for a follow-up conversation.
+       +
+       +Write two short narrative paragraphs:
+       +1. culture_narrative: 2-3 sentences on culture/competency fit based on the comparison patterns.
+       +2. overall_narrative: 2-3 sentence overall hiring recommendation summary.
+       +
+       +OUTPUT (JSON only):
+       +{
+       +  "culture_narrative": "...",
+       +  "overall_narrative": "..."
+       +}
+     # ./spec/services/fit_gap/engine_spec.rb:81:in `block (2 levels) in <top (required)>'
+
+Finished in 0.26898 seconds (files took 0.86051 seconds to load)
+9 examples, 4 failures
+
+Failed examples:
+
+rspec ./spec/services/fit_gap/engine_spec.rb:56 # FitGap::Engine marks a low-confidence comparison as provisional (AC4.2)
+rspec ./spec/services/fit_gap/engine_spec.rb:65 # FitGap::Engine flags overrides and keeps the AI level next to the effective one (AC4.3)
+rspec ./spec/services/fit_gap/engine_spec.rb:73 # FitGap::Engine records the rules version it was generated with
+rspec ./spec/services/fit_gap/engine_spec.rb:77 # FitGap::Engine builds the narrative from competency summaries, as PRD-02 specifies (AC4.6)
+

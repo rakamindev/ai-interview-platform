@@ -5,6 +5,10 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
+    # The model answered, but not with a JSON object. Raised before anything is written, so the
+    # job can be retried safely.
+    class UnreadableOutput < StandardError; end
+
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
@@ -20,23 +24,40 @@ module Portfolios
         generation_status: 'pending'
       )
 
-      portfolio.update!(generation_status: 'generating')
+      portfolio.update!(generation_status: 'generating', generation_started_at: Time.current,
+                        generation_attempts: portfolio.generation_attempts + 1)
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      coverage = expected_coverage
+      output   = model_needed?(coverage) ? fetch_model_output : {}
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      save_skills(portfolio, coverage, output)
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
+      # Stays 'generating' between Sidekiq retries; the worker marks it failed when they run out.
+      portfolio&.update!(generation_error: failure_reason(e))
       Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
       raise
     end
 
     private
+
+    # Shown to assessors, so it says what happened without exposing raw error text.
+    def failure_reason(error)
+      case error
+      when UnreadableOutput then error.message
+      when Gemini::HttpClient::TimeoutError then 'The AI model did not respond in time.'
+      when Gemini::HttpClient::RateLimitError then 'The AI model is rate limited (HTTP 429).'
+      when Gemini::HttpClient::ApiError
+        case error.status
+        when 404 then 'The AI model is not available (HTTP 404). Check the configured model name.'
+        when 500..599 then "The AI model is overloaded (HTTP #{error.status})."
+        else "The AI model returned an error#{" (HTTP #{error.status})" if error.status}."
+        end
+      else "Unexpected error (#{error.class.name})."
+      end
+    end
 
     def build_prompt
       assessment       = @session.assessment
@@ -147,35 +168,105 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+    # The skills a portfolio must list are the ones the interview tracked, not whatever the model
+    # chose to return. Falls back to the assessment's skills (all never discussed) when the session
+    # ended before coverage tracking started.
+    def expected_coverage
+      maps = @session.coverage_maps.order(:id).to_a
+      return maps if maps.any?
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      @session.assessment.assessment_skills.order(:display_order).map do |skill|
+        CoverageMap.new(skill_id: skill.skill_id, skill_label: skill.skill_label, is_discovered: false,
+                        state: 'not_yet', probe_count: 0)
+      end
+    end
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+    # Only spend a model call when there is something to rate.
+    def model_needed?(coverage)
+      candidate_spoke? && coverage.any? { |row| row.state != 'not_yet' }
+    end
+
+    def candidate_spoke?
+      @candidate_spoke ||= @session.transcript_turns.where(speaker: 'candidate').exists?
+    end
+
+    def fetch_model_output
+      raw  = @gemini_client.generate_content(build_prompt, temperature: 0.2)
+      data = raw.is_a?(String) ? JSON.parse(raw) : raw
+      raise UnreadableOutput, 'The AI returned a response that is not a JSON object.' unless data.is_a?(Hash)
+
+      data
+    rescue JSON::ParserError
+      raise UnreadableOutput, 'The AI returned a response that is not valid JSON.'
+    end
+
+    # Writes every skill in one transaction, updating rows in place so assessor overrides survive.
+    # The row lock serialises two jobs generating the same portfolio. requires_new makes this a
+    # savepoint, so these writes are undone on failure even if a caller has opened a transaction
+    # and rescues the error (a joined transaction would leave them to the caller's outcome).
+    def save_skills(portfolio, coverage, output)
+      rows = candidate_spoke? ? coverage : coverage.map { |row| not_discussed(row) }
+
+      ActiveRecord::Base.transaction(requires_new: true) do
+        portfolio.lock!
+        existing = portfolio.portfolio_skills.includes(:assessor_override).to_a
+
+        match_entries(rows, output).each do |row, entry|
+          attrs = SkillNormalizer.call(coverage: row, entry: entry)
+          skill = existing.find { |s| same_skill?(s, attrs) }
+          existing.delete(skill)
+          # Not portfolio.portfolio_skills.build: a built record stays in the association, and the
+          # failure path's portfolio.update! would autosave it outside this transaction.
+          skill ||= PortfolioSkill.new(portfolio_id: portfolio.id)
+          skill.assign_attributes(attrs)
+          skill.save!
+        end
+
+        # Skills no longer in the coverage map go away, unless an assessor has reviewed them.
+        existing.reject(&:assessor_override).each(&:destroy!)
+
+        portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      end
+    end
+
+    def not_discussed(row)
+      CoverageMap.new(skill_id: row.skill_id, skill_label: row.skill_label, is_discovered: row.is_discovered,
+                      state: 'not_yet', probe_count: 0)
+    end
+
+    # Pairs each coverage row with at most one model entry: by skill_id (any case), then by label.
+    # Entries that match nothing, or repeat a skill, are ignored. Only the count is logged, never
+    # their content, because it is about a candidate.
+    def match_entries(rows, output)
+      pools = { false => model_entries(output, 'configured_skills'), true => model_entries(output, 'discovered_skills') }
+      used  = []
+
+      pairs = rows.map do |row|
+        pool  = pools[row.is_discovered].reject { |e| used.any? { |u| u.equal?(e) } }
+        entry = pool.find { |e| same_text?(e['skill_id'], row.skill_id) } ||
+                pool.find { |e| same_text?(e['skill_label'], row.skill_label) }
+        used << entry if entry
+        [row, entry]
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      ignored = pools.values.sum(&:size) - used.size
+      Rails.logger.info("[N10] Ignored #{ignored} unmatched model skill entries for session #{@session.id}") if ignored.positive?
+      pairs
+    end
+
+    def model_entries(output, key)
+      list = output[key]
+      list.is_a?(Array) ? list.grep(Hash) : []
+    end
+
+    def same_skill?(skill, attrs)
+      return false unless skill.is_discovered == attrs[:is_discovered]
+
+      attrs[:skill_id].present? ? same_text?(skill.skill_id, attrs[:skill_id]) : same_text?(skill.skill_label, attrs[:skill_label])
+    end
+
+    def same_text?(a, b)
+      a.is_a?(String) && b.is_a?(String) && !a.strip.empty? && a.strip.casecmp?(b.strip)
     end
   end
 end

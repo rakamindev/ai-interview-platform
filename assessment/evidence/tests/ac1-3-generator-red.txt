@@ -1,0 +1,260 @@
+
+An error occurred while loading ./spec/services/coverage/confidence_spec.rb.
+Failure/Error:
+  RSpec.describe Coverage::Confidence do
+    [
+      # state,       probes, expected
+      ['covered',    3,      'high'],
+      ['covered',    7,      'high'],
+      ['covered',    2,      'medium'],  # overlap: covered but only 2 probes
+      ['partial',    2,      'medium'],
+      ['partial',    5,      'medium'],
+      ['initiated',  1,      'low'],
+      ['initiated',  4,      'low'],     # overlap: many probes but still only initiated
+
+NameError:
+  uninitialized constant Coverage::Confidence
+# ./spec/services/coverage/confidence_spec.rb:7:in `<top (required)>'
+
+An error occurred while loading ./spec/services/portfolios/skill_normalizer_spec.rb.
+Failure/Error:
+  RSpec.describe Portfolios::SkillNormalizer do
+    def coverage(state: 'covered', probes: 3, skill_id: 'SK-ENG-001', label: 'React / Frontend Development Core',
+                 discovered: false)
+      build(:coverage_map, state: state, probe_count: probes, skill_id: skill_id, skill_label: label,
+                           is_discovered: discovered)
+    end
+  
+    def entry(overrides = {})
+      { 'skill_id' => 'SK-ENG-001', 'skill_label' => 'React', 'level' => 3, 'confidence' => 'high',
+        'evidence' => ['I profile before I memoize.'], 'competency_summary' => 'Solid L3.' }.merge(overrides)
+
+NameError:
+  uninitialized constant Portfolios::SkillNormalizer
+# ./spec/services/portfolios/skill_normalizer_spec.rb:7:in `<main>'
+
+
+Finished in 0.00005 seconds (files took 1.18 seconds to load)
+0 examples, 0 failures, 2 errors occurred outside of examples
+
+FFFFFFFFF.FFFFFFFFFFFFF
+
+Failures:
+
+  1) Portfolios::Generator when the candidate never answered (AC1.2) does not call the model and marks every skill not assessed
+     Failure/Error: expect(client.prompts).to be_empty
+       expected `["You are evaluating a completed skills assessment interview to produce a structured skill portfolio....vidence\": [\"quote 1\"],\n      \"competency_summary\": \"2-3 sentence summary\"\n    }\n  ]\n}\n"].empty?` to be truthy, got false
+     # ./spec/services/portfolios/generator_spec.rb:56:in `block (3 levels) in <top (required)>'
+
+  2) Portfolios::Generator when the candidate spoke but no skill was discussed does not call the model
+     Failure/Error: expect(client.prompts).to be_empty
+       expected `["You are evaluating a completed skills assessment interview to produce a structured skill portfolio....vidence\": [\"quote 1\"],\n      \"competency_summary\": \"2-3 sentence summary\"\n    }\n  ]\n}\n"].empty?` to be truthy, got false
+     # ./spec/services/portfolios/generator_spec.rb:73:in `block (3 levels) in <top (required)>'
+
+  3) Portfolios::Generator with a normal interview never rates a not_yet skill, whatever the model returns (AC1.1)
+     Failure/Error:
+       expect(skills['Communication']).to have_attributes(assessment_status: 'not_assessed', ai_level: nil,
+                                                          ai_confidence: nil, competency_summary: '')
+
+       expected #<PortfolioSkill id: 102, portfolio_id: 102, skill_id: "SK-SOFT-001", skill_label: "Communication", i...ai_confidence: "high", evidence: ["A real quote."], competency_summary: "No evidence was gathered."> to respond to :assessment_status with 0 arguments
+     # ./spec/services/portfolios/generator_spec.rb:83:in `block (3 levels) in <top (required)>'
+
+  4) Portfolios::Generator with a normal interview computes confidence from coverage and survives a capitalised model label (AC3, F5)
+     Failure/Error:
+       portfolio.portfolio_skills.create!(
+         skill_id:           skill_data['skill_id'],
+         skill_label:        skill_data['skill_label'],
+         is_discovered:      false,
+         ai_level:           skill_data['level'].to_i.clamp(1, 5),
+         ai_confidence:      skill_data['confidence'],
+         evidence:           Array(skill_data['evidence']).first(3),
+         competency_summary: skill_data['competency_summary']
+       )
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Ai confidence is not included in the list
+     # ./app/services/portfolios/generator.rb:157:in `block in save_skills'
+     # ./app/services/portfolios/generator.rb:156:in `each'
+     # ./app/services/portfolios/generator.rb:156:in `save_skills'
+     # ./app/services/portfolios/generator.rb:28:in `call'
+     # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+     # ./spec/services/portfolios/generator_spec.rb:93:in `block (3 levels) in <top (required)>'
+
+  5) Portfolios::Generator with a normal interview matches model entries by skill_id in any case, then by label (AC2.5)
+     Failure/Error: expect(skills['React / Frontend Development Core'].ai_level).to eq(4)
+
+     NoMethodError:
+       undefined method `ai_level' for nil
+     # ./spec/services/portfolios/generator_spec.rb:107:in `block (3 levels) in <top (required)>'
+
+  6) Portfolios::Generator with a normal interview flags a discussed skill the model skipped as needs_review (AC2.6)
+     Failure/Error: expect(skills['TypeScript & Type Systems']).to have_attributes(assessment_status: 'needs_review', ai_level: nil)
+       expected nil to respond to :assessment_status, :ai_level with 0 arguments
+     # ./spec/services/portfolios/generator_spec.rb:116:in `block (3 levels) in <top (required)>'
+
+  7) Portfolios::Generator with a normal interview flags an invalid level instead of storing L1 (AC2.2)
+     Failure/Error:
+       expect(skills['React / Frontend Development Core']).to have_attributes(assessment_status: 'needs_review',
+                                                                              ai_level: nil)
+
+       expected #<PortfolioSkill id: 107, portfolio_id: 106, skill_id: "SK-ENG-001", skill_label: "React / Frontend D...se, ai_level: 1, ai_confidence: "high", evidence: ["A real quote."], competency_summary: "Summary."> to respond to :assessment_status with 0 arguments
+     # ./spec/services/portfolios/generator_spec.rb:125:in `block (3 levels) in <top (required)>'
+
+  8) Portfolios::Generator with a normal interview ignores invented and duplicate skills, keeping the first occurrence (AC2.7)
+     Failure/Error:
+       expect(skills.keys).to contain_exactly('React / Frontend Development Core', 'TypeScript & Type Systems',
+                                              'Communication')
+
+       expected collection contained:  ["Communication", "React / Frontend Development Core", "TypeScript & Type Systems"]
+       actual collection contained:    ["Communication", "Kubernetes", "React / Frontend Development Core", "TypeScript & Type Systems"]
+       the extra elements were:        ["Kubernetes"]
+     # ./spec/services/portfolios/generator_spec.rb:137:in `block (3 levels) in <top (required)>'
+
+  9) Portfolios::Generator with a normal interview stores discovered skills that exist in the coverage map
+     Failure/Error:
+       expect(skill).to have_attributes(is_discovered: true, assessment_status: 'assessed', ai_level: 2,
+                                        ai_confidence: 'low')
+
+       expected #<PortfolioSkill id: 118, portfolio_id: 108, skill_id: nil, skill_label: "Web Accessibility", is_disc...ue, ai_level: 2, ai_confidence: "high", evidence: ["A real quote."], competency_summary: "Summary."> to respond to :assessment_status with 0 arguments
+     # ./spec/services/portfolios/generator_spec.rb:149:in `block (3 levels) in <top (required)>'
+
+  10) Portfolios::Generator when the response is unreadable (AC2.8) raises a retryable error and writes no skills for "Sorry, I cannot help with tha
+      Failure/Error: expect { generate(FakeGeminiClient.new(raw)) }.to raise_error(Portfolios::Generator::UnreadableOutput)
+
+      NameError:
+        uninitialized constant Portfolios::Generator::UnreadableOutput
+      # ./spec/services/portfolios/generator_spec.rb:165:in `block (4 levels) in <top (required)>'
+
+  11) Portfolios::Generator when the response is unreadable (AC2.8) raises a retryable error and writes no skills for "[1, 2, 3]"
+      Failure/Error: expect { generate(FakeGeminiClient.new(raw)) }.to raise_error(Portfolios::Generator::UnreadableOutput)
+
+      NameError:
+        uninitialized constant Portfolios::Generator::UnreadableOutput
+      # ./spec/services/portfolios/generator_spec.rb:165:in `block (4 levels) in <top (required)>'
+
+  12) Portfolios::Generator when the response is unreadable (AC2.8) raises a retryable error and writes no skills for ["not", "a", "hash"]
+      Failure/Error: expect { generate(FakeGeminiClient.new(raw)) }.to raise_error(Portfolios::Generator::UnreadableOutput)
+
+      NameError:
+        uninitialized constant Portfolios::Generator::UnreadableOutput
+      # ./spec/services/portfolios/generator_spec.rb:165:in `block (4 levels) in <top (required)>'
+
+  13) Portfolios::Generator when a portfolio already exists updates skills in place and keeps the override (AC6.1)
+      Failure/Error: expect(old_react.reload).to have_attributes(ai_level: 3, assessment_status: 'assessed')
+
+      ActiveRecord::RecordNotFound:
+        Couldn't find PortfolioSkill with 'id'=122
+      # ./spec/services/portfolios/generator_spec.rb:191:in `block (3 levels) in <top (required)>'
+
+  14) Portfolios::Generator when a portfolio already exists keeps the override when the skill becomes not assessed (AC6.2)
+      Failure/Error: expect(old_communication.reload).to have_attributes(assessment_status: 'not_assessed', ai_level: nil)
+
+      ActiveRecord::RecordNotFound:
+        Couldn't find PortfolioSkill with 'id'=128
+      # ./spec/services/portfolios/generator_spec.rb:201:in `block (3 levels) in <top (required)>'
+
+  15) Portfolios::Generator when a portfolio already exists leaves every previous skill untouched when saving fails halfway (AC2.9)
+      Failure/Error: expect { generate(FakeGeminiClient.new(full_output)) }.to raise_error(ActiveRecord::StatementInvalid)
+
+        expected ActiveRecord::StatementInvalid, got #<ArgumentError: wrong number of arguments (given 1, expected 0)> with backtrace:
+          # ./spec/services/portfolios/generator_spec.rb:211:in `call'
+          # ./spec/services/portfolios/generator_spec.rb:211:in `block (4 levels) in <top (required)>'
+          # ./app/services/portfolios/generator.rb:157:in `block in save_skills'
+          # ./app/services/portfolios/generator.rb:156:in `each'
+          # ./app/services/portfolios/generator.rb:156:in `save_skills'
+          # ./app/services/portfolios/generator.rb:28:in `call'
+          # ./spec/services/portfolios/generator_spec.rb:42:in `generate'
+          # ./spec/services/portfolios/generator_spec.rb:214:in `block (4 levels) in <top (required)>'
+          # ./spec/services/portfolios/generator_spec.rb:214:in `block (3 levels) in <top (required)>'
+      # ./spec/services/portfolios/generator_spec.rb:214:in `block (3 levels) in <top (required)>'
+
+  16) Portfolios::Generator when a portfolio already exists removes stale skills that are no longer in the coverage map, unless they carry an override
+      Failure/Error: expect(PortfolioSkill.exists?(kept.id)).to be(true)
+
+        expected true
+             got false
+      # ./spec/services/portfolios/generator_spec.rb:230:in `block (3 levels) in <top (required)>'
+
+  17) Portfolios::Generator when the session has no coverage map (ended before it started) lists the assessment skills as not assessed without calling the model
+      Failure/Error: expect(client.prompts).to be_empty
+        expected `["You are evaluating a completed skills assessment interview to produce a structured skill portfolio....vidence\": [\"quote 1\"],\n      \"competency_summary\": \"2-3 sentence summary\"\n    }\n  ]\n}\n"].empty?` to be truthy, got false
+      # ./spec/services/portfolios/generator_spec.rb:245:in `block (3 levels) in <top (required)>'
+
+  18) FitGap::Engine reports a not-assessed skill as not_assessed, not as a gap (AC1.3)
+      Failure/Error:
+        create(:portfolio_skill, portfolio: portfolio, skill_id: 'SK-SOFT-001', skill_label: 'Communication',
+                                 assessment_status: 'not_assessed', ai_level: nil, ai_confidence: nil,
+                                 competency_summary: '', status_reason: 'Not discussed in the interview.')
+
+      NoMethodError:
+        undefined method `assessment_status=' for an instance of PortfolioSkill
+      # ./spec/services/fit_gap/engine_spec.rb:19:in `block (2 levels) in <main>'
+
+  19) FitGap::Engine reports a needs-review skill as needs_review (AC4.4)
+      Failure/Error:
+        create(:portfolio_skill, portfolio: portfolio, skill_id: 'SK-SOFT-001', skill_label: 'Communication',
+                                 assessment_status: 'not_assessed', ai_level: nil, ai_confidence: nil,
+                                 competency_summary: '', status_reason: 'Not discussed in the interview.')
+
+      NoMethodError:
+        undefined method `assessment_status=' for an instance of PortfolioSkill
+      # ./spec/services/fit_gap/engine_spec.rb:19:in `block (2 levels) in <main>'
+
+  20) FitGap::Engine still compares assessed skills
+      Failure/Error:
+        create(:portfolio_skill, portfolio: portfolio, skill_id: 'SK-SOFT-001', skill_label: 'Communication',
+                                 assessment_status: 'not_assessed', ai_level: nil, ai_confidence: nil,
+                                 competency_summary: '', status_reason: 'Not discussed in the interview.')
+
+      NoMethodError:
+        undefined method `assessment_status=' for an instance of PortfolioSkill
+      # ./spec/services/fit_gap/engine_spec.rb:19:in `block (2 levels) in <main>'
+
+  21) FitGap::Engine tells the model that not-assessed skills are unknown, not weak (AC1.4)
+      Failure/Error:
+        create(:portfolio_skill, portfolio: portfolio, skill_id: 'SK-SOFT-001', skill_label: 'Communication',
+                                 assessment_status: 'not_assessed', ai_level: nil, ai_confidence: nil,
+                                 competency_summary: '', status_reason: 'Not discussed in the interview.')
+
+      NoMethodError:
+        undefined method `assessment_status=' for an instance of PortfolioSkill
+      # ./spec/services/fit_gap/engine_spec.rb:19:in `block (2 levels) in <main>'
+
+  22) FitGap::Engine mentions not-assessed and needs-review skills in the fallback narrative (AC1.4)
+      Failure/Error:
+        create(:portfolio_skill, portfolio: portfolio, skill_id: 'SK-SOFT-001', skill_label: 'Communication',
+                                 assessment_status: 'not_assessed', ai_level: nil, ai_confidence: nil,
+                                 competency_summary: '', status_reason: 'Not discussed in the interview.')
+
+      NoMethodError:
+        undefined method `assessment_status=' for an instance of PortfolioSkill
+      # ./spec/services/fit_gap/engine_spec.rb:19:in `block (2 levels) in <main>'
+
+Finished in 0.54971 seconds (files took 0.84439 seconds to load)
+23 examples, 22 failures
+
+Failed examples:
+
+rspec ./spec/services/portfolios/generator_spec.rb:52 # Portfolios::Generator when the candidate never answered (AC1.2) does not call the model and marks every skill not assessed
+rspec ./spec/services/portfolios/generator_spec.rb:69 # Portfolios::Generator when the candidate spoke but no skill was discussed does not call the model
+rspec ./spec/services/portfolios/generator_spec.rb:80 # Portfolios::Generator with a normal interview never rates a not_yet skill, whatever the model returns (AC1.1)
+rspec ./spec/services/portfolios/generator_spec.rb:89 # Portfolios::Generator with a normal interview computes confidence from coverage and survives a capitalised model label (AC3, F5)
+rspec ./spec/services/portfolios/generator_spec.rb:99 # Portfolios::Generator with a normal interview matches model entries by skill_id in any case, then by label (AC2.5)
+rspec ./spec/services/portfolios/generator_spec.rb:111 # Portfolios::Generator with a normal interview flags a discussed skill the model skipped as needs_review (AC2.6)
+rspec ./spec/services/portfolios/generator_spec.rb:119 # Portfolios::Generator with a normal interview flags an invalid level instead of storing L1 (AC2.2)
+rspec ./spec/services/portfolios/generator_spec.rb:129 # Portfolios::Generator with a normal interview ignores invented and duplicate skills, keeping the first occurrence (AC2.7)
+rspec ./spec/services/portfolios/generator_spec.rb:142 # Portfolios::Generator with a normal interview stores discovered skills that exist in the coverage map
+rspec './spec/services/portfolios/generator_spec.rb[1:4:1]' # Portfolios::Generator when the response is unreadable (AC2.8) raises a retryable error and writes no skills for "Sorry, I cannot help with tha
+rspec './spec/services/portfolios/generator_spec.rb[1:4:2]' # Portfolios::Generator when the response is unreadable (AC2.8) raises a retryable error and writes no skills for "[1, 2, 3]"
+rspec './spec/services/portfolios/generator_spec.rb[1:4:3]' # Portfolios::Generator when the response is unreadable (AC2.8) raises a retryable error and writes no skills for ["not", "a", "hash"]
+rspec ./spec/services/portfolios/generator_spec.rb:188 # Portfolios::Generator when a portfolio already exists updates skills in place and keeps the override (AC6.1)
+rspec ./spec/services/portfolios/generator_spec.rb:195 # Portfolios::Generator when a portfolio already exists keeps the override when the skill becomes not assessed (AC6.2)
+rspec ./spec/services/portfolios/generator_spec.rb:205 # Portfolios::Generator when a portfolio already exists leaves every previous skill untouched when saving fails halfway (AC2.9)
+rspec ./spec/services/portfolios/generator_spec.rb:222 # Portfolios::Generator when a portfolio already exists removes stale skills that are no longer in the coverage map, unless they carry an override
+rspec ./spec/services/portfolios/generator_spec.rb:241 # Portfolios::Generator when the session has no coverage map (ended before it started) lists the assessment skills as not assessed without calling the model
+rspec ./spec/services/fit_gap/engine_spec.rb:35 # FitGap::Engine reports a not-assessed skill as not_assessed, not as a gap (AC1.3)
+rspec ./spec/services/fit_gap/engine_spec.rb:40 # FitGap::Engine reports a needs-review skill as needs_review (AC4.4)
+rspec ./spec/services/fit_gap/engine_spec.rb:44 # FitGap::Engine still compares assessed skills
+rspec ./spec/services/fit_gap/engine_spec.rb:48 # FitGap::Engine tells the model that not-assessed skills are unknown, not weak (AC1.4)
+rspec ./spec/services/fit_gap/engine_spec.rb:56 # FitGap::Engine mentions not-assessed and needs-review skills in the fallback narrative (AC1.4)
+

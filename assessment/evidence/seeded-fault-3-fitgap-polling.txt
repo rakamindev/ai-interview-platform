@@ -1,0 +1,85 @@
+Seeded fault 3 of 3 (branch scratch/seeded-fault)
+Fault commit : c6dfe72  seeded fault: ask for fit/gap generation again on every 202 poll
+Revert commit: 68178bb
+Change: useFitGapReport calls triggerFitGap again whenever polling gets a 202 (the F7 duplicate-job pattern).
+Result: 2 of 33 Vitest tests fail: triggerFitGap called 3 times instead of once, and once when another tab had already started it.
+After revert: 33 passed. Branch tip is byte-identical to 16e5e82 (git diff 16e5e82 is empty).
+
+---- npx vitest run (with the fault) ----
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+ ✓ src/components/portfolio/ConfidenceIndicator.test.tsx (1 test) 25ms
+ ✓ src/components/fitgap/ComparisonTable.test.tsx (6 tests) 290ms
+ ✓ src/components/portfolio/SkillPortfolioCard.test.tsx (7 tests) 190ms
+ ❯ src/hooks/useFitGapReport.test.ts (7 tests | 2 failed) 540ms
+   × useFitGapReport (AC7.1, F7) > starts generation once, then only polls until the report is ready 115ms
+     → expected "spy" to be called 1 times, but got 3 times
+   × useFitGapReport (AC7.1, F7) > does not start generation when another tab already did 85ms
+     → expected "spy" to not be called at all, but actually been called 1 times
+
+Received: 
+
+  1st spy call:
+
+    Array [
+      4,
+      2,
+    ]
+
+
+Number of calls: 1
+
+   ✓ useFitGapReport (AC7.1, F7) > keeps showing the current report while a refresh runs 83ms
+   ✓ useFitGapReport (AC7.1, F7) > reports a run that ended without a report, and retries on request 84ms
+   ✓ useFitGapReport (AC7.1, F7) > shows the API's message when loading fails 85ms
+   ✓ useFitGapReport (AC7.1, F7) > regenerates without hiding the current report 85ms
+   ✓ useFitGapReport (AC7.1, F7) > waits for the portfolio before asking for anything 1ms
+ ✓ src/pages/portfolio/PortfolioPage.test.tsx (7 tests) 233ms
+ ✓ src/components/portfolio/OverridePanel.test.tsx (5 tests) 462ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/hooks/useFitGapReport.test.ts > useFitGapReport (AC7.1, F7) > starts generation once, then only polls until the report is ready
+AssertionError: expected "spy" to be called 1 times, but got 3 times
+ ❯ src/hooks/useFitGapReport.test.ts:57:31
+     55|     expect(result.current.phase).toBe("ready");
+     56|     expect(result.current.report?.id).toBe(report.id);
+     57|     expect(api.triggerFitGap).toHaveBeenCalledTimes(1);
+       |                               ^
+     58|   });
+     59| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/hooks/useFitGapReport.test.ts > useFitGapReport (AC7.1, F7) > does not start generation when another tab already did
+AssertionError: expected "spy" to not be called at all, but actually been called 1 times
+
+Received: 
+
+  1st spy call:
+
+    Array [
+      4,
+      2,
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/hooks/useFitGapReport.test.ts:68:35
+     66| 
+     67|     expect(result.current.phase).toBe("ready");
+     68|     expect(api.triggerFitGap).not.toHaveBeenCalled();
+       |                                   ^
+     69|   });
+     70| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  2 failed | 31 passed (33)
+   Start at  23:38:29
+   Duration  2.03s (transform 440ms, setup 1.06s, collect 1.36s, tests 1.74s, environment 3.43s, prepare 518ms)
+

@@ -17,3 +17,12 @@ web/.vite/
 
 # OS
 .DS_Store
+
+# Draft render of assessment/report/report.html; the final PDF is uploaded to the hiring platform.
+assessment/report/*-DRAFT.pdf
+
+# Personal prep notes, kept locally and out of the submission.
+assessment/00-working-notes-findings.md
+assessment/defense-notes.md
+assessment/pr-description.md
+assessment/video-script.md

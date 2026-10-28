@@ -1,0 +1,47 @@
+FF2026-10-23T15:04:00.588Z pid=90651 tid=1swr INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+FF.FF...
+
+Failures:
+
+  1) Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as JSON
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 200
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:29:in `block (3 levels) in <top (required)>'
+
+  2) Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as PDF
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 500
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:36:in `block (3 levels) in <top (required)>'
+
+  3) Portfolio tenant isolation with tenant A's token and tenant B's ids does not start a fit/gap run, even against its own vacancy
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 202
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:43:in `block (3 levels) in <top (required)>'
+
+  4) Portfolio tenant isolation with tenant A's token and tenant B's ids does not show an existing fit/gap report
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 200
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:50:in `block (3 levels) in <top (required)>'
+
+  5) Portfolio tenant isolation with tenant A's token and tenant B's ids does not regenerate a fit/gap report against its own vacancy either
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 202
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:66:in `block (3 levels) in <top (required)>'
+
+  6) Portfolio tenant isolation with tenant A's token and tenant B's ids does not override a skill rating
+     Failure/Error: expect(response).to have_http_status(:not_found)
+       expected the response to have a not_found status code (404) but it was 201
+     # ./spec/requests/portfolio_tenant_isolation_spec.rb:75:in `block (3 levels) in <top (required)>'
+
+Finished in 0.37212 seconds (files took 0.88506 seconds to load)
+10 examples, 6 failures
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:26 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as JSON
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:33 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not export the portfolio as PDF
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:39 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not start a fit/gap run, even against its own vacancy
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:47 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not show an existing fit/gap report
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:62 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not regenerate a fit/gap report against its own vacancy either
+rspec ./spec/requests/portfolio_tenant_isolation_spec.rb:70 # Portfolio tenant isolation with tenant A's token and tenant B's ids does not override a skill rating
+

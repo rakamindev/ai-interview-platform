@@ -1,206 +1,187 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Notice } from "@/components/ui/notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
-import { portfoliosApi } from "@/services/portfolios";
+import LevelBadge from "@/components/portfolio/LevelBadge";
+import { downloadPortfolioExport } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
-import { usePolling } from "@/hooks/usePolling";
+import { useFitGapReport } from "@/hooks/useFitGapReport";
+import { apiErrorMessage } from "@/lib/apiError";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
-import type { FitGapReport, Portfolio } from "@/types";
+import type { Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
-  const { id, sessionId, vacancyId } = useParams<{
-    id: string;
-    sessionId: string;
-    vacancyId: string;
-  }>();
+  const { id, sessionId, vacancyId } = useParams<{ id: string; sessionId: string; vacancyId: string }>();
 
-  const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [portfolioError, setPortfolioError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
-  const [regenerating, setRegenerating] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  const fetchReport = useCallback(async () => {
-    if (!portfolio) return;
-    try {
-      const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
-    } catch (e: any) {
-      if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
-        }
-      }
-    }
-  }, [portfolio, vacancyId]);
+  const { report, phase, error, regenerate, retry } = useFitGapReport(portfolio?.id ?? null, Number(vacancyId));
 
   useEffect(() => {
     sessionsApi
       .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
-        }
+      .then((res) => {
+        const data = res.data as { portfolio?: Portfolio };
+        if (data.portfolio?.generation_status === "complete") setPortfolio(data.portfolio);
+        else setPortfolioError("The portfolio is not ready yet. Fit/gap needs a finished portfolio.");
       })
-      .finally(() => setLoading(false));
+      .catch((e) => setPortfolioError(apiErrorMessage(e, "Could not load the portfolio.")));
   }, [sessionId]);
-
-  useEffect(() => {
-    if (portfolio) fetchReport();
-  }, [portfolio, fetchReport]);
-
-  usePolling(fetchReport, 5000, generating && !!portfolio);
-
-  const handleRegenerate = async () => {
-    if (!portfolio) return;
-    setRegenerating(true);
-    try {
-      await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
-      setGenerating(true);
-    } finally {
-      setRegenerating(false);
-    }
-  };
 
   const handleExport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
-      const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
-      const ext = format;
-      const blob = format === "pdf"
-        ? new Blob([res.data as BlobPart], { type: "application/pdf" })
-        : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadPortfolioExport(portfolio.id, format, `fitgap-${sessionId}-${vacancyId}.${format}`, Number(vacancyId));
+    } catch (e) {
+      setExportError((e as Error).message);
     } finally {
       setExporting(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
+  const backLink = `/assessments/${id}/sessions/${sessionId}/portfolio`;
+  const discovered = portfolio?.skills.filter((s) => s.is_discovered) ?? [];
+  const loading = !portfolioError && (!portfolio || phase === "loading");
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
-          </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Link to={backLink} className="text-muted-foreground hover:text-foreground" aria-label="Back to portfolio">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
         </div>
 
-        {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+        {report && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={regenerate} disabled={phase === "generating"}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
               Regenerate
             </Button>
-            {report && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
-                </Button>
-              </>
-            )}
+            {(["pdf", "json"] as const).map((format) => (
+              <Button key={format} variant="outline" size="sm" onClick={() => handleExport(format)} disabled={!!exporting}>
+                {exporting === format ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                )}
+                {format.toUpperCase()}
+              </Button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Generating */}
-      {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+      {portfolioError && (
+        <Notice tone="error" action={<Link to={backLink} className="text-sm underline">Back to portfolio</Link>}>
+          {portfolioError}
+        </Notice>
+      )}
+
+      {exportError && <Notice tone="error">{exportError}</Notice>}
+
+      {loading && (
+        <div className="space-y-4">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
       )}
 
-      {/* Report ready */}
+      {phase === "error" && (
+        <Notice tone="error" action={<Button size="sm" variant="outline" onClick={retry}>Try again</Button>}>
+          {error}
+        </Notice>
+      )}
+
+      {phase === "generating" && !report && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Comparing the portfolio against this vacancy…</p>
+        </div>
+      )}
+
       {report && (
         <>
-          {/* Skill comparison */}
+          {phase === "generating" && (
+            <Notice>Updating this report. The version below stays available until the new one is ready.</Notice>
+          )}
+          {phase !== "generating" && report.stale && (
+            <Notice tone="warning" action={<Button size="sm" variant="outline" onClick={regenerate}>Regenerate</Button>}>
+              Built with older scoring rules, which counted skills that were never discussed as gaps.
+            </Notice>
+          )}
+          {phase !== "generating" && !report.stale && report.outdated && (
+            <Notice tone="warning" action={<Button size="sm" variant="outline" onClick={regenerate}>Regenerate</Button>}>
+              A rating was changed after this report was built.
+            </Notice>
+          )}
+
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
+            <CardHeader className="px-4 pt-4 pb-3">
+              <CardTitle className="text-sm">Skill comparison</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <ComparisonTable comparisons={report.skill_comparisons} />
             </CardContent>
           </Card>
 
-          <Separator />
+          {(report.culture_narrative || report.overall_narrative) && (
+            <Card>
+              <CardHeader className="px-4 pt-4 pb-3 space-y-1">
+                <CardTitle className="text-sm">Summary</CardTitle>
+                <p className="text-xs text-muted-foreground">AI-written draft. Check it against the evidence before sharing.</p>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-4 text-sm leading-relaxed">
+                {report.culture_narrative && (
+                  <section className="space-y-1">
+                    <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Culture and competency fit</h2>
+                    <p className="whitespace-pre-wrap break-words">{report.culture_narrative}</p>
+                  </section>
+                )}
+                {report.overall_narrative && (
+                  <section className="space-y-1">
+                    <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Overall</h2>
+                    <p className="whitespace-pre-wrap break-words">{report.overall_narrative}</p>
+                  </section>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Discovered skills */}
-          {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills (not in vacancy requirements)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-2">
-                  {portfolio.skills
-                    .filter((s) => s.is_discovered)
-                    .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
-                        <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
-                        </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
-            </>
+          {discovered.length > 0 && (
+            <Card>
+              <CardHeader className="px-4 pt-4 pb-3 space-y-1">
+                <CardTitle className="text-sm flex items-center gap-1.5">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  Discovered skills
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Came up in the interview but are not required for this vacancy.</p>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <ul className="space-y-2">
+                  {discovered.map((s) => (
+                    <li key={s.id} className="flex items-center gap-2 text-sm">
+                      {s.ai_level != null ? (
+                        <LevelBadge level={s.ai_level} size="sm" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground border rounded px-1.5 py-0.5">Not rated</span>
+                      )}
+                      <span className="font-medium break-words">{s.skill_label}</span>
+                      {s.ai_confidence === "low" && <span className="text-xs text-muted-foreground">provisional</span>}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           )}
         </>
       )}

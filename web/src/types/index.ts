@@ -80,18 +80,27 @@ export interface Portfolio {
   candidate_id?: number;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
-  generation_error?: string;
+  generation_error?: string | null;
+  generation_attempts: number;
+  /** In progress for longer than any attempt can take; regenerating is allowed. */
+  stale: boolean;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }
 
+export type Confidence = "high" | "medium" | "low";
+export type AssessmentStatus = "assessed" | "not_assessed" | "needs_review";
+
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  /** Only set when assessment_status is "assessed". */
+  ai_level: number | null;
+  ai_confidence: Confidence | null;
+  assessment_status: AssessmentStatus;
+  status_reason: string | null;
   evidence: string[];
   competency_summary: string;
 }
@@ -99,9 +108,10 @@ export interface PortfolioSkill {
 export interface AssessorOverride {
   id: number;
   portfolio_skill_id: number;
-  ai_level: number;
+  /** null when the AI did not rate the skill. */
+  ai_level: number | null;
   override_level: number;
-  assessor_notes: string;
+  assessor_notes: string | null;
   overridden_by?: number;
   overridden_at?: string;
 }
@@ -125,15 +135,23 @@ export interface VacancySkill {
   _destroy?: boolean;
 }
 
-export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
+// Mirrors contracts/fit_gap_report.example.json, which the API and web test suites both check.
+export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed" | "needs_review";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id: string | null;
+  expected_level: number;
+  candidate_level: number | null;
+  ai_level: number | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  confidence: Confidence | null;
+  /** Low-confidence result: based on a single interview question. */
+  provisional: boolean;
+  /** The candidate level was set by an assessor. */
+  overridden: boolean;
+  assessment_status: AssessmentStatus | null;
 }
 
 export interface FitGapReport {
@@ -141,9 +159,15 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
   generated_at: string;
+  /** Built with older comparison rules. */
+  stale: boolean;
+  /** A rating was overridden after this report was built. */
+  outdated: boolean;
+  /** A refresh is running; this report is still the latest finished one. */
+  generating: boolean;
 }
 
 export interface SkillTaxonomy {

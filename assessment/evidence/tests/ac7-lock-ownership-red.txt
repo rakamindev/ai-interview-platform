@@ -1,0 +1,105 @@
+2026-10-23T21:36:54.691Z pid=8351 tid=1zf INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+FF.FFFF...FF..........F..........
+
+Failures:
+
+  1) FitGap::GenerationLock hands out a token once, and nothing while the lock is held
+     Failure/Error: expect(token).to be_a(String).and be_present
+       expected true to be a kind of String
+     # ./spec/services/fit_gap/generation_lock_spec.rb:11:in `block (2 levels) in <top (required)>'
+
+  2) FitGap::GenerationLock releases only with the token it handed out
+     Failure/Error:
+       def release(portfolio_id, vacancy_id)
+         Sidekiq.redis { |r| r.call('DEL', key(portfolio_id, vacancy_id)) }
+       end
+
+     ArgumentError:
+       wrong number of arguments (given 3, expected 2)
+     # ./app/services/fit_gap/generation_lock.rb:16:in `release'
+     # ./spec/services/fit_gap/generation_lock_spec.rb:19:in `block (2 levels) in <top (required)>'
+
+  3) FitGapGeneratorWorker releases the lock it was given when it succeeds
+     Failure/Error:
+         def perform(portfolio_id, vacancy_id)
+           portfolio = Portfolio.find(portfolio_id)
+           vacancy   = Vacancy.unscoped.find(vacancy_id)
+       
+           FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+         rescue ActiveRecord::RecordNotFound => e
+           Rails.logger.warn("[N13] Record not found: #{e.message}")
+         rescue StandardError => e
+           Rails.logger.error("[N13] FitGapGeneratorWorker failed for portfolio=#{portfolio_id} vacancy=#{vacancy_id}: #{e.class}: #{e.message}")
+           raise
+
+     ArgumentError:
+       wrong number of arguments (given 3, expected 2)
+     # ./app/workers/fit_gap_generator_worker.rb:8:in `perform'
+     # ./spec/workers/fit_gap_generator_worker_spec.rb:13:in `block (2 levels) in <main>'
+
+  4) FitGapGeneratorWorker releases the lock it was given when it fails, so a retry or a new request can run
+     Failure/Error: expect { described_class.new.perform(portfolio.id, vacancy.id, token) }.to raise_error(ActiveRecord::StatementInvalid)
+
+       expected ActiveRecord::StatementInvalid, got #<ArgumentError: wrong number of arguments (given 3, expected 2)> with backtrace:
+         # ./app/workers/fit_gap_generator_worker.rb:8:in `perform'
+         # ./spec/workers/fit_gap_generator_worker_spec.rb:21:in `block (3 levels) in <main>'
+         # ./spec/workers/fit_gap_generator_worker_spec.rb:21:in `block (2 levels) in <main>'
+     # ./spec/workers/fit_gap_generator_worker_spec.rb:21:in `block (2 levels) in <main>'
+
+  5) FitGapGeneratorWorker leaves another job's lock alone when it runs without one (an override refresh)
+     Failure/Error: expect(FitGap::GenerationLock.held?(portfolio.id, vacancy.id)).to be(true)
+
+       expected true
+            got false
+     # ./spec/workers/fit_gap_generator_worker_spec.rb:30:in `block (2 levels) in <main>'
+
+  6) FitGapGeneratorWorker leaves the lock alone when its token is stale (the lock expired and someone else took it)
+     Failure/Error:
+         def perform(portfolio_id, vacancy_id)
+           portfolio = Portfolio.find(portfolio_id)
+           vacancy   = Vacancy.unscoped.find(vacancy_id)
+       
+           FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
+         rescue ActiveRecord::RecordNotFound => e
+           Rails.logger.warn("[N13] Record not found: #{e.message}")
+         rescue StandardError => e
+           Rails.logger.error("[N13] FitGapGeneratorWorker failed for portfolio=#{portfolio_id} vacancy=#{vacancy_id}: #{e.class}: #{e.message}")
+           raise
+
+     ArgumentError:
+       wrong number of arguments (given 3, expected 2)
+     # ./app/workers/fit_gap_generator_worker.rb:8:in `perform'
+     # ./spec/workers/fit_gap_generator_worker_spec.rb:36:in `block (2 levels) in <main>'
+
+  7) Fit/gap generation passes the lock token to the job, so only that job can release it
+     Failure/Error: expect(FitGapGeneratorWorker.jobs.first['args']).to match([portfolio.id, vacancy.id, a_string_matching(/\A\h{8}-/)])
+       expected [1171, 517] to match [1171, 517, (a string matching /\A\h{8}-/)]
+     # ./spec/requests/fit_gap_generation_spec.rb:63:in `block (2 levels) in <main>'
+
+  8) Fit/gap generation refreshes after an override without freeing the lock of a run in progress
+     Failure/Error: expect(FitGap::GenerationLock.held?(portfolio.id, vacancy.id)).to be(true)
+
+       expected true
+            got false
+     # ./spec/requests/fit_gap_generation_spec.rb:77:in `block (2 levels) in <main>'
+
+  9) POST /api/v1/portfolio_skills/:id/override keeps the existing fit/gap report and queues a refresh (F8)
+     Failure/Error: expect(FitGapGeneratorWorker.jobs.first['args'].last).to be_a(String)
+       expected 520 to be a kind of String
+     # ./spec/requests/portfolio_skill_override_spec.rb:82:in `block (2 levels) in <main>'
+
+Finished in 0.6812 seconds (files took 1.28 seconds to load)
+33 examples, 9 failures
+
+Failed examples:
+
+rspec ./spec/services/fit_gap/generation_lock_spec.rb:8 # FitGap::GenerationLock hands out a token once, and nothing while the lock is held
+rspec ./spec/services/fit_gap/generation_lock_spec.rb:16 # FitGap::GenerationLock releases only with the token it handed out
+rspec ./spec/workers/fit_gap_generator_worker_spec.rb:10 # FitGapGeneratorWorker releases the lock it was given when it succeeds
+rspec ./spec/workers/fit_gap_generator_worker_spec.rb:18 # FitGapGeneratorWorker releases the lock it was given when it fails, so a retry or a new request can run
+rspec ./spec/workers/fit_gap_generator_worker_spec.rb:25 # FitGapGeneratorWorker leaves another job's lock alone when it runs without one (an override refresh)
+rspec ./spec/workers/fit_gap_generator_worker_spec.rb:33 # FitGapGeneratorWorker leaves the lock alone when its token is stale (the lock expired and someone else took it)
+rspec ./spec/requests/fit_gap_generation_spec.rb:60 # Fit/gap generation passes the lock token to the job, so only that job can release it
+rspec ./spec/requests/fit_gap_generation_spec.rb:66 # Fit/gap generation refreshes after an override without freeing the lock of a run in progress
+rspec ./spec/requests/portfolio_skill_override_spec.rb:74 # POST /api/v1/portfolio_skills/:id/override keeps the existing fit/gap report and queues a refresh (F8)
+

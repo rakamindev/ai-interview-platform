@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rakamin Case Study Report</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  :root { --ink: #111827; --muted: #4b5563; --faint: #6b7280; --line: #e5e7eb; --teal: #017a83; --amber: #92400e; --amber-bg: #fffbeb; --red: #b91c1c; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.5; margin: 0; background: #fff; }
+  h1 { font-size: 22pt; margin: 0 0 4pt; letter-spacing: -0.01em; }
+  h2 { font-size: 15pt; margin: 0 0 8pt; padding-bottom: 4pt; border-bottom: 2px solid var(--teal); }
+  h3 { font-size: 11.5pt; margin: 11pt 0 4pt; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin-bottom: 2pt; }
+  a { color: var(--teal); text-decoration: none; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.6pt; background: #f3f4f6; padding: 0 2pt; border-radius: 2pt; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 8.8pt; }
+  th, td { border: 1px solid var(--line); padding: 4pt 5pt; text-align: left; vertical-align: top; }
+  th { background: #f9fafb; font-weight: 600; }
+  .section { break-before: page; }
+  .muted { color: var(--muted); }
+  .small { font-size: 8.6pt; }
+  .placeholder { background: #fef3c7; color: var(--amber); padding: 0 3pt; border-radius: 2pt; font-weight: 600; }
+  .sev { font-weight: 700; white-space: nowrap; }
+  .p0 { color: var(--red); } .p1 { color: var(--amber); } .p2 { color: #1d4ed8; } .p3 { color: var(--faint); }
+  .callout { break-inside: avoid; border-left: 3px solid var(--teal); background: #f0fdfa; padding: 6pt 9pt; margin: 6pt 0 10pt; }
+  .warn { border-left-color: #d97706; background: var(--amber-bg); }
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .meta td { border: none; padding: 2pt 8pt 2pt 0; font-size: 10pt; }
+  .cover .meta td:first-child { color: var(--faint); width: 34mm; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6pt; margin: 8pt 0 12pt; }
+  .kpi { border: 1px solid var(--line); border-radius: 4pt; padding: 6pt 8pt; }
+  .kpi b { display: block; font-size: 15pt; color: var(--teal); }
+  .kpi span { font-size: 8.4pt; color: var(--muted); }
+  figure { margin: 0 0 10pt; break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 3pt; display: block; }
+  figcaption { font-size: 8.4pt; color: var(--muted); margin-top: 3pt; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; break-inside: avoid; }
+  .trio { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; break-inside: avoid; }
+  .tag { display: inline-block; font-size: 7.6pt; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 0 4pt; border-radius: 2pt; margin-bottom: 2pt; }
+  .tag.before { background: #fee2e2; color: var(--red); } .tag.after { background: #dcfce7; color: #166534; }
+  .toc li { margin-bottom: 1pt; }
+</style>
+</head>
+<body>
+
+<!-- Cover -->
+<div class="cover">
+  <div>
+    <p class="muted" style="margin-bottom:18pt">Rakamin · Case Study: Fullstack Product Engineer</p>
+    <h1>Never report a rating the interview did not earn</h1>
+    <p class="muted" style="font-size:12pt; max-width:150mm">Making the AI interview platform honest at the point where evidence becomes a judgement about a person, and keeping that judgement inside the company that owns it.</p>
+  </div>
+  <div>
+    <table class="meta">
+      <tr><td>Candidate</td><td>Sultan Z. M. (Frontend Engineer Intern application)</td></tr>
+      <tr><td>Pull request</td><td><a href="https://github.com/rakamindev/ai-interview-platform/pull/185">github.com/rakamindev/ai-interview-platform/pull/185</a></td></tr>
+      <tr><td>Video walkthrough</td><td><a href="https://youtu.be/Bro84QWgvWM">youtu.be/Bro84QWgvWM</a></td></tr>
+      <tr><td>Repository</td><td>github.com/rakamindev/ai-interview-platform, branch <code>feat/candidate-assessment-revamp</code></td></tr>
+      <tr><td>Seeded fault branch</td><td><a href="https://github.com/SultanZhalifa/ai-interview-platform/commits/scratch/seeded-fault">SultanZhalifa/ai-interview-platform, <code>scratch/seeded-fault</code></a></td></tr>
+      <tr><td>Working files</td><td><code>/assessment</code> in the PR: every claim here links to a document, test or evidence file there</td></tr>
+      <tr><td>Data</td><td>All names in screenshots and evidence are invented. No real candidate data was used.</td></tr>
+    </table>
+    <h3>Contents</h3>
+    <ol class="toc small">
+      <li>Summary</li>
+      <li>Step 1: Setup and local exploration</li>
+      <li>Step 2: Context and domain immersion</li>
+      <li>Step 3: Problem and gap analysis</li>
+      <li>Step 4: Revamp strategy, acceptance criteria and trade-offs</li>
+      <li>Step 5: Implementation and proof</li>
+      <li>Before and after</li>
+      <li>Limits, follow-ups and assumptions</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="section">
+  <h2>Summary</h2>
+  <p>The platform interviews a candidate with an AI voice, tracks which skills the conversation actually reached, rates each skill L1 to L5, compares the ratings with a vacancy and writes a recommendation that ends up in a PDF for the hiring manager.</p>
+  <p><b>The core problem:</b> the product could not tell "we did not measure this" from "the candidate is weak at this". A skill the interview never reached was stored as L1, shown as "L1 Foundational", reported as a Gap and written into the hiring narrative as fact. A candidate whose audio dropped after one sentence received "Gap" on every skill and the line "not yet at the level to independently contribute". The assessor had no way to see it: the Required column was blank on every report, confidence was hidden, and correcting a rating broke the PDF export. Separately, any assessor could read and rescore another company's candidates by changing an id in the URL.</p>
+
+  <div class="pair">
+    <figure><span class="tag before">Before</span><img src="../screenshots/before/B04-audio-failure-becomes-gap-everywhere.jpg"><figcaption>One answer ("my audio is breaking up"): Gap on every skill, Required column blank, a negative verdict.</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A09-fitgap-nothing-assessed.jpg"><figcaption>Same session: every skill Not assessed, required levels shown, "we cannot make a hiring recommendation based on this interview".</figcaption></figure>
+  </div>
+
+  <h3>What shipped (one PR, both services)</h3>
+  <ul>
+    <li><b>Not assessed is a first-class state</b> in the database, the API contract, the UI and the PDF; coverage gates every rating; model output is validated per skill; confidence follows the PRD rule.</li>
+    <li><b>Fit/gap tells the truth</b>: required levels, provisional results, assessor overrides, stale and outdated reports, both narratives labelled as an AI draft.</li>
+    <li><b>Tenant isolation</b> on every portfolio endpoint; <b>no passwords or candidate data in logs</b>.</li>
+    <li><b>One job at a time</b> with visible retries and a way out of stalled runs; <b>overrides are never destroyed</b>; <b>PDF export works</b> for corrected portfolios and non-Latin names.</li>
+    <li>A test harness that did not exist: RSpec, Vitest, CI, and a contract file both suites check.</li>
+  </ul>
+  <div class="kpis">
+    <div class="kpi"><b>16</b><span>findings (2 P0, 10 P1, 3 P2, 1 P3), reproduced at runtime unless marked</span></div>
+    <div class="kpi"><b>11</b><span>acceptance criteria written before code</span></div>
+    <div class="kpi"><b>151 + 33</b><span>RSpec examples + Vitest tests, all passing</span></div>
+    <div class="kpi"><b>3 / 3</b><span>seeded faults caught, reverted with history</span></div>
+  </div>
+</div>
+
+<!-- Step 1 -->
+<div class="section">
+  <h2>Step 1: Setup and local exploration</h2>
+  <p>Fresh macOS machine, no Docker: Ruby 3.3.2 via rbenv, PostgreSQL 16 and Redis via Homebrew, Node 26. Branch <code>feat/candidate-assessment-revamp</code> off <code>main</code>; small commits, one concern each. Local secrets only in git-ignored files; a secret scan runs before every commit.</p>
+  <p>Getting it to run surfaced eight onboarding defects. They are small, but each one costs a new engineer time, and two of them hide real risk (S5, S8).</p>
+  <table>
+    <tr><th>#</th><th>What happened</th><th>Fix used</th></tr>
+    <tr><td>S1</td><td>Puma forks 2 workers; on macOS every forked worker crashed on the first request (empty replies).</td><td><code>WEB_CONCURRENCY=0</code> locally</td></tr>
+    <tr><td>S2</td><td><code>bin/rails</code> committed without the executable bit.</td><td><code>bundle exec rails</code></td></tr>
+    <tr><td>S3</td><td><code>web/.env.example</code> points at port 3000; the API listens on 3001.</td><td>Local <code>.env</code></td></tr>
+    <tr><td>S4</td><td>README uses an old repo path and an env var name the code does not read.</td><td>Followed the code</td></tr>
+    <tr><td>S5</td><td>Every model id in the sample and README returns 404 on a new key, so generation fails out of the box (finding N2).</td><td><code>gemini-2.5-flash</code> locally</td></tr>
+    <tr><td>S6</td><td>No lockfile in <code>web/</code>.</td><td>Committed it for CI</td></tr>
+    <tr><td>S7</td><td><code>SECRET_KEY_BASE</code> "must match rakamin-api", a service not in the repo.</td><td>Local value; escalated</td></tr>
+    <tr><td>S8</td><td>Sidekiq in development keeps the code it booted with.</td><td>Restart after changes</td></tr>
+  </table>
+  <h3>How the product was explored</h3>
+  <p>The live audio interview is not reproducible on demand, so I seeded realistic transcripts and coverage maps for fake candidates in two tenants, then drove everything else through the real API, Sidekiq and Gemini: ending sessions, generating portfolios, overriding, fit/gap, export. Three scenarios carried most of the analysis:</p>
+  <ul>
+    <li><b>Rina (fake)</b>: a strong 15-turn interview; one skill well probed, one partial, one asked once, one never discussed, one discovered.</li>
+    <li><b>Budi (fake)</b>: one answer, about a broken connection; every skill <code>not_yet</code>.</li>
+    <li><b>A second tenant</b> with its own candidate, used only to test isolation.</li>
+  </ul>
+</div>
+
+<!-- Step 2 -->
+<div class="section">
+  <h2>Step 2: Context and domain immersion</h2>
+  <h3>The product, as it behaves</h3>
+  <p>The code implies a careful pipeline: coverage states, a two-probe gate, a confidence rule in the PRD. In use, every one of those signals was dropped at the last step. The model was free to rate a skill the coverage map said was never reached, and the screens showed that rating with the same weight as a well-probed one.</p>
+  <h3>The industry</h3>
+  <p>For entry-level roles the scarce resource is a qualified person's time to talk to candidates. CV parsing, keyword screening, applicant tracking and online tests are commoditized. The leverage is a structured, evidence-backed signal about how a person thinks, produced at the cost of software, and it is only worth something if a recruiter trusts it enough not to re-interview. Candidates often join from a phone on a mobile connection, sometimes in a second language; dropped audio and mixed Bahasa Indonesia and English are normal conditions, not edge cases. (Qualitative reasoning; I did not find figures I could verify, so none are quoted.)</p>
+  <h3>What has to stay true</h3>
+  <ol>
+    <li>A rating must be earned. "Not assessed" is not "weak".</li>
+    <li>Thin evidence must look thin. One question is a hint, three probes with quotes is a rating.</li>
+    <li>A human stays in the loop, visibly. The override is the decision; AI text is a draft.</li>
+    <li>Data stays with the company that collected it.</li>
+  </ol>
+  <h3>Users and the people affected</h3>
+  <table>
+    <tr><th>Who</th><th>Their day</th><th>What they need here</th></tr>
+    <tr><td>Recruiter / assessor</td><td>Many candidates per role, skims between calls</td><td>In seconds: which ratings are solid, thin, or never measured; correct the AI and move on</td></tr>
+    <tr><td>Hiring manager</td><td>Reads a forwarded PDF</td><td>Required vs candidate on every row; no verdicts on unmeasured skills; visible human changes</td></tr>
+    <tr><td>Candidate (did not choose it)</td><td>Cannot see or contest the result</td><td>A failed session is a reason to re-invite, never a weakness on their record</td></tr>
+  </table>
+  <h3>UU PDP (Law 27/2022), checked against the published text</h3>
+  <table>
+    <tr><th>Provision</th><th>What it says</th><th>Product consequence</th></tr>
+    <tr><td>Pasal 10 (1)</td><td>A data subject may object to a decision based solely on automated processing, including profiling, with legal effects or a significant impact.</td><td>The visible override and "AI-written draft" labels keep the decision from being solely automated. There is still no way for a candidate to object: escalated.</td></tr>
+    <tr><td>Pasal 34 (1)-(2)</td><td>A data protection impact assessment is required for high-risk processing, including automated decisions with significant effects and evaluation or scoring.</td><td>This product does both. Clients need a DPIA; the product should give them what it needs. Escalated.</td></tr>
+    <tr><td>Pasal 16 (1)</td><td>Principles include telling subjects the purpose of processing, and deleting data when retention ends or on request.</td><td>No consent notice, retention period or deletion path today (F9). Personal data in logs (N1) fixed in this change.</td></tr>
+  </table>
+  <p class="small muted">Sources: pasal.id (Pasal 34); Wikisource transcription of the official text (Pasal 10, Pasal 16); Hukumonline on DPIA. Links in <code>assessment/02-context.md</code>. Not legal advice.</p>
+</div>
+
+<!-- Step 3 -->
+<div class="section">
+  <h2>Step 3: Problem and gap analysis</h2>
+  <p>Findings were reproduced on a running system with fake data, except the parts marked as read from code (the consent gap in F9, the production log level in N1). Two that did not hold up as written were downgraded (F4, F8); a report with a false finding is worse than a shorter one.</p>
+  <table>
+    <tr><th style="width:7%">#</th><th style="width:7%">Sev</th><th style="width:14%">Type</th><th>Finding and one-line impact</th></tr>
+    <tr><td>F1</td><td class="sev p0">P0</td><td>Defective impl</td><td>Portfolio, skill, override and fit/gap records are not tenant scoped. <b>Impact:</b> an assessor at company A downloaded, rescored (201) and ran fit/gap on company B's candidate.</td></tr>
+    <tr><td>F2</td><td class="sev p0">P0</td><td>Missing spec + defect</td><td>Coverage never gates a rating; a missing level becomes L1. <b>Impact:</b> candidates are rated and described as weak on skills nobody asked about, up to the hiring recommendation.</td></tr>
+    <tr><td>F3</td><td class="sev p1">P1</td><td>Defect (seam)</td><td>API sends <code>expected_level</code>, web reads <code>required_level</code>; override flag never serialized. <b>Impact:</b> the Required column was blank on every report ever generated.</td></tr>
+    <tr><td>F4</td><td class="sev p1">P1</td><td>Defect</td><td>Confidence taken from the model, not the PRD rule; fit/gap ignores it. <b>Impact:</b> a one-question skill weighs the same as a well-probed one. (Wrong labels were not observed in these runs.)</td></tr>
+    <tr><td>F5</td><td class="sev p1">P1</td><td>Defect</td><td>Non-atomic <code>destroy_all</code> + <code>create!</code>. <b>Impact:</b> one capitalised word from the model wiped the assessor's overrides and left 1 of 5 skills.</td></tr>
+    <tr><td>F6</td><td class="sev p1">P1</td><td>Defect + missing spec</td><td>Retry during Sidekiq retries queues a second job; stalled runs cannot be restarted. <b>Impact:</b> duplicate model spend; a stuck result needs a developer.</td></tr>
+    <tr><td>F7</td><td class="sev p1">P1</td><td>Defect</td><td>Fit/gap page POSTs on every 404 while polling. <b>Impact:</b> two model calls per page view; the narrative changed under the reader.</td></tr>
+    <tr><td>N1</td><td class="sev p1">P1</td><td>Defect</td><td>No parameter filtering at the production log level. <b>Impact:</b> login passwords and candidate names written to logs in plain text.</td></tr>
+    <tr><td>F10</td><td class="sev p1">P1</td><td>Defect</td><td>PDF fonts only cover Windows-1252; the override line has an arrow. <b>Impact:</b> every corrected portfolio failed to export, silently.</td></tr>
+    <tr><td>N2</td><td class="sev p1">P1</td><td>Defect (config)</td><td>Shipped model ids return 404; the stored error drops the reason. <b>Impact:</b> every portfolio fails out of the box with no explanation.</td></tr>
+    <tr><td>N3</td><td class="sev p1">P1</td><td>Defect (conditional)</td><td>A signed token without a <code>scheme</code> claim can pick any tenant via header or Referer. <b>Impact:</b> depends on whether such tokens exist (escalated).</td></tr>
+    <tr><td>F9</td><td class="sev p1">P1</td><td>Missing spec + defect</td><td>No consent, retention or deletion; narratives built from counts only although PRD-02 specifies competency summaries. <b>Impact:</b> automated profiling the candidate cannot see or contest.</td></tr>
+    <tr><td>F8</td><td class="sev p2">P2</td><td>Defect</td><td>Override deleted the report before regenerating; no audit trail. <b>Impact:</b> report vanishes after each override; reviewers cannot see why a rating changed.</td></tr>
+    <tr><td>F11</td><td class="sev p2">P2</td><td>Defect (UI)</td><td>Failure reasons hidden, export offered on failed portfolios, errors swallowed, recommendation never shown. <b>Impact:</b> assessors cannot see what went wrong.</td></tr>
+    <tr><td>F12</td><td class="sev p2">P2</td><td>Defect (UI)</td><td>Mobile: page scrolled sideways (550 px content on 375 px), the Result column off-screen. <b>Impact:</b> the key column is unreadable on a phone.</td></tr>
+    <tr><td>N4</td><td class="sev p3">P3</td><td>Defect</td><td>Model sometimes returns lowercase skill ids; matching relied on a label fallback. <b>Impact:</b> fragile, no wrong match observed.</td></tr>
+  </table>
+  <h3>Missing specification vs defective implementation</h3>
+  <p><b>Never defined:</b> what an unmeasured skill is called and how it counts; recovery from stuck generation; consent, retention, deletion and the candidate's right to contest; where culture-fit evidence comes from; how an override is audited. <b>Defined but broken:</b> tenant isolation, the PRD confidence rule, the fit/gap contract, atomic regeneration, one job per request, PDF export, log filtering, shipped model ids.</p>
+  <h3>Constraint signal (escalated to a Tech Lead)</h3>
+  <ol class="small">
+    <li><b>Token contract with rakamin-api:</b> does every token carry <code>scheme</code>? If not, N3 is a P0. Should this service verify tenant membership instead of trusting claims?</li>
+    <li><b>Model ids and API version:</b> the client hardcodes <code>v1</code>; current Pro models are not available there for new keys. Who owns model choice?</li>
+    <li><b>UU PDP:</b> lawful basis, consent text, retention, deletion, DPIA; whether AI recommendations need human review by policy.</li>
+    <li><b>No tests, no CI</b> before this change.</li>
+    <li><b>Isolation by default scope</b> relies on remembering a concern on every model; child tables have no <code>tenant_id</code>.</li>
+  </ol>
+</div>
+
+<!-- Step 4 -->
+<div class="section">
+  <h2>Step 4: Revamp strategy, acceptance criteria and trade-offs</h2>
+  <p>Written before any product code changed (<code>04-revamp-strategy.md</code>, committed as <code>dab60ca</code>). The slice is the path from evidence to decision, because a wrong result there reaches a candidate; the P0 tenant fix and the cheap log fix come along because a "trustworthy report" another company can read would be hollow.</p>
+  <h3>Acceptance criteria (condensed; each names its test layer in the source document)</h3>
+  <table>
+    <tr><th style="width:9%">AC</th><th>Correct behaviour, including the edge cases</th></tr>
+    <tr><td>AC1</td><td><code>not_yet</code> is Not assessed with no level or confidence, whatever the model says; zero candidate turns means no model call; never a gap; same in UI, PDF, JSON.</td></tr>
+    <tr><td>AC2</td><td>Level <code>3</code>, <code>"3"</code>, <code>"L3"</code>, <code>3.0</code> parse; <code>nil</code>, <code>0</code>, <code>7</code>, <code>2.5</code>, <code>"three"</code>, arrays become needs review, not L1. Evidence coerced to 3 strings of 500 chars; blank summary keeps the level; ids matched in any case; invented and duplicate skills dropped; non-JSON response retried with nothing written; a failure halfway leaves old rows intact.</td></tr>
+    <tr><td>AC3</td><td>Confidence from coverage per PRD (high: covered and 3+ probes; medium: 2 probes or partial; low: 1 or initiated), weakest wins on overlap; the model's label is ignored.</td></tr>
+    <tr><td>AC4</td><td>Every row shows required, candidate, confidence and result; low confidence is provisional; overrides flagged with the AI level; legacy reports served with defaults and marked stale; both narratives shown as a draft; empty vacancy has an empty state.</td></tr>
+    <tr><td>AC5</td><td>Another tenant's ids return 404 on export (JSON, PDF), fit/gap read, generate and regenerate, and override; workers still find records.</td></tr>
+    <tr><td>AC6</td><td>Regeneration updates skills in place and keeps overrides, even when a skill becomes not assessed; an override of an unassessed skill needs a note; notes capped at 2,000.</td></tr>
+    <tr><td>AC7</td><td>One fit/gap job per pair across tabs; the page POSTs once; between retries the portfolio stays generating with the reason and Retry is refused (409).</td></tr>
+    <tr><td>AC8</td><td>A run stuck for 20 minutes is reported as stalled and can be restarted.</td></tr>
+    <tr><td>AC9</td><td>PDF export works with an override, Indonesian, Greek, Cyrillic, CJK, emoji and 5,000-char text; failures are shown in the UI.</td></tr>
+    <tr><td>AC10</td><td>Passwords, tokens, emails, candidate names, notes and transcript text are filtered from logs.</td></tr>
+    <tr><td>AC11</td><td>Loading, empty, not assessed, needs review, low confidence, partial, generating, stalled, failed, fetch error, long text, 375 px without horizontal scroll.</td></tr>
+  </table>
+  <h3>Options compared</h3>
+  <table>
+    <tr><th style="width:17%">Decision</th><th>Chosen</th><th>Rejected, and why</th></tr>
+    <tr><td>Representing "not assessed"</td><td><b>Status column, nullable level, DB constraints</b>. One row per skill, needs review representable, enforced by the database. Down-migration refuses rather than inventing levels.</td><td><b>No row, derive from coverage:</b> no place for needs review; every future reader must remember the merge, which is how F2 happened. <b>Sentinel level 0:</b> the current bug with a different number.</td></tr>
+    <tr><td>Tenant isolation</td><td><b>Scope through the parent session</b> (verified that Rails 7.0 applies the default scope inside the join). Closes the P0 with no data migration; request specs pin it.</td><td><b><code>tenant_id</code> on child tables:</b> better defence in depth, but a production backfill under deadline. Proposed as the follow-up.</td></tr>
+    <tr><td>Fit/gap contract</td><td><b>Keep <code>expected_level</code>, fix the web, shared contract file</b> read by both suites.</td><td><b>Rename the API field:</b> stored JSONB keeps the old name anyway. <b>Fix the web only:</b> nothing stops the next drift.</td></tr>
+    <tr><td>Model output</td><td><b>Strict server-side normalizer</b>: works for any model or prompt.</td><td><b>JSON-schema mode alone:</b> depends on model and API version (see N2); a good follow-up, never a replacement for validation.</td></tr>
+    <tr><td>Duplicate jobs</td><td><b>POST once in the UI + Redis lock per pair</b>, released by the worker, TTL for dead workers.</td><td><b>UI only:</b> two tabs still double-spend. <b>sidekiq-unique-jobs:</b> a dependency to defend for a 20-line need.</td></tr>
+    <tr><td>PDF text</td><td><b>Embed Noto Sans</b> (OFL): names print as spoken.</td><td><b>Transliterate to Windows-1252:</b> silently mangles non-Latin names on a person's record.</td></tr>
+  </table>
+</div>
+
+<!-- Step 5 -->
+<div class="section">
+  <h2>Step 5: Implementation and proof</h2>
+  <table>
+    <tr><th style="width:16%">Area</th><th>Change</th></tr>
+    <tr><td>Data model</td><td><code>assessment_status</code> and <code>status_reason</code>; level and confidence nullable; check constraints for "level exactly when assessed"; <code>rules_version</code>, generation progress columns. Four reversible migrations, each run up, down and up on existing rows.</td></tr>
+    <tr><td>Generator</td><td>Skills from the coverage map; no model call when nothing was discussed; per-skill normalizer; PRD confidence; in-place upsert in a savepoint with a row lock; readable failure reasons; failed only when retries run out.</td></tr>
+    <tr><td>Fit/gap</td><td>Not assessed and needs review are never gaps; provisional and override flags; narratives from competency summaries; serializer with defaults and stale / outdated / generating; Redis lock; report kept during refresh.</td></tr>
+    <tr><td>Security</td><td>Tenant scope on every portfolio lookup; parameter filtering; override validation.</td></tr>
+    <tr><td>Export</td><td>Unicode font; overrides in words; provisional and assessor-set results marked; AI text labelled.</td></tr>
+    <tr><td>Web</td><td>Types mirror the contract (which turned F3 into compile errors); table, cards, override form and both pages handle every state; one fit/gap request then polling; mobile layout; one small <code>Notice</code> component.</td></tr>
+    <tr><td>Harness</td><td>RSpec with factories and a guard against real model calls; Vitest + Testing Library; GitHub Actions; <code>contracts/fit_gap_report.example.json</code>.</td></tr>
+  </table>
+  <h3>Proof that the tests are real</h3>
+  <ul>
+    <li><b>Red before green</b> for every group, both outputs saved in <code>assessment/evidence/tests/</code>. 151 RSpec examples and 33 Vitest tests pass; <code>tsc</code> and the production build are clean.</li>
+    <li><b>Seeded fault test</b> on <code>scratch/seeded-fault</code>, each reverted with <code>git revert</code> so the history stays visible:
+      <table style="margin-top:4pt">
+        <tr><th>Fault</th><th>Commits</th><th>Caught by</th></tr>
+        <tr><td>Let <code>not_yet</code> skills be rated again (F2)</td><td><code>2b67f0b</code> / <code>c15c80d</code></td><td>13 RSpec failures; 9 stopped by the model validation, a second line of defence</td></tr>
+        <tr><td>Export without the tenant scope (F1)</td><td><code>3c788f2</code> / <code>55382aa</code></td><td>Both cross-tenant export specs (200 and 500 instead of 404)</td></tr>
+        <tr><td>Re-request fit/gap on every poll (F7)</td><td><code>c6dfe72</code> / <code>68178bb</code></td><td>Hook tests: "called 3 times" instead of once</td></tr>
+      </table>
+    </li>
+    <li><b>Runtime re-checks</b> with real Gemini after each backend group: three fit/gap requests run one job; cross-tenant calls return 404; the corrected PDF renders, checked by rendering it to an image, which caught a missing arrow glyph the spec could not.</li>
+  </ul>
+  <div style="break-inside: avoid">
+  <h3>AI verification moments (9 real entries in <code>ai-verification-log.md</code>)</h3>
+  <div class="callout warn">
+    <p><b>The error path saved a half-written skill.</b> My first generator built new skills through the association. When a save failed inside the transaction, the existing <code>rescue</code> called <code>portfolio.update!</code>, which autosaved the unsaved skill outside the rolled-back transaction: exactly the partial write this change was meant to remove, and it would have happened in production. The atomicity spec caught it; I found the cause by printing the surviving rows instead of guessing.</p>
+    <p style="margin:0"><b>A wrong explanation, corrected.</b> I first blamed nested transactions and logged a symptom I had not observed. Re-reading the log, I tested the claim (removed <code>requires_new</code>; every spec still passed: RSpec's transaction is non-joinable) and corrected the entry and the code comment in a separate commit.</p>
+  </div>
+  </div>
+  <p class="small">Also logged: a shell quirk that made every model look like a 404; trusting a metadata endpoint; a regenerate path that made every just-queued run look stalled (caught reviewing my diff, spec first); two wrong test expectations fixed by making one stricter, not looser; a "missing name" that was a screenshot taken mid-load; a fake test password a secret scanner flagged on the PR; and a lock any job could release, found while listing failure modes and fixed with a token-owned lock.</p>
+</div>
+
+<!-- Before / after gallery -->
+<div class="section">
+  <h2>Before and after</h2>
+  <div class="pair">
+    <figure><span class="tag before">Before</span><img src="../screenshots/before/B02-unassessed-skills-rated-L1.jpg"><figcaption>Never discussed: "L1 Foundational", "Only briefly explored".</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A03-portfolio-nothing-discussed.jpg"><figcaption>Not assessed with the reason, "0 of 4 skills assessed", and a prompt to invite the candidate again.</figcaption></figure>
+  </div>
+  <div class="pair">
+    <figure><span class="tag before">Before</span><img src="../screenshots/before/B03-fitgap-required-blank-unassessed-as-gap.jpg"><figcaption>Required blank on every row; an unmeasured skill as "Gap -1"; confidence hidden.</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A05-fitgap-required-provisional-override.jpg"><figcaption>Required shown; one-question result marked provisional; assessor-set level marked with what the AI said.</figcaption></figure>
+  </div>
+</div>
+
+<div class="section">
+  <div class="pair">
+    <figure><span class="tag before">Before</span><img src="../screenshots/before/B05-override-copy-no-audit.jpg"><figcaption>Override: "You Overridden", no note, no time.</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A08-portfolio-low-confidence-and-override.jpg"><figcaption>Provisional note for thin evidence; override with who, when, what it replaced, and the note.</figcaption></figure>
+  </div>
+  <div class="pair">
+    <figure><span class="tag before">Before</span><img src="../screenshots/before/B01-portfolio-failed-no-reason.jpg"><figcaption>Failure with no reason, export still offered.</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A04-override-unassessed-requires-note.jpg"><figcaption>Override of an unassessed skill: form below the card, note required, character count.</figcaption></figure>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="margin-top:0">Mobile (375 px)</h3>
+  <div class="trio">
+    <figure><span class="tag before">Before</span><img src="../screenshots/before/B07-mobile-fitgap-result-column-hidden.jpg"><figcaption>Result column off-screen; page scrolls sideways.</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A06-mobile-fitgap-stacked.jpg"><figcaption>One block per skill; no horizontal scroll.</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A07-mobile-portfolio.jpg"><figcaption>Header and cards wrap instead of overlapping.</figcaption></figure>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="margin-top:0">Exported PDF</h3>
+  <div class="pair">
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A01-pdf-fitgap-provisional-and-override.png"><figcaption>Fit/gap table with provisional and assessor-set results; narratives labelled as an AI draft. Before: HTTP 500 for any portfolio with an override.</figcaption></figure>
+    <figure><span class="tag after">After</span><img src="../screenshots/after/A02-pdf-override-on-unassessed-skill.png"><figcaption>Override written in words, Indonesian note with an em dash.</figcaption></figure>
+  </div>
+</div>
+
+<!-- Limits -->
+<div class="section">
+  <h2>Limits, follow-ups and assumptions</h2>
+  <h3>Stated limits</h3>
+  <ul>
+    <li>The live audio interview was not run; transcripts and coverage maps were seeded. Everything after the interview used the real API, workers and model.</li>
+    <li>Local runs used <code>gemini-2.5-flash</code> for both model roles; production model choice is open (N2).</li>
+    <li>CI is configured but has not run on GitHub before this submission.</li>
+    <li>The model still writes a hiring recommendation. It is now labelled a draft and no longer built on unmeasured skills; whether the product should write one at all is a product and legal decision (Pasal 10), escalated rather than decided here.</li>
+  </ul>
+  <h3>Follow-ups, in priority order</h3>
+  <ol>
+    <li>Consent notice, retention period and deletion path for audio, transcripts and portfolios; a candidate-facing way to object (F9).</li>
+    <li>Confirm the token contract with rakamin-api; reject tenant selection by header for authenticated requests if possible (N3).</li>
+    <li><code>tenant_id</code> on child tables as a second isolation layer.</li>
+    <li>Settle production model ids and API version; add JSON-schema output on top of the normalizer.</li>
+    <li>Backfill task for portfolios generated before this change; evidence grounding (quotes must appear in the transcript).</li>
+  </ol>
+  <h3>Assumptions (no live Q&amp;A)</h3>
+  <ol class="small">
+    <li><code>not_yet</code> means no evidence was collected, whatever the model says.</li>
+    <li><code>initiated</code> with one probe is a real but thin signal: rated, low confidence, provisional in fit/gap.</li>
+    <li>Where the PRD confidence rules overlap, the weaker label wins.</li>
+    <li>An assessor override is the effective level for every downstream use.</li>
+    <li>"Required" in the UI is the vacancy skill's <code>expected_level</code>.</li>
+    <li>Narratives are drafts for the assessor, not statements to send unreviewed.</li>
+    <li>The submission deadline is the one shown on the career dashboard, which differs from the brief.</li>
+  </ol>
+  <p class="small muted" style="margin-top:14pt">Source documents in the PR: <code>assessment/01-setup-notes.md</code>, <code>02-context.md</code>, <code>03-findings.md</code>, <code>04-revamp-strategy.md</code>, <code>05-execution.md</code>, <code>ai-verification-log.md</code>, <code>evidence/</code>, <code>screenshots/</code>.</p>
+</div>
+
+</body>
+</html>

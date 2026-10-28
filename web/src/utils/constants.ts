@@ -1,12 +1,5 @@
 export const TIME_LIMIT_OPTIONS = [10, 30, 45, 60, 90] as const;
 
-/** Parse "L3" → 3, passthrough number, fallback to 1 */
-export function parseLevel(level: string | number): number {
-  if (typeof level === "number") return level;
-  const n = parseInt(level.replace(/\D/g, ""), 10);
-  return isNaN(n) ? 1 : n;
-}
-
 export const LEVEL_LABELS: Record<number, string> = {
   1: "L1",
   2: "L2",
@@ -60,11 +53,13 @@ export const FIT_GAP_RESULT_LABELS: Record<string, string> = {
   gap: "Gap",
   exceed: "Exceeds",
   not_assessed: "Not assessed",
+  needs_review: "Needs review",
 };
 
 export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   match: "text-green-700 bg-green-50",
   gap: "text-amber-700 bg-amber-50",
   exceed: "text-green-700 bg-green-50",
-  not_assessed: "text-neutral-500 bg-neutral-50",
+  not_assessed: "text-neutral-600 bg-neutral-100",
+  needs_review: "text-amber-800 bg-amber-100",
 };

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class FitGapReport < ApplicationRecord
-  FIT_RESULTS = %w[match gap exceed not_assessed].freeze
+  FIT_RESULTS = %w[match gap exceed not_assessed needs_review].freeze
 
   belongs_to :portfolio
   belongs_to :vacancy

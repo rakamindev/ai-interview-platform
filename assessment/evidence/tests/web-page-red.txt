@@ -1,0 +1,4808 @@
+
+ RUN  v3.2.7 ~/Desktop/Rakamin/ai-interview-platform/web
+
+ ❯ src/pages/portfolio/PortfolioPage.test.tsx (6 tests | 6 failed) 6099ms
+   × PortfolioPage > says how many skills the interview actually assessed (partial state) 1032ms
+     → Unable to find an element with the text: 1 of 2 skills assessed · 1 not discussed in the interview. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+   × PortfolioPage > shows progress and the last error while retries run, without offering a second run 1006ms
+     → Unable to find an element with the text: Generating the portfolio. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+   × PortfolioPage > offers a retry when generation has stalled 1005ms
+     → Unable to find an element with the text: This is taking much longer than expected.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+   × PortfolioPage > shows why generation failed, and no export buttons 1008ms
+     → Unable to find an element with the text: The AI model did not respond in time.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="border border-destructive/40 rounded-lg p-6 text-center space-y-3"
+      >
+        <p
+          class="text-sm text-destructive"
+        >
+          Portfolio generation failed.
+        </p>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-refresh-cw h-3.5 w-3.5 mr-1.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+            />
+            <path
+              d="M21 3v5h-5"
+            />
+            <path
+              d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+            />
+            <path
+              d="M8 16H3v5"
+            />
+          </svg>
+           Retry
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="border border-destructive/40 rounded-lg p-6 text-center space-y-3"
+      >
+        <p
+          class="text-sm text-destructive"
+        >
+          Portfolio generation failed.
+        </p>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-refresh-cw h-3.5 w-3.5 mr-1.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+            />
+            <path
+              d="M21 3v5h-5"
+            />
+            <path
+              d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+            />
+            <path
+              d="M8 16H3v5"
+            />
+          </svg>
+           Retry
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+   × PortfolioPage > shows an error instead of a blank page when loading fails 1005ms
+     → Unable to find an element with the text: Could not load the portfolio.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+   × PortfolioPage > explains a failed export (AC9.2) 1043ms
+     → Unable to find an element with the text: Could not export the PDF. Try again.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/portfolio/PortfolioPage.test.tsx > PortfolioPage > says how many skills the interview actually assessed (partial state)
+TestingLibraryElementError: Unable to find an element with the text: 1 of 2 skills assessed · 1 not discussed in the interview. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/portfolio/PortfolioPage.test.tsx:56:25
+     54|     renderPage();
+     55| 
+     56|     expect(await screen.findByText("1 of 2 skills assessed · 1 not dis…
+       |                         ^
+     57|   });
+     58| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/pages/portfolio/PortfolioPage.test.tsx > PortfolioPage > shows progress and the last error while retries run, without offering a second run
+TestingLibraryElementError: Unable to find an element with the text: Generating the portfolio. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/portfolio/PortfolioPage.test.tsx:67:25
+     65|     renderPage();
+     66| 
+     67|     expect(await screen.findByText("Generating the portfolio")).toBeIn…
+       |                         ^
+     68|     expect(screen.getByText("Attempt 2. Last attempt: The AI model is …
+     69|     expect(screen.queryByRole("button", { name: /retry/i })).not.toBeI…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/pages/portfolio/PortfolioPage.test.tsx > PortfolioPage > offers a retry when generation has stalled
+TestingLibraryElementError: Unable to find an element with the text: This is taking much longer than expected.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+      <div
+        class="border rounded-lg p-12 text-center space-y-3"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-loader-circle h-8 w-8 animate-spin text-primary mx-auto"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 12a9 9 0 1 1-6.219-8.56"
+          />
+        </svg>
+        <div>
+          <p
+            class="font-medium"
+          >
+            Generating portfolio...
+          </p>
+          <p
+            class="text-sm text-muted-foreground mt-1"
+          >
+            The AI is analyzing the interview transcript. This takes about 2 minutes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/portfolio/PortfolioPage.test.tsx:78:25
+     76|     renderPage();
+     77| 
+     78|     expect(await screen.findByText("This is taking much longer than ex…
+       |                         ^
+     79|     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDoc…
+     80|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/pages/portfolio/PortfolioPage.test.tsx > PortfolioPage > shows why generation failed, and no export buttons
+TestingLibraryElementError: Unable to find an element with the text: The AI model did not respond in time.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="border border-destructive/40 rounded-lg p-6 text-center space-y-3"
+      >
+        <p
+          class="text-sm text-destructive"
+        >
+          Portfolio generation failed.
+        </p>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-refresh-cw h-3.5 w-3.5 mr-1.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+            />
+            <path
+              d="M21 3v5h-5"
+            />
+            <path
+              d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+            />
+            <path
+              d="M8 16H3v5"
+            />
+          </svg>
+           Retry
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="border border-destructive/40 rounded-lg p-6 text-center space-y-3"
+      >
+        <p
+          class="text-sm text-destructive"
+        >
+          Portfolio generation failed.
+        </p>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-refresh-cw h-3.5 w-3.5 mr-1.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+            />
+            <path
+              d="M21 3v5h-5"
+            />
+            <path
+              d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+            />
+            <path
+              d="M8 16H3v5"
+            />
+          </svg>
+           Retry
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/portfolio/PortfolioPage.test.tsx:89:25
+     87|     renderPage();
+     88| 
+     89|     expect(await screen.findByText("The AI model did not respond in ti…
+       |                         ^
+     90|     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDoc…
+     91|     expect(screen.queryByRole("button", { name: "PDF" })).not.toBeInTh…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/pages/portfolio/PortfolioPage.test.tsx > PortfolioPage > shows an error instead of a blank page when loading fails
+TestingLibraryElementError: Unable to find an element with the text: Could not load the portfolio.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/portfolio/PortfolioPage.test.tsx:98:25
+     96|     renderPage();
+     97| 
+     98|     expect(await screen.findByText("Could not load the portfolio.")).t…
+       |                         ^
+     99|     expect(screen.getByRole("button", { name: "Try again" })).toBeInTh…
+    100|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  src/pages/portfolio/PortfolioPage.test.tsx > PortfolioPage > explains a failed export (AC9.2)
+TestingLibraryElementError: Unable to find an element with the text: Could not export the PDF. Try again.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="max-w-2xl mx-auto space-y-6"
+    >
+      <div
+        class="flex items-start justify-between"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <a
+            class="text-muted-foreground hover:text-foreground"
+            data-discover="true"
+            href="/assessments/1/invite"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-arrow-left h-4 w-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+          </a>
+          <div>
+            <h1
+              class="text-lg font-semibold"
+            >
+              Portfolio Results
+            </h1>
+            <p
+              class="text-sm text-muted-foreground"
+            >
+              Dewi Lestari (fake)
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex gap-2"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            data-discover="true"
+            href="/assessments/1/sessions/2/transcript"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-text h-3.5 w-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+              />
+              <path
+                d="M14 2v4a2 2 0 0 0 2 2h4"
+              />
+              <path
+                d="M10 9H8"
+              />
+              <path
+                d="M16 13H8"
+              />
+              <path
+                d="M16 17H8"
+              />
+            </svg>
+            Transcript
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            PDF
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-download h-3.5 w-3.5 mr-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 15V3"
+              />
+              <path
+                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+              />
+              <path
+                d="m7 10 5 5 5-5"
+              />
+            </svg>
+            JSON
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <h2
+          class="text-sm font-semibold"
+        >
+          Configured Skills
+        </h2>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="inline-flex flex-col items-center justify-center rounded font-semibold px-3 py-2 min-w-14 text-base bg-teal-100 text-teal-700"
+              >
+                <span>
+                  L3
+                </span>
+                <span
+                  class="text-[10px] font-normal opacity-70"
+                >
+                  Proficient
+                </span>
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    React
+                  </span>
+                </div>
+                <span
+                  class="flex items-center gap-1 text-xs text-green-600"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full bg-green-500"
+                  />
+                  Confidence: HIGH
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+            <div
+              class="space-y-1"
+            >
+              <span
+                class="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+              >
+                Competency summary
+              </span>
+              <p
+                class="text-sm text-muted-foreground leading-relaxed break-words"
+              >
+                Solid.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-card text-card-foreground shadow"
+        >
+          <div
+            class="p-4 space-y-4"
+          >
+            <div
+              class="flex items-start gap-3"
+            >
+              <div
+                class="shrink-0 w-16 rounded px-1 py-2 text-center text-[11px] font-semibold leading-tight bg-neutral-100 text-neutral-600"
+              >
+                Not assessed
+              </div>
+              <div
+                class="flex-1 min-w-0 space-y-0.5"
+              >
+                <div
+                  class="flex flex-wrap items-center gap-x-1.5"
+                >
+                  <span
+                    class="font-semibold break-words"
+                  >
+                    Communication
+                  </span>
+                </div>
+                <p
+                  class="text-xs text-muted-foreground"
+                >
+                  Not discussed in the interview.
+                </p>
+              </div>
+              <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs shrink-0"
+              >
+                Override rating
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="shrink-0 bg-border h-[1px] w-full"
+        data-orientation="horizontal"
+        role="none"
+      />
+      <div
+        class="flex items-center gap-3"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          class="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-56"
+          data-placeholder=""
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            Choose vacancy...
+          </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          disabled=""
+        >
+          Run Fit/Gap Analysis →
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/portfolio/PortfolioPage.test.tsx:109:25
+    107|     await userEvent.click(await screen.findByRole("button", { name: "P…
+    108| 
+    109|     expect(await screen.findByText("Could not export the PDF. Try agai…
+       |                         ^
+    110|     expect(screen.getByRole("button", { name: "PDF" })).toBeEnabled();
+    111|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+TypeError: portfoliosApi.exportPortfolio is not a function
+ ❯ handleExport src/pages/portfolio/PortfolioPage.tsx:70:39
+     68|     setExporting(format);
+     69|     try {
+     70|       const res = await portfoliosApi.exportPortfolio(
+       |                                       ^
+     71|         portfolio.id,
+     72|         format,
+ ❯ onClick src/pages/portfolio/PortfolioPage.tsx:136:32
+ ❯ HTMLUnknownElement.callCallback node_modules/react-dom/cjs/react-dom.development.js:4164:14
+ ❯ HTMLUnknownElement.callTheUserObjectsOperation node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30
+ ❯ innerInvokeEventListeners node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25
+ ❯ invokeEventListeners node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3
+ ❯ HTMLUnknownElementImpl._dispatch node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9
+ ❯ HTMLUnknownElementImpl.dispatchEvent node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17
+ ❯ HTMLUnknownElement.dispatchEvent node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34
+ ❯ Object.invokeGuardedCallbackDev node_modules/react-dom/cjs/react-dom.development.js:4213:16
+
+This error originated in "src/pages/portfolio/PortfolioPage.test.tsx" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "explains a failed export (AC9.2)". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+     Errors  1 error
+   Start at  23:11:58
+   Duration  7.04s (transform 87ms, setup 67ms, collect 247ms, tests 6.10s, environment 189ms, prepare 68ms)
+
