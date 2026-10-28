@@ -9,6 +9,10 @@ class Portfolio < ApplicationRecord
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
+  # A portfolio has no tenant_id of its own; it belongs to the organization of its session.
+  # Controllers look portfolios up through this scope, so another organization's portfolio is a 404.
+  scope :for_tenant, ->(tenant_id) { joins(:session).where(sessions: { tenant_id: tenant_id }) }
+
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }

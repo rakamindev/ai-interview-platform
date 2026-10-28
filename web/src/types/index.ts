@@ -129,11 +129,16 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  expected_level: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: string | null;
+  /** The candidate level was set by an assessor. Absent in reports generated before this field existed. */
   is_override?: boolean;
+  /** The level comes from the model alone, on thin evidence. Absent in older reports. */
+  low_confidence?: boolean;
 }
 
 export interface FitGapReport {

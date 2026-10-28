@@ -13,26 +13,48 @@ module Portfolios
       )
     end
 
+    # Raised when the model output cannot be turned into a usable portfolio.
+    # The message is fixed text on purpose: it is stored and shown to assessors,
+    # so it must never echo model output (which contains candidate quotes).
+    class InvalidOutput < StandardError; end
+
     # Returns the Portfolio record with skills populated.
+    #
+    # Safe to run more than once for the same session (Sidekiq may deliver or retry a job twice):
+    # a finished portfolio is returned untouched, because it may already carry assessor overrides.
     def call
       portfolio = @session.portfolio || @session.create_portfolio!(
         candidate_id:      @session.candidate_id,
         generation_status: 'pending'
       )
 
+      if portfolio.complete?
+        Rails.logger.info("[N10] Portfolio for session #{@session.id} already complete, skipping")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt
       response = @gemini_client.generate_content(prompt, temperature: 0.2)
+      rows     = usable_skill_rows(parse_output(response))
 
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+      raise InvalidOutput, 'The model returned no usable skills' if rows.empty?
+
+      # All-or-nothing: skills and the "complete" status are saved together or not at all.
+      Portfolio.transaction do
+        portfolio.lock! # re-reads the row; another job may have finished while we waited for the model
+        unless portfolio.complete?
+          replace_skills(portfolio, rows)
+          portfolio.update!(generation_status: 'complete', generated_at: Time.current)
+        end
+      end
 
       Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
       portfolio
     rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      mark_failed(portfolio, e)
+      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class}")
       raise
     end
 
@@ -147,35 +169,85 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+    def parse_output(response)
+      data = response.is_a?(String) ? JSON.parse(response) : response
+      raise InvalidOutput, 'The model output is not a JSON object' unless data.is_a?(Hash)
 
-      # Destroy existing skills (idempotent regeneration)
+      data
+    rescue JSON::ParserError
+      raise InvalidOutput, 'The model output is not valid JSON'
+    end
+
+    # Turns the model output into rows that are safe to save. A skill without a valid
+    # level stays "not assessed" (no row), instead of being stored as L1 and shown as a gap.
+    def usable_skill_rows(data)
+      rows    = []
+      skipped = 0
+
+      { false => 'configured_skills', true => 'discovered_skills' }.each do |discovered, key|
+        Array(data[key]).each do |skill_data|
+          row = skill_row(skill_data, discovered: discovered)
+          row ? rows << row : skipped += 1
+        end
+      end
+
+      Rails.logger.warn("[N10] Skipped #{skipped} unusable skill(s) for session #{@session.id}") if skipped.positive?
+      rows.uniq { |row| [row[:skill_id], row[:skill_label].downcase] }
+    end
+
+    def skill_row(skill_data, discovered:)
+      return nil unless skill_data.is_a?(Hash)
+
+      level   = parse_level(skill_data['level'])
+      label   = skill_data['skill_label'].to_s.strip
+      summary = skill_data['competency_summary'].to_s.strip
+      return nil unless level&.between?(1, 5) && label.present? && summary.present?
+
+      confidence = skill_data['confidence'].to_s.downcase
+      confidence = 'low' unless PortfolioSkill::CONFIDENCE_LEVELS.include?(confidence)
+
+      {
+        skill_id:           discovered ? nil : skill_data['skill_id'],
+        skill_label:        label,
+        is_discovered:      discovered,
+        ai_level:           level,
+        ai_confidence:      confidence,
+        evidence:           Array(skill_data['evidence']).map { |quote| quote.to_s.strip }.reject(&:empty?).first(3),
+        competency_summary: summary
+      }
+    end
+
+    # Accepts a whole number, as a number or a string ("4"). Anything else, including 2.5,
+    # is a malformed answer from the model: truncating it to 2 would invent a level.
+    def parse_level(value)
+      case value
+      when Integer then value
+      when String  then Integer(value.strip, 10, exception: false)
+      end
+    end
+
+    # Runs inside the transaction in #call. Only reached for a portfolio that is not complete,
+    # so no assessor override can be lost here.
+    def replace_skills(portfolio, rows)
       portfolio.portfolio_skills.destroy_all
+      rows.each { |attributes| portfolio.portfolio_skills.create!(attributes) }
+    end
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+    # Never overwrite a portfolio that a parallel job finished in the meantime.
+    def mark_failed(portfolio, error)
+      return unless portfolio
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
-      end
+      portfolio.reload
+      return if portfolio.complete?
+
+      portfolio.update!(generation_status: 'failed', generation_error: safe_error_message(error))
+    end
+
+    # Raw exception messages can echo model output or SQL values, i.e. candidate data (UU PDP).
+    def safe_error_message(error)
+      return error.message if error.is_a?(InvalidOutput)
+
+      "Portfolio generation failed (#{error.class.name}). Please regenerate or contact support."
     end
   end
 end
