@@ -1,3 +1,4 @@
+
 # frozen_string_literal: true
 
 module Gemini
@@ -27,10 +28,17 @@ module Gemini
     # Generates content using Gemini REST API.
     # Returns parsed JSON response body.
     def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
+      response = @connection.post(
+        generate_url,
+        request_body(prompt, temperature),
+        request_headers
+      )
+
       parse_response(response)
     rescue Faraday::TimeoutError => e
-      raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
+      raise TimeoutError.new(
+        "Gemini API timeout after #{@timeout}s: #{e.message}"
+      )
     rescue Faraday::Error => e
       raise ApiError.new("Gemini API error: #{e.message}")
     end
@@ -42,7 +50,10 @@ module Gemini
     end
 
     def request_headers
-      { 'Content-Type' => 'application/json', 'x-goog-api-key' => @api_key }
+      {
+        'Content-Type' => 'application/json',
+        'x-goog-api-key' => @api_key
+      }
     end
 
     def request_body(prompt, temperature)
@@ -55,17 +66,20 @@ module Gemini
     def build_connection
       Faraday.new do |f|
         f.request :retry, {
+          methods: [:post],
           max: 3,
           interval: 1,
           interval_randomness: 0.5,
           backoff_factor: 2,
           retry_statuses: [429, 500, 502, 503],
-          retry_block: ->(env, _opts, retries, exc) {
-            retry_after = env&.response_headers&.[]('retry-after')&.to_i
-            sleep([retry_after || 1, 30].min) if env&.status == 429
-            Rails.logger.warn("[Gemini::HttpClient] Retry ##{retries} for #{@model}: #{exc&.message}")
+          retry_block: lambda { |env:, retry_count:, exception:, will_retry_in:, **_|
+            Rails.logger.warn(
+              "[Gemini::HttpClient] Retry ##{retry_count} for #{@model} " \
+              "in #{will_retry_in}s: #{exception&.message}"
+            )
           }
         }
+
         f.options.timeout = @timeout
         f.options.open_timeout = 10
         f.adapter Faraday.default_adapter
@@ -74,15 +88,29 @@ module Gemini
 
     def parse_response(response)
       unless response.success?
-        raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
-        raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
+        if response.status == 429
+          raise RateLimitError.new(
+            'Rate limited',
+            status: response.status,
+            body: response.body
+          )
+        end
+
+        Rails.logger.error(
+          "[Gemini::HttpClient] API error #{response.status}"
+        )
+
+        raise ApiError.new(
+          "API returned #{response.status}",
+          status: response.status,
+          body: response.body
+        )
       end
 
       data = JSON.parse(response.body)
       text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
 
-      raise ApiError.new("No content in Gemini response") unless text
+      raise ApiError.new('No content in Gemini response') unless text
 
       # Strip markdown code fences if present (e.g. ```json ... ```)
       cleaned = text.strip.sub(/\A```(?:json)?\s*/, '').sub(/\s*```\z/, '')
