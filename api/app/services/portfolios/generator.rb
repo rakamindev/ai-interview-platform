@@ -147,34 +147,32 @@ module Portfolios
       }
     end
 
+    # Coverage state per configured skill, keyed by skill_id and by downcased label.
+    def coverage_states
+      @session.coverage_maps.configured.each_with_object({}) do |map, states|
+        states[map.skill_id.to_s] = map.state if map.skill_id.present?
+        states[map.skill_label.downcase] = map.state
+      end
+    end
+
     def save_skills(portfolio, response)
       data = response.is_a?(Hash) ? response : JSON.parse(response)
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Skills the interview never reached get no row (see Portfolios::SkillRows),
+      # so the fit/gap report shows them as "not assessed" instead of a forced L1.
+      configured = Portfolios::SkillRows.call(data['configured_skills'], coverage_states: coverage_states)
+      discovered = Portfolios::SkillRows.call(data['discovered_skills'], discovered: true)
 
-      (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      dropped = Array(data['configured_skills']).size - configured.size
+      if dropped.positive?
+        Rails.logger.info("[N10] #{dropped} configured skill(s) left unassessed for session #{@session.id}")
       end
 
-      (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+      # One transaction: if a row fails to save, the previous skills stay untouched
+      # instead of leaving a half-written portfolio.
+      ActiveRecord::Base.transaction do
+        portfolio.portfolio_skills.destroy_all # idempotent regeneration
+        (configured + discovered).each { |row| portfolio.portfolio_skills.create!(row) }
       end
     end
   end

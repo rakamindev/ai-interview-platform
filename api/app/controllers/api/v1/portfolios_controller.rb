@@ -168,8 +168,19 @@ module Api
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          not_assessed_skills: not_assessed_skills(portfolio),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
+      end
+
+      # Configured skills the interview never reached have no portfolio row.
+      # Listing them lets the UI say "not assessed" instead of showing nothing.
+      def not_assessed_skills(portfolio)
+        return [] unless portfolio.generation_status == 'complete'
+
+        configured = portfolio.session.assessment.assessment_skills.order(:display_order).pluck(:skill_label)
+        assessed   = portfolio.portfolio_skills.reject(&:is_discovered).map(&:skill_label)
+        Portfolios::SkillRows.not_assessed(configured, assessed)
       end
 
       def portfolio_skill_json(skill)

@@ -38,6 +38,8 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [loadError, setLoadError] = useState(false);
+  const [endedWithError, setEndedWithError] = useState(false);
 
   // Fetch candidate info
   useEffect(() => {
@@ -48,8 +50,16 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setLoadError(true));
   }, [token]);
+
+  // When the interview ends, ask the server why, so a session that failed is not shown as a success.
+  useEffect(() => {
+    if (interviewState !== "complete" || !token) return;
+    sessionsApi.getCandidateInfo(token)
+      .then((res) => setEndedWithError(res.data.end_reason === "error"))
+      .catch(() => {});
+  }, [interviewState, token]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -187,6 +197,18 @@ export default function InterviewPage() {
       ? "connected"
       : "reconnecting";
 
+  if (loadError) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <h2 className="text-xl font-semibold">This interview link can't be opened</h2>
+        <p className="text-sm text-muted-foreground">
+          The link is invalid, has expired, or we couldn't reach the server. Please check the link,
+          or contact the hiring team for a new one.
+        </p>
+      </div>
+    );
+  }
+
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
@@ -228,6 +250,19 @@ export default function InterviewPage() {
 
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
+    if (endedWithError) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="text-4xl">⚠️</div>
+          <h2 className="text-xl font-semibold">We couldn't complete your interview</h2>
+          <p className="text-sm text-muted-foreground">
+            A technical problem ended the session early. This is not a reflection of your answers.
+            <br />
+            Please contact the hiring team so they can arrange a new session.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>

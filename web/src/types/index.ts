@@ -82,6 +82,7 @@ export interface Portfolio {
   generated_at?: string;
   generation_error?: string;
   skills: PortfolioSkill[];
+  not_assessed_skills?: string[]; // configured skills the interview never reached
   overrides: AssessorOverride[];
 }
 
@@ -129,10 +130,10 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  expected_level: number; // field name sent by the API
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
   is_override?: boolean;
 }
 
@@ -164,6 +165,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
 }
 
 export interface PaginationMeta {

@@ -199,6 +199,20 @@ export default function PortfolioPage() {
                   onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
                 />
               ))}
+            {(portfolio.not_assessed_skills ?? []).length > 0 && (
+              <div className="rounded-lg border border-dashed p-4 space-y-2" data-testid="not-assessed">
+                <p className="text-sm font-medium">Not assessed</p>
+                <p className="text-xs text-muted-foreground">
+                  The interview did not reach these skills, so no level was assigned. Consider a follow-up
+                  session if they matter for the role.
+                </p>
+                <ul className="text-sm list-disc pl-5">
+                  {(portfolio.not_assessed_skills ?? []).map((label) => (
+                    <li key={label}>{label}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Discovered skills */}
