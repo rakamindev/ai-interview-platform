@@ -21,8 +21,14 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await authApi.login({ email, password });
-      const token = res.data.token;
+      // COMMENT ATAU HAPUS 2 BARIS INI:
+      // const res = await authApi.login({ email, password });
+      // const token = res.data.token;
+
+      // TAMBAHKAN BARIS INI (Paste token kamu di dalam tanda kutip):
+      const token =
+        "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoiYWRtaW4iLCJzY2hlbWUiOiJ0ZXN0LWNvcnAiLCJleHAiOjE3OTM0Mjk2Nzl9.Jf1Jd8yLtFAyc5ooikD99Q1G-K_4uzgQ_pUsmDHq9d8";
+
       saveToken(token);
       setAuth({ token });
       navigate("/assessments");
@@ -38,7 +44,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">AI Interview</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Sign in to your account
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,7 +81,6 @@ export default function LoginPage() {
             Sign in
           </Button>
         </form>
-
       </div>
     </div>
   );
