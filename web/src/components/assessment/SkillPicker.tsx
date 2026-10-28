@@ -57,8 +57,12 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add from B7 taxonomy</DialogTitle>
+          <DialogTitle>Choose a skill template</DialogTitle>
         </DialogHeader>
+
+        <p className="text-sm text-muted-foreground">
+          Start with an interview-ready skill definition and editable proficiency levels.
+        </p>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

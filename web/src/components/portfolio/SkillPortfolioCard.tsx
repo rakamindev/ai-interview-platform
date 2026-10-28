@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import LevelBadge from "./LevelBadge";
 import ConfidenceIndicator from "./ConfidenceIndicator";
 import OverridePanel from "./OverridePanel";
-import { Zap } from "lucide-react";
+import { Quote, Zap } from "lucide-react";
 import { parseLevel } from "@/utils/constants";
 import type { PortfolioSkill, AssessorOverride } from "@/types";
 
@@ -57,7 +57,7 @@ export default function SkillPortfolioCard({
             <ul className="space-y-1">
               {skill.evidence.map((quote, i) => (
                 <li key={i} className="text-sm text-foreground">
-                  • "{quote}"
+                  <Quote className="inline h-3.5 w-3.5 mr-1 text-muted-foreground" />"{quote}"
                 </li>
               ))}
             </ul>

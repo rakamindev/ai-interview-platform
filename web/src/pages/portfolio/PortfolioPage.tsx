@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
@@ -246,7 +246,7 @@ export default function PortfolioPage() {
               </SelectContent>
             </Select>
             <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
-              Run Fit/Gap Analysis →
+              Run Fit/Gap Analysis <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           </div>
         </>

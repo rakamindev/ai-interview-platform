@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Circle, Mic, MicOff, RefreshCw, X } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -202,12 +202,12 @@ export default function InterviewPage() {
 
         {!hardwareCheckDone ? (
           <div className="space-y-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
-            </div>
+            <ul className="bg-muted/50 rounded-lg p-4 pl-8 text-sm space-y-1.5 text-muted-foreground list-disc">
+              <li>This is a voice interview. Make sure you're in a quiet place.</li>
+              <li>The AI will ask follow-up questions; there are no scripts.</li>
+              <li>The session will last up to {candidateInfo?.time_limit_min ?? "-"} minutes.</li>
+              <li>Your mic will be active throughout. You can end anytime.</li>
+            </ul>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
         ) : (
@@ -230,7 +230,7 @@ export default function InterviewPage() {
   if (interviewState === "complete") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
+        <CheckCircle className="h-10 w-10 mx-auto text-green-600" />
         <h2 className="text-xl font-semibold">Interview Complete</h2>
         <p className="text-sm text-muted-foreground">
           Thank you. The interview has been recorded.
@@ -263,12 +263,12 @@ export default function InterviewPage() {
       {interviewState === "reconnecting" && (
         connectionLostLong ? (
           <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
+            <Circle className="h-3 w-3 animate-pulse fill-current" />
             <span>Connection is taking too long to restore. Please wait, and contact the interviewer if this persists.</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-2.5 mt-2">
-            <span className="animate-pulse">●</span>
+            <Circle className="h-3 w-3 animate-pulse fill-current" />
             <span>Briefly reconnecting — please wait a moment.</span>
           </div>
         )
@@ -278,7 +278,7 @@ export default function InterviewPage() {
       {reconnectedPrompt && (
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)} aria-label="Dismiss reconnect message"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -356,7 +356,7 @@ export default function InterviewPage() {
         {import.meta.env.DEV && (
           <Button variant="outline" size="sm" className="text-xs opacity-50"
             onClick={() => sendJson({ type: "debug_force_reconnect" })}>
-            ⚡ Force reconnect
+            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Force reconnect
           </Button>
         )}
         </div>

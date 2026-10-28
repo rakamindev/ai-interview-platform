@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { Plus, Clock, ChevronRight, Trash2 } from "lucide-react";
 import type { Assessment } from "@/types";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
@@ -31,7 +31,20 @@ export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
+
+  const deleteAssessment = async (event: React.MouseEvent, assessment: Assessment) => {
+    event.stopPropagation();
+    if (!window.confirm(`Delete “${assessment.name}” and its interview history? This cannot be undone.`)) return;
+    setDeletingId(assessment.id);
+    try {
+      await assessmentsApi.delete(assessment.id);
+      setAssessments((current) => current.filter((item) => item.id !== assessment.id));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     assessmentsApi
@@ -91,7 +104,19 @@ export default function AssessmentListPage() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={(event) => deleteAssessment(event, a)}
+                    disabled={deletingId === a.id}
+                    aria-label={`Delete ${a.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}

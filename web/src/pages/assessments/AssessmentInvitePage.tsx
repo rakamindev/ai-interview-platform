@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, Trash2, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -23,18 +23,23 @@ function SessionRow({
   index,
   assessmentId,
   onCopy,
+  onRemove,
   copiedId,
+  removingId,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onRemove: (session: Session) => void;
   copiedId: number | null;
+  removingId: number | null;
 }) {
   const navigate = useNavigate();
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  const canDelete = !isLive;
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
@@ -80,7 +85,7 @@ function SessionRow({
         )}
 
         <div className="flex items-center gap-1.5">
-          {isPending && (
+          {canDelete && (
             <Button
               variant="ghost"
               size="sm"
@@ -92,6 +97,18 @@ function SessionRow({
               ) : (
                 <><Copy className="h-3 w-3 mr-1" /> Copy link</>
               )}
+            </Button>
+          )}
+          {isPending && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+              onClick={() => onRemove(session)}
+              disabled={removingId === session.id}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              {removingId === session.id ? "Deleting..." : "Delete"}
             </Button>
           )}
           {isLive && (
@@ -132,6 +149,7 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [removingSessionId, setRemovingSessionId] = useState<number | null>(null);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -186,6 +204,20 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
+  };
+
+  const removePendingSession = async (session: Session) => {
+    const label = session.candidate_name || "this candidate";
+    if (!window.confirm(`Delete ${label}'s interview record and results? This cannot be undone.`)) return;
+
+    setRemovingSessionId(session.id);
+    try {
+      await assessmentsApi.deleteSession(session.id);
+      setSessions((current) => current.filter((item) => item.id !== session.id));
+      if (newSession?.id === session.id) setNewSession(null);
+    } finally {
+      setRemovingSessionId(null);
+    }
   };
 
   if (loading) {
@@ -312,7 +344,9 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onRemove={removePendingSession}
                   copiedId={copiedId}
+                  removingId={removingSessionId}
                 />
               ))}
             </CardContent>

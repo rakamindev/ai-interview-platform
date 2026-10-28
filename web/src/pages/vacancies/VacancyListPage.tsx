@@ -4,14 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
-import { Plus, Briefcase, ChevronRight } from "lucide-react";
+import { Plus, Briefcase, ChevronRight, Trash2 } from "lucide-react";
 import type { Vacancy } from "@/types";
 
 export default function VacancyListPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
+
+  const deleteVacancy = async (event: React.MouseEvent, vacancy: Vacancy) => {
+    event.stopPropagation();
+    if (!window.confirm(`Delete “${vacancy.role_title}”? This cannot be undone.`)) return;
+    setDeletingId(vacancy.id);
+    try {
+      await vacanciesApi.delete(vacancy.id);
+      setVacancies((current) => current.filter((item) => item.id !== vacancy.id));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     vacanciesApi.list()
@@ -59,7 +72,19 @@ export default function VacancyListPage() {
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium text-sm">{v.role_title}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={(event) => deleteVacancy(event, v)}
+                    disabled={deletingId === v.id}
+                    aria-label={`Delete ${v.role_title}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}

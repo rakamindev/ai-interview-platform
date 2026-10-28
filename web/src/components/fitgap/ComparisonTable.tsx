@@ -1,5 +1,6 @@
 import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
 import { cn } from "@/lib/utils";
+import { AlertTriangle, CheckCircle2, Minus, Pencil, Star } from "lucide-react";
 import type { SkillComparison } from "@/types";
 
 interface ComparisonTableProps {
@@ -10,16 +11,20 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   const label = FIT_GAP_RESULT_LABELS[comparison.result];
   const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
 
-  let icon = "";
   let suffix = "";
-  if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
-  else icon = "—";
+  const Icon = comparison.result === "match"
+    ? CheckCircle2
+    : comparison.result === "exceed"
+      ? Star
+      : comparison.result === "gap"
+        ? AlertTriangle
+        : Minus;
+  if (comparison.result === "exceed") suffix = comparison.delta ? ` +${comparison.delta}` : "";
+  if (comparison.result === "gap") suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : "";
 
   return (
     <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
-      {icon} {label}{suffix}
+      <Icon className="h-3.5 w-3.5" /> {label}{suffix}
     </span>
   );
 }
@@ -53,7 +58,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
                   {c.candidate_level != null ? (
                     <span>
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.is_override && <Pencil className="inline h-3 w-3 ml-1 text-muted-foreground" aria-label="Human override applied" />}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -70,10 +75,10 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
 
       {/* Summary */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+        {matchCount > 0 && <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
+        {gapCount > 0 && <span className="flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
+        {exceedCount > 0 && <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 text-primary" /> Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
+        <span className="ml-auto flex items-center gap-1"><Pencil className="h-3.5 w-3.5" /> Human override applied</span>
       </div>
     </div>
   );

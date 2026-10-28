@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show destroy end_session coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -54,6 +54,17 @@ module Api
             }
           )
         )
+      end
+
+      # DELETE /sessions/:id
+      # Removes an invite or completed interview. Active interviews remain protected.
+      def destroy
+        if @session.active?
+          return json_error("An active interview cannot be deleted", :unprocessable_entity)
+        end
+
+        @session.destroy!
+        head :no_content
       end
 
       # POST /api/v1/sessions/:id/end

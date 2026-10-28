@@ -24,7 +24,7 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Radio, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -186,7 +186,7 @@ export default function LiveMonitorPage() {
             className="ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            View portfolio <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         </div>
       )}
@@ -316,7 +316,7 @@ export default function LiveMonitorPage() {
             variant="outline"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            View portfolio <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         )}
       </div>

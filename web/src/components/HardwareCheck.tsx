@@ -9,7 +9,7 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, Download, Upload } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
@@ -243,10 +243,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                         {key === "internet" && internetResult && (
                             <div className="mt-2 flex gap-3 text-xs">
                                 <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
+                                    <Download className="h-3 w-3" /> {internetResult.download} Mbps
                                 </span>
                                 <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
+                                    <Upload className="h-3 w-3" /> {internetResult.upload} Mbps
                                 </span>
                                 <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
                                     {internetResult.ping} ms
