@@ -1,0 +1,16 @@
+# Backend API base URL
+VITE_API_BASE_URL=http://localhost:3000/api/v1
+
+# WebSocket base URL (no /api/v1)
+VITE_WS_BASE_URL=ws://localhost:3000
+
+# Dev auth token — paste a JWT from your local backend (rails console: JsonWebToken.encode(...))
+VITE_DEV_TOKEN=
+
+# Speed test endpoints — when set, used instead of external services (leave blank to use external CDN/httpbin)
+VITE_SPEED_TEST_PING_URL=
+VITE_SPEED_TEST_UPLOAD_URL=
+
+# Dev tenant context
+VITE_DEV_TENANT_ID=1
+VITE_DEV_TENANT_NAME=Demo Tenant

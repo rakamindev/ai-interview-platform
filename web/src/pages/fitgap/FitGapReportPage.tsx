@@ -10,6 +10,7 @@ import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
+import FitGapRadar from "@/components/FitGapRadar";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -151,6 +152,11 @@ export default function FitGapReportPage() {
       {/* Report ready */}
       {report && (
         <>
+          {/** [NEW] Visualisasi Radar Chart & Overall Score*/}
+          <div className="mb-6">
+            <FitGapRadar report={report} isLoading={generating} />
+          </div>
+        
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">

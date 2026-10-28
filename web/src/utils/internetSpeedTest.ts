@@ -17,8 +17,8 @@ export interface SpeedThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: SpeedThresholds = {
-    minDownloadMbps: 8,
-    minUploadMbps: 4,
+    minDownloadMbps: 2,
+    minUploadMbps: 0.2,
     maxPingMs: 300,
 };
 

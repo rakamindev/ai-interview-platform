@@ -205,6 +205,7 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          overall_score:     report.overall_score,
           generated_at:      report.generated_at
         }
       end

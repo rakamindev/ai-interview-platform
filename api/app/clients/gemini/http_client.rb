@@ -2,7 +2,7 @@
 
 module Gemini
   class HttpClient
-    BASE_URL = 'https://generativelanguage.googleapis.com/v1'
+    BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 
     class ApiError < StandardError
       attr_reader :status, :body
@@ -24,10 +24,24 @@ module Gemini
       @connection = build_connection
     end
 
-    # Generates content using Gemini REST API.
+# Generates content using Gemini REST API.
     # Returns parsed JSON response body.
     def generate_content(prompt, temperature: 0.2)
-      response = @connection.post(generate_url, request_body(prompt, temperature), request_headers)
+      url = generate_url
+      
+      puts "\n====== DEBUG GEMINI URL ======"
+      puts "TARGET URL : #{url}"
+      puts "NAMA MODEL : '#{@model}'"
+      puts "==============================\n"
+
+      response = @connection.post(url, request_body(prompt, temperature), request_headers)
+      
+      unless response.success?
+        puts "\n====== GEMINI ERROR BODY ======"
+        puts response.body
+        puts "===============================\n"
+      end
+      
       parse_response(response)
     rescue Faraday::TimeoutError => e
       raise TimeoutError.new("Gemini API timeout after #{@timeout}s: #{e.message}")
