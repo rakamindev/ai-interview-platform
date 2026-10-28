@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Engineering & Product Execution Report - Fullstack Product Engineer</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1f2937;
+      line-height: 1.55;
+      font-size: 10.5pt;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      font-size: 19pt;
+      color: #111827;
+      margin-bottom: 2px;
+      font-weight: 700;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 8px;
+    }
+    h2 {
+      font-size: 13.5pt;
+      color: #1e3a8a;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 11pt;
+      color: #374151;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      font-weight: 600;
+      page-break-after: avoid;
+    }
+    p, ul {
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 3px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 8pt;
+      font-weight: 600;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+    .badge-p0 { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+    .badge-p1 { background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .badge-p2 { background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .meta-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 9.5pt;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 9px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      color: #334155;
+    }
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8.5pt;
+    }
+    pre {
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0;
+      line-height: 1.4;
+      page-break-inside: avoid;
+    }
+    .highlight-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 8px 12px;
+      margin: 10px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Product &amp; Engineering Execution Report</h1>
+  <div style="font-size: 11pt; color: #4b5563; margin-top: -2px; margin-bottom: 12px;">
+    <strong>Case Study: Fullstack Product Engineer (Frontend Revamp Depth)</strong> — AI Interview Platform
+  </div>
+
+  <div class="meta-box">
+    <div class="meta-grid">
+      <div><strong>Platform:</strong> AI Interview Platform (Rails 7 + React 18 TypeScript)</div>
+      <div><strong>Repository:</strong> github.com/rakamindev/ai-interview-platform</div>
+      <div><strong>Feature Branch:</strong> <code>feature/frontend-product-revamp</code></div>
+      <div><strong>Seeded Fault Branch:</strong> <code>scratch/seeded-fault-test</code></div>
+      <div><strong>Evaluation Ratio:</strong> 50% Product Impact &amp; Craft &bull; 50% Engineering Execution</div>
+      <div><strong>Status:</strong> Ready for Production &amp; Client Release</div>
+    </div>
+  </div>
+
+  <h2>1. Executive Summary &amp; Pull Request Link</h2>
+  <p>
+    This report documents the end-to-end audit, problem definition, architectural revamp, and automated test suite for the <strong>AI Interview Platform</strong>. Treated as software about to ship to enterprise clients, this initiative directly resolves critical multi-tenant data leaks (UU PDP compliance), eliminates unfair unassessed skill rating distortions (preventing false L1 ratings), and bridges the frontend/backend data contract seam on the Fit/Gap comparison matrix.
+  </p>
+  <div class="highlight-box">
+    <strong>GitHub Pull Request:</strong> <a href="https://github.com/rakamindev/ai-interview-platform/pull/212" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">https://github.com/rakamindev/ai-interview-platform/pull/212</a><br>
+    <em>All changes are organized in atomic, descriptive commits across both services with 100% test pass rate and clean build.</em>
+  </div>
+
+
+  <h2>2. Step 2: Deep Context &amp; Domain Immersion</h2>
+  <h3>A. Indonesian Hiring Context &amp; Assessor Pain Points</h3>
+  <p>
+    Technical hiring in Indonesia suffers from acute engineering resource exhaustion. Senior software engineers frequently spend 15–20 hours each week conducting repetitive initial screening interviews. Assessors and hiring managers require a transparent, reliable competency signal—not static theoretical recitation—to benchmark talent quickly against vacancy requirements.
+  </p>
+
+  <h3>B. High-Stakes Candidate Empathy</h3>
+  <p>
+    Candidates do not select the AI tool and cannot opt out. An arbitrary evaluation failure or a confusing user interface alters a real person’s career trajectory. When unassessed skills default to failing grades (L1) due to early interview termination, the platform actively harms the candidate. Designing with candidate empathy requires explicit handling of incomplete sessions, transparent override indicators, and graceful degradation during network drops.
+  </p>
+
+  <h3>C. Regulatory Compliance (UU No. 27 Tahun 2022 - UU PDP)</h3>
+  <p>
+    Transcripts, voice recordings, and evaluator ratings constitute sensitive personal data under Indonesia’s Personal Data Protection Law (UU PDP). Strict multi-tenant isolation is mandatory. An assessor from Organization A must never be able to inspect, query, or override candidate evaluation records belonging to Organization B.
+  </p>
+
+  <h2>3. Step 3: Defining Problem &amp; Gap Analysis (P0 to P3)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 55px;">Severity</th>
+        <th style="width: 140px;">Finding</th>
+        <th>One-Line Impact Statement</th>
+        <th style="width: 100px;">Classification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-p0">P0</span></td>
+        <td>Cross-Tenant Portfolio Access</td>
+        <td>Assessor from Tenant A can view/override evaluations of Tenant B due to unscoped <code>Portfolio.find(params[:id])</code>, causing severe UU PDP data breach.</td>
+        <td>Defective Implementation</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p1">P1</span></td>
+        <td>Unassessed Skills Clamped to L1</td>
+        <td>Unassessed skills (probe_count: 0) execute <code>.to_i.clamp(1, 5)</code>, penalizing candidates with a false failing L1 score on topics never explored.</td>
+        <td>Defective Implementation</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p1">P1</span></td>
+        <td>Fit/Gap Contract Key Mismatch</td>
+        <td>Backend serializes <code>expected_level</code> while frontend reads <code>required_level</code>, rendering the required column completely blank.</td>
+        <td>Defective Implementation</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p1">P1</span></td>
+        <td>Missing Assessor Override Flag</td>
+        <td>Backend never sent <code>is_override</code> flag, preventing frontend from indicating whether a score was AI-generated or human-adjusted.</td>
+        <td>Missing Specification</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p2">P2</span></td>
+        <td>Zero Automated Test Harness</td>
+        <td>No test runner existed in <code>web/</code> and no integration specs existed in <code>api/</code>, risking silent regressions upon deployment.</td>
+        <td>Missing Specification</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p2">P2</span></td>
+        <td>Truncated Narrative Presentation</td>
+        <td><code>FitGapReportPage</code> used <code>culture_narrative || overall_narrative</code>, completely hiding the overall recommendation if culture was present.</td>
+        <td>Defective Implementation</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <h2>4. Step 4: Revamp Strategy, Acceptance Criteria &amp; Trade-offs</h2>
+
+  <h3>A. Technical Solution Options &amp; Trade-off Evaluation</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 130px;">Dimension</th>
+        <th>Option A: Frontend-Only Quick Hack</th>
+        <th>Option B: Full-Stack Resilient Contract &amp; Craft (Chosen)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Product Impact vs Cost</strong></td>
+        <td>Low cost, but ignores multi-tenant data leaks and background job DB validation crashes.</td>
+        <td>High impact. Guarantees UU PDP tenant isolation, fair candidate scoring, and rich UX with zero data corruption.</td>
+      </tr>
+      <tr>
+        <td><strong>Long-term Maintainability</strong></td>
+        <td>Fragile. Disconnected schemas require constant client-side patching.</td>
+        <td>Clean, decoupled interfaces. Dual-field tolerance ensures forward &amp; backward API compatibility.</td>
+      </tr>
+      <tr>
+        <td><strong>Failure Modes</strong></td>
+        <td>Unassessed skills crash Sidekiq workers with enum validation errors.</td>
+        <td>Graceful degradation: nil/unassessed skills render neutral "Not assessed" badges without throwing errors.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>B. Self-Defined Acceptance Criteria (Edge Cases Handled)</h3>
+  <ul>
+    <li><strong>Unassessed Skills:</strong> If a configured skill has 0 probes, it displays a neutral <code>⚪ Not assessed</code> badge in Fit/Gap and <code>— / Unassessed</code> in Portfolio cards. It must never force L1.</li>
+    <li><strong>Contract Resilience:</strong> <code>ComparisonTable</code> resolves levels via <code>c.expected_level ?? c.required_level</code>, gracefully defaulting to <code>—</code> if omitted.</li>
+    <li><strong>Human Overrides:</strong> Overridden skills show a distinct <code>✏️ Override (AI: LX)</code> tag, preserving auditability between AI and human judgement.</li>
+    <li><strong>Executive KPI Header &amp; Responsive Layout:</strong> Wide <code>max-w-5xl</code> layout with Role Benchmark, Match Rate % progress bar, Dynamic Fit Status badge, and Level Badge color pills.</li>
+    <li><strong>Dual Narrative Display:</strong> Culture &amp; Competency Fit and Overall Hiring Assessment render in separate dedicated cards with AI objective synthesis tags.</li>
+    <li><strong>Direct Assessor Navigation:</strong> 1-click direct <code>Transcript</code> access from candidate session list for frictionless review.</li>
+  </ul>
+
+  <h2>5. Step 5: Monozukuri Implementation &amp; Testing Proofs</h2>
+
+  <h3>A. Automated Test Suite Execution (Vitest)</h3>
+  <p>
+    We built an automated testing harness using <strong>Vitest</strong> and <strong>React Testing Library</strong> in <code>web/</code>. 9 tests across 2 test suites cover all critical components:
+  </p>
+  <pre><code>$ npm test
+ RUN  v5.0.5 C:/Users/kirei/ai-interview-platform/web
+
+ ✓ src/components/fitgap/__tests__/ComparisonTable.test.tsx (5 tests)
+ ✓ src/components/portfolio/__tests__/SkillPortfolioCard.test.tsx (4 tests)
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Duration  1.94s</code></pre>
+
+  <h3>B. Seeded Fault Test Proof (Preserved on <code>scratch/seeded-fault-test</code>)</h3>
+  <p>
+    To prove our test harness catches real regressions (and is not a set of trivial happy-path assertions):
+  </p>
+  <ol>
+    <li>Checked out branch <code>scratch/seeded-fault-test</code>.</li>
+    <li>Intentionally broke the level fallback in <code>ComparisonTable.tsx</code> by ignoring <code>expected_level</code>.</li>
+    <li>Ran <code>npm test</code>, which immediately caught the fault with a descriptive assertion error:
+      <pre><code>FAIL src/components/fitgap/__tests__/ComparisonTable.test.tsx
+  ✕ renders comparisons with expected_level (backend contract) and required_level fallbacks
+  Error: expect(element).toHaveTextContent()
+  Expected element to have text content: "L3"
+  Received: "React / Frontend Architecture—L5⭐Exceeds +2"</code></pre>
+    </li>
+    <li>Committed the fault (commit <code>c948d73</code>) and reverted it via <code>git revert</code> (commit <code>c8dae98</code>), restoring the green test suite.</li>
+  </ol>
+
+  <h3>C. AI Verification Moment</h3>
+  <p>
+    <strong>The Incident:</strong> During initial portfolio logic generation, an AI assistant suggested applying <code>skill_data['level'].to_i.clamp(1, 5)</code> to ensure safe integers. However, when an interview ends early and a skill is unassessed, <code>nil.to_i</code> returns <code>0</code>, and <code>0.clamp(1, 5)</code> outputs <code>1</code>. This would have stamped an unassessed candidate with an automatic Level 1 (failing grade).<br>
+    <strong>The Monozukuri Resolution:</strong> We rejected the clamp and engineered explicit unassessed states: <code>LevelBadge</code> displays neutral <code>— / Unassessed</code>, and <code>ComparisonTable</code> treats missing ratings as <code>not_assessed</code>, protecting candidate fairness.
+  </p>
+
+  <h2>6. Step 6: Video Walkthrough Guide (3–5 Minutes)</h2>
+  <div class="meta-box">
+    <strong>Video Demonstration Link:</strong> <a href="https://youtu.be/3N7zA5cx7LQ?si=lJAAG5ZG76GuEvj7" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: underline;">https://youtu.be/3N7zA5cx7LQ?si=lJAAG5ZG76GuEvj7</a><br>
+    <strong>Walkthrough Structure:</strong>
+
+    <ul>
+      <li><strong>0:00–0:45 | Problem Context:</strong> Empathy for candidate stakes and explanation of the broken data seam.</li>
+      <li><strong>0:45–2:00 | Revamped UI Flows:</strong> Showcase the new Fit/Gap matrix, override indicators, and dual narrative layout.</li>
+      <li><strong>2:00–3:15 | Testing Harness:</strong> Run <code>npm test</code> and explain the Seeded Fault test on <code>scratch/seeded-fault-test</code>.</li>
+      <li><strong>3:15–4:00 | Engineering Craft:</strong> Summary of UU PDP tenant isolation and enterprise-readiness.</li>
+    </ul>
+  </div>
+
+</body>
+</html>

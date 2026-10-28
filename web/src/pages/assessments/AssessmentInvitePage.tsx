@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, FileText } from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -105,14 +105,24 @@ function SessionRow({
             </Button>
           )}
           {isEnded && session.end_reason !== "error" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
-            >
-              Results
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/transcript`)}
+              >
+                <FileText className="h-3 w-3 mr-1" /> Transcript
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7 px-2.5 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              >
+                Results →
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -190,7 +200,7 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -199,7 +209,7 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">

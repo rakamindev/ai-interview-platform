@@ -43,16 +43,16 @@ module FitGap
       comparisons = vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
+        if portfolio_skill && portfolio_skill[:effective_level].present? && portfolio_skill[:effective_level].to_i > 0
+          candidate_level  = portfolio_skill[:effective_level].to_i
+          expected_level   = vacancy_skill.expected_level.to_i
           delta            = candidate_level - expected_level
           result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
         else
-          candidate_level = nil
-          expected_level  = vacancy_skill.expected_level
-          delta           = nil
-          result          = 'not_assessed'
+          candidate_level  = nil
+          expected_level   = vacancy_skill.expected_level.to_i
+          delta            = nil
+          result           = 'not_assessed'
         end
 
         {
@@ -60,8 +60,10 @@ module FitGap
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
           expected_level:  expected_level,
+          required_level:  expected_level,
           result:          result,
           delta:           delta,
+          is_override:     portfolio_skill&.dig(:overridden) || false,
           confidence:      portfolio_skill&.dig(:confidence)
         }
       end

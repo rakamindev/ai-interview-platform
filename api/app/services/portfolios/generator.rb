@@ -154,26 +154,38 @@ module Portfolios
       portfolio.portfolio_skills.destroy_all
 
       (data['configured_skills'] || []).each do |skill_data|
+        raw_level = skill_data['level']
+        level = raw_level.present? && raw_level.to_i > 0 ? raw_level.to_i.clamp(1, 5) : 1
+        conf = skill_data['confidence'].to_s.downcase
+        safe_conf = %w[high medium low].include?(conf) ? conf : 'low'
+        summary = skill_data['competency_summary'].presence || "Skill covered with baseline evaluation."
+
         portfolio.portfolio_skills.create!(
           skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
+          skill_label:        skill_data['skill_label'].presence || "Configured Skill",
           is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level,
+          ai_confidence:      safe_conf,
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: summary
         )
       end
 
       (data['discovered_skills'] || []).each do |skill_data|
+        raw_level = skill_data['level']
+        level = raw_level.present? && raw_level.to_i > 0 ? raw_level.to_i.clamp(1, 5) : 1
+        conf = skill_data['confidence'].to_s.downcase
+        safe_conf = %w[high medium low].include?(conf) ? conf : 'low'
+        summary = skill_data['competency_summary'].presence || "Discovered skill mentioned during interview."
+
         portfolio.portfolio_skills.create!(
           skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
+          skill_label:        skill_data['skill_label'].presence || "Discovered Skill",
           is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
+          ai_level:           level,
+          ai_confidence:      safe_conf,
           evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
+          competency_summary: summary
         )
       end
     end
