@@ -15,7 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
 
 function SessionRow({
@@ -88,9 +97,13 @@ function SessionRow({
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
+                <>
+                  <Check className="h-3 w-3 mr-1" /> Copied
+                </>
               ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                <>
+                  <Copy className="h-3 w-3 mr-1" /> Copy link
+                </>
               )}
             </Button>
           )}
@@ -99,7 +112,11 @@ function SessionRow({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
+              onClick={() =>
+                navigate(
+                  `/assessments/${assessmentId}/sessions/${session.id}/monitor`,
+                )
+              }
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
@@ -109,7 +126,11 @@ function SessionRow({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              onClick={() =>
+                navigate(
+                  `/assessments/${assessmentId}/sessions/${session.id}/portfolio`,
+                )
+              }
             >
               Results
             </Button>
@@ -142,10 +163,13 @@ export default function AssessmentInvitePage() {
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    ])
+      .then(([aRes, sRes]) => {
+        setAssessment(aRes.data.assessment);
+        setSessions(sRes.data.sessions);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [id]);
 
   // Poll while any session is live or pending
@@ -166,7 +190,10 @@ export default function AssessmentInvitePage() {
     setShowInviteDialog(false);
     setNewSession(null);
     try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
+      const res = await assessmentsApi.createSession(
+        Number(id),
+        candidateNameInput.trim() || undefined,
+      );
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
@@ -203,23 +230,35 @@ export default function AssessmentInvitePage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+          <Link
+            to="/assessments"
+            className="text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
             <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
               <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
+              {assessment?.time_limit_min} min ·{" "}
+              {assessment?.skills?.length ?? 0} skills
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/assessments/${id}/edit`)}
+          >
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button
+            size="sm"
+            onClick={openInviteDialog}
+            disabled={creatingSession}
+          >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
@@ -242,10 +281,17 @@ export default function AssessmentInvitePage() {
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
+            <p className="text-xs text-muted-foreground">
+              Optional — helps you identify this session later.
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowInviteDialog(false)}
+            >
+              Cancel
+            </Button>
             <Button onClick={handleInviteCandidate}>Create Link</Button>
           </DialogFooter>
         </DialogContent>
@@ -256,20 +302,37 @@ export default function AssessmentInvitePage() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-4 space-y-2">
             <p className="text-sm font-medium">
-              {newSession.candidate_name
-                ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
-                : <>New invite link ready — share with your candidate:</>}
+              {newSession.candidate_name ? (
+                <>
+                  Link for{" "}
+                  <span className="font-semibold">
+                    {newSession.candidate_name}
+                  </span>{" "}
+                  ready — share with your candidate:
+                </>
+              ) : (
+                <>New invite link ready — share with your candidate:</>
+              )}
             </p>
             <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyNewSessionLink}
+              className="w-full"
+            >
               {newSessionCopied ? (
-                <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+                <>
+                  <Check className="h-3.5 w-3.5 mr-1.5" /> Copied!
+                </>
               ) : (
-                <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link</>
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy link
+                </>
               )}
             </Button>
           </CardContent>
@@ -284,7 +347,9 @@ export default function AssessmentInvitePage() {
           <h2 className="text-sm font-semibold">
             Candidates
             {sessions.length > 0 && (
-              <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
+              <span className="ml-1.5 text-muted-foreground font-normal">
+                ({sessions.length})
+              </span>
             )}
           </h2>
         </div>
@@ -306,7 +371,8 @@ export default function AssessmentInvitePage() {
                 <SessionRow
                   key={session.id}
                   session={session}
-                  index={sessions.length - i}
+                  // index={sessions.length - i}
+                  index={i + 1}
                   assessmentId={id!}
                   onCopy={(sid) => {
                     const s = sessions.find((x) => x.id === sid);
@@ -328,10 +394,15 @@ export default function AssessmentInvitePage() {
             <h2 className="text-sm font-semibold">Skills assessed</h2>
             <ul className="space-y-1">
               {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <li
+                  key={s.id ?? s.skill_label}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                   <span>•</span>
                   <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                  <span className="text-xs">
+                    (expected {LEVEL_LABELS[s.expected_level]})
+                  </span>
                 </li>
               ))}
             </ul>
