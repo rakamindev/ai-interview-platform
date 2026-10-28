@@ -189,16 +189,22 @@ export default function PortfolioPage() {
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>
-            {portfolio.skills
-              .filter((s) => !s.is_discovered)
-              .map((skill) => (
-                <SkillPortfolioCard
-                  key={skill.id}
-                  skill={skill}
-                  override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
-                />
-              ))}
+            {portfolio.skills.filter((s) => !s.is_discovered).length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                No configured skills recorded for this portfolio.
+              </div>
+            ) : (
+              portfolio.skills
+                .filter((s) => !s.is_discovered)
+                .map((skill) => (
+                  <SkillPortfolioCard
+                    key={skill.id}
+                    skill={skill}
+                    override={overrides[skill.id]}
+                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  />
+                ))
+            )}
           </div>
 
           {/* Discovered skills */}

@@ -154,7 +154,7 @@ export default function FitGapReportPage() {
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
+              <CardTitle className="text-sm font-semibold">Skill Comparison Matrix</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <ComparisonTable comparisons={report.skill_comparisons} />
@@ -164,16 +164,32 @@ export default function FitGapReportPage() {
           <Separator />
 
           {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
+          {report.culture_narrative && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold">Culture &amp; Competency Fit</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.culture_narrative}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Overall hiring narrative */}
+          {report.overall_narrative && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold">Overall Hiring Assessment</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.overall_narrative}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Discovered skills */}
           {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
@@ -181,7 +197,7 @@ export default function FitGapReportPage() {
               <Separator />
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
+                  <CardTitle className="text-sm flex items-center gap-1.5 font-semibold">
                     <Zap className="h-4 w-4 text-amber-500" />
                     Discovered Skills (not in vacancy requirements)
                   </CardTitle>
@@ -192,8 +208,8 @@ export default function FitGapReportPage() {
                     .map((s) => (
                       <div key={s.id} className="text-sm flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+                        <span className="text-muted-foreground font-mono text-xs">
+                          L{s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
                         </span>
                         <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>
@@ -203,6 +219,22 @@ export default function FitGapReportPage() {
             </>
           )}
         </>
+      )}
+
+      {/* Empty / Not ready state */}
+      {!generating && !report && (
+        <Card className="border-dashed">
+          <CardContent className="p-8 text-center space-y-3">
+            <p className="text-sm font-medium text-foreground">No Fit/Gap Report Generated Yet</p>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              A fit/gap comparison compares this candidate's verified skills against the vacancy requirements.
+              Click the button below to generate the analysis.
+            </p>
+            <Button size="sm" onClick={handleRegenerate} disabled={regenerating}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Generate Fit/Gap Report
+            </Button>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

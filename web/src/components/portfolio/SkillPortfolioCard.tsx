@@ -17,25 +17,39 @@ export default function SkillPortfolioCard({
   override,
   onOverrideSaved,
 }: SkillPortfolioCardProps) {
-  const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
+  const hasValidAiLevel = skill.ai_level != null && Number(skill.ai_level) >= 1 && Number(skill.ai_level) <= 5;
+  const effectiveLevel = override?.override_level ?? (hasValidAiLevel ? Number(skill.ai_level) : null);
+  const isUnassessed = effectiveLevel == null;
 
   return (
-    <Card>
+    <Card className="transition-all hover:shadow-sm" data-testid={`portfolio-skill-card-${skill.skill_label.toLowerCase().replace(/\s+/g, "-")}`}>
       <CardContent className="p-4 space-y-4">
         {/* Skill header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <LevelBadge level={effectiveLevel} />
             <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold">{skill.skill_label}</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-foreground">{skill.skill_label}</span>
                 {skill.is_discovered && (
-                  <span className="flex items-center gap-0.5 text-xs text-amber-600">
-                    <Zap className="h-3 w-3" /> Discovered
+                  <span className="inline-flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                    <Zap className="h-3 w-3 text-amber-500" /> Discovered
+                  </span>
+                )}
+                {override && (
+                  <span className="inline-flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                    ✏️ Override (AI: L{skill.ai_level})
+                  </span>
+                )}
+                {isUnassessed && (
+                  <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground bg-neutral-100 px-2 py-0.5 rounded-full border">
+                    Not assessed
                   </span>
                 )}
               </div>
-              <ConfidenceIndicator confidence={skill.ai_confidence} />
+              {!isUnassessed && skill.ai_confidence && (
+                <ConfidenceIndicator confidence={skill.ai_confidence} />
+              )}
             </div>
           </div>
           <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
