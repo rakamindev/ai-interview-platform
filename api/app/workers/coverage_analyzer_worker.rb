@@ -81,23 +81,14 @@ class CoverageAnalyzerWorker
     Rails.logger.error("[N7] Failed to publish coverage update: #{e.message}")
   end
 
-  # Auto-advance skills that are partial but have fallen outside the analyzer's
-  # context window (last TURNS_CONTEXT turns). Once a skill leaves the window,
-  # Flash can't see it and will never promote it — so we promote here if there's
-  # enough evidence (probe_count >= 4).
-  #
-  # exclude_ids: coverage_map IDs updated in this same job run — those were just
-  # discussed and are NOT stale yet.
-  def advance_stale_partials(session, exclude_ids: [])
-    scope = session.coverage_maps
-                   .where(state: 'partial')
-                   .where('probe_count >= ?', 4)
-    scope = scope.where.not(id: exclude_ids) if exclude_ids.any?
-
-    scope.each do |map|
-      map.update!(state: 'covered', last_signal: 'Auto-advanced: outside context window with sufficient probes')
-      Rails.logger.info("[N7] Auto-advanced #{map.skill_label} to covered (probe_count=#{map.probe_count})")
-    end
+  # Stale partial skills must not be promoted to covered based on probe_count alone.
+  # Coverage::Analyzer must evaluate behavioral evidence before a skill is covered.
+  # TODO: Re-evaluate stale skills using relevant transcript evidence outside the
+  # sliding context window so they do not remain partial indefinitely.
+  def advance_stale_partials(_session, exclude_ids: [])
+    Rails.logger.debug(
+      "[N7] Skipping stale partial auto-advance; coverage requires evidence-based evaluation"
+    )
   end
 
   def coverage_json(map)

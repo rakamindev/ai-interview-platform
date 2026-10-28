@@ -749,8 +749,8 @@ class AudioWebSocketMiddleware
 
         Session.unscoped.where(tenant_id: tenant_id).find_by(id: session_id)
       end
-    rescue StandardError => e
-      return [nil, "Authentication failed: #{e.message}"]
+    rescue StandardError
+      return [nil, 'Authentication failed']
     end
 
     return [nil, 'Session not found'] unless session

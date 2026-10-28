@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from "@/utils/internetSpeedTest";
 import {
@@ -9,7 +10,7 @@ import {
     getCurrentTime,
 } from "@/utils/hardwareUtils";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Loader2, Circle, Wifi, AlertTriangle } from "lucide-react";
 
 interface HardwareCheckProps {
     onStart?: () => void;
@@ -46,18 +47,21 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const [audioLevel, setAudioLevel] = useState<number>(0);
+    const [continueWithWeakInternet, setContinueWithWeakInternet] = useState(false);
+    const [showWeakInternetWarning, setShowWeakInternetWarning] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
         const { osAndBrowser, internet, camera, audio, microphone } = progress;
         setAllPassed(
             osAndBrowser === ProctoringState.PASSED &&
-            internet === ProctoringState.PASSED &&
+            (internet === ProctoringState.PASSED ||
+                (internet === ProctoringState.ERROR && continueWithWeakInternet)) &&
             camera === ProctoringState.PASSED &&
             audio === ProctoringState.PASSED &&
             microphone === ProctoringState.PASSED
         );
-    }, [progress]);
+    }, [progress, continueWithWeakInternet]);
 
     useEffect(() => {
         if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
@@ -120,19 +124,40 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     // Step 2: Internet
     useEffect(() => {
         if (progress.internet !== ProctoringState.LOADING) return;
+
         testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
             setInternetResult(result);
-            setProgress((p) => ({
-                ...p,
-                internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
+
+            if (result.passed) {
+                setShowWeakInternetWarning(false);
+                setProgress((p) => ({
+                    ...p,
+                    internet: ProctoringState.PASSED,
+                    ...(REQUIRE_CAMERA
                         ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
-            }));
+                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
+                }));
+            } else {
+                setShowWeakInternetWarning(true);
+                setProgress((p) => ({
+                    ...p,
+                    internet: ProctoringState.ERROR,
+                }));
+            }
         });
     }, [progress.internet]);
+
+    // Continue after the candidate accepts the weak-internet warning.
+    const continueAnyway = () => {
+        setContinueWithWeakInternet(true);
+        setShowWeakInternetWarning(false);
+        setProgress((p) => ({
+            ...p,
+            ...(REQUIRE_CAMERA
+                ? { camera: ProctoringState.LOADING }
+                : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }),
+        }));
+    };
 
     // Step 3: Camera + microphone (or microphone-only when camera disabled)
     useEffect(() => {
@@ -179,9 +204,13 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         videoStream?.getTracks().forEach((t) => t.stop());
         setVideoStream(null);
         setInternetResult(null);
+        setContinueWithWeakInternet(false);
+        setShowWeakInternetWarning(false);
+        setAllPassed(false);
+
         setProgress({
-            osAndBrowser: ProctoringState.LOADING,
-            internet: ProctoringState.WAITING,
+            osAndBrowser: ProctoringState.PASSED,
+            internet: ProctoringState.LOADING,
             camera: ProctoringState.WAITING,
             audio: ProctoringState.WAITING,
             microphone: ProctoringState.WAITING,
@@ -198,7 +227,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         { key: "audio", label: "Audio output" },
     ];
 
-    const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
+    const hasError = Object.entries(progress).some(
+        ([key, state]) =>
+            state === ProctoringState.ERROR &&
+            !(key === "internet" && continueWithWeakInternet)
+    );
 
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
@@ -254,6 +287,43 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             </div>
                         )}
 
+                        {/* Weak internet warning — directly below Internet details */}
+                        {key === "internet" && showWeakInternetWarning && internetResult && (
+                            <div
+                                role="alertdialog"
+                                aria-labelledby="weak-internet-title"
+                                aria-describedby="weak-internet-description"
+                                className="mt-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-4"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                                    <div className="space-y-2">
+                                        <h3 id="weak-internet-title" className="font-semibold text-sm">
+                                            Your internet connection is weak
+                                        </h3>
+                                        <p id="weak-internet-description" className="text-sm text-muted-foreground">
+                                            Your download speed is {internetResult.download} Mbps, below the recommended{" "}
+                                            {thresholds.minDownloadMbps} Mbps. This may affect interview audio quality,
+                                            cause delays, or interrupt the interview.
+                                        </p>
+                                        <p className="text-sm font-medium">
+                                            Are you sure you want to continue?
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                                    <Button variant="outline" size="sm" onClick={retryAll}>
+                                        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                                        Retry test
+                                    </Button>
+                                    <Button size="sm" onClick={continueAnyway}>
+                                        <Wifi className="mr-1.5 h-3.5 w-3.5" />
+                                        Continue anyway
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Mic level bar */}
                         {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
                             <div className="mt-2 flex items-center gap-2">
@@ -281,7 +351,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                 <Button
                     size="sm"
                     className="ml-auto"
-                    disabled={!allPassed}
+                    disabled={!allPassed || showWeakInternetWarning}
                     onClick={onStart}
                 >
                     Start Interview
