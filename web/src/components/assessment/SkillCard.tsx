@@ -35,7 +35,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       ref={setNodeRef}
       style={style}
       className={cn(
-        "border rounded-lg bg-white",
+        "border rounded-lg bg-background",
         isDragging && "opacity-50 shadow-lg"
       )}
     >
@@ -43,11 +43,12 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
       <div className="flex items-center gap-2 px-3 py-2.5">
         <button
           type="button"
-          className="cursor-grab text-muted-foreground hover:text-foreground touch-none"
+          className="touch-target cursor-grab rounded-sm text-muted-foreground hover:text-foreground touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           {...attributes}
           {...listeners}
+          aria-label={`Reorder ${skillLabel}`}
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical aria-hidden="true" className="h-4 w-4" />
         </button>
 
         <div className="flex-1 min-w-0">
@@ -62,10 +63,10 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
         <button
           type="button"
           onClick={onRemove}
-          className="text-muted-foreground hover:text-destructive transition-colors"
-          aria-label="Remove skill"
+          className="touch-target rounded-sm text-muted-foreground hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`Remove ${skillLabel}`}
         >
-          <X className="h-4 w-4" />
+          <X aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
 
@@ -79,9 +80,10 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             <button
               type="button"
               onClick={() => setAnchorsOpen((o) => !o)}
-              className="flex items-center gap-1 text-xs text-primary hover:underline"
+              aria-expanded={anchorsOpen}
+              className="flex items-center gap-1 rounded-sm text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {anchorsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {anchorsOpen ? <ChevronDown aria-hidden="true" className="h-3 w-3" /> : <ChevronRight aria-hidden="true" className="h-3 w-3" />}
               {anchorsOpen ? "Hide L1–L5 anchors" : "Show L1–L5 anchors"}
             </button>
 
@@ -101,6 +103,7 @@ export default function SkillCard({ index, id, form, onRemove }: SkillCardProps)
             <div className="space-y-1.5">
               <span className="text-xs text-muted-foreground">Expected level:</span>
               <LevelRadio
+                label={`Expected level for ${skillLabel}`}
                 value={skill?.expected_level ?? 3}
                 onChange={(v) => form.setValue(`skills.${index}.expected_level`, v)}
               />

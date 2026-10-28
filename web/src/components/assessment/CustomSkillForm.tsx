@@ -21,6 +21,7 @@ const LEVEL_PLACEHOLDERS: Record<number, string> = {
 export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
   const { register, setValue, formState: { errors } } = form;
   const expectedLevel = useWatch({ control: form.control, name: `skills.${index}.expected_level` });
+  const skillLabel = useWatch({ control: form.control, name: `skills.${index}.skill_label` });
 
   return (
     <div className="space-y-3 pt-1">
@@ -66,6 +67,7 @@ export default function CustomSkillForm({ index, form }: CustomSkillFormProps) {
       <div className="space-y-1.5">
         <Label>Expected level</Label>
         <LevelRadio
+          label={`Expected level for ${skillLabel || "New Skill"}`}
           value={expectedLevel ?? 3}
           onChange={(v) => setValue(`skills.${index}.expected_level`, v)}
         />

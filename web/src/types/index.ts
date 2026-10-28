@@ -12,6 +12,9 @@ export interface Assessment {
     status: "pending" | "active" | "ended";
     end_reason?: string | null;
   };
+  // List only: candidates, and candidates whose portfolio still needs review.
+  candidate_count?: number;
+  needs_review_count?: number;
 }
 
 export interface AssessmentSkill {
@@ -45,6 +48,45 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  // Candidate list only (GET /assessments/:id/sessions).
+  portfolio_status?: PortfolioStatus;
+  review_summary?: ReviewReason[];
+}
+
+export type PortfolioStatus = "none" | "generating" | "ready" | "failed";
+
+// Why a portfolio still needs a human (Portfolios::ReviewReasons on the API).
+export type ReviewReasonCode =
+  | "generation_failed"
+  | "empty_portfolio"
+  | "legacy_ratings"
+  | "unreviewed_low_confidence"
+  | "unreviewed_not_assessed"
+  | "narrative_failed"
+  | "narrative_outdated";
+
+export interface ReviewReason {
+  code: ReviewReasonCode;
+  count: number;
+}
+
+export type ReviewGroup = "skills" | "narratives" | "legacy" | "portfolio";
+
+export interface ReviewQueueItem {
+  portfolio_id: number;
+  session_id: number;
+  assessment_id: number;
+  assessment_name: string;
+  candidate_name: string | null;
+  reasons: ReviewReason[];
+  waiting_since: string;
+  target: { page: "portfolio" | "fitgap"; vacancy_id: number | null };
+}
+
+export interface ReviewQueue {
+  summary: Record<ReviewReasonCode | "portfolios", number>;
+  items: ReviewQueueItem[];
+  meta: PaginationMeta;
 }
 
 export interface CoverageSkill {
@@ -80,7 +122,9 @@ export interface Portfolio {
   candidate_id?: number;
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
-  generation_error?: string;
+  generation_error_code?: string | null;
+  generation_error_message?: string | null;
+  ratings_validated?: boolean;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }
@@ -90,11 +134,20 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  rating_status: "assessed" | "not_assessed";
+  not_assessed_reason?: NotAssessedReason | null;
+  coverage?: { state: string | null; probe_count: number | null };
+  ai_level: number | null;                             // integer 1..5, null when not assessed
+  ai_confidence: "high" | "medium" | "low" | null;     // computed from coverage, null when not assessed
+  effective_level?: number | null;
+  level_source?: LevelSource | null;
+  assessor_confirmed?: boolean;
+  review?: SkillReview | null;
   evidence: string[];
   competency_summary: string;
 }
+
+export type NotAssessedReason = "not_covered" | "no_level_from_model" | "invalid_level_from_model" | "no_evidence";
 
 export interface AssessorOverride {
   id: number;
@@ -104,6 +157,7 @@ export interface AssessorOverride {
   assessor_notes: string;
   overridden_by?: number;
   overridden_at?: string;
+  lock_version?: number;
 }
 
 export interface Vacancy {
@@ -125,25 +179,82 @@ export interface VacancySkill {
   _destroy?: boolean;
 }
 
-export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
+export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed" | "low_confidence";
+export type LevelSource = "ai" | "assessor_confirmed" | "assessor_override";
+
+// Mirrors FitGap::ReportPresenter (api/app/services/fit_gap/report_presenter.rb).
+// The assessor decision behind a level (same shape as the API "review").
+export interface SkillReview {
+  action: "override" | "confirm";
+  ai_level: number | null;
+  notes: string | null;
+  actor_id: number;
+  at: string;
+}
+
+// One append-only assessor decision on a skill (GET /portfolio_skills/:id/override_events).
+export interface OverrideEvent {
+  id: number;
+  action: "set" | "revert" | "confirm";
+  from_level: number | null;
+  to_level: number | null;
+  ai_level_at_time: number | null;
+  notes: string | null;
+  actor_id: number;
+  created_at: string;
+}
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  expected_level: number;
+  ai_level?: number | null;
+  candidate_level: number | null;
+  level_source: LevelSource | null;
+  is_override: boolean;
+  override_notes?: string | null;
+  confidence: "high" | "medium" | "low" | null;
   result: SkillComparisonResult;
-  delta?: number;
-  is_override?: boolean;
+  delta: number | null;
+  counts_toward_fit: boolean;
+  not_assessed_reason?: NotAssessedReason | null;
+  tentative_direction?: "below" | "equal" | "above" | null;
+  portfolio_skill_id?: number | null;
+  probe_count?: number | null;
+  review?: SkillReview | null;
+}
+
+export interface FitGapSummary {
+  total: number;
+  evidenced: number;
+  match: number;
+  exceed: number;
+  gap: number;
+  not_assessed: number;
+  low_confidence: number;
+  overridden: number;
+  confirmed: number;
+}
+
+export interface FitGapNarrative {
+  status: "not_requested" | "generating" | "complete" | "failed" | "outdated";
+  source: "ai" | "legacy_fallback" | null;
+  label: string;
+  culture: string | null;
+  overall: string | null;
+  generated_at?: string | null;
+  error_code?: string | null;
 }
 
 export interface FitGapReport {
-  id: number;
   portfolio_id: number;
   vacancy_id: number;
-  skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
-  generated_at: string;
+  role_title?: string;
+  ratings_validated?: boolean;
+  summary: FitGapSummary;
+  comparisons: SkillComparison[];
+  follow_up: string[];
+  narrative: FitGapNarrative;
 }
 
 export interface SkillTaxonomy {

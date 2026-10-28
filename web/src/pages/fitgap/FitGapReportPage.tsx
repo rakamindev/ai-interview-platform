@@ -1,209 +1,203 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { FileDown, ListPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/page-header";
+import { PageShell } from "@/components/ui/page-shell";
+import { Callout } from "@/components/ui/callout";
+import { ConfidenceBadge } from "@/components/ui/confidence-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
+import FitGapSkeleton from "@/components/fitgap/FitGapSkeleton";
+import FollowUpList from "@/components/fitgap/FollowUpList";
+import NarrativeSection from "@/components/fitgap/NarrativeSection";
+import ReportSummary from "@/components/fitgap/ReportSummary";
+import { useFitGapReport } from "@/hooks/useFitGapReport";
 import { portfoliosApi } from "@/services/portfolios";
-import { sessionsApi } from "@/services/sessions";
-import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
-import type { FitGapReport, Portfolio } from "@/types";
+import { formatUtc } from "@/utils/datetime";
+import type { ApiErrorInfo } from "@/utils/apiError";
+import type { Portfolio } from "@/types";
+
+const EXPORT_ERROR = {
+  pdf: "The PDF could not be created. Try again or export JSON instead.",
+  json: "The JSON export failed. Try again.",
+};
+
+function LoadError({ error, retry, retrying, portfolioPath, vacancyId }: {
+  error: ApiErrorInfo; retry: () => void; retrying: boolean; portfolioPath: string; vacancyId: string;
+}) {
+  const backLink = (
+    <Button asChild variant="outline"><Link to={portfolioPath}>Back to the portfolio</Link></Button>
+  );
+  switch (error.kind) {
+    case "not_found":
+      return <ErrorState title="We could not find this report"
+                         description="It may have been removed, or you may not have access to it." action={backLink} />;
+    case "network":
+      return <ErrorState title="Cannot reach the server" description="Check your connection and try again."
+                         onRetry={retry} retrying={retrying} />;
+    case "vacancy_has_no_skills":
+      return (
+        <EmptyState icon={ListPlus} title="This vacancy has no required skills"
+                    description="The fit/gap report compares the candidate with the vacancy's required skills. Add at least one to see the comparison."
+                    action={<Button asChild><Link to={`/vacancies/${vacancyId}/edit`}>Add required skills</Link></Button>} />
+      );
+    case "portfolio_not_ready":
+      return (
+        <Callout variant="info" title="Portfolio not ready" action={backLink}>
+          {error.generationStatus === "failed"
+            ? "The portfolio could not be generated. Open the portfolio to retry it."
+            : "The portfolio is still being generated. The report will be available when it is complete."}
+        </Callout>
+      );
+    default:
+      return <ErrorState title="Could not load the report" description="The server had a problem. Nothing was changed."
+                         onRetry={retry} retrying={retrying} />;
+  }
+}
+
+function DiscoveredSkills({ portfolio }: { portfolio: Portfolio }) {
+  const discovered = portfolio.skills.filter((skill) => skill.is_discovered);
+  if (discovered.length === 0) return null;
+
+  return (
+    <section aria-labelledby="discovered-skills" className="space-y-3 rounded-lg border bg-card p-4">
+      <h2 id="discovered-skills" className="text-base font-semibold">Discovered skills</h2>
+      <p className="text-sm text-muted-foreground">Not required for this role. Shown for context and not counted toward fit.</p>
+      <ul className="space-y-2">
+        {discovered.map((skill) => {
+          const level = skill.effective_level ?? skill.ai_level;
+          return (
+            <li key={skill.id} className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium [overflow-wrap:anywhere]">{skill.skill_label}</span>
+              <span className="text-muted-foreground">{level ? `Level ${level}` : "Not assessed"}</span>
+              {skill.ai_confidence && <ConfidenceBadge confidence={skill.ai_confidence} probeCount={skill.coverage?.probe_count} />}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 export default function FitGapReportPage() {
-  const { id, sessionId, vacancyId } = useParams<{
-    id: string;
-    sessionId: string;
-    vacancyId: string;
-  }>();
-
-  const [report, setReport] = useState<FitGapReport | null>(null);
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { id, sessionId, vacancyId } = useParams<{ id: string; sessionId: string; vacancyId: string }>();
+  const state = useFitGapReport(Number(sessionId), Number(vacancyId));
+  const { portfolio, report } = state;
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
-  const [regenerating, setRegenerating] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const portfolioPath = `/assessments/${id}/sessions/${sessionId}/portfolio`;
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
-  const fetchReport = useCallback(async () => {
-    if (!portfolio) return;
-    try {
-      const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
-    } catch (e: any) {
-      if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
-        }
-      }
-    }
-  }, [portfolio, vacancyId]);
-
-  useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (portfolio) fetchReport();
-  }, [portfolio, fetchReport]);
-
-  usePolling(fetchReport, 5000, generating && !!portfolio);
-
-  const handleRegenerate = async () => {
-    if (!portfolio) return;
-    setRegenerating(true);
-    try {
-      await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
-      setGenerating(true);
-    } finally {
-      setRegenerating(false);
-    }
+  // The error panel disappears once the report loads, so focus goes to the
+  // page heading instead of falling back to the page body.
+  const retry = async () => {
+    await state.retry();
+    headingRef.current?.focus();
   };
 
+  const skillsById = useMemo(
+    () => new Map((portfolio?.skills ?? []).map((skill) => [skill.id, skill])),
+    [portfolio],
+  );
+  const hasRatedSkills = (portfolio?.skills ?? []).some((skill) => !skill.is_discovered);
+
   const handleExport = async (format: "pdf" | "json") => {
-    if (!portfolio) return;
+    if (!portfolio || exporting) return;
     setExporting(format);
+    setExportError(null);
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
-      const ext = format;
       const blob = format === "pdf"
         ? new Blob([res.data as BlobPart], { type: "application/pdf" })
         : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
-      a.click();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `fitgap-${sessionId}-${vacancyId}.${format}`;
+      link.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setExportError(EXPORT_ERROR[format]);
     } finally {
       setExporting(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
+  if (state.loading) return <FitGapSkeleton />;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
-          </div>
-        </div>
-
-        {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
-            </Button>
-            {report && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
-                </Button>
-              </>
+    <PageShell>
+      <PageHeader
+        ref={headingRef}
+        title="Fit/Gap Report"
+        back={{ to: portfolioPath, label: "Back to portfolio" }}
+        description={
+          <div className="space-y-1">
+            <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              {state.candidateName && (
+                <div className="flex min-w-0 gap-1">
+                  <dt className="text-muted-foreground">Candidate</dt>
+                  <dd className="font-medium text-foreground [overflow-wrap:anywhere]">{state.candidateName}</dd>
+                </div>
+              )}
+              {report?.role_title && (
+                <div className="flex min-w-0 gap-1">
+                  <dt className="text-muted-foreground">Vacancy</dt>
+                  <dd className="font-medium text-foreground [overflow-wrap:anywhere]">{report.role_title}</dd>
+                </div>
+              )}
+            </dl>
+            {state.computedAt && (
+              <p className="text-xs text-muted-foreground">Computed from current ratings, {formatUtc(state.computedAt)}</p>
             )}
           </div>
-        )}
-      </div>
+        }
+        actions={
+          <>
+            {(["pdf", "json"] as const).map((format) => (
+              <Button key={format} variant={format === "pdf" ? "default" : "outline"} size="sm"
+                      onClick={() => handleExport(format)} disabled={!report}
+                      aria-disabled={exporting !== null || undefined} className="aria-disabled:cursor-wait aria-disabled:opacity-60">
+                {exporting === format ? <Loader2 aria-hidden="true" className="animate-spin" /> : <FileDown aria-hidden="true" />}
+                {format === "pdf" ? "Export PDF" : "Export JSON"}
+              </Button>
+            ))}
+          </>
+        }
+      />
 
-      {/* Generating */}
-      {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
-        </div>
+      {exportError && <Callout variant="error" role="alert" title="Export failed">{exportError}</Callout>}
+
+      {state.error && !report && (
+        <LoadError error={state.error} retry={retry} retrying={state.retrying}
+                   portfolioPath={portfolioPath} vacancyId={vacancyId ?? ""} />
       )}
 
-      {/* Report ready */}
       {report && (
         <>
-          {/* Skill comparison */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <ComparisonTable comparisons={report.skill_comparisons} />
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Discovered skills */}
-          {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills (not in vacancy requirements)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-2">
-                  {portfolio.skills
-                    .filter((s) => s.is_discovered)
-                    .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
-                        <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
-                        </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
-            </>
+          {report.ratings_validated === false && (
+            <Callout variant="warning" title="Legacy portfolio"
+                     action={<Button asChild size="sm" variant="outline"><Link to={portfolioPath}>Review on the portfolio page</Link></Button>}>
+              This portfolio was generated before ratings were validated. Levels are shown as stored; review each skill
+              before relying on them.
+            </Callout>
           )}
+          {portfolio && !hasRatedSkills && (
+            <Callout variant="info" title="This portfolio has no rated skills">
+              Every required skill is shown as not assessed and listed as a follow-up question.
+            </Callout>
+          )}
+          <ReportSummary summary={report.summary} />
+          <ComparisonTable comparisons={report.comparisons} skillsById={skillsById} />
+          <FollowUpList comparisons={report.comparisons} />
+          <NarrativeSection narrative={report.narrative} onRequest={state.requestNarrative}
+                            requesting={state.requesting} requestFailed={state.requestFailed}
+                            pollFailed={state.pollFailed} onCheckAgain={state.checkAgain} />
+          {portfolio && <DiscoveredSkills portfolio={portfolio} />}
         </>
       )}
-    </div>
+    </PageShell>
   );
 }

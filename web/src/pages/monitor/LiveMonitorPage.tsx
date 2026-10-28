@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -15,7 +15,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { PageHeader } from "@/components/ui/page-header";
+import { PageShell } from "@/components/ui/page-shell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/ui/status-badge";
 import TranscriptBubble from "@/components/interview/TranscriptBubble";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
@@ -24,9 +27,8 @@ import {
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowLeft, CheckCircle, Clock, Radio, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle, Clock, Loader2, Zap } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
-import { cn } from "@/lib/utils";
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const [elapsed, setElapsed] = useState(0);
@@ -43,7 +45,7 @@ function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const ss = String(elapsed % 60).padStart(2, "0");
   return (
     <span className="flex items-center gap-1 text-sm tabular-nums text-muted-foreground">
-      <Clock className="h-3.5 w-3.5" />
+      <Clock aria-hidden="true" className="h-3.5 w-3.5" />
       {mm}:{ss}
     </span>
   );
@@ -129,11 +131,13 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-32 w-full" />
-      </div>
+      <PageShell width="narrow">
+        <div aria-busy="true" aria-label="Loading live monitor" className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </PageShell>
     );
   }
 
@@ -141,37 +145,29 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+    <PageShell width="narrow">
+      <PageHeader
+        title="Live Monitor"
+        back={{ to: `/assessments/${id}/invite`, label: "Back to candidates" }}
+        description={assessmentName || undefined}
+        actions={
+          <div className="flex items-center gap-3">
+            {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
+            {!sessionActive ? (
+              <StatusBadge tone="neutral" icon={CheckCircle}>Ended</StatusBadge>
+            ) : isConnected ? (
+              <StatusBadge tone="info">Live</StatusBadge>
+            ) : (
+              <StatusBadge tone="warning" icon={Loader2}>Reconnecting...</StatusBadge>
+            )}
           </div>
-          {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
-          )}>
-            <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
-          </span>
-        </div>
-      </div>
+        }
+      />
 
       {/* Session ended banner */}
       {sessionEnded && (
         <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+          <CheckCircle aria-hidden="true" className="h-4 w-4 text-green-700 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>
             {sessionEndReason && (
@@ -186,7 +182,8 @@ export default function LiveMonitorPage() {
             className="ml-auto"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            View portfolio
+            <ArrowRight aria-hidden="true" />
           </Button>
         </div>
       )}
@@ -237,7 +234,7 @@ export default function LiveMonitorPage() {
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
+                        <Zap aria-hidden="true" className="h-3 w-3 text-amber-700" />
                         {skill.skill_label}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -276,7 +273,7 @@ export default function LiveMonitorPage() {
           ) : (
             <div className="space-y-2">
               {transcript.map((turn) => (
-                <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
+                <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} candidateLabel="Candidate" />
               ))}
             </div>
           )}
@@ -316,10 +313,11 @@ export default function LiveMonitorPage() {
             variant="outline"
             onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/portfolio`)}
           >
-            View portfolio →
+            View portfolio
+            <ArrowRight aria-hidden="true" />
           </Button>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

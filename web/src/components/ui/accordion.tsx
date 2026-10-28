@@ -13,24 +13,31 @@ const AccordionItem = React.forwardRef<
 ));
 AccordionItem.displayName = "AccordionItem";
 
+// headingLevel sets the heading the trigger sits in, so an accordion inside
+// a card can nest under the card's own heading (default h3).
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-    </AccordionPrimitive.Trigger>
-  </AccordionPrimitive.Header>
-));
+  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & { headingLevel?: 3 | 4 }
+>(({ className, children, headingLevel = 3, ...props }, ref) => {
+  const Heading = headingLevel === 4 ? "h4" : "h3";
+  return (
+    <AccordionPrimitive.Header asChild>
+      <Heading className="flex">
+        <AccordionPrimitive.Trigger
+          ref={ref}
+          className={cn(
+            "flex flex-1 max-sm:min-h-11 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+            className
+          )}
+          {...props}
+        >
+          {children}
+          <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+        </AccordionPrimitive.Trigger>
+      </Heading>
+    </AccordionPrimitive.Header>
+  );
+});
 AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName;
 
 const AccordionContent = React.forwardRef<

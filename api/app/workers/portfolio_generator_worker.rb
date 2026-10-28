@@ -8,10 +8,11 @@ class PortfolioGeneratorWorker
   sidekiq_retries_exhausted do |msg, _ex|
     session_id = msg['args'].first
     session = Session.find_by(id: session_id)
-    session&.portfolio&.update(
-      generation_status: 'failed',
-      generation_error:  "Failed after #{msg['retry_count']} retries: #{msg['error_message']}"
-    )
+    # The generator already stored a safe error code; the raw message is not kept.
+    portfolio = session&.portfolio
+    portfolio&.update_columns(generation_status: 'failed',
+                              generation_error_code: portfolio.generation_error_code || 'unknown',
+                              generation_error: msg['error_class'])
     Rails.logger.error("[N10] Portfolio generation permanently failed for session #{session_id}")
   end
 

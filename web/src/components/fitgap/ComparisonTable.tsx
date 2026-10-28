@@ -1,79 +1,109 @@
-import { LEVEL_LABELS, FIT_GAP_RESULT_LABELS, FIT_GAP_RESULT_CLASSES } from "@/utils/constants";
-import { cn } from "@/lib/utils";
-import type { SkillComparison } from "@/types";
+import type { ReactNode } from "react";
+import { ClampText } from "@/components/ui/clamp-text";
+import { ConfidenceBadge } from "@/components/ui/confidence-badge";
+import { LevelScale } from "@/components/ui/level-scale";
+import { LevelSourceMarker } from "@/components/ui/level-source-marker";
+import { ResultBadge } from "@/components/ui/result-badge";
+import SkillEvidence from "@/components/fitgap/SkillEvidence";
+import type { PortfolioSkill, SkillComparison } from "@/types";
 
 interface ComparisonTableProps {
   comparisons: SkillComparison[];
+  skillsById?: Map<number, PortfolioSkill>;
 }
 
-function ResultBadge({ comparison }: { comparison: SkillComparison }) {
-  const label = FIT_GAP_RESULT_LABELS[comparison.result];
-  const classes = FIT_GAP_RESULT_CLASSES[comparison.result];
+// Gaps first, then what still needs evidence, then what already fits.
+const RESULT_ORDER: Record<SkillComparison["result"], number> = {
+  gap: 0,
+  low_confidence: 1,
+  not_assessed: 2,
+  match: 3,
+  exceed: 4,
+};
 
-  let icon = "";
-  let suffix = "";
-  if (comparison.result === "match") icon = "✅";
-  else if (comparison.result === "exceed") { icon = "⭐"; suffix = comparison.delta ? ` +${comparison.delta}` : ""; }
-  else if (comparison.result === "gap") { icon = "⚠"; suffix = comparison.delta ? ` -${Math.abs(comparison.delta)}` : ""; }
-  else icon = "—";
+// One column template for the header and every row (desktop); below md each
+// row becomes a stacked card with its own field labels.
+const COLUMNS =
+  "md:grid-cols-[minmax(0,1.5fr)_4.5rem_minmax(0,1.7fr)_minmax(0,1.2fr)_minmax(0,1.3fr)]";
 
+export function sortComparisons(comparisons: SkillComparison[]): SkillComparison[] {
+  return comparisons
+    .map((comparison, index) => ({ comparison, index }))
+    .sort((a, b) => RESULT_ORDER[a.comparison.result] - RESULT_ORDER[b.comparison.result] || a.index - b.index)
+    .map(({ comparison }) => comparison);
+}
+
+function Cell({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
-      {icon} {label}{suffix}
-    </span>
+    <div role="cell" className="min-w-0 space-y-1">
+      <span className="block text-xs font-medium text-slate-700 md:hidden">{label}</span>
+      {children}
+    </div>
   );
 }
 
-export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
-  // Summary counts
-  const matchCount = comparisons.filter((c) => c.result === "match").length;
-  const gapCount = comparisons.filter((c) => c.result === "gap").length;
-  const exceedCount = comparisons.filter((c) => c.result === "exceed").length;
+function Confidence({ comparison }: { comparison: SkillComparison }) {
+  if (comparison.confidence) {
+    return <ConfidenceBadge confidence={comparison.confidence} probeCount={comparison.probe_count} />;
+  }
+  const text = comparison.level_source === "assessor_override" ? "Not applicable: assessor rating" : "No evidence";
+  return <span className="text-xs text-muted-foreground">{text}</span>;
+}
+
+function ComparisonRow({ comparison, skill }: { comparison: SkillComparison; skill: PortfolioSkill | undefined }) {
+  return (
+    <div role="row" className={`grid grid-cols-2 gap-x-4 gap-y-3 px-4 py-4 md:items-start ${COLUMNS}`}>
+      <div role="rowheader" className="col-span-2 min-w-0 text-sm font-medium md:col-span-1">
+        <ClampText text={comparison.skill_label} lines={2} maxChars={80} expandLabel="Show full name" />
+      </div>
+      <Cell label="Required">
+        <span className="text-sm font-medium tabular-nums">{`L${comparison.expected_level}`}</span>
+      </Cell>
+      <Cell label="Candidate">
+        <div className="flex flex-wrap items-center gap-2">
+          <LevelScale required={comparison.expected_level} candidate={comparison.candidate_level} />
+          <span className="text-sm font-medium tabular-nums">
+            {comparison.candidate_level ? `L${comparison.candidate_level}` : "Not assessed"}
+          </span>
+        </div>
+        <LevelSourceMarker source={comparison.level_source} aiLevel={comparison.ai_level ?? null} review={comparison.review} />
+      </Cell>
+      <Cell label="Result">
+        <ResultBadge result={comparison.result} delta={comparison.delta} tentativeDirection={comparison.tentative_direction} />
+      </Cell>
+      <Cell label="Confidence">
+        <Confidence comparison={comparison} />
+      </Cell>
+      <div role="cell" className="col-span-2 min-w-0 md:col-span-5">
+        <SkillEvidence comparison={comparison} skill={skill} />
+      </div>
+    </div>
+  );
+}
+
+export default function ComparisonTable({ comparisons, skillsById }: ComparisonTableProps) {
+  const rows = sortComparisons(comparisons);
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
-            </tr>
-          </thead>
-          <tbody>
-            {comparisons.map((c, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  {c.candidate_level != null ? (
-                    <span>
-                      {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-center">
-                  <ResultBadge comparison={c} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div role="table" aria-label="Skill comparison" className="overflow-hidden rounded-lg border bg-card">
+      <div role="rowgroup" className="hidden border-b bg-muted/50 md:block">
+        <div role="row" className={`grid gap-x-4 px-4 py-2.5 text-xs font-medium text-slate-700 ${COLUMNS}`}>
+          <span role="columnheader">Skill</span>
+          <span role="columnheader">Required</span>
+          <span role="columnheader">Candidate</span>
+          <span role="columnheader">Result</span>
+          <span role="columnheader">Confidence</span>
+          <span role="columnheader" className="sr-only">Evidence and review</span>
+        </div>
       </div>
-
-      {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
-        {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
-        {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+      <div role="rowgroup" className="divide-y">
+        {rows.map((comparison, index) => (
+          <ComparisonRow
+            key={`${comparison.skill_label}-${index}`}
+            comparison={comparison}
+            skill={comparison.portfolio_skill_id != null ? skillsById?.get(comparison.portfolio_skill_id) : undefined}
+          />
+        ))}
       </div>
     </div>
   );

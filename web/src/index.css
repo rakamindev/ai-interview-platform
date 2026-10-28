@@ -13,8 +13,9 @@
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
+        /* Rakamin teal #01959f (hsl 184 99% 31%) darkened to #01767f (hsl 184 99% 25%):
+           white text on it and it as text on white reach 5.4:1, above WCAG AA 4.5:1. */
+        --primary: 184 99% 25%;
         --primary-foreground: 0 0% 98%;
 
         /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
@@ -22,17 +23,17 @@
         --secondary-foreground: 26 47% 25%;
 
         --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+        --muted-foreground: 215 16% 45%;
 
         --accent: 210 40% 96%;
         --accent-foreground: 222 47% 11%;
 
-        --destructive: 0 84% 60%;
+        --destructive: 0 84% 45%;
         --destructive-foreground: 0 0% 98%;
 
         --border: 214 32% 91%;
         --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+        --ring: 184 99% 25%;
 
         --radius: 0.5rem;
     }
@@ -76,4 +77,23 @@
     body {
         @apply bg-background text-foreground;
     }
+}
+
+@layer utilities {
+  /* A 44 x 44 px tap area around a small control without changing its size
+     or the layout around it. */
+  /* Zero specificity, so a positioned control (e.g. absolute) keeps its position. */
+  :where(.touch-target) {
+    position: relative;
+  }
+
+  .touch-target::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
 }

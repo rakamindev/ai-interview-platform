@@ -1,8 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import CandidateResultsMenu from "@/components/assessment/CandidateResultsMenu";
+import { Callout } from "@/components/ui/callout";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { PageShell } from "@/components/ui/page-shell";
 import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -15,8 +21,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import { formatDate } from "@/utils/datetime";
+import { candidateReviewStatus } from "@/components/review/reviewText";
+import { Copy, Check, Eye, FileCheck2, Loader2, Pencil, Clock, Plus, UserCheck, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
+import { useRetryFocus } from "@/hooks/useRetryFocus";
+
+// The portfolio state and what still needs a human, instead of one green
+// "Completed" for every finished interview (N15).
+function PortfolioStatus({ session }: { session: Session }) {
+  if (session.portfolio_status === "failed") return <StatusBadge tone="danger">Portfolio failed</StatusBadge>;
+  if (session.portfolio_status === "generating") return <StatusBadge tone="info" icon={Loader2}>Generating</StatusBadge>;
+  if (session.portfolio_status !== "ready") return <StatusBadge tone="neutral">No portfolio yet</StatusBadge>;
+
+  return (
+    <>
+      <StatusBadge tone="neutral" icon={FileCheck2}>Portfolio ready</StatusBadge>
+      {candidateReviewStatus(session.review_summary ?? []).map(({ text, tone }) => (
+        <StatusBadge key={text} tone={tone} icon={tone === "success" ? UserCheck : undefined}>{text}</StatusBadge>
+      ))}
+    </>
+  );
+}
+
+function needsReview(session: Session) {
+  return (session.review_summary?.length ?? 0) > 0;
+}
 
 function SessionRow({
   session,
@@ -35,49 +65,27 @@ function SessionRow({
   const isLive = session.status === "active";
   const isEnded = session.status === "ended";
   const isPending = session.status === "pending";
+  // The number only names a candidate without a name; it is not shown.
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-          {index}
-        </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
+    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 px-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="min-w-0 space-y-0.5">
+          <div className="text-sm font-medium [overflow-wrap:anywhere]">{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
-              {new Date(session.started_at).toLocaleDateString()}
+              Started {formatDate(session.started_at)}
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Awaiting candidate
-          </span>
-        )}
-        {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Live
-          </span>
-        )}
-        {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
-        )}
-        {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
-        )}
+      <div className="flex flex-wrap items-center gap-2">
+        {isPending && <StatusBadge tone="warning">Awaiting candidate</StatusBadge>}
+        {isLive && <StatusBadge tone="info">Live</StatusBadge>}
+        {isEnded && session.end_reason === "error" && <StatusBadge tone="danger">Failed</StatusBadge>}
+        {isEnded && session.end_reason !== "error" && <PortfolioStatus session={session} />}
 
         <div className="flex items-center gap-1.5">
           {isPending && (
@@ -88,9 +96,9 @@ function SessionRow({
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
-                <><Check className="h-3 w-3 mr-1" /> Copied</>
+                <><Check aria-hidden="true" className="h-3 w-3 mr-1" /> Copied</>
               ) : (
-                <><Copy className="h-3 w-3 mr-1" /> Copy link</>
+                <><Copy aria-hidden="true" className="h-3 w-3 mr-1" /> Copy link</>
               )}
             </Button>
           )}
@@ -101,22 +109,15 @@ function SessionRow({
               className="h-7 px-2 text-xs"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
             >
-              <Eye className="h-3 w-3 mr-1" /> Monitor
+              <Eye aria-hidden="true" className="h-3 w-3 mr-1" /> Monitor
             </Button>
           )}
           {isEnded && session.end_reason !== "error" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
-            >
-              Results
-            </Button>
+            <CandidateResultsMenu assessmentId={assessmentId} sessionId={session.id} candidateName={displayName} />
           )}
         </div>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -126,11 +127,14 @@ export default function AssessmentInvitePage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [inviteFailed, setInviteFailed] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
   const loadSessions = useCallback(async () => {
@@ -138,15 +142,20 @@ export default function AssessmentInvitePage() {
     setSessions(res.data.sessions);
   }, [id]);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadFailed(false);
     Promise.all([
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
     ]).then(([aRes, sRes]) => {
       setAssessment(aRes.data.assessment);
       setSessions(sRes.data.sessions);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => setLoadFailed(true)).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(load, [load]);
+  const { headingRef, markRetry } = useRetryFocus(loading);
 
   // Poll while any session is live or pending
   useEffect(() => {
@@ -165,11 +174,14 @@ export default function AssessmentInvitePage() {
     setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
+    setInviteFailed(false);
     try {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+    } catch {
+      setInviteFailed(true);
     } finally {
       setCreatingSession(false);
     }
@@ -188,43 +200,59 @@ export default function AssessmentInvitePage() {
     setTimeout(() => setNewSessionCopied(false), 2000);
   };
 
+  const back = { to: "/assessments", label: "Back to assessments" };
+
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
+      <PageShell>
+        <div aria-busy="true" aria-label="Loading candidates" className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (loadFailed || !assessment) {
+    return (
+      <PageShell>
+        <PageHeader ref={headingRef} title="Candidates" back={back} />
+        <ErrorState title="Could not load this assessment" description="Check your connection, then try again." onRetry={() => { markRetry(); load(); }} />
+      </PageShell>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
-            </div>
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader
+        ref={headingRef}
+        title={assessment.name}
+        back={back}
+        description={
+          <span className="flex items-center gap-1.5">
+            <Clock aria-hidden="true" className="h-3.5 w-3.5" />
+            {assessment.time_limit_min} min · {assessment.skills?.length ?? 0} skills
+          </span>
+        }
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
+              <Pencil aria-hidden="true" className="h-3.5 w-3.5 mr-1.5" /> Edit
+            </Button>
+            <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+              <Plus aria-hidden="true" className="h-3.5 w-3.5 mr-1.5" />
+              {creatingSession ? "Creating..." : "Invite Candidate"}
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-          </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            {creatingSession ? "Creating..." : "Invite Candidate"}
-          </Button>
-        </div>
-      </div>
+      {inviteFailed && (
+        <Callout variant="error" role="alert" title="Could not create the invite link">
+          No link was created. Try again.
+        </Callout>
+      )}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -300,23 +328,37 @@ export default function AssessmentInvitePage() {
             </div>
           </div>
         ) : (
-          <Card>
-            <CardContent className="p-0 divide-y">
-              {sessions.map((session, i) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  index={sessions.length - i}
-                  assessmentId={id!}
-                  onCopy={(sid) => {
-                    const s = sessions.find((x) => x.id === sid);
-                    if (s) copyLink(s, sid);
-                  }}
-                  copiedId={copiedId}
-                />
-              ))}
-            </CardContent>
-          </Card>
+          <>
+            {sessions.some((s) => s.review_summary !== undefined) && (
+              <div role="group" aria-label="Show candidates" className="flex gap-2">
+                <Button type="button" size="sm" variant={reviewFilter ? "outline" : "default"} aria-pressed={!reviewFilter} className="max-sm:min-w-11"
+                        onClick={() => setReviewFilter(false)}>All</Button>
+                <Button type="button" size="sm" variant={reviewFilter ? "default" : "outline"} aria-pressed={reviewFilter} className="max-sm:min-w-11"
+                        onClick={() => setReviewFilter(true)}>Needs review</Button>
+              </div>
+            )}
+            {reviewFilter && !sessions.some(needsReview) ? (
+              <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No candidates need review.</p>
+            ) : (
+              <Card>
+                <ul className="divide-y">
+                  {sessions.map((session, i) => (reviewFilter && !needsReview(session)) ? null : (
+                    <SessionRow
+                      key={session.id}
+                      session={session}
+                      index={sessions.length - i}
+                      assessmentId={id!}
+                      onCopy={(sid) => {
+                        const s = sessions.find((x) => x.id === sid);
+                        if (s) copyLink(s, sid);
+                      }}
+                      copiedId={copiedId}
+                    />
+                  ))}
+                </ul>
+              </Card>
+            )}
+          </>
         )}
       </div>
 
@@ -331,13 +373,13 @@ export default function AssessmentInvitePage() {
                 <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>•</span>
                   <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                  {LEVEL_LABELS[s.expected_level] && <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>}
                 </li>
               ))}
             </ul>
           </div>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }

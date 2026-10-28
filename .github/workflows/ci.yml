@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "feat/**"
+      - "fix/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (RSpec)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Dummy values only. Specs replace Gemini with a fake client and WebMock
+    # blocks all outbound HTTP, so no real key is ever needed here.
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      REDIS_URL: redis://localhost:6379/1
+      SECRET_KEY_BASE: ci-dummy-secret-key-base-not-used-outside-tests
+      ALLOWED_ORIGINS: http://localhost:5173
+      GEMINI_API_KEY: ci-dummy-gemini-key
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.2"
+          bundler-cache: true
+          working-directory: api
+
+      # db:migrate (not db:schema:load): schema.rb cannot express the
+      # ai_interview Postgres schema.
+      - name: Prepare test database
+        run: bundle exec rails db:create db:migrate
+
+      - name: Run RSpec
+        run: bundle exec rspec
+
+  web:
+    name: Web (Vitest + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Type-check and build
+        run: npm run build

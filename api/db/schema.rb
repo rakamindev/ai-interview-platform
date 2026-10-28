@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_24_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -56,15 +56,34 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
 
+  create_table "assessor_override_events", force: :cascade do |t|
+    t.bigint "portfolio_skill_id", null: false
+    t.string "action", limit: 20, null: false
+    t.integer "from_level"
+    t.integer "to_level"
+    t.integer "ai_level_at_time"
+    t.text "notes"
+    t.bigint "actor_id", null: false
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.index ["portfolio_skill_id", "created_at"], name: "index_override_events_on_skill_and_time"
+    t.check_constraint "action::text = 'confirm'::text OR notes IS NOT NULL AND length(btrim(notes)) > 0", name: "chk_override_events_notes"
+    t.check_constraint "action::text = ANY (ARRAY['set'::character varying, 'revert'::character varying, 'confirm'::character varying]::text[])", name: "chk_override_events_action"
+    t.check_constraint "ai_level_at_time IS NULL OR ai_level_at_time >= 1 AND ai_level_at_time <= 5", name: "chk_override_events_ai_level_at_time"
+    t.check_constraint "from_level IS NULL OR from_level >= 1 AND from_level <= 5", name: "chk_override_events_from_level"
+    t.check_constraint "to_level IS NULL OR to_level >= 1 AND to_level <= 5", name: "chk_override_events_to_level"
+  end
+
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
+    t.integer "lock_version", default: 0, null: false
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
+    t.check_constraint "assessor_notes IS NOT NULL AND length(btrim(assessor_notes)) > 0", name: "chk_overrides_notes_present"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
   end
 
@@ -85,13 +104,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   create_table "fit_gap_reports", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.bigint "vacancy_id", null: false
-    t.jsonb "skill_comparisons", null: false
+    t.jsonb "skill_comparisons"
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "status", limit: 20, default: "not_requested", null: false
+    t.string "narrative_source", limit: 20
+    t.string "input_digest", limit: 64
+    t.string "error_code", limit: 40
+    t.datetime "requested_at"
+    t.datetime "completed_at"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
+    t.check_constraint "narrative_source IS NULL OR (narrative_source::text = ANY (ARRAY['ai'::character varying, 'legacy_fallback'::character varying]::text[]))", name: "chk_fit_gap_reports_narrative_source"
+    t.check_constraint "status::text = ANY (ARRAY['not_requested'::character varying, 'generating'::character varying, 'complete'::character varying, 'failed'::character varying]::text[])", name: "chk_fit_gap_reports_status"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -112,12 +139,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
-    t.enum "ai_confidence", null: false, enum_type: "confidence_level"
+    t.integer "ai_level"
+    t.enum "ai_confidence", enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.string "rating_status", limit: 20, default: "assessed", null: false
+    t.string "not_assessed_reason", limit: 40
+    t.string "coverage_state", limit: 20
+    t.integer "probe_count"
+    t.string "skill_key", limit: 300, null: false
+    t.index ["portfolio_id", "is_discovered", "skill_key"], name: "index_portfolio_skills_on_identity", unique: true
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
-    t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "ai_level IS NULL OR ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
+    t.check_constraint "not_assessed_reason IS NULL OR (not_assessed_reason::text = ANY (ARRAY['not_covered'::character varying, 'no_level_from_model'::character varying, 'invalid_level_from_model'::character varying, 'no_evidence'::character varying]::text[]))", name: "chk_portfolio_skills_not_assessed_reason"
+    t.check_constraint "rating_status::text = 'assessed'::text AND ai_level IS NOT NULL AND ai_confidence IS NOT NULL AND not_assessed_reason IS NULL OR rating_status::text = 'not_assessed'::text AND ai_level IS NULL AND ai_confidence IS NULL AND not_assessed_reason IS NOT NULL", name: "chk_portfolio_skills_rating_consistency"
+    t.check_constraint "rating_status::text = ANY (ARRAY['assessed'::character varying, 'not_assessed'::character varying]::text[])", name: "chk_portfolio_skills_rating_status"
   end
 
   create_table "portfolios", force: :cascade do |t|
@@ -126,8 +162,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.boolean "ratings_validated", default: true, null: false
+    t.string "generation_error_code", limit: 40
+    t.datetime "generation_claimed_at"
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
+    t.check_constraint "generation_error_code IS NULL OR (generation_error_code::text = ANY (ARRAY['timeout'::character varying, 'rate_limited'::character varying, 'provider_denied'::character varying, 'provider_unavailable'::character varying, 'invalid_output'::character varying, 'empty_output'::character varying, 'unknown'::character varying]::text[]))", name: "chk_portfolios_generation_error_code"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -206,6 +246,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   end
 
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessor_override_events", "portfolio_skills"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"

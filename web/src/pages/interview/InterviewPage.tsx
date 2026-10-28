@@ -278,7 +278,7 @@ export default function InterviewPage() {
       {reconnectedPrompt && (
         <div className="flex items-center justify-between text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-4 py-2.5 mt-2">
           <span>Reconnected — please say <strong>"check"</strong> or continue your answer to resume.</span>
-          <button className="ml-3 text-blue-500 hover:text-blue-700 shrink-0" onClick={() => setReconnectedPrompt(false)}>✕</button>
+          <button type="button" aria-label="Dismiss reconnected message" className="touch-target ml-3 text-blue-700 hover:text-blue-900 shrink-0" onClick={() => setReconnectedPrompt(false)}><span aria-hidden="true">✕</span></button>
         </div>
       )}
 

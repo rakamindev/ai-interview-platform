@@ -10,11 +10,11 @@ module Api
       # GET /api/v1/assessments
       def index
         assessments = paginate(
-          Assessment.includes(:sessions).order(created_at: :desc)
+          Assessment.includes(sessions: { portfolio: Portfolios::ReviewReasons::PRELOAD }).order(created_at: :desc)
         )
 
         json_response(
-          assessments: assessments.map(&method(:assessment_json)),
+          assessments: assessments.map { |a| assessment_json(a).merge(review_counts(a)) },
           meta: pagination_meta(assessments)
         )
       end
@@ -92,6 +92,16 @@ module Api
             status:     latest.status,
             end_reason: latest.end_reason
           }
+        }
+      end
+
+      # Additive list fields: how many candidates, and how many of their
+      # portfolios still need a human review (Portfolios::ReviewReasons).
+      def review_counts(assessment)
+        portfolios = assessment.sessions.filter_map(&:portfolio)
+        {
+          candidate_count: assessment.sessions.size,
+          needs_review_count: portfolios.count { |p| Portfolios::ReviewReasons.new(p).needs_review? }
         }
       end
 

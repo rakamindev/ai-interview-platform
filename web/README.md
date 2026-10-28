@@ -47,6 +47,8 @@ The app will be available at **http://localhost:5173**.
 | `npm run dev`       | Start Vite dev server with HMR       |
 | `npm run build`     | Type-check with `tsc` then build     |
 | `npm run preview`   | Preview the production build locally |
+| `npm test`          | Run the Vitest suite once            |
+| `npm run test:watch`| Run Vitest in watch mode             |
 
 ## Environment Variables
 
@@ -97,3 +99,28 @@ public/
 - The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
 - Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
 - The backend must be running for authentication, session management, and real-time audio streaming to work.
+
+## Running tests
+
+Tests use Vitest, jsdom and Testing Library. Test files live next to the code as
+`*.test.ts(x)`; shared setup is in `src/test/setup.ts` and configuration in
+`vitest.config.ts` (it reuses `vite.config.ts`, so the `@` alias works in tests).
+
+```bash
+nvm use          # Node 22, from .nvmrc
+npm test         # single run, as in CI
+npm run test:watch
+npm run build    # type-check (tsc) + production build
+```
+
+CI (`.github/workflows/ci.yml`) runs `npm ci`, `npm test` and `npm run build` with the
+Node version from `.nvmrc`.
+
+## Local setup notes (macOS)
+
+- **Node 22 is required** for the test tooling (Vitest 5, jsdom 30). Node 20 reached end of
+  life in April 2026. With nvm: `nvm install 22 && nvm use` in `web/`.
+- The API runs on port **3001**, so set `VITE_API_BASE_URL=http://localhost:3001/api/v1` and
+  `VITE_WS_BASE_URL=ws://localhost:3001` in `.env` (the example file still points at 3000).
+- `VITE_DEV_TOKEN` expires after 3 days (`TOKEN_EXPIRATION_TIME` on the API); mint a new one
+  with `JsonWebToken.encode(...)` in `bundle exec rails console` when requests start returning 401.

@@ -1,70 +1,66 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Briefcase, CalendarDays, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { ListRow } from "@/components/ui/list-row";
+import { PageHeader } from "@/components/ui/page-header";
+import { PageShell } from "@/components/ui/page-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
-import { Plus, Briefcase, ChevronRight } from "lucide-react";
+import { formatDate } from "@/utils/datetime";
 import type { Vacancy } from "@/types";
+import { useRetryFocus } from "@/hooks/useRetryFocus";
 
 export default function VacancyListPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     vacanciesApi.list()
       .then((res) => setVacancies(res.data.vacancies))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Vacancies</h1>
-        <Button onClick={() => navigate("/vacancies/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
-        </Button>
-      </div>
+  useEffect(load, [load]);
+  const { headingRef, markRetry } = useRetryFocus(loading);
 
-      {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load vacancies. Please refresh the page.
-        </div>
-      )}
+  const newButton = (
+    <Button asChild>
+      <Link to="/vacancies/new"><Plus aria-hidden="true" />New Vacancy</Link>
+    </Button>
+  );
+
+  return (
+    <PageShell>
+      <PageHeader ref={headingRef} title="Vacancies" description="Roles and the skill levels they require. A candidate's portfolio is compared against one of these in the fit/gap report."
+                  actions={newButton} />
 
       {loading ? (
-        <div className="space-y-2">
+        <div aria-busy="true" aria-label="Loading vacancies" className="space-y-2">
           {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
+      ) : error ? (
+        <ErrorState title="Could not load vacancies" description="Check your connection, then try again." onRetry={() => { markRetry(); load(); }} />
       ) : vacancies.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No vacancies yet.</p>
-          <Button variant="outline" onClick={() => navigate("/vacancies/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first vacancy
-          </Button>
-        </div>
+        <EmptyState icon={Briefcase} title="No vacancies yet" className="bg-card"
+                    description="Create a vacancy with its required skill levels to compare candidates against it."
+                    action={<Button asChild variant="outline"><Link to="/vacancies/new"><Plus aria-hidden="true" />Create your first vacancy</Link></Button>} />
       ) : (
-        <div className="space-y-2">
+        <ul className="space-y-2">
           {vacancies.map((v) => (
-            <Card
-              key={v.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/vacancies/${v.id}/edit`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium text-sm">{v.role_title}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+            <ListRow key={v.id} to={`/vacancies/${v.id}/edit`} title={v.role_title}
+                     meta={(v.updated_at ?? v.created_at) && (
+                       <span className="flex items-center gap-1"><CalendarDays aria-hidden="true" className="h-3 w-3" />Updated {formatDate(v.updated_at ?? v.created_at)}</span>
+                     )} />
           ))}
-        </div>
+        </ul>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -95,3 +95,57 @@ Runs on **port 5173** by default.
 | Sidekiq | `bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml` | — |
 | Rails API | `bundle exec rails server` | 3001 |
 | Frontend | `npm run dev` (in `ai-interview-web/`) | 5173 |
+
+---
+
+## Running tests
+
+The suite uses RSpec, FactoryBot and WebMock. Gemini is never called: specs pass a
+`FakeGeminiClient` (see `spec/support/fake_gemini_client.rb`) as `gemini_client:`,
+`WebMock.disable_net_connect!` blocks all outbound HTTP, and `GEMINI_API_KEY` is replaced
+with a dummy value before the app boots. Sidekiq runs in fake mode (jobs stay in memory).
+
+Prepare the test database once (and again after adding a migration):
+
+```bash
+RAILS_ENV=test bundle exec rails db:create db:migrate
+```
+
+Use `db:migrate`, not `db:schema:load`: `schema.rb` cannot express the `ai_interview`
+Postgres schema, so loading it would put every table in `public`.
+
+Run the suite:
+
+```bash
+bundle exec rspec
+CI=true bundle exec rspec   # same as CI: eager loads the whole app first
+```
+
+CI (`.github/workflows/ci.yml`) runs the same suite against PostgreSQL and Redis service
+containers with dummy secrets only.
+
+### Dev scenarios (manual testing without a live interview)
+
+```bash
+bundle exec rails runner db/seeds/dev_scenarios.rb
+```
+
+Creates obviously fake portfolios and fit/gap reports for the Portfolio, Override and
+Fit/Gap flow using the real generator and engine with a fake Gemini client. Development
+environment only; idempotent.
+
+---
+
+## Local setup notes (macOS)
+
+- **Ruby 3.3.2**: if Homebrew refuses to install `rbenv` because Command Line Tools are
+  outdated, clone `rbenv` and `ruby-build` into `~/.rbenv` and build with
+  `RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@3) --with-libyaml-dir=$(brew --prefix libyaml)" rbenv install 3.3.2`.
+- **`bin/rails` is not executable** in the repository; use `bundle exec rails ...`.
+- **Puma crashes on fork** (`objc[...] ... fork() was called`) because `config/puma.rb`
+  defaults to 2 workers with `preload_app!`. Run a single process locally:
+  `WEB_CONCURRENCY=0 bundle exec rails server -p 3001`.
+- **Redis without Docker**: `brew services start redis` works with
+  `REDIS_URL=redis://localhost:6379/1`.
+- `ALLOWED_ORIGINS` must be set (for example `http://localhost:5173`), otherwise every
+  `rails` command fails at boot.

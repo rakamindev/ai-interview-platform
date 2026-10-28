@@ -11,9 +11,9 @@ module Api
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        sessions = assessment.sessions.includes(portfolio: Portfolios::ReviewReasons::PRELOAD).order(created_at: :desc)
 
-        json_response(sessions: sessions.map(&method(:session_json)))
+        json_response(sessions: sessions.map { |s| session_json(s).merge(review_json(s)) })
       rescue ActiveRecord::RecordNotFound
         json_error("Assessment not found", :not_found)
       end
@@ -159,6 +159,19 @@ module Api
         @session = Session.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Session not found", :not_found)
+      end
+
+      PORTFOLIO_STATUSES = { 'pending' => 'generating', 'generating' => 'generating',
+                             'complete' => 'ready', 'failed' => 'failed' }.freeze
+
+      # Additive list fields: the portfolio state and what still needs a human
+      # review, so a failed portfolio no longer looks completed (N15).
+      def review_json(session)
+        portfolio = session.portfolio
+        return { portfolio_status: 'none', review_summary: [] } unless portfolio
+
+        { portfolio_status: PORTFOLIO_STATUSES.fetch(portfolio.generation_status),
+          review_summary: Portfolios::ReviewReasons.new(portfolio).reasons }
       end
 
       def session_json(session)

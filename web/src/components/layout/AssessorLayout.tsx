@@ -25,14 +25,14 @@ export default function AssessorLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-muted/40">
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-6">
             <Link to="/assessments" className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-sm">Rakamin AI Interview</span>
+              <LayoutDashboard aria-hidden="true" className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-sm max-sm:sr-only">Rakamin AI Interview</span>
             </Link>
             <nav className="flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => (
@@ -46,21 +46,21 @@ export default function AssessorLayout() {
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {label}
+                  <Icon aria-hidden="true" className="h-4 w-4" />
+                  <span className="max-sm:sr-only">{label}</span>
                 </Link>
               ))}
             </nav>
           </div>
           <div className="flex items-center gap-3">
             {tenant.name && (
-              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5">
+              <span className="text-xs text-muted-foreground border rounded-full px-2.5 py-0.5 max-md:hidden">
                 Tenant: {tenant.name}
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+              <LogOut aria-hidden="true" className="h-4 w-4 sm:mr-1.5" />
+              <span className="max-sm:sr-only">Logout</span>
             </Button>
           </div>
         </div>

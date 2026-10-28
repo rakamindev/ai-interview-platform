@@ -1,39 +1,63 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { CalendarDays, ClipboardList, Clock, Languages, Plus, UserCheck, Users } from "lucide-react";
+import NeedsReviewSection from "@/components/review/NeedsReviewSection";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { ListRow } from "@/components/ui/list-row";
+import { PageHeader } from "@/components/ui/page-header";
+import { PageShell } from "@/components/ui/page-shell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { assessmentsApi } from "@/services/assessments";
-import { Plus, Clock, ChevronRight } from "lucide-react";
+import { formatDate } from "@/utils/datetime";
 import type { Assessment } from "@/types";
+import { useRetryFocus } from "@/hooks/useRetryFocus";
+
+const LANGUAGE_LABELS: Record<string, string> = { en: "English", id: "Indonesian" };
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
-  if (!session) return null;
+  if (!session) return <StatusBadge tone="neutral">No candidates yet</StatusBadge>;
+  if (session.status === "active") return <StatusBadge tone="info">Live now</StatusBadge>;
+  if (session.status === "ended" && session.end_reason === "error") return <StatusBadge tone="danger">Last: failed</StatusBadge>;
+  if (session.status === "ended") return <StatusBadge tone="success">Last: completed</StatusBadge>;
+  return <StatusBadge tone="warning">Awaiting candidate</StatusBadge>;
+}
 
-  if (session.status === "active")
-    return (
-      <span className="flex items-center gap-1 text-xs text-primary">
-        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        Live now
-      </span>
-    );
-
-  if (session.status === "ended" && session.end_reason === "error")
-    return <span className="text-xs text-destructive">Last: failed</span>;
-
-  if (session.status === "ended")
-    return <span className="text-xs text-muted-foreground">Last: completed</span>;
-
-  return <span className="text-xs text-muted-foreground">Awaiting candidate</span>;
+function AssessmentMeta({ assessment }: { assessment: Assessment }) {
+  return (
+    <>
+      <span className="flex items-center gap-1"><Clock aria-hidden="true" className="h-3 w-3" />{assessment.time_limit_min} min</span>
+      {assessment.language && (
+        <span className="flex items-center gap-1"><Languages aria-hidden="true" className="h-3 w-3" />{LANGUAGE_LABELS[assessment.language] ?? assessment.language}</span>
+      )}
+      {assessment.created_at && (
+        <span className="flex items-center gap-1"><CalendarDays aria-hidden="true" className="h-3 w-3" />Created {formatDate(assessment.created_at)}</span>
+      )}
+      {assessment.candidate_count !== undefined && (
+        <span className="flex items-center gap-1">
+          <Users aria-hidden="true" className="h-3 w-3" />
+          {`${assessment.candidate_count} ${assessment.candidate_count === 1 ? "candidate" : "candidates"}`}
+        </span>
+      )}
+      {(assessment.needs_review_count ?? 0) > 0 ? (
+        <StatusBadge tone="warning">{`${assessment.needs_review_count} need review`}</StatusBadge>
+      ) : (assessment.candidate_count ?? 0) > 0 && assessment.needs_review_count === 0 ? (
+        <StatusBadge tone="success" icon={UserCheck}>All reviewed</StatusBadge>
+      ) : null}
+    </>
+  );
 }
 
 export default function AssessmentListPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     assessmentsApi
       .list()
       .then((res) => setAssessments(res.data.assessments))
@@ -41,62 +65,42 @@ export default function AssessmentListPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Assessment
-        </Button>
-      </div>
+  useEffect(load, [load]);
+  const { headingRef, markRetry } = useRetryFocus(loading);
 
-      {error && (
-        <div className="border border-destructive/40 rounded-lg p-4 text-sm text-destructive">
-          Failed to load assessments. Please refresh the page.
-        </div>
-      )}
+  const newButton = (
+    <Button asChild>
+      <Link to="/assessments/new"><Plus aria-hidden="true" />New Assessment</Link>
+    </Button>
+  );
+
+  return (
+    <PageShell>
+      <PageHeader ref={headingRef} title="Assessments" description="Interviews you send to candidates. Open one to invite candidates and read their results."
+                  actions={newButton} />
+
+      <NeedsReviewSection />
+
+      <h2 className="text-lg font-semibold">All assessments</h2>
 
       {loading ? (
-        <div className="space-y-2">
+        <div aria-busy="true" aria-label="Loading assessments" className="space-y-2">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
+      ) : error ? (
+        <ErrorState title="Could not load assessments" description="Check your connection, then try again." onRetry={() => { markRetry(); load(); }} />
       ) : assessments.length === 0 ? (
-        <div className="border rounded-lg p-12 text-center text-sm text-muted-foreground">
-          <p className="mb-3">No assessments yet.</p>
-          <Button variant="outline" onClick={() => navigate("/assessments/new")}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create your first assessment
-          </Button>
-        </div>
+        <EmptyState icon={ClipboardList} title="No assessments yet" className="bg-card"
+                    description="Create an assessment to choose the skills to interview for, then invite candidates."
+                    action={<Button asChild variant="outline"><Link to="/assessments/new"><Plus aria-hidden="true" />Create your first assessment</Link></Button>} />
       ) : (
-        <div className="space-y-2">
+        <ul className="space-y-2">
           {assessments.map((a) => (
-            <Card
-              key={a.id}
-              className="cursor-pointer hover:border-primary/40 transition-colors"
-              onClick={() => navigate(`/assessments/${a.id}/invite`)}
-            >
-              <CardContent className="py-3 px-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{a.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {a.time_limit_min} min
-                    </span>
-                    {a.latest_session && (
-                      <>
-                        <span>·</span>
-                        <SessionSummary session={a.latest_session} />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+            <ListRow key={a.id} to={`/assessments/${a.id}/invite`} title={a.name}
+                     meta={<AssessmentMeta assessment={a} />} status={<SessionSummary session={a.latest_session} />} />
           ))}
-        </div>
+        </ul>
       )}
-    </div>
+    </PageShell>
   );
 }

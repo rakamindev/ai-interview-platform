@@ -1,157 +1,135 @@
 # frozen_string_literal: true
 
 require 'prawn'
-require 'prawn/table'
 
 module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
+  #
+  # The PDF is the official decision document (Q4), so it only prints what
+  # the shared presenters say (Portfolios::SkillPresenter and
+  # FitGap::ReportPresenter), the same data the API and the screens use.
   class PdfGenerator
-    LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
-    CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
-    RESULT_LABELS = {
-      'match'        => 'Match',
-      'gap'          => 'Gap',
-      'exceed'       => 'Exceeds',
-      'not_assessed' => 'Not Assessed'
-    }.freeze
+    include PdfLabels
+
+    LEGACY_BANNER = 'Legacy portfolio: generated before ratings were validated. Some levels may come from ' \
+                    'an unchecked AI rating. Regenerate the portfolio or review every skill before relying on it.'
+    LOW_CONFIDENCE_NOTE = 'Only briefly explored. Not counted toward fit until an assessor reviews it.'
+    REPLACED_NOTE = 'Some characters were replaced for printing. The original text is shown in the web report.'
 
     def initialize(portfolio:, vacancy: nil)
       @portfolio   = portfolio
       @vacancy     = vacancy
       @session     = portfolio.session
       @assessment  = @session.assessment
-      @fit_gap     = vacancy ? FitGapReport.find_by(portfolio: portfolio, vacancy: vacancy) : nil
     end
 
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
-        render_header(pdf)
-        render_portfolio_section(pdf)
-        render_fit_gap_section(pdf) if @fit_gap
+        canvas = PdfCanvas.new(pdf)
+        render_header(canvas)
+        render_portfolio_section(canvas)
+        PdfFitGapSection.new(canvas, fit_gap_report).render(@vacancy.role_title) if @vacancy
+        render_replaced_note(canvas) if canvas.replaced?
         render_footer(pdf)
       end.render
     end
 
     private
 
-    def render_header(pdf)
-      pdf.font_size(22) { pdf.text @assessment.name, style: :bold }
-      pdf.move_down 4
-      pdf.font_size(12) { pdf.text "Skill Portfolio Report" }
-      pdf.move_down 4
-
-      pdf.font_size(10) do
-        pdf.text "Session: #{@session.id}"
-        pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
-        pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
-      end
-
-      pdf.stroke_horizontal_rule
-      pdf.move_down 10
+    def fit_gap_report
+      FitGap::ReportPresenter.new(portfolio: @portfolio, vacancy: @vacancy)
     end
 
-    def render_portfolio_section(pdf)
-      pdf.font_size(16) { pdf.text "Skill Portfolio", style: :bold }
-      pdf.move_down 8
-
-      skills = @portfolio.portfolio_skills.includes(:assessor_override)
-      configured = skills.reject(&:is_discovered)
-      discovered = skills.select(&:is_discovered)
-
-      if configured.any?
-        pdf.font_size(13) { pdf.text "Assessed Skills", style: :bold }
-        pdf.move_down 6
-        configured.each { |skill| render_skill_card(pdf, skill) }
-      end
-
-      if discovered.any?
-        pdf.move_down 6
-        pdf.font_size(13) { pdf.text "Discovered Skills", style: :bold }
-        pdf.move_down 6
-        discovered.each { |skill| render_skill_card(pdf, skill) }
-      end
+    def render_header(canvas)
+      canvas.text(@assessment.name, size: 20, style: :bold)
+      canvas.text('Skill Portfolio Report', size: 12)
+      canvas.pdf.move_down 4
+      canvas.text("Portfolio: #{@portfolio.id}  |  Session: #{@session.id}  |  " \
+                  "Duration: #{format_duration(@session.duration_seconds)}", size: 9)
+      canvas.text("Generated: #{Time.current.utc.strftime('%Y-%m-%d %H:%M UTC')}", size: 9)
+      render_legacy_banner(canvas) unless @portfolio.ratings_validated
+      canvas.pdf.stroke_horizontal_rule
+      canvas.pdf.move_down 10
     end
 
-    def render_skill_card(pdf, skill)
-      override = skill.assessor_override
-      effective_level = override ? override.override_level : skill.ai_level
+    def render_legacy_banner(canvas)
+      canvas.pdf.move_down 6
+      canvas.text(LEGACY_BANNER, size: 10, style: :bold, color: '9A3412')
+      canvas.pdf.move_down 6
+    end
 
-      pdf.font_size(11) do
-        pdf.text "#{skill.skill_label}", style: :bold
+    def render_portfolio_section(canvas)
+      canvas.heading('Skill Portfolio', size: 16)
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
-        level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
-        pdf.text level_text
+      skills = @portfolio.portfolio_skills.includes(:assessor_override, :override_events).order(:id).to_a
+      return canvas.text('This portfolio has no skills.') if skills.empty?
+
+      configured, discovered = skills.partition { |skill| !skill.is_discovered }
+      render_skill_group(canvas, 'Configured skills', configured)
+      render_skill_group(canvas, 'Discovered skills', discovered)
+    end
+
+    def render_skill_group(canvas, title, skills)
+      return if skills.empty?
+
+      canvas.pdf.move_down 4
+      canvas.heading(title)
+      skills.each { |skill| render_skill_card(canvas, skill, Portfolios::SkillPresenter.new(skill)) }
+    end
+
+    def render_skill_card(canvas, skill, view)
+      canvas.text(skill.skill_label, size: 11, style: :bold)
+      canvas.text("Level: #{level(view.effective_level)}", size: 11)
+      render_rating_source(canvas, skill, view)
+      render_review(canvas, view.review) if view.review
+
+      canvas.text(skill.competency_summary) if skill.competency_summary.present?
+      render_evidence(canvas, skill.evidence_quotes)
+      render_separator(canvas.pdf)
+    end
+
+    def render_separator(pdf)
+      pdf.stroke do
+        pdf.stroke_color 'CCCCCC'
+        pdf.horizontal_rule
       end
-
-      pdf.move_down 4
-
-      if skill.competency_summary.present?
-        pdf.font_size(10) { pdf.text skill.competency_summary }
-      end
-
-      if skill.evidence.any?
-        pdf.move_down 4
-        pdf.font_size(10) do
-          pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
-        end
-      end
-
-      if override&.assessor_notes.present?
-        pdf.move_down 4
-        pdf.font_size(10) do
-          pdf.text "Assessor Note:", style: :bold
-          pdf.text "  #{override.assessor_notes}"
-        end
-      end
-
-      pdf.stroke { pdf.stroke_color 'CCCCCC'; pdf.horizontal_rule }
       pdf.move_down 8
     end
 
-    def render_fit_gap_section(pdf)
-      pdf.start_new_page
+    def render_rating_source(canvas, skill, view)
+      return canvas.text(not_assessed_reason(skill.not_assessed_reason)) if view.effective_level.nil?
 
-      pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
-      pdf.move_down 8
+      canvas.text(source_text(view))
+      canvas.text("Confidence: #{confidence(view.confidence, skill.probe_count)}") if view.confidence
+      canvas.text(LOW_CONFIDENCE_NOTE) if view.confidence == 'low' && !view.human_reviewed?
+    end
 
-      comparisons = @fit_gap.skill_comparisons
-
-      table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
-      comparisons.each do |c|
-        table_data << [
-          c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
-          c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
-        ]
+    def source_text(view)
+      case view.level_source
+      when 'assessor_override' then "Assessor override. AI level: #{level(view.review[:ai_level])}"
+      when 'assessor_confirmed' then "Confirmed by assessor. AI level: #{level(view.review[:ai_level])}"
+      else 'Source: AI rating, not reviewed by an assessor'
       end
+    end
 
-      pdf.table(table_data, header: true, width: pdf.bounds.width) do |t|
-        t.row(0).font_style = :bold
-        t.row(0).background_color = 'E5E7EB'
-        t.cells.padding = [6, 8]
-        t.cells.size = 10
-      end
+    def render_review(canvas, review)
+      canvas.text(reviewer(review))
+      canvas.text("Note: #{review[:notes].presence || 'none'}")
+    end
 
-      if @fit_gap.culture_narrative.present?
-        pdf.move_down 12
-        pdf.font_size(12) { pdf.text "Culture & Competency Fit", style: :bold }
-        pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.culture_narrative }
-      end
+    def render_evidence(canvas, quotes)
+      return if quotes.empty?
 
-      if @fit_gap.overall_narrative.present?
-        pdf.move_down 8
-        pdf.font_size(12) { pdf.text "Overall Assessment", style: :bold }
-        pdf.move_down 4
-        pdf.font_size(10) { pdf.text @fit_gap.overall_narrative }
-      end
+      canvas.pdf.move_down 4
+      canvas.text('Evidence:', style: :bold)
+      quotes.each { |quote| canvas.text("• #{quote}") }
+    end
+
+    def render_replaced_note(canvas)
+      canvas.pdf.move_down 12
+      canvas.text(REPLACED_NOTE, size: 9, color: '555555')
     end
 
     def render_footer(pdf)

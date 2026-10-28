@@ -75,7 +75,8 @@ module Gemini
     def parse_response(response)
       unless response.success?
         raise RateLimitError.new("Rate limited", status: response.status, body: response.body) if response.status == 429
-        Rails.logger.error("[Gemini::HttpClient] API error #{response.status}: #{response.body}")
+        # The body is kept on the exception but not logged: it can echo prompt content.
+        Rails.logger.error("[Gemini::HttpClient] API error #{response.status} for #{@model}")
         raise ApiError.new("API returned #{response.status}", status: response.status, body: response.body)
       end
 

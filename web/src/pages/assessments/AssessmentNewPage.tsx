@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   DndContext,
   closestCenter,
@@ -20,10 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { Callout } from "@/components/ui/callout";
+import { FieldError, FormSection } from "@/components/ui/form-section";
+import { PageHeader } from "@/components/ui/page-header";
+import { PageShell } from "@/components/ui/page-shell";
 import SkillCard from "@/components/assessment/SkillCard";
 import SkillPicker from "@/components/assessment/SkillPicker";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowRight, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
@@ -107,148 +110,96 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Assessment</span>
-      </div>
+    <PageShell width="narrow">
+      <PageHeader title="New Assessment" back={{ to: "/assessments", label: "Back to assessments" }}
+                  description="Choose the skills the AI interviewer explores and the level each one needs." />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Role title */}
-        <div className="space-y-1.5">
-          <Label htmlFor="name">
-            Role title <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="name"
-            placeholder="Senior Frontend Engineer"
-            {...register("name", { required: "Role title is required" })}
-          />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
-          )}
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+        <FormSection title="Details">
+          <div className="space-y-1.5">
+            <Label htmlFor="name">
+              Role title <span aria-hidden="true" className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="name"
+              placeholder="Senior Frontend Engineer"
+              aria-required="true"
+              aria-invalid={errors.name ? true : undefined}
+              aria-describedby={errors.name ? "name-error" : undefined}
+              {...register("name", { required: "Role title is required" })}
+            />
+            <FieldError id="name-error">{errors.name?.message}</FieldError>
+          </div>
 
-        {/* Time limit */}
-        <div className="space-y-1.5">
-          <Label>
-            Session time limit <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            defaultValue="45"
-            onValueChange={(v) => setValue("time_limit_min", Number(v))}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_LIMIT_OPTIONS.map((min) => (
-                <SelectItem key={min} value={String(min)}>
-                  {min} min
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="time_limit_min">
+                Session time limit <span aria-hidden="true" className="text-destructive">*</span>
+              </Label>
+              <Select defaultValue="45" onValueChange={(v) => setValue("time_limit_min", Number(v))}>
+                <SelectTrigger id="time_limit_min" className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TIME_LIMIT_OPTIONS.map((min) => (
+                    <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Language */}
-        <div className="space-y-1.5">
-          <Label>Interview language</Label>
-          <Select
-            defaultValue="en"
-            onValueChange={(v) => setValue("language", v as "en" | "id")}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="id">Indonesian</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="language">Interview language</Label>
+              <Select defaultValue="en" onValueChange={(v) => setValue("language", v as "en" | "id")}>
+                <SelectTrigger id="language" className="w-40" aria-describedby="language-help"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="id">Indonesian</SelectItem>
+                </SelectContent>
+              </Select>
+              <p id="language-help" className="text-xs text-muted-foreground">The language the AI interviewer speaks.</p>
+            </div>
+          </div>
+        </FormSection>
 
-        <Separator />
-
-        {/* Skills section */}
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
-
+        <FormSection title="Skills to assess" description="Drag a skill to change the order. Each skill needs an expected level.">
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
               <p className="mb-1">No skills added yet.</p>
               <p>Add at least one skill to continue.</p>
             </div>
           ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={fields.map((f) => f.id)}
-                strategy={verticalListSortingStrategy}
-              >
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                    <SkillCard
-                      key={field.id}
-                      id={field.id}
-                      index={index}
-                      form={form}
-                      onRemove={() => remove(index)}
-                    />
+                    <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
                   ))}
                 </div>
               </SortableContext>
             </DndContext>
           )}
 
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPickerOpen(true)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+              <Plus aria-hidden="true" className="h-3.5 w-3.5 mr-1" />
               Add from Skill Taxonomy
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addCustomSkill}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
+            <Button type="button" variant="outline" size="sm" onClick={addCustomSkill}>
+              <Plus aria-hidden="true" className="h-3.5 w-3.5 mr-1" />
               Add custom skill
             </Button>
           </div>
-        </div>
+        </FormSection>
 
-        <Separator />
+        {error && <Callout variant="error" role="alert" title={error} />}
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-
-        {/* Actions */}
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/assessments")}
-          >
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => navigate("/assessments")}>
             Cancel
           </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            {submitting && <Loader2 aria-hidden="true" className="h-4 w-4 mr-2 animate-spin" />}
+            Save &amp; Create Session
+            <ArrowRight aria-hidden="true" />
           </Button>
         </div>
       </form>
@@ -258,6 +209,6 @@ export default function AssessmentNewPage() {
         onOpenChange={setPickerOpen}
         onSelect={addB7Skill}
       />
-    </div>
+    </PageShell>
   );
 }
