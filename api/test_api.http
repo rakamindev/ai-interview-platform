@@ -1,0 +1,23 @@
+### ==========================================
+### 1. HEALTH CHECK & SPEED TEST (Tanpa Auth)
+### ==========================================
+
+# @name GlobalHealth
+GET http://localhost:3001/health
+Accept: application/json
+
+###
+
+# @name ApiV1Health
+GET http://localhost:3001/api/v1/health
+Accept: application/json
+
+###
+
+# @name SpeedTest
+POST http://localhost:3001/api/v1/speed_test
+Content-Type: application/json
+
+{
+    "test_data": "Mencoba mengirim payload untuk test kecepatan upload"
+}

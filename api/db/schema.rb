@@ -100,7 +100,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.string "identifier", limit: 255, null: false
     t.string "host", limit: 255, null: false
     t.string "alias_hosts", default: [], null: false, array: true
-    t.jsonb "config", default: {}, null: false
+    t.jsonb "config", null: false
     t.timestamptz "created_at", default: -> { "now()" }, null: false
     t.timestamptz "updated_at", default: -> { "now()" }, null: false
     t.index ["host"], name: "index_organizations_on_host"
@@ -114,7 +114,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.boolean "is_discovered", default: false, null: false
     t.integer "ai_level", null: false
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
-    t.jsonb "evidence", default: [], null: false
+    t.jsonb "evidence", null: false
     t.text "competency_summary", null: false
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
