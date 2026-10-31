@@ -1,0 +1,128 @@
+{
+  "exported_at": "2026-10-28T16:36:16Z",
+  "portfolio": {
+    "id": 1,
+    "session_id": 1,
+    "candidate_id": null,
+    "generation_status": "complete",
+    "generated_at": "2026-10-28T15:09:08.177Z",
+    "generation_error": null,
+    "skills": [
+      {
+        "id": 1,
+        "skill_id": "react",
+        "skill_label": "React",
+        "is_discovered": false,
+        "ai_level": 2,
+        "ai_confidence": "high",
+        "evidence": [
+          "Synthetic quote: I reproduced a rendering issue, isolated its cause, and checked the fix."
+        ],
+        "competency_summary": "Synthetic assessment fixture for demonstration. This is not a real candidate evaluation."
+      },
+      {
+        "id": 2,
+        "skill_id": "testing",
+        "skill_label": "Testing and debugging",
+        "is_discovered": false,
+        "ai_level": 3,
+        "ai_confidence": "low",
+        "evidence": [
+          "Synthetic quote: I reproduced a rendering issue, isolated its cause, and checked the fix."
+        ],
+        "competency_summary": "Synthetic assessment fixture for demonstration. This is not a real candidate evaluation."
+      },
+      {
+        "id": 3,
+        "skill_id": "communication",
+        "skill_label": "Technical communication",
+        "is_discovered": false,
+        "ai_level": 3,
+        "ai_confidence": "high",
+        "evidence": [
+          "Synthetic quote: I reproduced a rendering issue, isolated its cause, and checked the fix."
+        ],
+        "competency_summary": "Synthetic assessment fixture for demonstration. This is not a real candidate evaluation."
+      }
+    ],
+    "overrides": [
+      {
+        "id": 2,
+        "portfolio_skill_id": 1,
+        "ai_level": 2,
+        "override_level": 4,
+        "assessor_notes": "Synthetic demo: assessor reviewed the interview evidence and adjusted the rating.",
+        "overridden_by": 1,
+        "overridden_at": "2026-10-28T16:35:56.773Z"
+      }
+    ]
+  },
+  "fit_gap_report": {
+    "id": 1,
+    "portfolio_id": 1,
+    "vacancy_id": 1,
+    "skill_comparisons": [
+      {
+        "delta": 1,
+        "reason": null,
+        "result": "exceed",
+        "skill_id": "react",
+        "confidence": "high",
+        "is_override": true,
+        "skill_label": "React",
+        "rating_source": "assessor",
+        "expected_level": 3,
+        "candidate_level": 4,
+        "vacancy_skill_id": 1,
+        "portfolio_skill_id": 1
+      },
+      {
+        "delta": 0,
+        "reason": null,
+        "result": "match",
+        "skill_id": "testing",
+        "confidence": "low",
+        "is_override": false,
+        "skill_label": "Testing and debugging",
+        "rating_source": "ai",
+        "expected_level": 3,
+        "candidate_level": 3,
+        "vacancy_skill_id": 2,
+        "portfolio_skill_id": 2
+      },
+      {
+        "delta": 1,
+        "reason": null,
+        "result": "exceed",
+        "skill_id": "communication",
+        "confidence": "high",
+        "is_override": false,
+        "skill_label": "Technical communication",
+        "rating_source": "ai",
+        "expected_level": 2,
+        "candidate_level": 3,
+        "vacancy_skill_id": 3,
+        "portfolio_skill_id": 3
+      },
+      {
+        "delta": null,
+        "reason": "missing_skill",
+        "result": "not_assessed",
+        "skill_id": "system-design",
+        "confidence": null,
+        "is_override": false,
+        "skill_label": "System design",
+        "rating_source": null,
+        "expected_level": 3,
+        "candidate_level": null,
+        "vacancy_skill_id": 4,
+        "portfolio_skill_id": null
+      }
+    ],
+    "culture_narrative": null,
+    "overall_narrative": "1 match, 2 above requirement, 0 below requirement, 1 not assessed. Missing assessment is not a skill gap. Review interview evidence before making a hiring decision.",
+    "role_title": "Frontend Engineer - synthetic demo",
+    "comparison_method": "deterministic_v1",
+    "generated_at": "2026-10-28T16:35:57.246Z"
+  }
+}

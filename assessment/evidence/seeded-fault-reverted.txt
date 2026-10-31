@@ -1,0 +1,36 @@
+[Evidence note: machine-specific workspace paths are normalized; test outcomes are unchanged.]
+
+Randomized with seed 6035
+
+FitGap::Comparison
+  does not manufacture a level from -1
+  does not manufacture a level from 0
+  does not fall back to AI when an override is invalid
+  normalizes a custom label when one ID is unavailable
+  does not manufacture a level from "3oops"
+  does not manufacture a level from ""
+  does not turn a missing assessment into a gap
+  preserves requirements with repeated labels
+  does not manufacture a level from []
+  does not manufacture a level from 2.5
+  uses the assessor rating with explicit provenance
+  does not merge different canonical IDs with identical labels
+  does not manufacture a level from {}
+  does not manufacture a level from 6
+  does not manufacture a level from "L3"
+  exposes required levels and low-confidence provenance
+  accepts an explicit integer string
+  matches an ID before a renamed label
+  accepts an empty requirement list
+  does not manufacture a level from true
+  distinguishes below and above requirements
+  does not manufacture a level from "3.0"
+  marks an invalid requirement as incomplete configuration
+  does not manufacture a level from nil
+  does not choose between ambiguous matches
+
+Finished in 0.19252 seconds (files took 4.19 seconds to load)
+25 examples, 0 failures
+
+Randomized with seed 6035
+

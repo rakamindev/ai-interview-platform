@@ -4,11 +4,20 @@ module Api
   module V1
     class PortfolioSkillsController < ApiController
       authorize_auth_token! :assessor
+      before_action :verify_authenticated_tenant!
 
       before_action :set_portfolio_skill
 
       # POST /api/v1/portfolio-skills/:id/override
       def override
+        @portfolio_skill.portfolio.with_lock do
+          save_override
+        end
+      end
+
+      private
+
+      def save_override
         existing = @portfolio_skill.assessor_override
 
         if existing
@@ -36,19 +45,19 @@ module Api
         end
       end
 
-      private
-
       def regenerate_stale_fitgap_reports
         portfolio = @portfolio_skill.portfolio
         FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          vacancy = report.vacancy
+          next unless vacancy && vacancy.tenant_id == current_tenant_id
+
+          FitGap::Engine.new(portfolio: portfolio, vacancy: vacancy).call
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        @portfolio_skill = PortfolioSkill.joins(portfolio: :session)
+                                         .where(sessions: { tenant_id: current_tenant_id })
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

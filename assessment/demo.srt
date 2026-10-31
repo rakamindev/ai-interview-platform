@@ -1,0 +1,43 @@
+1
+00:00:00,000 --> 00:00:12,000
+Demo menggunakan data sintetis, bukan penilaian kandidat nyata.
+Pada tampilan awal, kolom Required kosong karena kontrak field frontend dan API berbeda.
+
+2
+00:00:12,000 --> 00:00:20,000
+Mulai dari portfolio dan bukti wawancara yang dapat ditinjau assessor.
+
+3
+00:00:20,000 --> 00:00:45,000
+Laporan membedakan level yang dibutuhkan, level hasil penilaian, dan data yang belum ada.
+Skill yang belum dinilai tidak dihitung sebagai kekurangan kemampuan.
+
+4
+00:00:45,000 --> 00:01:05,000
+Filter tindak lanjut memuat gap, penilaian yang belum ada, dan confidence AI rendah.
+Aturan pencocokan dan perhitungan dapat dibaca melalui penjelasan laporan.
+
+5
+00:01:05,000 --> 00:01:30,000
+Assessor yang berwenang meninjau bukti dan mengoreksi rating.
+Laporan berikutnya menggunakan nilai terbaru dan menandai sumbernya sebagai assessor override.
+
+6
+00:01:30,000 --> 00:01:50,000
+Ekspor PDF dan JSON menggunakan perbandingan terbaru dari backend.
+Perhitungan deterministik ini tidak menunggu Gemini atau background job.
+
+7
+00:01:50,000 --> 00:02:15,000
+Pada layar mobile, perbandingan berubah menjadi baris yang ditumpuk.
+Level, sumber rating, dan alasan tindak lanjut tetap dapat dibaca.
+
+8
+00:02:15,000 --> 00:02:35,000
+Kegagalan jaringan disimulasikan untuk memperlihatkan pesan error dan tombol retry.
+Tidak ada polling atau pembuatan job berulang ketika permintaan gagal.
+
+9
+00:02:35,000 --> 00:03:05,000
+Vacancy tanpa requirement memiliki empty state; kondisi ini bukan bukti kandidat cocok.
+Penilaian budaya dan keputusan perekrutan tetap memerlukan tinjauan manusia atas bukti.

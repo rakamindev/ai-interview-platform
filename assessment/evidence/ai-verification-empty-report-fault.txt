@@ -1,0 +1,100 @@
+[Evidence note: machine-specific workspace paths are normalized; test outcomes are unchanged.]
+
+Randomized with seed 51566
+
+Fit/Gap API
+  prevents a foreign vacancy from being compared or exported
+  refreshes reports atomically after an authorized override
+  exports the current comparison as JSON and a real PDF
+  prevents foreign overrides and keeps the original rating
+  returns a fresh, typed comparison on initial read and explicit recompute
+  prevents access to foreign portfolios through read, generation, regeneration, and exports
+  exports an unconfigured vacancy without implying a match or crashing (FAILED - 1)
+  rejects incomplete portfolios and missing vacancy parameters
+  requires authentication and an assessor role
+  validates overrides without deleting reports or changing ratings
+  rolls back the override if refreshing a report fails partway through the operation
+  rejects a signed token with no tenant claim even if a header selects a tenant
+
+FitGap::Comparison
+  does not manufacture a level from "3.0"
+  does not turn a missing assessment into a gap
+  distinguishes below and above requirements
+  does not merge different canonical IDs with identical labels
+  does not manufacture a level from "3oops"
+  does not fall back to AI when an override is invalid
+  exposes required levels and low-confidence provenance
+  does not manufacture a level from {}
+  accepts an explicit integer string
+  marks an invalid requirement as incomplete configuration
+  does not manufacture a level from 6
+  preserves requirements with repeated labels
+  normalizes a custom label when one ID is unavailable
+  does not manufacture a level from 0
+  does not manufacture a level from nil
+  does not manufacture a level from 2.5
+  does not manufacture a level from ""
+  does not manufacture a level from -1
+  does not manufacture a level from "L3"
+  accepts an empty requirement list
+  does not choose between ambiguous matches
+  matches an ID before a renamed label
+  does not manufacture a level from true
+  does not manufacture a level from []
+  uses the assessor rating with explicit provenance
+
+FitGap::Engine
+  refreshes overrides and vacancy edits
+  preserves an earlier report if persistence fails
+  rejects comparisons across organizations even outside a request
+  does not compare an incomplete portfolio
+  upserts one deterministic report without a provider or queue
+  supports a vacancy with no requirements (FAILED - 2)
+
+Failures:
+
+  1) Fit/Gap API exports an unconfigured vacancy without implying a match or crashing
+     Failure/Error: expect(response).to have_http_status(:ok)
+       expected the response to have status code :ok (200) but it was :unprocessable_entity (422)
+     # ./spec/requests/fit_gap_spec.rb:102:in `block (2 levels) in <top (required)>'
+     # -e:1:in `<main>'
+
+  2) FitGap::Engine supports a vacancy with no requirements
+     Failure/Error: report.save!
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Skill comparisons is reserved
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/validations.rb:80:in `raise_validation_error'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/validations.rb:53:in `save!'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/transactions.rb:302:in `block in save!'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/transactions.rb:354:in `block in with_transaction_returning_status'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/connection_adapters/abstract/database_statements.rb:314:in `transaction'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/transactions.rb:350:in `with_transaction_returning_status'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/transactions.rb:302:in `save!'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/suppressor.rb:54:in `save!'
+     # ./app/services/fit_gap/engine.rb:28:in `block in call'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/locking/pessimistic.rb:94:in `block in with_lock'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/connection_adapters/abstract/transaction.rb:319:in `block in within_new_transaction'
+     # [workspace-parent]/.runtime/gems/gems/activesupport-7.0.10/lib/active_support/concurrency/load_interlock_aware_monitor.rb:25:in `handle_interrupt'
+     # [workspace-parent]/.runtime/gems/gems/activesupport-7.0.10/lib/active_support/concurrency/load_interlock_aware_monitor.rb:25:in `block in synchronize'
+     # [workspace-parent]/.runtime/gems/gems/activesupport-7.0.10/lib/active_support/concurrency/load_interlock_aware_monitor.rb:21:in `handle_interrupt'
+     # [workspace-parent]/.runtime/gems/gems/activesupport-7.0.10/lib/active_support/concurrency/load_interlock_aware_monitor.rb:21:in `synchronize'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/connection_adapters/abstract/transaction.rb:317:in `within_new_transaction'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/connection_adapters/abstract/database_statements.rb:316:in `transaction'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/transactions.rb:209:in `transaction'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/transactions.rb:290:in `transaction'
+     # [workspace-parent]/.runtime/gems/gems/activerecord-7.0.10/lib/active_record/locking/pessimistic.rb:92:in `with_lock'
+     # ./app/services/fit_gap/engine.rb:11:in `call'
+     # ./spec/services/fit_gap/engine_spec.rb:40:in `block (2 levels) in <top (required)>'
+     # -e:1:in `<main>'
+
+Finished in 13.83 seconds (files took 48.96 seconds to load)
+43 examples, 2 failures
+
+Failed examples:
+
+rspec ./spec/requests/fit_gap_spec.rb:99 # Fit/Gap API exports an unconfigured vacancy without implying a match or crashing
+rspec ./spec/services/fit_gap/engine_spec.rb:38 # FitGap::Engine supports a vacancy with no requirements
+
+Randomized with seed 51566
+

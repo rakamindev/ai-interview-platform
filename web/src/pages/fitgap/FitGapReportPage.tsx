@@ -1,207 +1,283 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
-import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
-import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { portfoliosApi } from "@/services/portfolios";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
-  const { id, sessionId, vacancyId } = useParams<{
-    id: string;
-    sessionId: string;
-    vacancyId: string;
-  }>();
-
+  const { id, sessionId, vacancyId } = useParams();
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
-  const [regenerating, setRegenerating] = useState(false);
+  const [revision, setRevision] = useState(0);
 
-  const fetchReport = useCallback(async () => {
-    if (!portfolio) return;
-    try {
-      const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
-    } catch (e: any) {
-      if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+    setReport(null);
+    setPortfolio(null);
+    const load = async () => {
+      if (
+        ![sessionId, vacancyId].every(
+          (value) =>
+            value &&
+            /^\d+$/.test(value) &&
+            Number.isSafeInteger(Number(value)) &&
+            Number(value) > 0,
+        )
+      ) {
+        if (active) {
+          setError(
+            "This comparison link is invalid. Return to the portfolio and select a vacancy.",
+          );
+          setLoading(false);
         }
+        return;
       }
-    }
-  }, [portfolio, vacancyId]);
-
-  useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
+      try {
+        const response = await sessionsApi.getPortfolio(Number(sessionId));
+        const data = response.data as { portfolio?: Portfolio };
+        if (
+          !data.portfolio ||
+          data.portfolio.generation_status !== "complete"
+        ) {
+          if (active)
+            setError(
+              "The portfolio is not ready. Return to the portfolio to check its status, then retry.",
+            );
+          return;
         }
-      })
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+        const comparison = await portfoliosApi.getFitGap(
+          data.portfolio.id,
+          Number(vacancyId),
+        );
+        if (active) {
+          setPortfolio(data.portfolio);
+          setReport(comparison.data.report);
+        }
+      } catch {
+        if (active)
+          setError(
+            "We could not load this comparison. Check your connection and access to the portfolio and vacancy, then retry.",
+          );
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [sessionId, vacancyId, revision]);
 
-  useEffect(() => {
-    if (portfolio) fetchReport();
-  }, [portfolio, fetchReport]);
-
-  usePolling(fetchReport, 5000, generating && !!portfolio);
-
-  const handleRegenerate = async () => {
-    if (!portfolio) return;
-    setRegenerating(true);
-    try {
-      await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
-      setGenerating(true);
-    } finally {
-      setRegenerating(false);
-    }
-  };
-
-  const handleExport = async (format: "pdf" | "json") => {
+  const exportReport = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExporting(format);
+    setExportError(null);
     try {
-      const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
-      const ext = format;
-      const blob = format === "pdf"
-        ? new Blob([res.data as BlobPart], { type: "application/pdf" })
-        : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const response = await portfoliosApi.exportPortfolio(
+        portfolio.id,
+        format,
+        Number(vacancyId),
+      );
+      const blob = new Blob(
+        [
+          format === "pdf"
+            ? response.data
+            : JSON.stringify(response.data, null, 2),
+        ],
+        { type: format === "pdf" ? "application/pdf" : "application/json" },
+      );
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `fitgap-${sessionId}-${vacancyId}.${ext}`;
-      a.click();
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "fitgap-" + sessionId + "-" + vacancyId + "." + format;
+      anchor.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setExportError(
+        "The export failed. Your comparison is still available. Try the export again.",
+      );
     } finally {
       setExporting(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
+  const rows = report?.skill_comparisons ?? [];
+  const unassessed = rows.filter((row) => row.result === "not_assessed").length;
+  const gaps = rows.filter((row) => row.result === "gap").length;
+  const matches = rows.filter(
+    (row) => row.result === "match" || row.result === "exceed",
+  ).length;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
-          </div>
+    <div className="mx-auto max-w-5xl space-y-7 text-slate-900 [&_button]:min-h-11 [&_button]:focus-visible:ring-2">
+      <Link
+        to={"/assessments/" + id + "/sessions/" + sessionId + "/portfolio"}
+        className="inline-flex min-h-10 items-center gap-2 rounded text-sm text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-700"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Back to portfolio
+      </Link>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Fit/Gap review
+          </h1>
+          <p className="break-words text-slate-600 [overflow-wrap:anywhere]">
+            {report?.role_title ??
+              "Compare interview evidence with role requirements."}
+          </p>
         </div>
-
-        {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
+        {report && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="min-h-10"
+              onClick={() => setRevision((value) => value + 1)}
+              disabled={loading || !!exporting}
+            >
+              <RefreshCw aria-hidden="true" />
+              Refresh comparison
             </Button>
-            {report && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
-                </Button>
-              </>
-            )}
+            <Button
+              variant="outline"
+              className="min-h-10"
+              onClick={() => void exportReport("pdf")}
+              disabled={!!exporting}
+            >
+              <Download aria-hidden="true" />
+              {exporting === "pdf" ? "Exporting PDF..." : "Export PDF"}
+            </Button>
+            <Button
+              variant="outline"
+              className="min-h-10"
+              onClick={() => void exportReport("json")}
+              disabled={!!exporting}
+            >
+              {exporting === "json" ? "Exporting JSON..." : "Export JSON"}
+            </Button>
           </div>
         )}
-      </div>
-
-      {/* Generating */}
-      {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+      </header>
+      {loading && (
+        <div role="status" aria-live="polite" className="rounded-lg border p-8">
+          <p className="font-medium">Loading skill comparison...</p>
+          <p className="mt-2 text-sm text-slate-600">
+            Checking the latest ratings and vacancy requirements.
+          </p>
         </div>
       )}
-
-      {/* Report ready */}
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-300 bg-amber-50 p-6 space-y-3"
+        >
+          <h2 className="font-semibold">Comparison unavailable</h2>
+          <p className="text-sm leading-relaxed">{error}</p>
+          <Button
+            variant="outline"
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            Retry comparison
+          </Button>
+        </div>
+      )}
+      {exportError && (
+        <p
+          role="alert"
+          className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm"
+        >
+          {exportError}
+        </p>
+      )}
       {report && (
         <>
-          {/* Skill comparison */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <ComparisonTable comparisons={report.skill_comparisons} />
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
+          <section
+            aria-labelledby="coverage-title"
+            className="rounded-lg border bg-slate-50 p-5 sm:p-6"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2
+                  id="coverage-title"
+                  className="text-sm font-medium text-slate-600"
+                >
+                  Assessment coverage
+                </h2>
+                <p className="mt-2 text-2xl font-semibold">
+                  {rows.length - unassessed} of {rows.length} requirements
+                  assessed
+                </p>
+              </div>
+              <Link
+                className="inline-flex min-h-10 items-center rounded px-2 text-sm font-medium text-teal-800 underline underline-offset-4 focus-visible:outline focus-visible:outline-2"
+                to={
+                  "/assessments/" +
+                  id +
+                  "/sessions/" +
+                  sessionId +
+                  "/transcript"
+                }
+              >
+                Review interview transcript
+              </Link>
+            </div>
+            {rows.length > 0 && (
+              <>
+                <progress
+                  className="mt-4 h-2 w-full appearance-none overflow-hidden rounded bg-slate-200 [&::-webkit-progress-bar]:bg-slate-200 [&::-webkit-progress-value]:bg-teal-700 [&::-moz-progress-bar]:bg-teal-700"
+                  value={rows.length - unassessed}
+                  max={rows.length}
+                  aria-label="Assessed vacancy requirements"
+                />
+                <p className="mt-3 text-sm text-slate-700">
+                  {matches} meet or exceed requirements · {gaps} below
+                  requirement · {unassessed} not assessed
+                </p>
+              </>
+            )}
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Missing assessment is not a skill gap. This comparison supports
+              human review and does not make a hiring recommendation.
+            </p>
+          </section>
+          <ComparisonTable key={report.vacancy_id} comparisons={rows} />
+          <section className="border-t pt-6 space-y-2">
+            <h2 className="font-semibold">
+              Culture and competency need separate review
+            </h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
+              Skill levels alone do not establish culture fit. Review behavioral
+              evidence and the role context with an assessor before drawing a
+              conclusion.
+            </p>
+          </section>
+          <details className="rounded-lg border p-4 text-sm">
+            <summary className="cursor-pointer rounded font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">
+              How this comparison works
+            </summary>
+            <div className="mt-3 space-y-2 leading-relaxed text-slate-600">
+              <p>
+                Skills match by canonical ID first. Custom skills use an
+                unambiguous normalized label. The assessor override takes
+                precedence; otherwise the AI rating is used. Difference equals
+                assessed level minus required level.
               </p>
-            </CardContent>
-          </Card>
-
-          {/* Discovered skills */}
-          {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills (not in vacancy requirements)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-2">
-                  {portfolio.skills
-                    .filter((s) => s.is_discovered)
-                    .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
-                        <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
-                        </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
-            </>
-          )}
+              <p>
+                Missing, invalid, or ambiguous ratings remain unassessed. No
+                model is called to calculate this report.
+              </p>
+              <p>Updated: {new Date(report.generated_at).toLocaleString()}</p>
+            </div>
+          </details>
         </>
       )}
     </div>

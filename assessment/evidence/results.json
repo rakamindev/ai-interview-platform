@@ -1,0 +1,29 @@
+{
+  "tested_on": "2026-10-28",
+  "api": {
+    "passed": true,
+    "tests": 44,
+    "source": "api-tests.txt"
+  },
+  "web_unit": {
+    "passed": true,
+    "tests": 10,
+    "source": "web-unit.txt"
+  },
+  "browser": {
+    "passed": true,
+    "tests": 7,
+    "source": "web-browser.txt",
+    "synthetic_api_fixtures": true
+  },
+  "build": {
+    "passed": true,
+    "source": "web-build.txt"
+  },
+  "seeded_fault": {
+    "tests": 25,
+    "failures_observed": 2,
+    "fault_commit": "a1bae27",
+    "revert_commit": "79e06aa"
+  }
+}

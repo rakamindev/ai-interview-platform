@@ -1,0 +1,22 @@
+[Evidence note: machine-specific workspace paths are normalized; test outcomes are unchanged.]
+
+> ai-interview-web@0.0.0 test
+> vitest run
+
+
+ RUN  v3.2.7 [workspace]/web
+
+ ✓ src/components/fitgap/ComparisonTable.test.tsx (5 tests) 3014ms
+   ✓ ComparisonTable > renders required and assessed levels using the API contract and names human provenance  784ms
+   ✓ ComparisonTable > filters to gaps, unknowns, and low-confidence ratings without losing counts  1493ms
+   ✓ ComparisonTable > keeps historical AI confidence from overruling an assessor rating  399ms
+ ✓ src/pages/fitgap/FitGapReportPage.test.tsx (5 tests) 2365ms
+   ✓ FitGapReportPage > announces loading then distinguishes missing assessment from a gap  1036ms
+   ✓ FitGapReportPage > shows errors and retries on request without creating jobs or polling  603ms
+   ✓ FitGapReportPage > keeps the report visible after an export fails and re-enables the action  580ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  21:48:09
+   Duration  31.41s (transform 1.37s, setup 5.06s, collect 5.06s, tests 5.38s, environment 22.47s, prepare 3.57s)
+

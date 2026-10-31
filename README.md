@@ -25,3 +25,7 @@ Each service has its own setup guide. Run the API first, then the web app pointe
 - This is the codebase you assess, harden, and release. Treat it as a version about to ship to a client.
 - Work in the `/assessment` folder at the repo root for your written deliverables; code changes go in `api/` or `web/`.
 - See the case-study brief you were given for what to produce and how it is evaluated.
+
+## Evidence-first Fit/Gap submission
+
+See [assessment/README.md](assessment/README.md) for the report, demo, acceptance criteria, executed test evidence and setup guide. The comparison shows required and assessed levels, human overrides and missing evidence, and enforces tenant ownership. It does not infer culture fit or a hiring recommendation from skill arithmetic.

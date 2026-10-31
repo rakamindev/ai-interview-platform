@@ -6,5 +6,7 @@ class FitGapReport < ApplicationRecord
   belongs_to :portfolio
   belongs_to :vacancy
 
-  validates :skill_comparisons, presence: true
+  validate do
+    errors.add(:skill_comparisons, 'must be an array') unless skill_comparisons.is_a?(Array)
+  end
 end

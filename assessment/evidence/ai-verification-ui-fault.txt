@@ -1,0 +1,628 @@
+[Evidence note: machine-specific workspace paths are normalized; test outcomes are unchanged.]
+
+> ai-interview-web@0.0.0 test
+> vitest run src/components/fitgap/ComparisonTable.test.tsx
+
+
+ RUN  v3.2.7 [workspace]/web
+
+ ❯ src/components/fitgap/ComparisonTable.test.tsx (5 tests | 1 failed) 1131ms
+   ✓ ComparisonTable > renders required and assessed levels using the API contract and names human provenance  409ms
+   ✓ ComparisonTable > keeps missing assessment visible with a follow-up explanation 38ms
+   ✓ ComparisonTable > filters to gaps, unknowns, and low-confidence ratings without losing counts  352ms
+   × ComparisonTable > keeps historical AI confidence from overruling an assessor rating 315ms
+     → Unable to find an accessible element with the role "button" and name "Needs follow-up (0)"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "Skill comparison":
+  [36m<section[39m
+    [33maria-labelledby[39m=[32m"comparison-title"[39m
+    [33mclass[39m=[32m"space-y-4 [&_button]:min-h-11 [&_button]:focus-visible:ring-2"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Skill comparison":
+  [36m<h2[39m
+    [33mclass[39m=[32m"text-lg font-semibold"[39m
+    [33mid[39m=[32m"comparison-title"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "All (1)":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"true"[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"[39m
+  [36m/>[39m
+
+  Name "Needs follow-up (1)":
+  [36m<button[39m
+    [33maria-pressed[39m=[32m"false"[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  table:
+
+  Name "Vacancy requirements compared with assessed skill levels. Missing assessment is not a skill gap.":
+  [36m<table[39m
+    [33mclass[39m=[32m"w-full table-fixed text-sm"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  caption:
+
+  Name "Vacancy requirements compared with assessed skill levels. Missing assessment is not a skill gap.":
+  [36m<caption[39m
+    [33mclass[39m=[32m"sr-only"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  rowgroup:
+
+  Name "":
+  [36m<thead[39m
+    [33mclass[39m=[32m"hidden sm:table-header-group bg-slate-50 text-slate-600"[39m
+  [36m/>[39m
+
+  Name "":
+  [36m<tbody[39m
+    [33mclass[39m=[32m"block sm:table-row-group"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  row:
+
+  Name "Skill Required Assessed Comparison":
+  [36m<tr />[39m
+
+  Name "React AI confidence: low Required L3 Assessed L4 Assessor override Above requirement Difference: +1 level":
+  [36m<tr[39m
+    [33mclass[39m=[32m"block border-t first:border-t-0 sm:table-row sm:first:border-t"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  columnheader:
+
+  Name "Skill":
+  [36m<th[39m
+    [33mclass[39m=[32m"w-[34%] p-4 text-left font-medium"[39m
+    [33mscope[39m=[32m"col"[39m
+  [36m/>[39m
+
+  Name "Required":
+  [36m<th[39m
+    [33mclass[39m=[32m"w-[18%] p-4 text-left font-medium"[39m
+    [33mscope[39m=[32m"col"[39m
+  [36m/>[39m
+
+  Name "Assessed":
+  [36m<th[39m
+    [33mclass[39m=[32m"w-[20%] p-4 text-left font-medium"[39m
+    [33mscope[39m=[32m"col"[39m
+  [36m/>[39m
+
+  Name "Comparison":
+  [36m<th[39m
+    [33mclass[39m=[32m"p-4 text-left font-medium"[39m
+    [33mscope[39m=[32m"col"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  rowheader:
+
+  Name "React AI confidence: low":
+  [36m<th[39m
+    [33mclass[39m=[32m"block p-4 pb-2 text-left align-top font-normal sm:table-cell sm:pb-4"[39m
+    [33mscope[39m=[32m"row"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  cell:
+
+  Name "Required L3":
+  [36m<td[39m
+    [33mclass[39m=[32m"inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"[39m
+  [36m/>[39m
+
+  Name "Assessed L4 Assessor override":
+  [36m<td[39m
+    [33mclass[39m=[32m"inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"[39m
+  [36m/>[39m
+
+  Name "Above requirement Difference: +1 level":
+  [36m<td[39m
+    [33mclass[39m=[32m"block px-4 pb-4 pt-2 align-top sm:table-cell sm:pt-4"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"text-xs leading-relaxed text-slate-600"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-labelledby[39m=[32m"comparison-title"[39m
+      [33mclass[39m=[32m"space-y-4 [&_button]:min-h-11 [&_button]:focus-visible:ring-2"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-wrap items-center justify-between gap-3"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mclass[39m=[32m"text-lg font-semibold"[39m
+          [33mid[39m=[32m"comparison-title"[39m
+        [36m>[39m
+          [0mSkill comparison[0m
+        [36m</h2>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"Filter skill comparison"[39m
+          [33mclass[39m=[32m"flex flex-wrap gap-2"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-pressed[39m=[32m"true"[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"[39m
+          [36m>[39m
+            [0mAll ([0m
+            [0m1[0m
+            [0m)[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-pressed[39m=[32m"false"[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"[39m
+          [36m>[39m
+            [0mNeeds follow-up ([0m
+            [0m1[0m
+            [0m)[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rounded-lg border"[39m
+      [36m>[39m
+        [36m<table[39m
+          [33mclass[39m=[32m"w-full table-fixed text-sm"[39m
+        [36m>[39m
+          [36m<caption[39m
+            [33mclass[39m=[32m"sr-only"[39m
+          [36m>[39m
+            [0mVacancy requirements compared with assessed skill levels. Missing assessment is not a skill gap.[0m
+          [36m</caption>[39m
+          [36m<thead[39m
+            [33mclass[39m=[32m"hidden sm:table-header-group bg-slate-50 text-slate-600"[39m
+          [36m>[39m
+            [36m<tr>[39m
+              [36m<th[39m
+                [33mclass[39m=[32m"w-[34%] p-4 text-left font-medium"[39m
+                [33mscope[39m=[32m"col"[39m
+              [36m>[39m
+                [0mSkill[0m
+              [36m</th>[39m
+              [36m<th[39m
+                [33mclass[39m=[32m"w-[18%] p-4 text-left font-medium"[39m
+                [33mscope[39m=[32m"col"[39m
+              [36m>[39m
+                [0mRequired[0m
+              [36m</th>[39m
+              [36m<th[39m
+                [33mclass[39m=[32m"w-[20%] p-4 text-left font-medium"[39m
+                [33mscope[39m=[32m"col"[39m
+              [36m>[39m
+                [0mAssessed[0m
+              [36m</th>[39m
+              [36m<th[39m
+                [33mclass[39m=[32m"p-4 text-left font-medium"[39m
+                [33mscope[39m=[32m"col"[39m
+              [36m>[39m
+                [0mComparison[0m
+              [36m</th>[39m
+            [36m</tr>[39m
+          [36m</thead>[39m
+          [36m<tbody[39m
+            [33mclass[39m=[32m"block sm:table-row-group"[39m
+          [36m>[39m
+            [36m<tr[39m
+              [33mclass[39m=[32m"block border-t first:border-t-0 sm:table-row sm:first:border-t"[39m
+            [36m>[39m
+              [36m<th[39m
+                [33mclass[39m=[32m"block p-4 pb-2 text-left align-top font-normal sm:table-cell sm:pb-4"[39m
+                [33mscope[39m=[32m"row"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"block font-semibold break-words [overflow-wrap:anywhere]"[39m
+                [36m>[39m
+                  [0mReact[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"block mt-1 text-xs text-slate-600"[39m
+                [36m>[39m
+                  [0mAI confidence: [0m
+                  [0mlow[0m
+                [36m</span>[39m
+              [36m</th>[39m
+              [36m<td[39m
+                [33mclass[39m=[32m"inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"block text-xs text-slate-600 sm:hidden"[39m
+                [36m>[39m
+                  [0mRequired[0m
+                [36m</span>[39m
+                [0mL3[0m
+              [36m</td>[39m
+              [36m<td[39m
+                [33mclass[39m=[32m"inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"block text-xs text-slate-600 sm:hidden"[39m
+                [36m>[39m
+                  [0mAssessed[0m
+                [36m</span>[39m
+                [0mL4[0m
+                [36m<span[39m
+                  [33mclass[39m=[32m"block mt-1 text-xs text-slate-600"[39m
+                [36m>[39m
+                  [0mAssessor override[0m
+                [36m</span>[39m
+              [36m</td>[39m
+              [36m<td[39m
+                [33mclass[39m=[32m"block px-4 pb-4 pt-2 align-top sm:table-cell sm:pt-4"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"inline-block rounded px-2 py-1 text-xs font-medium bg-teal-50 text-teal-900"[39m
+                [36m>[39m
+                  [0mAbove requirement[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"block mt-1 text-xs text-slate-600"[39m
+                [36m>[39m
+                  [0mDifference: [0m
+                  [0m+[0m
+                  [0m1[0m
+                  [0m level[0m
+                [36m</span>[39m
+              [36m</td>[39m
+            [36m</tr>[39m
+          [36m</tbody>[39m
+        [36m</table>[39m
+      [36m</div>[39m
+      [36m<p[39m
+        [33mclass[39m=[32m"text-xs leading-relaxed text-slate-600"[39m
+      [36m>[39m
+        [0mFollow-up includes skill gaps, missing assessments, and low-confidence AI ratings. Confidence describes the AI assessment; an override identifies the human rating used.[0m
+      [36m</p>[39m
+    [36m</section>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   ✓ ComparisonTable > explains empty configuration without implying a candidate match 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/fitgap/ComparisonTable.test.tsx > ComparisonTable > keeps historical AI confidence from overruling an assessor rating
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Needs follow-up (0)"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "Skill comparison":
+  <section
+    aria-labelledby="comparison-title"
+    class="space-y-4 [&_button]:min-h-11 [&_button]:focus-visible:ring-2"
+  />
+
+  --------------------------------------------------
+  heading:
+
+  Name "Skill comparison":
+  <h2
+    class="text-lg font-semibold"
+    id="comparison-title"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "All (1)":
+  <button
+    aria-pressed="true"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+  />
+
+  Name "Needs follow-up (1)":
+  <button
+    aria-pressed="false"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+  />
+
+  --------------------------------------------------
+  table:
+
+  Name "Vacancy requirements compared with assessed skill levels. Missing assessment is not a skill gap.":
+  <table
+    class="w-full table-fixed text-sm"
+  />
+
+  --------------------------------------------------
+  caption:
+
+  Name "Vacancy requirements compared with assessed skill levels. Missing assessment is not a skill gap.":
+  <caption
+    class="sr-only"
+  />
+
+  --------------------------------------------------
+  rowgroup:
+
+  Name "":
+  <thead
+    class="hidden sm:table-header-group bg-slate-50 text-slate-600"
+  />
+
+  Name "":
+  <tbody
+    class="block sm:table-row-group"
+  />
+
+  --------------------------------------------------
+  row:
+
+  Name "Skill Required Assessed Comparison":
+  <tr />
+
+  Name "React AI confidence: low Required L3 Assessed L4 Assessor override Above requirement Difference: +1 level":
+  <tr
+    class="block border-t first:border-t-0 sm:table-row sm:first:border-t"
+  />
+
+  --------------------------------------------------
+  columnheader:
+
+  Name "Skill":
+  <th
+    class="w-[34%] p-4 text-left font-medium"
+    scope="col"
+  />
+
+  Name "Required":
+  <th
+    class="w-[18%] p-4 text-left font-medium"
+    scope="col"
+  />
+
+  Name "Assessed":
+  <th
+    class="w-[20%] p-4 text-left font-medium"
+    scope="col"
+  />
+
+  Name "Comparison":
+  <th
+    class="p-4 text-left font-medium"
+    scope="col"
+  />
+
+  --------------------------------------------------
+  rowheader:
+
+  Name "React AI confidence: low":
+  <th
+    class="block p-4 pb-2 text-left align-top font-normal sm:table-cell sm:pb-4"
+    scope="row"
+  />
+
+  --------------------------------------------------
+  cell:
+
+  Name "Required L3":
+  <td
+    class="inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"
+  />
+
+  Name "Assessed L4 Assessor override":
+  <td
+    class="inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"
+  />
+
+  Name "Above requirement Difference: +1 level":
+  <td
+    class="block px-4 pb-4 pt-2 align-top sm:table-cell sm:pt-4"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-xs leading-relaxed text-slate-600"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <section
+      aria-labelledby="comparison-title"
+      class="space-y-4 [&_button]:min-h-11 [&_button]:focus-visible:ring-2"
+    >
+      <div
+        class="flex flex-wrap items-center justify-between gap-3"
+      >
+        <h2
+          class="text-lg font-semibold"
+          id="comparison-title"
+        >
+          Skill comparison
+        </h2>
+        <div
+          aria-label="Filter skill comparison"
+          class="flex flex-wrap gap-2"
+        >
+          <button
+            aria-pressed="true"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+          >
+            All (
+            1
+            )
+          </button>
+          <button
+            aria-pressed="false"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+          >
+            Needs follow-up (
+            1
+            )
+          </button>
+        </div>
+      </div>
+      <div
+        class="rounded-lg border"
+      >
+        <table
+          class="w-full table-fixed text-sm"
+        >
+          <caption
+            class="sr-only"
+          >
+            Vacancy requirements compared with assessed skill levels. Missing assessment is not a skill gap.
+          </caption>
+          <thead
+            class="hidden sm:table-header-group bg-slate-50 text-slate-600"
+          >
+            <tr>
+              <th
+                class="w-[34%] p-4 text-left font-medium"
+                scope="col"
+              >
+                Skill
+              </th>
+              <th
+                class="w-[18%] p-4 text-left font-medium"
+                scope="col"
+              >
+                Required
+              </th>
+              <th
+                class="w-[20%] p-4 text-left font-medium"
+                scope="col"
+              >
+                Assessed
+              </th>
+              <th
+                class="p-4 text-left font-medium"
+                scope="col"
+              >
+                Comparison
+              </th>
+            </tr>
+          </thead>
+          <tbody
+            class="block sm:table-row-group"
+          >
+            <tr
+              class="block border-t first:border-t-0 sm:table-row sm:first:border-t"
+            >
+              <th
+                class="block p-4 pb-2 text-left align-top font-normal sm:table-cell sm:pb-4"
+                scope="row"
+              >
+                <span
+                  class="block font-semibold break-words [overflow-wrap:anywhere]"
+                >
+                  React
+                </span>
+                <span
+                  class="block mt-1 text-xs text-slate-600"
+                >
+                  AI confidence: 
+                  low
+                </span>
+              </th>
+              <td
+                class="inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"
+              >
+                <span
+                  class="block text-xs text-slate-600 sm:hidden"
+                >
+                  Required
+                </span>
+                L3
+              </td>
+              <td
+                class="inline-block w-1/2 px-4 py-2 align-top sm:table-cell sm:w-auto sm:py-4"
+              >
+                <span
+                  class="block text-xs text-slate-600 sm:hidden"
+                >
+                  Assessed
+                </span>
+                L4
+                <span
+                  class="block mt-1 text-xs text-slate-600"
+                >
+                  Assessor override
+                </span>
+              </td>
+              <td
+                class="block px-4 pb-4 pt-2 align-top sm:table-cell sm:pt-4"
+              >
+                <span
+                  class="inline-block rounded px-2 py-1 text-xs font-medium bg-teal-50 text-teal-900"
+                >
+                  Above requirement
+                </span>
+                <span
+                  class="block mt-1 text-xs text-slate-600"
+                >
+                  Difference: 
+                  +
+                  1
+                   level
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p
+        class="text-xs leading-relaxed text-slate-600"
+      >
+        Follow-up includes skill gaps, missing assessments, and low-confidence AI ratings. Confidence describes the AI assessment; an override identifies the human rating used.
+      </p>
+    </section>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/fitgap/ComparisonTable.test.tsx:82:29
+     80|     render(<ComparisonTable comparisons={[{ ...assessed, confidence: "…
+     81|     expect(screen.getByText("AI confidence: low")).toBeVisible();
+     82|     await user.click(screen.getByRole("button", { name: "Needs follow-…
+       |                             ^
+     83|     expect(screen.getByRole("status")).toHaveTextContent("No skills ne…
+     84|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  21:39:12
+   Duration  60.73s (transform 816ms, setup 16.24s, collect 6.08s, tests 1.13s, environment 33.63s, prepare 2.14s)
+

@@ -1,0 +1,88 @@
+[Evidence note: machine-specific workspace paths are normalized; test outcomes are unchanged.]
+
+Randomized with seed 47967
+
+FitGap::Comparison
+  distinguishes below and above requirements (FAILED - 1)
+  does not manufacture a level from nil
+  accepts an explicit integer string (FAILED - 2)
+  does not manufacture a level from ""
+  preserves requirements with repeated labels
+  does not manufacture a level from {}
+  does not manufacture a level from "3.0"
+  does not choose between ambiguous matches
+  exposes required levels and low-confidence provenance
+  does not manufacture a level from []
+  does not manufacture a level from 2.5
+  does not turn a missing assessment into a gap
+  does not manufacture a level from true
+  does not manufacture a level from 6
+  uses the assessor rating with explicit provenance
+  does not manufacture a level from -1
+  does not manufacture a level from "3oops"
+  accepts an empty requirement list
+  does not fall back to AI when an override is invalid
+  marks an invalid requirement as incomplete configuration
+  matches an ID before a renamed label
+  does not merge different canonical IDs with identical labels
+  does not manufacture a level from "L3"
+  normalizes a custom label when one ID is unavailable
+  does not manufacture a level from 0
+
+Failures:
+
+  1) FitGap::Comparison distinguishes below and above requirements
+     Failure/Error: expect(compare([requirement], [skill.merge(ai_level: 2)]).first).to include(result: 'gap', delta: -1)
+
+       expected {:candidate_level => 2, :confidence => "low", :delta => 1, :expected_level => 3, :is_override => false, :portfo...", :reason => nil, :result => "exceed", :skill_id => "react", :skill_label => "React", :vacancy_skill_id => 1} to include {:result => "gap", :delta => -1}
+       Diff:
+       @@ -1,2 +1,12 @@
+       -:delta => -1,
+       -:result => "gap",
+       +:candidate_level => 2,
+       +:confidence => "low",
+       +:delta => 1,
+       +:expected_level => 3,
+       +:is_override => false,
+       +:portfolio_skill_id => 8,
+       +:rating_source => "ai",
+       +:reason => nil,
+       +:result => "exceed",
+       +:skill_id => "react",
+       +:skill_label => "React",
+       +:vacancy_skill_id => 1,
+     # ./api/spec/services/fit_gap/comparison_spec.rb:19:in `block (2 levels) in <top (required)>'
+     # -e:1:in `<main>'
+
+  2) FitGap::Comparison accepts an explicit integer string
+     Failure/Error: expect(compare([requirement], [skill.merge(ai_level: '4')]).first).to include(candidate_level: 4, result: 'exceed')
+
+       expected {:candidate_level => 4, :confidence => "low", :delta => -1, :expected_level => 3, :is_override => false, :portf..."ai", :reason => nil, :result => "gap", :skill_id => "react", :skill_label => "React", :vacancy_skill_id => 1} to include {:result => "exceed"}
+       Diff:
+       @@ -1,2 +1,12 @@
+        :candidate_level => 4,
+       -:result => "exceed",
+       +:confidence => "low",
+       +:delta => -1,
+       +:expected_level => 3,
+       +:is_override => false,
+       +:portfolio_skill_id => 8,
+       +:rating_source => "ai",
+       +:reason => nil,
+       +:result => "gap",
+       +:skill_id => "react",
+       +:skill_label => "React",
+       +:vacancy_skill_id => 1,
+     # ./api/spec/services/fit_gap/comparison_spec.rb:34:in `block (2 levels) in <top (required)>'
+     # -e:1:in `<main>'
+
+Finished in 0.80065 seconds (files took 6.08 seconds to load)
+25 examples, 2 failures
+
+Failed examples:
+
+rspec ./api/spec/services/fit_gap/comparison_spec.rb:18 # FitGap::Comparison distinguishes below and above requirements
+rspec ./api/spec/services/fit_gap/comparison_spec.rb:33 # FitGap::Comparison accepts an explicit integer string
+
+Randomized with seed 47967
+

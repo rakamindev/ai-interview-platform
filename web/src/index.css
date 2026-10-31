@@ -14,7 +14,7 @@
         --popover-foreground: 222 47% 11%;
 
         /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
+        --primary: 184 90% 24%;
         --primary-foreground: 0 0% 98%;
 
         /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
@@ -47,7 +47,7 @@
         --popover: 222 47% 11%;
         --popover-foreground: 210 40% 98%;
 
-        --primary: 184 99% 31%;
+        --primary: 184 90% 24%;
         --primary-foreground: 0 0% 98%;
 
         --secondary: 43 96% 60%;

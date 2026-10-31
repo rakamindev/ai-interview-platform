@@ -1,0 +1,19 @@
+[Evidence note: machine-specific workspace paths are normalized; test outcomes are unchanged.]
+
+> ai-interview-web@0.0.0 test:browser
+> playwright test
+
+
+Running 7 tests using 1 worker
+
+(node:6932) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 browser-tests\fit-gap.spec.ts:76:1 › renders the real API contract and every review control (12.3s)
+  ok 2 browser-tests\fit-gap.spec.ts:107:3 › reflows long labels at 320px (6.2s)
+  ok 3 browser-tests\fit-gap.spec.ts:107:3 › reflows long labels at 390px (6.0s)
+  ok 4 browser-tests\fit-gap.spec.ts:107:3 › reflows long labels at 768px (5.5s)
+  ok 5 browser-tests\fit-gap.spec.ts:107:3 › reflows long labels at 1280px (4.9s)
+  ok 6 browser-tests\fit-gap.spec.ts:135:1 › provides a keyboard-operable retry for errors without automatic requeue (6.7s)
+  ok 7 browser-tests\fit-gap.spec.ts:152:1 › shows a purposeful empty state (5.8s)
+
+  7 passed (2.4m)

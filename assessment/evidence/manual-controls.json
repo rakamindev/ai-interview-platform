@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "synthetic_data": true,
+  "source": "actual local Rails API",
+  "controls": [
+    "vacancy selection",
+    "comparison navigation",
+    "filters",
+    "details",
+    "transcript",
+    "back to portfolio",
+    "navigation links",
+    "logout"
+  ]
+}

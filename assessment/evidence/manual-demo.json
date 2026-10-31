@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "synthetic_data": true,
+  "api": "local Rails and PostgreSQL",
+  "simulated_failure": "one aborted comparison request for error/retry",
+  "scenes": [
+    {
+      "name": "Scene 1: baseline contract defect, then source evidence",
+      "seconds": 0.001
+    },
+    {
+      "name": "Scene 2: report with incomplete assessment",
+      "seconds": 23.532
+    },
+    {
+      "name": "Scene 3: follow-up and transparent rules",
+      "seconds": 45.008
+    },
+    {
+      "name": "Scene 4: authorized assessor override",
+      "seconds": 65.01
+    },
+    {
+      "name": "Scene 5: exports from the current comparison",
+      "seconds": 90.002
+    },
+    {
+      "name": "Scene 6: mobile review",
+      "seconds": 110.011
+    },
+    {
+      "name": "Scene 7: simulated network failure and recovery",
+      "seconds": 135.01
+    },
+    {
+      "name": "Scene 8: unconfigured vacancy and review boundary",
+      "seconds": 155.016
+    }
+  ],
+  "run_duration_seconds": 202.035,
+  "video_duration_seconds": 185.0,
+  "captions": "Bahasa Indonesia, separate subtitle band",
+  "raw_video_duration_seconds": 235.88,
+  "trimmed_startup_seconds": 50.879999999999995
+}

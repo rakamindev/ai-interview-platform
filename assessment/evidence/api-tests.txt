@@ -1,0 +1,59 @@
+[Evidence note: machine-specific workspace paths are normalized; test outcomes are unchanged.]
+
+Randomized with seed 39285
+
+FitGap::Comparison
+  normalizes a custom label when one ID is unavailable
+  does not choose between ambiguous matches
+  does not manufacture a level from nil
+  does not fall back to AI when an override is invalid
+  does not manufacture a level from true
+  does not manufacture a level from 2.5
+  does not manufacture a level from -1
+  does not manufacture a level from 0
+  does not manufacture a level from 6
+  uses the assessor rating with explicit provenance
+  marks an invalid requirement as incomplete configuration
+  does not manufacture a level from "3.0"
+  does not manufacture a level from {}
+  does not manufacture a level from []
+  accepts an explicit integer string
+  does not manufacture a level from ""
+  does not turn a missing assessment into a gap
+  does not manufacture a level from "L3"
+  does not manufacture a level from "3oops"
+  exposes required levels and low-confidence provenance
+  matches an ID before a renamed label
+  distinguishes below and above requirements
+  preserves requirements with repeated labels
+  accepts an empty requirement list
+  does not merge different canonical IDs with identical labels
+
+Fit/Gap API
+  exports the current comparison as JSON and a real PDF
+  prevents foreign overrides and keeps the original rating
+  exports an unconfigured vacancy without implying a match or crashing
+  rejects incomplete portfolios and missing vacancy parameters
+  requires authentication and an assessor role
+  rolls back the override if refreshing a report fails partway through the operation
+  returns a fresh, typed comparison on initial read and explicit recompute
+  prevents access to foreign portfolios through read, generation, regeneration, and exports
+  rejects a signed token with no tenant claim even if a header selects a tenant
+  validates overrides without deleting reports or changing ratings
+  does not let an inaccessible legacy cache block an authorized override
+  prevents a foreign vacancy from being compared or exported
+  refreshes reports atomically after an authorized override
+
+FitGap::Engine
+  does not compare an incomplete portfolio
+  rejects comparisons across organizations even outside a request
+  refreshes overrides and vacancy edits
+  supports a vacancy with no requirements
+  preserves an earlier report if persistence fails
+  upserts one deterministic report without a provider or queue
+
+Finished in 31.01 seconds (files took 2 minutes 26.1 seconds to load)
+44 examples, 0 failures
+
+Randomized with seed 39285
+
