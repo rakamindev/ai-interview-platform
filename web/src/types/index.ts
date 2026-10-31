@@ -127,12 +127,15 @@ export interface VacancySkill {
 
 export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
+// Mirrors FitGap::Engine#build_skill_comparisons; reports stored before is_override existed omit it.
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
+  skill_id?: string | null;
+  expected_level: number;
+  candidate_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
+  confidence?: "high" | "medium" | "low" | null;
   is_override?: boolean;
 }
 
