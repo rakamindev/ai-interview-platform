@@ -87,6 +87,12 @@ services:
     environment:
       <<: *api_env
     depends_on:
+      # api and sidekiq share the api_bundle volume, and Docker seeds an empty
+      # named volume from the image when the first container using it is created.
+      # Creating both at once on a fresh clone races and fails with
+      # "failed to mkdir .../api_bundle/_data/cache: file exists".
+      api:
+        condition: service_started
       postgres:
         condition: service_healthy
       redis:
