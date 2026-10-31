@@ -95,31 +95,31 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6">
+        <Skeleton className="h-8 w-64 sm:w-80" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-col sm:flex-row gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link
               to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
               className="text-muted-foreground hover:text-foreground"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">Fit/Gap Report</h1>
           </div>
         </div>
 
         {portfolio && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
               Regenerate
@@ -142,9 +142,9 @@ export default function FitGapReportPage() {
 
       {/* Generating */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+        <div className="border rounded-lg p-8 sm:p-12 text-center space-y-3">
+          <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 animate-spin text-primary mx-auto" />
+          <p className="text-sm sm:text-base text-muted-foreground">Generating fit/gap report...</p>
         </div>
       )}
 
@@ -154,7 +154,7 @@ export default function FitGapReportPage() {
           {/* Skill comparison */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Skill Comparison</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <ComparisonTable comparisons={report.skill_comparisons} />
@@ -166,10 +166,10 @@ export default function FitGapReportPage() {
           {/* Culture & competency */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Culture & Competency Fit</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+              <p className="text-sm sm:text-base leading-relaxed text-foreground whitespace-pre-wrap">
                 {report.culture_narrative || report.overall_narrative}
               </p>
             </CardContent>
@@ -181,8 +181,8 @@ export default function FitGapReportPage() {
               <Separator />
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-1.5">
+                    <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
                     Discovered Skills (not in vacancy requirements)
                   </CardTitle>
                 </CardHeader>
@@ -190,12 +190,12 @@ export default function FitGapReportPage() {
                   {portfolio.skills
                     .filter((s) => s.is_discovered)
                     .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
+                      <div key={s.id} className="text-sm sm:text-base flex items-center gap-2">
                         <span className="font-medium">{s.skill_label}</span>
                         <span className="text-muted-foreground">
                           {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
                         </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>
                     ))}
                 </CardContent>

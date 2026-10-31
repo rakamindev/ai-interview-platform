@@ -41,19 +41,19 @@ export default function TranscriptPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
+      <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
         <div className="flex items-center gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
             className="text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">Interview Transcript</h1>
             {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
+              <p className="text-sm sm:text-base text-muted-foreground">{candidateName}</p>
             )}
           </div>
         </div>
@@ -74,38 +74,38 @@ export default function TranscriptPage() {
       )}
 
       {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
+        <div className="border rounded-lg p-6 sm:p-8 text-center text-sm sm:text-base text-destructive">
           Failed to load transcript. Please refresh.
         </div>
       )}
 
       {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+        <div className="border rounded-lg p-6 sm:p-8 text-center text-sm sm:text-base text-muted-foreground">
           No transcript available for this session.
         </div>
       )}
 
       {!loading && !error && turns.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 sm:space-y-4">
           {turns.map((turn) => {
             const isAI = turn.speaker === "ai";
             return (
               <div
                 key={turn.id}
-                className={`rounded-lg p-4 ${
+                className={`rounded-lg p-4 sm:p-6 ${
                   isAI
                     ? "bg-muted border"
                     : "bg-background border border-primary/20"
                 }`}
               >
                 <p
-                  className={`text-xs font-semibold mb-1 ${
+                  className={`text-xs sm:text-sm font-semibold mb-1 ${
                     isAI ? "text-muted-foreground" : "text-primary"
                   }`}
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>
-                <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
+                <p className="text-sm sm:text-base whitespace-pre-wrap">{turn.text}</p>
               </div>
             );
           })}

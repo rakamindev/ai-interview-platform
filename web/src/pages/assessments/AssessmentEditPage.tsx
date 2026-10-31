@@ -89,7 +89,7 @@ export default function AssessmentEditPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-40" />
@@ -99,29 +99,29 @@ export default function AssessmentEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="flex items-center gap-2 mb-6 sm:mb-8">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
         </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">Edit Assessment</span>
+        <span className="text-sm sm:text-base text-muted-foreground">Back</span>
+        <span className="text-sm sm:text-base text-muted-foreground">/</span>
+        <span className="text-sm sm:text-base font-medium">Edit Assessment</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
         <div className="space-y-1.5">
-          <Label htmlFor="name">Role title <span className="text-destructive">*</span></Label>
-          <Input id="name" {...register("name", { required: true })} />
+          <Label htmlFor="name" className="text-sm sm:text-base">Role title <span className="text-destructive">*</span></Label>
+          <Input id="name" {...register("name", { required: true })} className="text-sm sm:text-base" />
         </div>
 
         <div className="space-y-1.5">
-          <Label>Session time limit <span className="text-destructive">*</span></Label>
+          <Label className="text-sm sm:text-base">Session time limit <span className="text-destructive">*</span></Label>
           <Select
             value={String(form.watch("time_limit_min"))}
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40 sm:w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
               {TIME_LIMIT_OPTIONS.map((min) => (
                 <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
@@ -132,16 +132,16 @@ export default function AssessmentEditPage() {
 
         <Separator />
 
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
+        <div className="space-y-3 sm:space-y-4">
+          <Label className="text-sm sm:text-base font-medium">Skills to assess</Label>
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="border rounded-lg p-6 sm:p-8 text-center text-sm sm:text-base text-muted-foreground">
               No skills added yet.
             </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
+                <div className="space-y-2 sm:space-y-3">
                   {fields.map((field, index) => (
                     <SkillCard key={field.id} id={field.id} index={index} form={form} onRemove={() => remove(index)} />
                   ))}
@@ -149,22 +149,22 @@ export default function AssessmentEditPage() {
               </SortableContext>
             </DndContext>
           )}
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="w-full sm:w-auto">
               <Plus className="h-3.5 w-3.5 mr-1" /> Add from B7 taxonomy
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })}>
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ skill_label: "", is_custom: true, expected_level: 3, display_order: fields.length })} className="w-full sm:w-auto">
               <Plus className="h-3.5 w-3.5 mr-1" /> Add custom skill
             </Button>
           </div>
         </div>
 
         <Separator />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm sm:text-base text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)} className="w-full sm:w-auto">Cancel</Button>
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Changes
           </Button>

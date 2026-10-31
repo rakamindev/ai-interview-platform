@@ -9,9 +9,15 @@ module Api
       def authenticate
         user = User.find_by(email: params[:email].to_s.downcase)
 
-        return json_error('Invalid email or password', :unauthorized) unless user&.authenticate(params[:password])
+        unless user&.authenticate(params[:password])
+          Rails.logger.warn("[Auth] AUTH_INVALID_CREDENTIALS: email=#{params[:email]}")
+          return json_error('Invalid email or password', :unauthorized)
+        end
 
-        return json_error('Invalid email or password', :unauthorized) unless user.role == 'admin'
+        unless user.role == 'admin'
+          Rails.logger.warn("[Auth] AUTH_ROLE_FORBIDDEN: user_id=#{user.id} role=#{user.role}")
+          return json_error('Account valid but access denied: admin role required', :forbidden)
+        end
 
         scheme = resolve_scheme
         token  = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: })

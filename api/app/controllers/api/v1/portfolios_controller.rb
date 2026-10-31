@@ -59,6 +59,14 @@ module Api
 
         if format == "pdf"
           vacancy = params[:vacancy_id].present? ? Vacancy.find_by(id: params[:vacancy_id]) : nil
+          session = @portfolio.session
+
+          # GAP-05: Check candidate name for PDF
+          if session.candidate_name.blank?
+            Rails.logger.warn("[Export] PDF_CANDIDATE_NAME_MISSING: portfolio=#{@portfolio.id} session=#{session.id}")
+            # Non-blocking: still generate PDF with fallback, but log it
+          end
+
           pdf_data = Exports::PdfGenerator.new(portfolio: @portfolio, vacancy: vacancy).call
 
           return send_data pdf_data,
@@ -116,6 +124,11 @@ module Api
         # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
+          # GAP-02: Validate contract integrity
+          if invalid_fit_gap_contract?(existing)
+            Rails.logger.error("[FitGap] FITGAP_CONTRACT_INVALID: report=#{existing.id} portfolio=#{portfolio.id} vacancy=#{vacancy.id} missing_fields=#{missing_fit_gap_fields(existing)}")
+            return json_error("Laporan Fit/Gap belum dapat ditampilkan dengan benar. Muat ulang laporan atau kembali beberapa saat lagi.", :unprocessable_entity)
+          end
           return json_response(report: fit_gap_json(existing))
         end
 
@@ -134,9 +147,35 @@ module Api
           return json_error("Fit/gap report not found", :not_found)
         end
 
+        # GAP-02: Validate contract integrity
+        if invalid_fit_gap_contract?(report)
+          Rails.logger.error("[FitGap] FITGAP_CONTRACT_INVALID: report=#{report.id} portfolio=#{portfolio.id} vacancy=#{params[:vacancy_id]} missing_fields=#{missing_fit_gap_fields(report)}")
+          return json_error("Laporan Fit/Gap belum dapat ditampilkan dengan benar. Muat ulang laporan atau kembali beberapa saat lagi.", :unprocessable_entity)
+        end
+
         json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
+      end
+
+      private
+
+      def invalid_fit_gap_contract?(report)
+        return true unless report.skill_comparisons.is_a?(Array)
+
+        required_fields = %w[skill_label expected_level result]
+        report.skill_comparisons.any? do |c|
+          required_fields.any? { |f| c[f].nil? }
+        end
+      end
+
+      def missing_fit_gap_fields(report)
+        return [] unless report.skill_comparisons.is_a?(Array)
+
+        required_fields = %w[skill_label expected_level result]
+        report.skill_comparisons.flat_map do |c|
+          required_fields.select { |f| c[f].nil? }
+        end.uniq
       end
 
       private

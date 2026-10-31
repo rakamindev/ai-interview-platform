@@ -3,8 +3,88 @@
 require 'faye/websocket'
 require 'json'
 require 'base64'
+require 'socket'
+require 'openssl'
+require 'websocket/driver'
 
 module Gemini
+  # Fallback client for platforms (like Windows mingw/ucrt) where EventMachine was built without SSL.
+  # Uses standard Ruby OpenSSL::SSL::SSLSocket with websocket-driver to provide full TLS WebSocket support.
+  class NativeSslWebSocketClient
+    attr_reader :driver
+
+    def initialize(url, headers = {})
+      @uri = URI.parse(url)
+      @tcp = TCPSocket.new(@uri.host, @uri.port || 443)
+      ctx = OpenSSL::SSL::SSLContext.new
+      @ssl = OpenSSL::SSL::SSLSocket.new(@tcp, ctx)
+      @ssl.hostname = @uri.host
+      @ssl.connect
+
+      @write_mutex = Mutex.new
+      @driver = WebSocket::Driver.client(self)
+      headers.each { |k, v| @driver.set_header(k, v) }
+      @closed = false
+    end
+
+    def write(buffer)
+      @write_mutex.synchronize do
+        @ssl.write(buffer) unless @closed
+      end
+    rescue => e
+      Rails.logger.warn("[Gemini::LiveClient] Native SSL write failed: #{e.class}: #{e.message}")
+    end
+
+    def url
+      @uri.to_s
+    end
+
+    def on(event, &block)
+      @driver.on(event) do |ev|
+        if EventMachine.reactor_running?
+          EventMachine.schedule { block.call(ev) }
+        else
+          block.call(ev)
+        end
+      end
+    end
+
+    def start
+      @driver.start
+      @reader_thread = Thread.new do
+        loop do
+          break if @closed
+          data = @ssl.readpartial(4096)
+          @driver.parse(data)
+        rescue EOFError, Errno::ECONNRESET, OpenSSL::SSL::SSLError
+          break
+        rescue => e
+          Rails.logger.error("[Gemini::LiveClient] Reader thread error: #{e.class}: #{e.message}")
+          break
+        end
+      end
+    end
+
+    def send(data)
+      return if @closed
+      if data.is_a?(String)
+        @driver.text(data)
+      else
+        @driver.binary(data)
+      end
+    end
+
+    def close(code = 1000, reason = '')
+      return if @closed
+      @closed = true
+      @driver.close(reason, code) rescue nil
+      @ssl.close rescue nil
+      @tcp.close rescue nil
+    rescue => _e
+      nil
+    end
+  end
+
   # Manages a persistent WebSocket connection to Gemini Live API.
   class LiveClient
     GEMINI_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
@@ -37,7 +117,7 @@ module Gemini
     )
       @system_prompt = system_prompt
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
-      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview')
+      @model = model || ENV.fetch('GEMINI_LIVE_MODEL', 'gemini-3.8-live')
       @voice = voice
       @resumption_token = nil
       @connected = false
@@ -63,16 +143,27 @@ module Gemini
     # Opens the WebSocket and sends setup; resumes a prior session if a handle is provided.
     def connect(resumption_handle: nil)
       @setup_complete = false
-      @ws = Faye::WebSocket::Client.new(
-        GEMINI_WS_URL,
-        nil,
-        headers: { 'x-goog-api-key' => @api_key }
-      )
+
+      if EventMachine.ssl?
+        @ws = Faye::WebSocket::Client.new(
+          GEMINI_WS_URL,
+          nil,
+          headers: { 'x-goog-api-key' => @api_key }
+        )
+      else
+        Rails.logger.info('[Gemini::LiveClient] Native EventMachine SSL not available — using Ruby OpenSSL WebSocket client')
+        @ws = NativeSslWebSocketClient.new(
+          GEMINI_WS_URL,
+          { 'x-goog-api-key' => @api_key }
+        )
+      end
 
       @ws.on(:open)    { |_event| handle_ws_open(resumption_handle) }
       @ws.on(:message) { |event|  handle_message(event.data) }
       @ws.on(:close)   { |event|  handle_ws_close(event) }
       @ws.on(:error)   { |event|  handle_ws_error(event) }
+
+      @ws.start if @ws.respond_to?(:start)
 
       @ws
     end

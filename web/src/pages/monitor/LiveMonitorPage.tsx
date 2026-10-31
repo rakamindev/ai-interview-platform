@@ -42,8 +42,8 @@ function ElapsedTimer({ startedAt }: { startedAt: string }) {
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
   return (
-    <span className="flex items-center gap-1 text-sm tabular-nums text-muted-foreground">
-      <Clock className="h-3.5 w-3.5" />
+    <span className="flex items-center gap-1 text-sm sm:text-base tabular-nums text-muted-foreground">
+      <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       {mm}:{ss}
     </span>
   );
@@ -129,8 +129,8 @@ export default function LiveMonitorPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6">
+        <Skeleton className="h-8 w-64 sm:w-80" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -141,28 +141,28 @@ export default function LiveMonitorPage() {
   const discoveredSkills = coverageMap?.discovered ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-col sm:flex-row gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
-            <h1 className="text-lg font-semibold">Live Monitor</h1>
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">Live Monitor</h1>
           </div>
           {assessmentName && (
-            <p className="text-sm text-muted-foreground pl-6">{assessmentName}</p>
+            <p className="text-sm sm:text-base text-muted-foreground pl-6">{assessmentName}</p>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
           <span className={cn(
-            "flex items-center gap-1 text-xs",
+            "flex items-center gap-1 text-xs sm:text-sm",
             isConnected ? "text-green-600" : "text-muted-foreground"
           )}>
-            <Radio className="h-3 w-3" />
+            <Radio className="h-3 w-3 sm:h-4 sm:w-4" />
             {isConnected ? "Live" : "Reconnecting..."}
           </span>
         </div>
@@ -170,8 +170,8 @@ export default function LiveMonitorPage() {
 
       {/* Session ended banner */}
       {sessionEnded && (
-        <div className="flex items-center gap-2 text-sm bg-muted/50 border rounded-lg px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+        <div className="flex items-center gap-2 text-sm sm:text-base bg-muted/50 border rounded-lg px-4 sm:px-6 py-3 sm:py-4">
+          <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0" />
           <div>
             <span className="font-medium">Session ended</span>
             {sessionEndReason && (
@@ -194,17 +194,17 @@ export default function LiveMonitorPage() {
       {/* Coverage map */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Coverage Status</CardTitle>
+          <CardTitle className="text-sm sm:text-base">Coverage Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {configuredSkills.length === 0 && discoveredSkills.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Waiting for interview to begin...</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Waiting for interview to begin...</p>
           ) : (
             configuredSkills.map((skill) => (
               <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-sm sm:text-base">
                   <span className="font-medium">{skill.skill_label}</span>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                     {skill.probe_count > 0 && (
                       <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                     )}
@@ -214,10 +214,10 @@ export default function LiveMonitorPage() {
                 <Progress
                   value={COVERAGE_STATE_WIDTH[skill.state]}
                   indicatorClassName={COVERAGE_STATE_COLOR[skill.state]}
-                  className="h-2"
+                  className="h-2 sm:h-2.5"
                 />
                 {skill.last_signal && (
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
                     "{skill.last_signal}"
                   </p>
                 )}
@@ -230,17 +230,17 @@ export default function LiveMonitorPage() {
             <>
               {configuredSkills.length > 0 && <Separator />}
               <div className="space-y-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide">
                   Discovered
                 </p>
                 {discoveredSkills.map((skill) => (
                   <div key={skill.id ?? skill.skill_label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-sm sm:text-base">
                       <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-amber-500" />
+                        <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500" />
                         {skill.skill_label}
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                         {skill.probe_count > 0 && (
                           <span>{skill.probe_count} probe{skill.probe_count !== 1 ? "s" : ""}</span>
                         )}
@@ -250,10 +250,10 @@ export default function LiveMonitorPage() {
                     <Progress
                       value={COVERAGE_STATE_WIDTH[skill.state]}
                       indicatorClassName="bg-amber-400"
-                      className="h-2"
+                      className="h-2 sm:h-2.5"
                     />
                     {skill.last_signal && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
                         "{skill.last_signal}"
                       </p>
                     )}
@@ -268,13 +268,13 @@ export default function LiveMonitorPage() {
       {/* Live transcript */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Live Transcript</CardTitle>
+          <CardTitle className="text-sm sm:text-base">Live Transcript</CardTitle>
         </CardHeader>
         <CardContent>
           {transcript.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No transcript yet.</p>
+            <p className="text-sm sm:text-base text-muted-foreground">No transcript yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 sm:space-y-3">
               {transcript.map((turn) => (
                 <TranscriptBubble key={turn.id} speaker={turn.speaker} text={turn.text} />
               ))}
@@ -284,7 +284,7 @@ export default function LiveMonitorPage() {
       </Card>
 
       {endError && (
-        <div className="border border-destructive/40 rounded-lg p-3 text-sm text-destructive">
+        <div className="border border-destructive/40 rounded-lg p-3 sm:p-4 text-sm sm:text-base text-destructive">
           Failed to end session. Please try again.
         </div>
       )}

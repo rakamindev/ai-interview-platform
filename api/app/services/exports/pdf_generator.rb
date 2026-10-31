@@ -44,6 +44,8 @@ module Exports
 
       pdf.font_size(10) do
         pdf.text "Session: #{@session.id}"
+        candidate_display_name = @session.candidate_name.presence || "Candidate (not provided)"
+        pdf.text "Candidate: #{candidate_display_name}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
         pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
       end

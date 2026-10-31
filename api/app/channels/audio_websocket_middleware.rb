@@ -47,14 +47,17 @@ class AudioWebSocketMiddleware
   end
 
   def handle_browser_open(env, session_id, browser_ws, state)
+    Rails.logger.info("[AudioWS] AUDIO_CONNECTION_ATTEMPT session=#{session_id}")
     session, error = authenticate_and_load(env, session_id)
 
     if error
+      Rails.logger.warn("[AudioWS] AUDIO_AUTH_FAILED session=#{session_id} reason=#{error}")
       browser_ws.send({ type: 'error', code: 'auth_failed', message: error, recoverable: false }.to_json)
       browser_ws.close
       return
     end
 
+    Rails.logger.info("[AudioWS] AUDIO_CONNECTION_ESTABLISHED session=#{session_id}")
     state.session = session
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
@@ -102,26 +105,61 @@ class AudioWebSocketMiddleware
   def connect_to_gemini(browser_ws, state)
     session = state.session
 
-    ensure_system_prompt(session)
+    # GAP-04: All DB operations (system_prompt, StartHandler, coverage) are moved to a background
+    # thread with a connection pool checkout to avoid blocking the EM reactor thread.
+    # On Windows+EventMachine, blocking the reactor thread here caused silent crashes that made
+    # the interview appear to complete immediately on start.
+    Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        # 1. Ensure system_prompt is available (may regenerate and write to DB).
+        ensure_system_prompt(session)
 
-    unless session.assessment.system_prompt.present?
-      send_json(browser_ws, type: 'error', code: 'no_system_prompt',
-                            message: 'Assessment configuration is incomplete.', recoverable: false)
-      browser_ws.close
-      return
+        unless session.assessment.system_prompt.present?
+          EM.schedule do
+            Rails.logger.error("[AudioWS] AUDIO_CONNECTION_FAILED: session=#{session.id} code=no_system_prompt")
+            send_json(browser_ws, type: 'error', code: 'no_system_prompt',
+                                  message: 'Assessment configuration is incomplete.', recoverable: false)
+            browser_ws.close
+          end
+          next
+        end
+
+        # 2. Activate session and initialize coverage maps (DB transaction).
+        Sessions::StartHandler.new(session).call unless session.active?
+
+        turn_counter = session.transcript_turns.maximum(:turn_number).to_i
+
+        # 3. Pre-compute coverage for the first candidate turn.
+        injector = Coverage::MapInjector.new(session)
+        cached_coverage_text  = injector.injection_text
+        last_coverage_digest  = injector.coverage_fingerprint
+        resumption_handle     = session.gemini_resumption_token.presence
+
+        # 4. Hand results back to EM thread before touching shared state or opening WS to Gemini.
+        EM.schedule do
+          begin
+            state.turn_counter        = turn_counter
+            state.cached_coverage_text = cached_coverage_text
+            state.last_coverage_digest = last_coverage_digest
+
+            build_gemini_client(browser_ws, state)
+            state.gemini_client.connect(resumption_handle: resumption_handle)
+          rescue StandardError => e
+            Rails.logger.error("[AudioWS] EM connect_to_gemini failed: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+            send_json(browser_ws, type: 'error', code: 'setup_failed',
+                                  message: 'Failed to initialize interview session.', recoverable: false)
+            browser_ws.close
+          end
+        end
+      end
+    rescue StandardError => e
+      Rails.logger.error("[AudioWS] connect_to_gemini thread failed: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+      EM.schedule do
+        send_json(browser_ws, type: 'error', code: 'setup_failed',
+                              message: 'Failed to initialize interview session.', recoverable: false)
+        browser_ws.close
+      end
     end
-
-    Sessions::StartHandler.new(session).call unless session.active?
-
-    state.turn_counter = session.transcript_turns.maximum(:turn_number).to_i
-
-    # Pre-compute coverage so the first candidate turn has context to inject (no stale/empty cache on turn 1).
-    injector = Coverage::MapInjector.new(session)
-    state.cached_coverage_text = injector.injection_text
-    state.last_coverage_digest = injector.coverage_fingerprint
-
-    build_gemini_client(browser_ws, state)
-    state.gemini_client.connect(resumption_handle: session.gemini_resumption_token.presence)
   end
 
   def ensure_system_prompt(session)
@@ -383,10 +421,12 @@ class AudioWebSocketMiddleware
     if state.reconnect_attempts < MAX_RECONNECT_ATTEMPTS
       schedule_gemini_reconnect(browser_ws, state, code)
     else
-      Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
+      Rails.logger.error("[AudioWS] AUDIO_RUNTIME_UNHEALTHY: session=#{state.session&.id} code=#{code} reason=#{reason}")
+      Rails.logger.error("[AudioWS] AUDIO_RETRY_EXHAUSTED: session=#{state.session&.id} total_attempts=#{state.reconnect_attempts}")
       Sessions::EndHandler.new(state.session).call(reason: 'error')
-      send_json(browser_ws, type: 'session_ended', reason: 'error',
-                            message: 'The session encountered a problem. Please contact the interviewer.')
+      # Send retry_exhausted (not session_ended) so frontend can show the connection_failed state rather than the "interview complete" screen.
+      send_json(browser_ws, type: 'retry_exhausted', code: 'AUDIO_RETRY_EXHAUSTED',
+                            message: 'Connection to the interview service failed. Please contact the interviewer.')
       browser_ws.close
     end
   end

@@ -96,8 +96,8 @@ export default function PortfolioPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6">
+        <Skeleton className="h-8 w-64 sm:w-80" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -105,27 +105,27 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-col sm:flex-row gap-4">
         <div className="flex items-center gap-2">
           <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">Portfolio Results</h1>
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">Portfolio Results</h1>
             {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
+              <p className="text-sm sm:text-base text-muted-foreground">{candidateName}</p>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
-            className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
+            className="inline-flex items-center gap-1 text-sm sm:text-base border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
           >
-            <FileText className="h-3.5 w-3.5" />
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Transcript
           </Link>
           {!generating && portfolio && (
@@ -155,11 +155,11 @@ export default function PortfolioPage() {
 
       {/* Generating state */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <div className="border rounded-lg p-8 sm:p-12 text-center space-y-3">
+          <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 animate-spin text-primary mx-auto" />
           <div>
-            <p className="font-medium">Generating portfolio...</p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm sm:text-base font-medium">Generating portfolio...</p>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               The AI is analyzing the interview transcript. This takes about 2 minutes.
             </p>
           </div>
@@ -168,8 +168,8 @@ export default function PortfolioPage() {
 
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
-        <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+        <div className="border border-destructive/40 rounded-lg p-6 sm:p-8 text-center space-y-3">
+          <p className="text-sm sm:text-base text-destructive">Portfolio generation failed.</p>
           <Button
             variant="outline"
             size="sm"
@@ -187,8 +187,8 @@ export default function PortfolioPage() {
       {!generating && portfolio?.generation_status === "complete" && (
         <>
           {/* Configured skills */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold">Configured Skills</h2>
+          <div className="space-y-3 sm:space-y-4">
+            <h2 className="text-sm sm:text-base font-semibold">Configured Skills</h2>
             {portfolio.skills
               .filter((s) => !s.is_discovered)
               .map((skill) => (
@@ -205,13 +205,13 @@ export default function PortfolioPage() {
           {portfolio.skills.some((s) => s.is_discovered) && (
             <>
               <Separator />
-              <div className="space-y-3">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
+                  <h2 className="text-sm sm:text-base font-semibold flex items-center gap-1.5">
+                    <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
                     Discovered Skills
                   </h2>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Skills the AI probed that were not in the original assessment
                   </p>
                 </div>
@@ -232,9 +232,9 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Choose vacancy..." />
               </SelectTrigger>
               <SelectContent>
@@ -245,7 +245,7 @@ export default function PortfolioPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleRunFitGap} disabled={!selectedVacancy}>
+            <Button onClick={handleRunFitGap} disabled={!selectedVacancy} className="w-full sm:w-auto">
               Run Fit/Gap Analysis →
             </Button>
           </div>

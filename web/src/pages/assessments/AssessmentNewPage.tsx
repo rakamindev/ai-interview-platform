@@ -107,43 +107,44 @@ export default function AssessmentNewPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-6 sm:mb-8">
         <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
         </Link>
-        <span className="text-sm text-muted-foreground">Back</span>
-        <span className="text-sm text-muted-foreground">/</span>
-        <span className="text-sm font-medium">New Assessment</span>
+        <span className="text-sm sm:text-base text-muted-foreground">Back</span>
+        <span className="text-sm sm:text-base text-muted-foreground">/</span>
+        <span className="text-sm sm:text-base font-medium">New Assessment</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
         {/* Role title */}
         <div className="space-y-1.5">
-          <Label htmlFor="name">
+          <Label htmlFor="name" className="text-sm sm:text-base">
             Role title <span className="text-destructive">*</span>
           </Label>
           <Input
             id="name"
             placeholder="Senior Frontend Engineer"
             {...register("name", { required: "Role title is required" })}
+            className="text-sm sm:text-base"
           />
           {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+            <p className="text-xs sm:text-sm text-destructive">{errors.name.message}</p>
           )}
         </div>
 
         {/* Time limit */}
         <div className="space-y-1.5">
-          <Label>
+          <Label className="text-sm sm:text-base">
             Session time limit <span className="text-destructive">*</span>
           </Label>
           <Select
             defaultValue="45"
             onValueChange={(v) => setValue("time_limit_min", Number(v))}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40 sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -158,12 +159,12 @@ export default function AssessmentNewPage() {
 
         {/* Language */}
         <div className="space-y-1.5">
-          <Label>Interview language</Label>
+          <Label className="text-sm sm:text-base">Interview language</Label>
           <Select
             defaultValue="en"
             onValueChange={(v) => setValue("language", v as "en" | "id")}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40 sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -176,11 +177,11 @@ export default function AssessmentNewPage() {
         <Separator />
 
         {/* Skills section */}
-        <div className="space-y-3">
-          <Label>Skills to assess</Label>
+        <div className="space-y-3 sm:space-y-4">
+          <Label className="text-sm sm:text-base font-medium">Skills to assess</Label>
 
           {fields.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="border rounded-lg p-6 sm:p-8 text-center text-sm sm:text-base text-muted-foreground">
               <p className="mb-1">No skills added yet.</p>
               <p>Add at least one skill to continue.</p>
             </div>
@@ -194,7 +195,7 @@ export default function AssessmentNewPage() {
                 items={fields.map((f) => f.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="space-y-2">
+                <div className="space-y-2 sm:space-y-3">
                   {fields.map((field, index) => (
                     <SkillCard
                       key={field.id}
@@ -209,12 +210,13 @@ export default function AssessmentNewPage() {
             </DndContext>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setPickerOpen(true)}
+              className="w-full sm:w-auto"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add from Skill Taxonomy
@@ -224,6 +226,7 @@ export default function AssessmentNewPage() {
               variant="outline"
               size="sm"
               onClick={addCustomSkill}
+              className="w-full sm:w-auto"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add custom skill
@@ -234,21 +237,22 @@ export default function AssessmentNewPage() {
         <Separator />
 
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-sm sm:text-base text-destructive">{error}</p>
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate("/assessments")}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save &amp; Create Session →
+            Save & Create Session →
           </Button>
         </div>
       </form>

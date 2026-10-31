@@ -38,13 +38,13 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3 px-4 sm:px-6">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted text-xs sm:text-sm font-medium text-muted-foreground">
           {index}
         </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
+        <div className="space-y-0.5 min-w-0">
+          <div className="text-sm sm:text-base font-medium truncate">{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -53,27 +53,27 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
           </span>
         )}
         {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-primary">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Live
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-destructive">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
             Failed
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-green-600">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
           </span>
@@ -84,7 +84,7 @@ function SessionRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs sm:text-sm whitespace-nowrap"
               onClick={() => onCopy(session.id)}
             >
               {copiedId === session.id ? (
@@ -98,7 +98,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs sm:text-sm whitespace-nowrap"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/monitor`)}
             >
               <Eye className="h-3 w-3 mr-1" /> Monitor
@@ -108,7 +108,7 @@ function SessionRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs sm:text-sm whitespace-nowrap"
               onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
             >
               Results
@@ -190,8 +190,8 @@ export default function AssessmentInvitePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6">
+        <Skeleton className="h-8 w-64 sm:w-80" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -199,23 +199,23 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-col sm:flex-row gap-4">
         <div className="flex items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">{assessment?.name ?? "—"}</h1>
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground mt-1">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
               {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
@@ -233,7 +233,7 @@ export default function AssessmentInvitePage() {
             <DialogTitle>Invite Candidate</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label htmlFor="candidate-name">Candidate name</Label>
+            <Label htmlFor="candidate-name" className="text-sm sm:text-base">Candidate name</Label>
             <Input
               id="candidate-name"
               placeholder="e.g. Budi Santoso"
@@ -241,6 +241,7 @@ export default function AssessmentInvitePage() {
               onChange={(e) => setCandidateNameInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleInviteCandidate()}
               autoFocus
+              className="text-sm sm:text-base"
             />
             <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
           </div>
@@ -255,17 +256,17 @@ export default function AssessmentInvitePage() {
       {newSession && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-4 space-y-2">
-            <p className="text-sm font-medium">
+            <p className="text-sm sm:text-base font-medium">
               {newSession.candidate_name
                 ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
                 : <>New invite link ready — share with your candidate:</>}
             </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
-              <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
+            <div className="flex items-center gap-2 border rounded-md px-3 sm:px-4 py-2 bg-white">
+              <span className="flex-1 text-sm sm:text-base font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
+            <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full sm:w-auto">
               {newSessionCopied ? (
                 <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
               ) : (
@@ -281,7 +282,7 @@ export default function AssessmentInvitePage() {
       {/* Sessions list */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
+          <h2 className="text-sm sm:text-base font-semibold">
             Candidates
             {sessions.length > 0 && (
               <span className="ml-1.5 text-muted-foreground font-normal">({sessions.length})</span>
@@ -290,11 +291,11 @@ export default function AssessmentInvitePage() {
         </div>
 
         {sessions.length === 0 ? (
-          <div className="border rounded-lg p-10 text-center space-y-3">
-            <UserRound className="h-8 w-8 text-muted-foreground mx-auto" />
+          <div className="border rounded-lg p-8 sm:p-10 text-center space-y-3">
+            <UserRound className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground mx-auto" />
             <div>
-              <p className="text-sm font-medium">No candidates yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-sm sm:text-base font-medium">No candidates yet</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Click "Invite Candidate" to generate an interview link.
               </p>
             </div>
@@ -325,13 +326,13 @@ export default function AssessmentInvitePage() {
         <>
           <Separator />
           <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Skills assessed</h2>
+            <h2 className="text-sm sm:text-base font-semibold">Skills assessed</h2>
             <ul className="space-y-1">
               {assessment.skills.map((s) => (
-                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <li key={s.id ?? s.skill_label} className="flex items-center gap-2 text-sm sm:text-base text-muted-foreground">
                   <span>•</span>
                   <span>{s.skill_label}</span>
-                  <span className="text-xs">(expected {LEVEL_LABELS[s.expected_level]})</span>
+                  <span className="text-xs sm:text-sm">(expected {LEVEL_LABELS[s.expected_level]})</span>
                 </li>
               ))}
             </ul>

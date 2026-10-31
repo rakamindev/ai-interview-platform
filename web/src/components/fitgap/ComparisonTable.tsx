@@ -18,7 +18,7 @@ function ResultBadge({ comparison }: { comparison: SkillComparison }) {
   else icon = "—";
 
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded", classes)}>
+    <span className={cn("inline-flex items-center gap-1 text-xs sm:text-sm font-medium px-2 py-0.5 rounded", classes)}>
       {icon} {label}{suffix}
     </span>
   );
@@ -33,33 +33,33 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm sm:text-base">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-2.5 font-medium">Skill</th>
-              <th className="text-center px-4 py-2.5 font-medium">Required</th>
-              <th className="text-center px-4 py-2.5 font-medium">Candidate</th>
-              <th className="text-center px-4 py-2.5 font-medium">Result</th>
+              <th className="text-left px-4 py-2.5 sm:px-6 sm:py-3 font-medium">Skill</th>
+              <th className="text-center px-4 py-2.5 sm:px-6 sm:py-3 font-medium">Required</th>
+              <th className="text-center px-4 py-2.5 sm:px-6 sm:py-3 font-medium">Candidate</th>
+              <th className="text-center px-4 py-2.5 sm:px-6 sm:py-3 font-medium">Result</th>
             </tr>
           </thead>
           <tbody>
             {comparisons.map((c, i) => (
               <tr key={i} className="border-b last:border-0">
-                <td className="px-4 py-2.5">{c.skill_label}</td>
-                <td className="px-4 py-2.5 text-center text-muted-foreground">
-                  {LEVEL_LABELS[c.required_level]}
+                <td className="px-4 py-2.5 sm:px-6 sm:py-3">{c.skill_label}</td>
+                <td className="px-4 py-2.5 sm:px-6 sm:py-3 text-center text-muted-foreground">
+                  {LEVEL_LABELS[c.expected_level]}
                 </td>
-                <td className="px-4 py-2.5 text-center">
+                <td className="px-4 py-2.5 sm:px-6 sm:py-3 text-center">
                   {c.candidate_level != null ? (
                     <span>
                       {LEVEL_LABELS[c.candidate_level]}
-                      {c.is_override && <span className="text-xs text-muted-foreground ml-1">✏</span>}
+                      {c.is_override && <span className="text-xs sm:text-sm text-muted-foreground ml-1">✏</span>}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-center">
+                <td className="px-4 py-2.5 sm:px-6 sm:py-3 text-center">
                   <ResultBadge comparison={c} />
                 </td>
               </tr>
@@ -69,11 +69,11 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
         {exceedCount > 0 && <span>⭐ Exceeds: {exceedCount} skill{exceedCount !== 1 ? "s" : ""}</span>}
-        <span className="ml-auto">✏ = human override applied</span>
+        <span className="ml-auto sm:ml-4">✏ = human override applied</span>
       </div>
     </div>
   );
