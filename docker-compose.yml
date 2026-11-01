@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: rakamin_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    command: tail -f /dev/null
+    ports:
+      - "3001:3001"
+    environment:
+      - RAILS_ENV=development
+      - ALLOWED_ORIGINS=*
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/rakamin_development
+      - REDIS_URL=redis://redis:6379/1
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=rakamin_development
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_LIVE_MODEL=gemini-2.0-flash-live-001
+      - GEMINI_FLASH_MODEL=gemini-2.0-flash-001
+      - GEMINI_PRO_MODEL=gemini-2.0-pro-001
+      - APP_BASE_URL=http://localhost:3001
+      - TOKEN_EXPIRATION_TIME=259200
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./api:/ai-interview
+
+volumes:
+  postgres_data:

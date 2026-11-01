@@ -51,7 +51,7 @@ module Portfolios
         discovered: coverage_maps.select(&:is_discovered).map { |m| coverage_json(m) }
       }.to_json
 
-      transcript_text = turns.map { |t| "[#{t.speaker.upcase}]: #{t.text}" }.join("\n")
+      transcript_text = turns.map { |t| "[#{t.speaker.upcase}]: #{PiiAnonymizerService.anonymize_text(t.text)}" }.join("\n")
 
       <<~PROMPT
         You are evaluating a completed skills assessment interview to produce a structured skill portfolio.

@@ -45,7 +45,7 @@ module Coverage
         discovered: coverage_maps.select(&:is_discovered).map { |m| coverage_map_json(m) }
       }.to_json
 
-      turns_text = turns.map { |t| "[#{t.speaker}]: #{t.text}" }.join("\n")
+      turns_text = turns.map { |t| "[#{t.speaker}]: #{PiiAnonymizerService.anonymize_text(t.text)}" }.join("\n")
 
       <<~PROMPT
         You are analyzing a transcript excerpt from a live skills assessment interview.

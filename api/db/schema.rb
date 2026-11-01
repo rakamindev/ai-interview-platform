@@ -107,6 +107,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
+  create_table "organizations", force: :cascade do |t|
+    t.string "name", limit: 255, null: false
+    t.string "scheme", limit: 255, null: false
+    t.string "identifier", limit: 255, null: false
+    t.string "host", limit: 255, null: false
+    t.string "alias_hosts", default: [], null: false, array: true
+    t.jsonb "config", default: {}, null: false
+    t.timestamptz "created_at", default: -> { "now()" }, null: false
+    t.timestamptz "updated_at", default: -> { "now()" }, null: false
+    t.index ["host"], name: "index_organizations_on_host"
+    t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
+  end
+
   create_table "portfolio_skills", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.string "skill_id", limit: 50
