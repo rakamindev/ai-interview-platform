@@ -61,6 +61,7 @@ describe("LandingPage", () => {
 
     await user.click(screen.getByRole("button", { name: /Request a demo/ }));
     expect(screen.getByRole("dialog", { name: "Request a demo" })).toBeInTheDocument();
+    expect(screen.queryByText(/walk you through|reach out/i)).toBeNull();
   });
 
   it("keeps repeated mobile cards in compact, keyboard-scrollable rails", () => {
