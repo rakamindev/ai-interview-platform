@@ -101,4 +101,58 @@ RSpec.describe AudioWebSocketMiddleware, :aggregate_failures do
     expect(loaded).to be_nil
     expect(error).to eq('Session has ended')
   end
+
+  describe 'conversation history for a rejoining browser' do
+    before do
+      allow(middleware).to receive(:connect_to_gemini)
+      allow(EM::PeriodicTimer).to receive(:new).and_return(instance_double(EM::PeriodicTimer, cancel: nil))
+    end
+
+    def add_turn(number, speaker, text)
+      session.transcript_turns.create!(turn_number: number, speaker: speaker, text: text)
+    end
+
+    def history_message(*turns)
+      { type: 'transcript_history', turns: turns.map { |speaker, text| { speaker:, text: } } }.to_json
+    end
+
+    it 'sends the owner the saved conversation in order' do
+      add_turn(2, 'candidate', 'I built a table')
+      add_turn(1, 'ai', 'Tell me about a project')
+
+      expect(open_connection(first_browser)).to have_received(:send)
+        .with(history_message(['ai', 'Tell me about a project'], ['candidate', 'I built a table']))
+    end
+
+    it 'limits the history to the most recent turns the page shows' do
+      (1..12).each { |number| add_turn(number, 'ai', "Turn #{number}") }
+
+      expect(open_connection(first_browser)).to have_received(:send)
+        .with(history_message(*(3..12).map { |number| ['ai', "Turn #{number}"] }))
+    end
+
+    it 'sends nothing when there is no conversation yet' do
+      browser_ws = open_connection(first_browser)
+
+      expect(browser_ws).not_to have_received(:send)
+    end
+
+    it 'never sends the conversation to a browser that was refused' do
+      add_turn(1, 'candidate', 'private answer')
+      open_connection(first_browser)
+
+      browser_ws = open_connection(second_browser)
+
+      expect(browser_ws).to have_received(:send).once.with(a_string_including('session_in_use'))
+      expect(browser_ws).not_to have_received(:send).with(a_string_including('private answer'))
+    end
+
+    it 'still starts the interview when the history cannot be loaded' do
+      allow(middleware).to receive(:send_transcript_history).and_raise(ActiveRecord::ConnectionTimeoutError)
+
+      open_connection(first_browser)
+
+      expect(middleware).to have_received(:connect_to_gemini)
+    end
+  end
 end
