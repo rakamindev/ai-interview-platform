@@ -29,6 +29,26 @@ RSpec.describe 'GET /api/v1/sessions/:token/candidate', :aggregate_failures do
     expect(candidate_info(first_browser)).to include('session_status' => 'ended', 'end_reason' => 'error')
   end
 
+  it 'gives a running interview its remaining time from the server clock' do
+    session.update!(status: 'active', started_at: 10.minutes.ago)
+
+    expect(candidate_info(first_browser)['remaining_seconds']).to be_within(2).of(20.minutes.to_i)
+  end
+
+  it 'never reports negative time once the limit has passed' do
+    session.update!(status: 'active', started_at: 2.hours.ago)
+
+    expect(candidate_info(first_browser)['remaining_seconds']).to eq(0)
+  end
+
+  it 'reports no remaining time before the interview starts or after it ends' do
+    expect(candidate_info(first_browser)['remaining_seconds']).to be_nil
+
+    session.update!(status: 'ended', end_reason: 'all_covered', started_at: 1.minute.ago)
+
+    expect(candidate_info(first_browser)['remaining_seconds']).to be_nil
+  end
+
   it 'reports the interview in use to every browser except the one that started it' do
     Sessions::ClientClaim.new(session).admit(first_browser)
 
