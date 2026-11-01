@@ -119,13 +119,13 @@ module Exports
       pdf.font_size(16) { pdf.text "Fit/Gap Analysis — #{@vacancy.role_title}", style: :bold }
       pdf.move_down 8
 
-      comparisons = @fit_gap.skill_comparisons
+      comparisons = @fit_gap.normalized_skill_comparisons
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
+          c['required_level'] ? "L#{c['required_level']}" : '—',
           c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
           RESULT_LABELS[c['result']] || c['result'],
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'

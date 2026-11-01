@@ -10,7 +10,21 @@ module Api
 
       # GET /api/v1/sessions/:id/portfolio
       def show
-        if @portfolio.nil? || @portfolio.generating?
+        # A Portfolio row only gets created by PortfolioGeneratorWorker once a
+        # session actually ends (see Sessions::EndHandler#call), so a nil
+        # portfolio means three different things depending on the session
+        # (see assessment/03_defining_problem_and_gap_to_ideal_condition.md F4):
+        #   - active: the interview is still running, nothing to analyze yet
+        #   - ended:  generation was (or is about to be) triggered
+        #   - other:  the interview never started, so generation never will
+        if @portfolio.nil?
+          return render json: { status: "in_progress" }, status: :ok if @session.active?
+          return render json: { status: "generating" }, status: :accepted if @session.ended?
+
+          return render json: { status: "not_started" }, status: :ok
+        end
+
+        if @portfolio.generating?
           return render json: { status: "generating" }, status: :accepted
         end
 
@@ -202,7 +216,7 @@ module Api
           id:                report.id,
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
+          skill_comparisons: report.normalized_skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
           generated_at:      report.generated_at

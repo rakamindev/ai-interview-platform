@@ -14,8 +14,22 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
   // Avoids AudioContext.suspend/resume async state issues entirely.
   const mutedRef = useRef(false);
 
-  const start = useCallback(async () => {
-    if (isCapturing) return;
+  const stop = useCallback(() => {
+    workletNodeRef.current?.disconnect();
+    workletNodeRef.current = null;
+    audioCtxRef.current?.close();
+    audioCtxRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    mutedRef.current = false;
+    setIsCapturing(false);
+  }, []);
+
+  // Resolves true once the mic is live and frames are flowing, false if capture
+  // could not be started. Callers that open other resources (e.g. the
+  // WebSocket) should wait for this before doing so.
+  const start = useCallback(async (): Promise<boolean> => {
+    if (isCapturing) return true;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -40,12 +54,17 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
       source.connect(workletNode);
 
       setIsCapturing(true);
+      return true;
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       console.error("[AudioCapture] Failed to start:", error.message);
+      // Don't leave the mic hot if we failed after acquiring it (e.g. the
+      // worklet module failed to load).
+      stop();
       onError?.(error);
+      return false;
     }
-  }, [isCapturing, onFrame, onError]);
+  }, [isCapturing, onFrame, onError, stop]);
 
   const mute = useCallback(() => {
     mutedRef.current = true;
@@ -53,17 +72,6 @@ export function useAudioCapture({ onFrame, onError }: UseAudioCaptureOptions) {
 
   const unmute = useCallback(() => {
     mutedRef.current = false;
-  }, []);
-
-  const stop = useCallback(() => {
-    workletNodeRef.current?.disconnect();
-    workletNodeRef.current = null;
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    mutedRef.current = false;
-    setIsCapturing(false);
   }, []);
 
   return { start, stop, mute, unmute, isCapturing };

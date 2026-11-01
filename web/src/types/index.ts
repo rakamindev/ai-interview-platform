@@ -182,7 +182,16 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  // The invite token doesn't resolve to a session at all (bad/expired link,
+  // deleted assessment). Distinct from "complete" — nothing was ever recorded.
+  | "invalid_link"
+  // Fetching candidate info failed for a reason that isn't a bad token
+  // (network blip, 5xx). Retryable, unlike invalid_link.
+  | "connection_error"
+  // getUserMedia failed at the moment the interview actually tried to start,
+  // after HardwareCheck already passed (e.g. mic revoked/grabbed in between).
+  | "mic_error";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 

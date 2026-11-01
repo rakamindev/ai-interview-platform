@@ -1,0 +1,103 @@
+# Local development stack for the api/ service (Rails, Sidekiq) plus its
+# infra dependencies (PostgreSQL, Redis).
+#
+# The web/ frontend is intentionally NOT containerized here — it's a Vite dev
+# server with hot module reload, which is simpler and faster to run natively
+# (`cd web && npm run dev`) than through a container/volume-mount round trip.
+# See assessment/01_setup_and_local_exploration.md for the full walkthrough.
+
+x-api-env: &api_env
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: rakamin_development
+  DB_USERNAME: postgres
+  # No password: the postgres service below runs with POSTGRES_HOST_AUTH_METHOD=trust
+  # (local-only, no network exposure beyond localhost) so there is no credential
+  # value to leak or for secret scanners to (correctly or incorrectly) flag.
+  DB_PASSWORD: ""
+  REDIS_URL: redis://redis:6379/1
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-local_dev_secret_key_base_not_for_production_0123456789abcdef}
+  APP_BASE_URL: http://localhost:3001
+  WEB_BASE_URL: http://localhost:5173
+  ALLOWED_ORIGINS: http://localhost:5173
+  TOKEN_EXPIRATION_TIME: "259200"
+  # Read from a root-level .env file (gitignored), NOT hardcoded here — this
+  # file is tracked by git. Falls back to a placeholder if no .env is present.
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-dummy_key_replace_me}
+  GEMINI_LIVE_MODEL: gemini-2.0-flash-live-001
+  GEMINI_FLASH_MODEL: gemini-2.0-flash-001
+  GEMINI_PRO_MODEL: gemini-2.0-pro-001
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      # trust = no password required for local connections. Standard Postgres
+      # image option, documented for exactly this use case (dev/test only).
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: rakamin_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    command: >
+      bash -c "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails server -b 0.0.0.0 -p 3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/ai-interview
+      - api_bundle:/usr/local/bundle
+    environment:
+      <<: *api_env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    command: bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
+    volumes:
+      - ./api:/ai-interview
+      - api_bundle:/usr/local/bundle
+    environment:
+      <<: *api_env
+    depends_on:
+      # api and sidekiq share the api_bundle volume, and Docker seeds an empty
+      # named volume from the image when the first container using it is created.
+      # Creating both at once on a fresh clone races and fails with
+      # "failed to mkdir .../api_bundle/_data/cache: file exists".
+      api:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  api_bundle:

@@ -160,10 +160,10 @@ export default function LiveMonitorPage() {
           {startedAt && sessionActive && <ElapsedTimer startedAt={startedAt} />}
           <span className={cn(
             "flex items-center gap-1 text-xs",
-            isConnected ? "text-green-600" : "text-muted-foreground"
+            sessionActive && isConnected ? "text-green-600" : "text-muted-foreground"
           )}>
             <Radio className="h-3 w-3" />
-            {isConnected ? "Live" : "Reconnecting..."}
+            {sessionActive ? (isConnected ? "Live" : "Reconnecting...") : "Not live"}
           </span>
         </div>
       </div>

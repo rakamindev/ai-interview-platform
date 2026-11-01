@@ -59,7 +59,10 @@ module FitGap
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
-          expected_level:  expected_level,
+          # Serialized as required_level to match the frontend's SkillComparison
+          # contract (web/src/types/index.ts) — see
+          # assessment/03_defining_problem_and_gap_to_ideal_condition.md F3.
+          required_level:  expected_level,
           result:          result,
           delta:           delta,
           confidence:      portfolio_skill&.dig(:confidence)
@@ -122,8 +125,8 @@ module FitGap
 
         SKILL COMPARISON RESULTS:
         - Matches (#{matches.count}): #{matches.map { |c| "#{c[:skill_label]} (L#{c[:candidate_level]})" }.join(', ')}
-        - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (delta #{c[:delta]})" }.join(', ')}
-        - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:expected_level]} (+#{c[:delta]})" }.join(', ')}
+        - Gaps (#{gaps.count}): #{gaps.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:required_level]} (delta #{c[:delta]})" }.join(', ')}
+        - Exceeds (#{exceeds.count}): #{exceeds.map { |c| "#{c[:skill_label]}: candidate L#{c[:candidate_level]} vs expected L#{c[:required_level]} (+#{c[:delta]})" }.join(', ')}
         - Not assessed (#{not_assessed.count}): #{not_assessed.map { |c| c[:skill_label] }.join(', ')}
 
         Write two short narrative paragraphs:

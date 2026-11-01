@@ -68,3 +68,9 @@ export const FIT_GAP_RESULT_CLASSES: Record<string, string> = {
   exceed: "text-green-700 bg-green-50",
   not_assessed: "text-neutral-500 bg-neutral-50",
 };
+
+// Portfolio generation polling. The UI promises "about 2 minutes"; 60 attempts
+// at 5s gives ~5 minutes of headroom before we stop and hand control back to
+// the assessor instead of spinning forever.
+export const PORTFOLIO_POLL_INTERVAL_MS = 5000;
+export const PORTFOLIO_POLL_MAX_ATTEMPTS = 60;

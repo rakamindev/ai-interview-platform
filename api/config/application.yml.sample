@@ -17,8 +17,12 @@ GEMINI_LIVE_MODEL: "gemini-2.0-flash-live-001"
 GEMINI_FLASH_MODEL: "gemini-2.0-flash-001"
 GEMINI_PRO_MODEL: "gemini-2.0-pro-001"
 
-# App URL (for invite links)
+# Backend API's own base URL (used for server-to-server / CORS contexts, NOT for candidate-facing links)
 APP_BASE_URL: "http://localhost:3001"
+
+# Frontend origin — where a human (candidate) opens links in a browser.
+# Must point at the React SPA, not this API. In dev with the two services split, that's the Vite port.
+WEB_BASE_URL: "http://localhost:5173"
 
 # Token settings (should match rakamin-api)
 TOKEN_EXPIRATION_TIME: "259200"  # 3 days in seconds

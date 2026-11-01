@@ -25,8 +25,16 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # WEB_BASE_URL is the origin candidates open in a browser (the React SPA).
+  # This is intentionally distinct from APP_BASE_URL, which is the Rails API's
+  # own origin — the two are different hosts in any split-service deployment
+  # (see assessment/03_defining_problem_and_gap_to_ideal_condition.md, F1).
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    base = ENV.fetch('WEB_BASE_URL') do
+      Rails.logger.warn('[Session#invite_url] WEB_BASE_URL is not set — falling back to APP_BASE_URL, ' \
+                         'which points at the API and will produce a broken candidate link.')
+      ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
+    end
     "#{base}/interview/#{invite_token}"
   end
 

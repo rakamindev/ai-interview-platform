@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, XCircle, WifiOff } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -38,18 +38,45 @@ export default function InterviewPage() {
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
+  const [candidateInfoAttempt, setCandidateInfoAttempt] = useState(0);
+  const MAX_AUTO_RETRIES = 2;
 
-  // Fetch candidate info
+  const retryCandidateInfo = useCallback(() => {
+    setInterviewState("idle");
+    setCandidateInfoAttempt(0);
+  }, []);
+
+  // Fetch candidate info. A bad/expired token and a transient network failure
+  // are different problems and must not collapse into the same UI (see
+  // assessment/03_defining_problem_and_gap_to_ideal_condition.md F2): a bad
+  // token is terminal ("invalid_link"), a network hiccup is retried
+  // automatically a couple times before asking the candidate to retry
+  // manually ("connection_error"). Neither should ever land on "complete" —
+  // that state is reserved for a session that actually ended.
   useEffect(() => {
     if (!token) return;
+    let cancelled = false;
+
     sessionsApi.getCandidateInfo(token)
       .then((res) => {
+        if (cancelled) return;
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
         if (res.data.session_status === "ended") setInterviewState("complete");
       })
-      .catch(() => setInterviewState("complete"));
-  }, [token]);
+      .catch((err) => {
+        if (cancelled) return;
+        if (err?.response?.status === 404) {
+          setInterviewState("invalid_link");
+        } else if (candidateInfoAttempt < MAX_AUTO_RETRIES) {
+          setCandidateInfoAttempt((n) => n + 1);
+        } else {
+          setInterviewState("connection_error");
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [token, candidateInfoAttempt]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -140,8 +167,20 @@ export default function InterviewPage() {
     onReconnected: handleReconnected,
   });
 
+  const handleMicError = useCallback(() => {
+    // getUserMedia failed after HardwareCheck already passed (mic revoked,
+    // grabbed by another app, permission withdrawn at the last second — see
+    // assessment/03_defining_problem_and_gap_to_ideal_condition.md F6). The
+    // socket is deliberately not opened until the mic is secured (see
+    // startInterview), so there is nothing to tear down: no session was marked
+    // active on the backend, and the candidate gets a screen they can act on
+    // instead of an indefinite "Connecting...".
+    setInterviewState("mic_error");
+  }, []);
+
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
     onFrame: send,
+    onError: handleMicError,
   });
 
   muteRef.current = mute;
@@ -162,12 +201,16 @@ export default function InterviewPage() {
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
     setInterviewState("connecting");
-    connect();
-    await startCapture();
+    // Secure the microphone BEFORE opening the WebSocket. The backend treats a
+    // connected socket as an active session, so opening it first meant a mic
+    // failure left an active session behind that the grace timer later ended.
+    const micReady = await startCapture();
+    if (!micReady) return; // handleMicError already moved us to "mic_error"
     // Start muted — only unmute when backend sends speaker_changed: candidate.
     // This prevents mic audio from being sent during AI speech, since separate
     // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
+    connect();
   }, [sessionId, connect, startCapture]);
 
   const endInterview = useCallback(async () => {
@@ -237,6 +280,57 @@ export default function InterviewPage() {
           <br />
           The hiring team will review your results and follow up with you.
         </p>
+      </div>
+    );
+  }
+
+  // ── State: Invalid or expired link ──────────────────────────────────────
+  // Terminal — the backend told us this token doesn't resolve to anything.
+  // Must never be confused with a genuinely completed interview.
+  if (interviewState === "invalid_link") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <XCircle className="h-10 w-10 text-destructive mx-auto" />
+        <h2 className="text-xl font-semibold">This interview link is invalid</h2>
+        <p className="text-sm text-muted-foreground">
+          This link may have expired or no longer exists.
+          <br />
+          Please contact the recruiter who sent you this link.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State: Connection error ─────────────────────────────────────────────
+  // We couldn't reach the server after a couple of automatic retries — not
+  // necessarily a bad link, so offer a manual retry instead of a dead end.
+  if (interviewState === "connection_error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <WifiOff className="h-10 w-10 text-muted-foreground mx-auto" />
+        <h2 className="text-xl font-semibold">Couldn't connect</h2>
+        <p className="text-sm text-muted-foreground">
+          We had trouble reaching the server. Check your connection and try again.
+        </p>
+        <Button onClick={retryCandidateInfo}>Retry</Button>
+      </div>
+    );
+  }
+
+  // ── State: Microphone failed at start ───────────────────────────────────
+  // HardwareCheck passed earlier, but getUserMedia failed anyway when the
+  // interview actually tried to start (mic revoked/grabbed in between).
+  if (interviewState === "mic_error") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <MicOff className="h-10 w-10 text-destructive mx-auto" />
+        <h2 className="text-xl font-semibold">Couldn't access your microphone</h2>
+        <p className="text-sm text-muted-foreground">
+          Make sure no other app is using your microphone and that permission is granted, then try again.
+        </p>
+        <Button onClick={() => { setInterviewState("idle"); setHardwareCheckDone(false); }}>
+          Try again
+        </Button>
       </div>
     );
   }

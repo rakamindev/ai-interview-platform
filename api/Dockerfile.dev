@@ -1,0 +1,25 @@
+# Local development image — NOT the production image (see Dockerfile for that).
+# Installs the full bundle (including :development/:test groups, e.g. rspec)
+# and expects the source tree to be bind-mounted over /ai-interview by
+# docker-compose.yml, so gem installs don't have to be rebuilt on every code
+# change.
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  git \
+  libpq-dev \
+  tzdata \
+  postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ai-interview
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4
+
+COPY . .
+
+EXPOSE 3001
+
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
