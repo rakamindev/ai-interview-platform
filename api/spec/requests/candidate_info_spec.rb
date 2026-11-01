@@ -23,6 +23,12 @@ RSpec.describe 'GET /api/v1/sessions/:token/candidate', :aggregate_failures do
     expect(response).to have_http_status(:ok)
   end
 
+  it 'tells the page why an ended interview ended' do
+    session.update!(status: 'ended', end_reason: 'error')
+
+    expect(candidate_info(first_browser)).to include('session_status' => 'ended', 'end_reason' => 'error')
+  end
+
   it 'reports the interview in use to every browser except the one that started it' do
     Sessions::ClientClaim.new(session).admit(first_browser)
 

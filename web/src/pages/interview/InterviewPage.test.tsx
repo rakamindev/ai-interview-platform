@@ -27,9 +27,15 @@ vi.mock("@/hooks/useAudioPlayback", () => ({
 }));
 
 const startCapture = vi.hoisted(() => vi.fn());
+const stopCapture = vi.hoisted(() => vi.fn());
 
 vi.mock("@/hooks/useAudioCapture", () => ({
-  useAudioCapture: () => ({ start: startCapture, stop: vi.fn(), mute: vi.fn(), unmute: vi.fn() }),
+  useAudioCapture: () => ({
+    start: startCapture,
+    stop: stopCapture,
+    mute: vi.fn(),
+    unmute: vi.fn(),
+  }),
 }));
 
 vi.mock("@/components/HardwareCheck", () => ({
@@ -162,6 +168,65 @@ describe("InterviewPage single-browser access", () => {
 
     expect(screen.getByText("Interview Already in Progress")).toBeInTheDocument();
     expect(screen.queryByText("Interview Could Not Continue")).not.toBeInTheDocument();
+  });
+});
+
+describe("InterviewPage after the connection is lost", () => {
+  function mockSession(overrides: Partial<CandidateInfo>) {
+    vi.mocked(sessionsApi.getCandidateInfo).mockResolvedValue({
+      data: {
+        session_id: 3,
+        role_title: "Frontend Engineer",
+        time_limit_min: 45,
+        session_status: "active",
+        in_use_elsewhere: false,
+        ...overrides,
+      },
+    } as Awaited<ReturnType<typeof sessionsApi.getCandidateInfo>>);
+  }
+
+  it("does not call an interview that ended in error complete when the link is reopened", async () => {
+    mockSession({ session_status: "ended", end_reason: "error" });
+    renderPage();
+
+    expect(await screen.findByText("Interview Could Not Continue")).toBeInTheDocument();
+    expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+  });
+
+  it("still shows completion when the link is reopened after a normal end", async () => {
+    mockSession({ session_status: "ended", end_reason: "all_covered" });
+    renderPage();
+
+    expect(await screen.findByText("Interview Complete")).toBeInTheDocument();
+  });
+
+  it("explains why this browser stopped when another one took over", async () => {
+    mockSession({});
+    const socketOptions = renderPage();
+    await waitFor(() => expect(sessionsApi.getCandidateInfo).toHaveBeenCalled());
+
+    act(() => {
+      socketOptions().onSessionFailed?.("connection_replaced");
+      socketOptions().onStateChange("complete");
+    });
+
+    expect(screen.getByText("Interview Continued Elsewhere")).toBeInTheDocument();
+    expect(screen.queryByText("Interview Could Not Continue")).not.toBeInTheDocument();
+    expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+  });
+
+  it("releases the microphone on the end screen", async () => {
+    mockSession({});
+    const socketOptions = renderPage();
+    await waitFor(() => expect(sessionsApi.getCandidateInfo).toHaveBeenCalled());
+    stopCapture.mockClear();
+
+    act(() => {
+      socketOptions().onSessionFailed?.();
+      socketOptions().onStateChange("complete");
+    });
+
+    expect(stopCapture).toHaveBeenCalled();
   });
 });
 
