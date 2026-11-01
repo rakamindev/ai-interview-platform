@@ -6,7 +6,7 @@ Branch perbaikan: `fix/reviewer-feedback`
 |---|---|---|
 | 1 | Microphone failure (F6) bisa mengakhiri sesi | Selesai, sudah dicoba manual |
 | 2 | Rename key F3 belum aman untuk data lama | Selesai, sudah dicoba manual |
-| 3 | State Portfolio F4 belum lengkap | Menyusul |
+| 3 | State Portfolio F4 belum lengkap | Selesai, sudah dicoba manual |
 | 4 | Failure conditions pada perbandingan opsi | Menyusul |
 | 5 | AI Verification Moment | Menyusul |
 
@@ -122,3 +122,72 @@ Delapan tes baru (6 model, 2 request/PDF) gagal pada kode lama, antara lain deng
 
 - Data lama tetap berbentuk lama di database sampai laporannya dibuat ulang.
 - Laporan lama pada reproduksi ini saya buat manual dengan bentuk lama, bukan data produksi.
+
+---
+
+## 3. State Portfolio F4
+
+**Commit:** `0fac686`
+
+### Feedback
+
+Sesi yang masih berjalan tetap menampilkan "AI is analyzing", padahal belum ada yang bisa dianalisis. Sesi `ended` yang tidak punya portfolio melakukan polling tanpa batas.
+
+### Akar masalah
+
+Perbaikan F4 pertama hanya memisahkan sesi yang belum dimulai. Sesi `active` dan `ended` tanpa portfolio masih dijawab sama oleh API, yaitu `202 {"status":"generating"}`, sehingga halaman menampilkan pesan yang sama untuk keduanya. Polling hanya berhenti kalau statusnya berubah, jadi spinner berputar terus jika portfolio tidak pernah muncul.
+
+Saat menyelesaikan perbaikan ini, saya menemukan bug pada perbaikan saya sendiri. `pollTimedOut` hanya di-reset oleh tombol "Check again". Kalau halaman tetap ter-mount saat pindah dari sesi yang sudah timeout ke sesi aktif, panel "Interview is still in progress" dan "Portfolio is taking longer than expected" tampil bersamaan.
+
+### Perbaikan
+
+- API menjawab `200 {"status":"in_progress"}` untuk sesi aktif. Sesi `ended` tanpa portfolio tetap `202 {"status":"generating"}`, karena worker masih mungkin selesai.
+- Sesi aktif menampilkan "Interview is still in progress" dengan tombol "Open Live Monitor" dan "Refresh", tanpa polling.
+- `usePolling` menerima batas percobaan. Polling portfolio berhenti setelah 60 kali dengan interval 5 detik, lalu menampilkan "Portfolio is taking longer than expected" dengan tombol "Check again".
+- `pollTimedOut` di-reset setiap kali sesi berganti.
+
+### Cara reproduce
+
+Saya membandingkan dua project yang berjalan berdampingan: clone versi yang direview (`a250a03`, API di port 3002, web di port 5174) dan versi perbaikan (API di port 3001, web di port 5173).
+
+1. Siapkan satu sesi `active` dan satu sesi `ended` tanpa portfolio. Sebelum: assessment 3, sesi 11 dan 12. Sesudah: assessment 7, sesi 22 dan 23.
+2. Panggil `GET /api/v1/sessions/:id/portfolio` untuk kedua sesi, lalu periksa status dan isi response.
+3. Buka halaman portfolio sesi aktif, lalu hitung request portfolio.
+4. Buka halaman portfolio sesi `ended`, percepat interval 50 kali lewat skrip Console, lalu hitung tick polling.
+5. Di versi perbaikan, klik "Check again" setelah timeout.
+
+### Hasil
+
+| Yang diperiksa | Sebelum | Sesudah |
+|---|---|---|
+| API sesi aktif | `202 {"status":"generating"}` | `200 {"status":"in_progress"}` |
+| API sesi `ended` | `202 {"status":"generating"}` | `202 {"status":"generating"}` |
+| Halaman sesi aktif | "Generating portfolio...", polling terus | "Interview is still in progress", 0 tick baru dan 1 request portfolio selama 8 detik |
+| Polling sesi `ended` (interval dipercepat 50 kali) | 119 tick dalam 12 detik, spinner terus berputar | Berhenti di 61 tick dengan "taking longer than expected" |
+| "Check again" | Tidak ada | Polling mulai lagi, lalu berhenti lagi di 61 tick |
+
+Hasil di atas sesuai ekspektasi.
+
+Sebelum commit, saya memuat ulang halaman setelah `pollTimedOut` diperbaiki. Sesi 22 ternyata sudah tidak aktif: log menunjukkan sesi itu diakhiri manual lewat `end_session` (`manual_assessor`) dan portfolio-nya sudah dibuat, sehingga halamannya wajar menampilkan hasil portfolio. Karena itu saya membuat sesi aktif baru di database lokal (sesi 24, assessment 7) untuk pengecekan berikut:
+
+| Yang diperiksa | Hasil |
+|---|---|
+| Halaman sesi aktif | "Interview is still in progress", 1 request portfolio selama 6 detik |
+| Klik "Refresh" | Menambah tepat 1 request, panel tetap sama |
+| Klik "Open Live Monitor" | Pindah ke `/assessments/7/sessions/24/monitor` dan halaman Live Monitor tampil |
+
+### Tes otomatis
+
+Tes regresi `drops the timeout message when the page moves to another session while staying mounted` ditulis lebih dulu dan gagal pada kode sebelum reset: "Portfolio is taking longer than expected" masih tampil setelah pindah sesi. Setelah perbaikan, tes ini lolos.
+
+Hasil akhir:
+
+- `PortfolioPage.test.tsx` dan `usePolling.test.ts`: 11 tes lolos.
+- `portfolios_show_spec.rb`: 5 tes lolos.
+
+### Keterbatasan
+
+- Batas polling dibuktikan dengan interval yang dipercepat dan fake timer, bukan dengan waktu asli 5 menit.
+- Perpindahan antarsesi tanpa remount hanya diuji lewat tes otomatis, tidak di browser.
+- "Refresh" hanya dicoba saat sesi masih aktif. Perpindahan tampilan ketika sesi berakhir lalu "Refresh" diklik tidak dicoba.
+- Sesi repro dibuat langsung di database lokal, bukan lewat interview sungguhan.
