@@ -71,7 +71,7 @@ function SessionRow({
 
       <div className="flex flex-wrap items-center gap-2 pl-12 sm:pl-0">
         <SessionStatusBadge session={session} />
-        {isPending && (
+        {(isPending || isLive) && (
           <Button variant="ghost" size="sm" onClick={() => onCopy(session.id)}>
             {copyResult?.key === session.id && copyResult.ok ? (
               <>
