@@ -39,6 +39,13 @@ RSpec.describe Sessions::ClientClaim, :aggregate_failures do
       expect(described_class.new(session).claim(first_browser)).to be(true)
     end
 
+    it 'fails closed when Redis is unavailable' do
+      allow(redis).to receive(:set).and_raise(Redis::CannotConnectError)
+
+      expect { described_class.new(session).claim(first_browser) }
+        .to raise_error(described_class::Unavailable)
+    end
+
     it 'keeps claims of different sessions independent' do
       other_session = create_interview_session
 
