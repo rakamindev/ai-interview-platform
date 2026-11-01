@@ -369,6 +369,27 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Admin User (for /api/v1/auth/login) ──────────────────────────────────────
+#
+# Creates a default admin user for local development login.
+# Credentials: admin@test-corp.com / password123
+# Auth endpoint: POST /api/v1/auth/login
+#
+puts "== Seeding Admin User =="
+
+admin = User.find_or_initialize_by(email: 'admin@test-corp.com')
+admin.password = 'password123'
+admin.role = 'admin'
+
+if admin.save
+  action = admin.previously_new_record? ? "Created" : "Confirmed"
+  puts "  #{action} admin user: #{admin.email}"
+else
+  puts "  ERROR creating admin user: #{admin.errors.full_messages.join(', ')}"
+end
+
+puts ""
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

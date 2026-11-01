@@ -12,10 +12,12 @@
 ## 1. Environment variables
 
 ```bash
+cp ../.env.example ../.env
 cp config/application.yml.sample config/application.yml
 ```
 
-Fill in the required values in `config/application.yml`:
+Fill in the secret values in `.env`; do not commit that file. The non-secret
+application settings remain in `config/application.yml`:
 
 | Variable | Description |
 |---|---|

@@ -11,6 +11,8 @@ import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
 
+import PrivacyBadge from "@/components/common/PrivacyBadge";
+
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
     id: string;
@@ -95,26 +97,34 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
+      <div className="max-w-3xl mx-auto space-y-4 pb-12">
+        <Skeleton className="h-8 w-64 rounded-lg" />
+        <Skeleton className="h-48 w-full rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 pb-12">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <Link
+            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+            className="mt-1 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">
+                Role Fit/Gap Benchmark Report
+              </h1>
+              <PrivacyBadge />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Automated vacancy matching analysis based on validated interview evidence
+            </p>
           </div>
         </div>
 
