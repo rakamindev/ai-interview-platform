@@ -75,11 +75,10 @@ export default function DemoRequestDialog({ trigger }: { trigger: ReactNode }) {
         {submitted ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
             <CheckCircle2 className="h-12 w-12 text-primary duration-500 animate-in zoom-in-50 motion-reduce:animate-none" />
-            <DialogTitle>Thanks, {submitted.name.trim()}!</DialogTitle>
+            <DialogTitle>Request recorded</DialogTitle>
             <DialogDescription>
-              We've recorded your request for {submitted.company.trim()}. Our team reviews requests
-              by hand and may contact you at {submitted.email.trim()}; no confirmation email is sent
-              automatically.
+              Thanks, {submitted.name.trim()}. Your demo request for {submitted.company.trim()} has
+              been saved. No confirmation email or follow-up schedule is set up yet.
             </DialogDescription>
             <DialogClose asChild>
               <Button className="mt-2">Done</Button>
@@ -153,7 +152,7 @@ export default function DemoRequestDialog({ trigger }: { trigger: ReactNode }) {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              We use these details only to follow up on your request.
+              We store these details only to record your demo request.
             </p>
 
             {sendError && <Notice variant="error">{sendError}</Notice>}
