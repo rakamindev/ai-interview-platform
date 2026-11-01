@@ -1,18 +1,19 @@
 # frozen_string_literal: true
 
 require 'rails_helper'
-require 'support/fake_redis'
+require 'support/isolated_redis'
 require 'support/interview_session_helpers'
 
 RSpec.describe AudioWebSocketMiddleware, :aggregate_failures do
   include InterviewSessionHelpers
+  include IsolatedRedis
 
   let(:middleware) { described_class.new(->(_env) { [200, {}, []] }) }
   let(:session) { create_interview_session }
   let(:first_browser) { 'a' * 32 }
   let(:second_browser) { 'b' * 32 }
 
-  before { allow(Redis).to receive(:new).and_return(FakeRedis.new) }
+  before { isolate_claim_store }
 
   def connection_env(client_id: nil, session_id: session.id.to_s)
     query = { token: session.invite_token, client_id: client_id }.compact.to_query
@@ -88,6 +89,16 @@ RSpec.describe AudioWebSocketMiddleware, :aggregate_failures do
 
     _loaded, error = authenticate(client_id: first_browser)
 
+    expect(error).to eq('Session has ended')
+  end
+
+  it 'refuses a rejoin once the grace period has started ending the session' do
+    connection = Sessions::ClientClaim.new(session).admit(first_browser)
+    Sessions::ClientClaim.new(session).finalize(connection)
+
+    loaded, error = authenticate(client_id: first_browser)
+
+    expect(loaded).to be_nil
     expect(error).to eq('Session has ended')
   end
 end
