@@ -32,9 +32,12 @@ vi.mock("@/components/HardwareCheck", () => ({
   ),
 }));
 
+// Hoisted so tests can assert on WHEN the socket is opened relative to the mic.
+const { connectMock } = vi.hoisted(() => ({ connectMock: vi.fn() }));
+
 vi.mock("@/hooks/useAudioWebSocket", () => ({
   useAudioWebSocket: () => ({
-    connect: vi.fn(),
+    connect: connectMock,
     send: vi.fn(),
     sendJson: vi.fn(),
     disconnect: vi.fn(),
@@ -100,6 +103,7 @@ describe("InterviewPage — candidate info failures (F2)", () => {
 
 describe("InterviewPage — microphone failure at start (F6)", () => {
   beforeEach(() => {
+    connectMock.mockReset();
     vi.mocked(sessionsApi.getCandidateInfo).mockReset();
     vi.mocked(sessionsApi.getCandidateInfo).mockResolvedValue({
       data: { session_id: 1, role_title: "Senior Engineer", time_limit_min: 45, session_status: "pending" },
@@ -120,5 +124,45 @@ describe("InterviewPage — microphone failure at start (F6)", () => {
 
     expect(await screen.findByText(/couldn't access your microphone/i)).toBeInTheDocument();
     expect(screen.queryByText(/^connecting\.\.\.$/i)).not.toBeInTheDocument();
+  });
+
+  // Reviewer feedback on F6: the socket used to be opened BEFORE the microphone
+  // was acquired. The backend marks a session active as soon as the socket
+  // connects, so a mic failure then left an active session behind that the
+  // grace timer eventually ended. The mic must be secured first.
+  it("never opens the WebSocket when the microphone cannot be acquired", async () => {
+    const user = userEvent.setup();
+    renderAtToken("good-token");
+
+    await user.click(await screen.findByText(/start interview \(mocked hardware check\)/i));
+    await screen.findByText(/couldn't access your microphone/i);
+
+    expect(connectMock).not.toHaveBeenCalled();
+  });
+
+  it("opens the WebSocket only after the microphone has been acquired", async () => {
+    class FakeAudioContext {
+      audioWorklet = { addModule: vi.fn().mockResolvedValue(undefined) };
+      createMediaStreamSource = vi.fn(() => ({ connect: vi.fn() }));
+      close = vi.fn();
+    }
+    class FakeAudioWorkletNode {
+      port = {};
+      disconnect = vi.fn();
+    }
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    vi.stubGlobal("AudioWorkletNode", FakeAudioWorkletNode);
+    const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] });
+    Object.defineProperty(globalThis.navigator, "mediaDevices", { configurable: true, value: { getUserMedia } });
+
+    const user = userEvent.setup();
+    renderAtToken("good-token");
+    await user.click(await screen.findByText(/start interview \(mocked hardware check\)/i));
+
+    await vi.waitFor(() => expect(connectMock).toHaveBeenCalledTimes(1));
+    expect(getUserMedia.mock.invocationCallOrder[0]).toBeLessThan(connectMock.mock.invocationCallOrder[0]);
+    expect(screen.queryByText(/couldn't access your microphone/i)).not.toBeInTheDocument();
+
+    vi.unstubAllGlobals();
   });
 });

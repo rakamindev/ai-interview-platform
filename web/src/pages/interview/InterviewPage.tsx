@@ -170,13 +170,13 @@ export default function InterviewPage() {
   const handleMicError = useCallback(() => {
     // getUserMedia failed after HardwareCheck already passed (mic revoked,
     // grabbed by another app, permission withdrawn at the last second — see
-    // assessment/03_defining_problem_and_gap_to_ideal_condition.md F6). Tear
-    // down the socket we already opened in startInterview so it doesn't sit
-    // connected with nothing feeding it, and surface a state the candidate
-    // can actually act on instead of an indefinite "Connecting..." spinner.
-    disconnect();
+    // assessment/03_defining_problem_and_gap_to_ideal_condition.md F6). The
+    // socket is deliberately not opened until the mic is secured (see
+    // startInterview), so there is nothing to tear down: no session was marked
+    // active on the backend, and the candidate gets a screen they can act on
+    // instead of an indefinite "Connecting...".
     setInterviewState("mic_error");
-  }, [disconnect]);
+  }, []);
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
     onFrame: send,
@@ -201,12 +201,16 @@ export default function InterviewPage() {
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
     setInterviewState("connecting");
-    connect();
-    await startCapture();
+    // Secure the microphone BEFORE opening the WebSocket. The backend treats a
+    // connected socket as an active session, so opening it first meant a mic
+    // failure left an active session behind that the grace timer later ended.
+    const micReady = await startCapture();
+    if (!micReady) return; // handleMicError already moved us to "mic_error"
     // Start muted — only unmute when backend sends speaker_changed: candidate.
     // This prevents mic audio from being sent during AI speech, since separate
     // AudioContexts for capture/playback break the browser's echo cancellation.
     muteRef.current?.();
+    connect();
   }, [sessionId, connect, startCapture]);
 
   const endInterview = useCallback(async () => {
