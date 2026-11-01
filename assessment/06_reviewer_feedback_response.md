@@ -7,7 +7,7 @@ Branch perbaikan: `fix/reviewer-feedback`
 | 1 | Microphone failure (F6) bisa mengakhiri sesi | Selesai, sudah dicoba manual |
 | 2 | Rename key F3 belum aman untuk data lama | Selesai, sudah dicoba manual |
 | 3 | State Portfolio F4 belum lengkap | Selesai, sudah dicoba manual |
-| 4 | Failure conditions pada perbandingan opsi | Menyusul |
+| 4 | Failure conditions pada perbandingan opsi | Selesai, perubahan dokumen saja |
 | 5 | AI Verification Moment | Menyusul |
 
 ---
@@ -191,3 +191,34 @@ Hasil akhir:
 - Perpindahan antarsesi tanpa remount hanya diuji lewat tes otomatis, tidak di browser.
 - "Refresh" hanya dicoba saat sesi masih aktif. Perpindahan tampilan ketika sesi berakhir lalu "Refresh" diklik tidak dicoba.
 - Sesi repro dibuat langsung di database lokal, bukan lewat interview sungguhan.
+
+---
+
+## 4. Failure Conditions
+
+**Commit:** `dfde2e2`
+
+### Feedback
+
+Option A tidak punya failure conditions, sedangkan Option B hanya menyinggungnya di bagian maintainability. Kedua opsi perlu failure conditions yang eksplisit.
+
+### Akar masalah
+
+Perbandingan opsi hanya membahas dampak, biaya, dan kecocokan, tanpa menyebut kapan tiap opsi gagal.
+
+Saat mencocokkan draf dengan kode, saya menemukan bagian Keputusan juga terlalu optimistis. AC8 ditulis terpenuhi, padahal `WEB_BASE_URL` yang tidak di-set hanya menghasilkan log warning dan link rusak tetap dibuat. Draf juga menyebut "sesi gagal", padahal tidak ada kode yang menulis status `failed`; sesi error tersimpan sebagai `ended`.
+
+### Perbaikan
+
+Perubahan hanya ada di `assessment/04_revamp_strategy.md`, tanpa perubahan kode.
+
+- Option A kini punya enam kondisi gagal: konfigurasi link, arti status HTTP, server bermasalah saat link dibuka, koneksi putus saat interview, link sesi error dibuka ulang, dan dua tab.
+- Option B kini punya kondisi gagal yang ditandai sebagai analisis, karena opsi ini belum diimplementasi.
+- Keputusan kini memisahkan status tiap AC: terpenuhi (AC1, AC2), terpenuhi dengan catatan (AC5, AC6), sebagian (AC3, AC8), dan belum (AC4, AC7).
+- Deskripsi Option A kini menyebut bahwa microphone diminta sebelum WebSocket dibuka.
+
+### Keterbatasan
+
+- Kondisi gagal Option A diverifikasi dengan membaca kode. Saya tidak menjalankan skenarionya dan tidak menjalankan tes.
+- Kondisi gagal Option B adalah analisis desain, belum dibuktikan dengan implementasi.
+- Kondisi gagal Option A tetap ada di aplikasi. Poin ini hanya mendokumentasikannya, tidak memperbaikinya.
