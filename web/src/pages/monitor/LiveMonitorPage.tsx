@@ -344,7 +344,8 @@ export default function LiveMonitorPage() {
       {endError && <Notice variant="error">Failed to end session. Please try again.</Notice>}
       {resetStatus === "done" && (
         <Notice variant="success">
-          Candidate access reset. Ask the candidate to open their invite link now; the session ends if nobody rejoins within 2 minutes of the connection
+          Candidate access reset. Ask the candidate to open their invite link now in a different
+          browser or device; the session ends if nobody rejoins within 2 minutes of the connection
           being lost.
         </Notice>
       )}
