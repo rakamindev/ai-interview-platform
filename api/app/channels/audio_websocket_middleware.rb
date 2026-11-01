@@ -9,7 +9,7 @@ class AudioWebSocketMiddleware
 
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
-  BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
+  REPLACEMENT_CHECK_INTERVAL = 5 # seconds between checks that this connection still holds the interview
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
@@ -47,7 +47,7 @@ class AudioWebSocketMiddleware
   end
 
   def handle_browser_open(env, session_id, browser_ws, state)
-    session, error, error_code = authenticate_and_load(env, session_id)
+    session, error, error_code, connection_token = authenticate_and_load(env, session_id)
 
     if error
       browser_ws.send({ type: 'error', code: error_code || 'auth_failed', message: error, recoverable: false }.to_json)
@@ -56,6 +56,8 @@ class AudioWebSocketMiddleware
     end
 
     state.session = session
+    state.connection_token = connection_token
+    watch_for_replacement(browser_ws, state)
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
@@ -94,9 +96,69 @@ class AudioWebSocketMiddleware
     Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code}")
     state.browser_disconnected_at = Time.current
     state.proactive_reconnect_timer&.cancel
+    state.replacement_timer&.cancel
+    return unless state.session
 
-    # Keep Gemini alive during grace period in case candidate reconnects via page refresh.
-    schedule_graceful_end(browser_ws, state)
+    # A rejoining browser opens its own Gemini session from the resumption token, so this one has no
+    # further use; left open it could end the session or overwrite the token.
+    state.gemini_client&.supersede!
+    state.gemini_client&.close
+    return if state.replaced
+
+    Thread.new { schedule_session_end(state) }
+  end
+
+  # Skipped when a newer connection has already taken over, which also keeps its token from being overwritten.
+  def schedule_session_end(state)
+    ActiveRecord::Base.connection_pool.with_connection do
+      claim = Sessions::ClientClaim.new(state.session)
+      deadline = claim.disconnected(state.connection_token)
+      next unless deadline
+
+      persist_latest_resumption_token(state)
+      claim.schedule_end(state.connection_token, deadline)
+    rescue Sessions::ClientClaim::Unavailable => e
+      # Nothing can be queued without Redis: the assessor can still end the session from the live monitor.
+      Rails.logger.error("[AudioWS] Grace end not scheduled for session #{state.session.id}: #{e.message}")
+      persist_latest_resumption_token(state)
+    end
+  rescue StandardError => e
+    Rails.logger.error("[AudioWS] Thread crashed (schedule session end): #{e.class}: #{e.message}")
+  end
+
+  def persist_latest_resumption_token(state)
+    return unless state.latest_resumption_token
+
+    state.session.update_column(:gemini_resumption_token, state.latest_resumption_token)
+  end
+
+  # Checks the authoritative claim rather than relying on a broadcast that could be missed.
+  # Redis errors keep the interview running: while Redis is down, no other browser can be admitted.
+  def watch_for_replacement(browser_ws, state)
+    state.replacement_timer = EM::PeriodicTimer.new(REPLACEMENT_CHECK_INTERVAL) do
+      Thread.new do
+        next unless Sessions::ClientClaim.new(state.session).replaced?(state.connection_token)
+
+        EM.schedule { retire_replaced_connection(browser_ws, state) }
+      rescue Sessions::ClientClaim::Unavailable
+        nil
+      rescue StandardError => e
+        Rails.logger.error("[AudioWS] Thread crashed (replacement check): #{e.class}: #{e.message}")
+      end
+    end
+  end
+
+  def retire_replaced_connection(browser_ws, state)
+    return if state.replaced
+
+    state.replaced = true
+    state.replacement_timer&.cancel
+    state.coverage_end_timer&.cancel
+    state.time_ceiling_timer&.cancel
+    Rails.logger.info("[AudioWS] Connection replaced — closing it for session #{state.session.id}")
+    send_json(browser_ws, type: 'error', code: 'connection_replaced',
+                          message: 'This interview continued in another tab or device', recoverable: false)
+    browser_ws.close
   end
 
   def connect_to_gemini(browser_ws, state)
@@ -406,6 +468,7 @@ class AudioWebSocketMiddleware
     expected_client = state.gemini_client
     EM.add_timer(backoff) do
       next unless state.gemini_client.equal?(expected_client)
+      next if state.browser_disconnected_at
       next if state.session.ended?
 
       state.gemini_client&.supersede!
@@ -428,7 +491,6 @@ class AudioWebSocketMiddleware
       end
     when 'end_session'
       state.proactive_reconnect_timer&.cancel
-      state.graceful_end_timer&.cancel
       state.time_ceiling_timer&.cancel
       state.coverage_end_timer&.cancel
       Sessions::EndHandler.new(state.session).call(reason: 'manual_candidate')
@@ -498,24 +560,6 @@ class AudioWebSocketMiddleware
   end
 
   # Cancellable EM timer (vs Thread.new+sleep) — releases on session end without holding a thread for 2min.
-  def schedule_graceful_end(browser_ws, state)
-    return unless state.session
-
-    state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
-      Thread.new do
-        ActiveRecord::Base.connection_pool.with_connection do
-          next if state.session.reload.ended?
-
-          Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
-          EM.schedule { state.gemini_client&.close }
-        end
-      rescue StandardError => e
-        Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")
-      end
-    end
-  end
-
   # Sends session_ended then closes both connections; 300ms delay lets the frontend process the JSON
   # before the close event fires, otherwise it shows the reconnection UI instead of the complete screen.
   def close_session_after_end(browser_ws, state, reason:)
@@ -758,11 +802,12 @@ class AudioWebSocketMiddleware
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 
     # Invite links are bearer links: only the browser that started the interview may (re)join it.
-    if invite_token.present? && !Sessions::ClientClaim.new(session).claim(request.params['client_id'])
-      return [nil, 'Interview already in progress in another browser', 'session_in_use']
-    end
+    claim = Sessions::ClientClaim.new(session)
+    connection_token = invite_token.present? ? claim.admit(request.params['client_id']) : claim.admit_without_owner
+    return [nil, 'Interview already in progress in another browser', 'session_in_use'] if connection_token == :taken
+    return [nil, 'Session has ended'] if connection_token == :closing
 
-    [session, nil]
+    [session, nil, nil, connection_token]
   rescue Sessions::ClientClaim::Unavailable
     # Fail closed: without the claim store, ownership cannot be verified, so no browser is admitted.
     [nil, 'Interview service is temporarily unavailable', 'claim_unavailable']
@@ -788,7 +833,7 @@ class AudioWebSocketMiddleware
                   :sent_time_warnings, :ai_audio_chunks,
                   :cached_coverage_text, :last_injected_digest,
                   :logged_gate_suppressed, :reconnect_after_turn,
-                  :graceful_end_timer, :time_ceiling_timer,
+                  :connection_token, :replacement_timer, :replaced, :time_ceiling_timer,
                   :coverage_end_timer, :coverage_pending,
                   :last_ai_turn_ends_with_question, :wrap_up_injected,
                   :waiting_for_candidate_response
