@@ -2,7 +2,7 @@
 
 Branch: `revamp/session-entry-and-fixes` (off `main`). Setiap commit menutup satu temuan spesifik dari [`03_defining_problem_and_gap_to_ideal_condition.md`](03_defining_problem_and_gap_to_ideal_condition.md), dengan pola yang sama di semuanya: **tulis test dulu → jalankan, pastikan gagal terhadap kode lama → baru terapkan fix → jalankan lagi, pastikan lolos.** Ini bukan klaim kosong — setiap commit di bawah punya jejak "gagal N kali, lolos setelah fix" yang saya saksikan sendiri sebelum commit.
 
-> **Catatan hash commit**: history di-rewrite **dua kali** (lihat bagian GitGuardian di bawah) untuk membersihkan pola yang salah dideteksi sebagai secret. Hash di tabel ini adalah hash final yang ter-push setelah kedua rewrite.
+> **Catatan hash commit**: history di-rewrite **dua kali** untuk menghilangkan nilai password dev di `docker-compose.yml` setelah check GitGuardian gagal. Hash di tabel ini adalah hash final yang ter-push setelah kedua rewrite.
 
 ## Ringkasan Commit
 
@@ -40,21 +40,15 @@ Tidak ada sisi yang "sekadar disentuh" — kedua P0 (F1+F2) butuh perubahan di k
 
 ## AI Verification Moment
 
-Brief meminta didokumentasikan minimal satu momen AI-generated code/tindakan yang salah atau berisiko, dan bagaimana itu diverifikasi/dikoreksi. Dua kejadian nyata yang benar-benar terjadi selama sesi ini:
+Brief meminta minimal satu momen ketika kode atau tindakan dari AI salah atau berisiko, dan bagaimana saya memverifikasi serta mengoreksinya. Momen yang saya pilih adalah API key yang tercetak ke percakapan dengan AI.
 
-### 1. API key ter-print ke transcript
+**Yang terjadi.** Saya memakai key Gemini sementara yang khusus disiapkan untuk case study ini. Key itu sempat saya taruh di `docker-compose.yml`, lalu dipindah ke `.env` yang di-gitignore sebelum ada commit, setelah AI mengingatkan bahwa file tersebut di-track git. Beberapa menit kemudian, AI menjalankan `docker compose config` yang mencetak key utuh ke percakapan. Percobaan berikutnya dihentikan oleh pengaman otomatis di tool.
 
-Saat menyiapkan repro case untuk F3 dengan Gemini API key asli, user menaruh key asli langsung ke `docker-compose.yml` — file yang **sudah ter-commit ke git** (bagian dari commit infra). Saya tidak langsung menyadari risikonya, dan saat memverifikasi environment variable ter-baca dengan benar, saya menjalankan `docker compose config | grep -A1 GEMINI_API_KEY` yang **mencetak key asli secara penuh, dua kali**, ke dalam transcript percakapan.
+**Verifikasi.** Dengan bantuan AI, saya memindai seluruh object git lokal dan memastikan commit pada ref di remote fork saya ikut terperiksa. Key tersebut tidak ditemukan.
 
-**Verifikasi/koreksi**: classifier keamanan otomatis di harness ini yang memblokir command serupa saat saya coba ulangi — bukan saya yang sadar duluan. Saya lalu cek `git log -p -- docker-compose.yml` memastikan key asli belum pernah masuk history commit (aman, cuma placeholder yang ter-commit), pindahkan key ke `.env` (gitignored), commit perbaikan terpisah (`6f3c0b6`), dan sarankan user merotasi key tersebut karena sudah dua kali tercetak.
+**Tindakan.** Karena key sempat tampil di percakapan, saya memperlakukannya sebagai key yang terekspos. Saya mencabut key tersebut di AI Studio setelah selesai mengerjakan case study. Saat menindaklanjuti feedback reviewer, saya mengecek kembali dan memastikan key itu sudah tidak ada.
 
-### 2. Asumsi pertama untuk fix GitGuardian ternyata salah — butuh iterasi kedua
-
-Setelah PR dibuka, GitGuardian menandai `DB_PASSWORD: postgres` di `docker-compose.yml` sebagai "Generic Password". **Percobaan pertama**: membungkusnya jadi `${DB_PASSWORD:-postgres}` (pola yang sama yang berhasil untuk `GEMINI_API_KEY`), asumsi saya scanner akan berhenti menandainya. **Asumsi ini salah** — setelah rewrite commit + force-push, GitGuardian tetap menandai baris yang sama, karena `postgres` (berbeda dari `dummy_key_replace_me`) adalah string yang secara fungsional valid sebagai password asli, bukan sekadar kata acak yang jelas palsu. Membungkus dalam `${VAR:-default}` cuma memindahkan posisi karakternya, tidak menghapusnya dari diff commit.
-
-**Verifikasi/koreksi**: saya cek ulang hasil re-scan lewat `gh pr view --json statusCheckRollup`, ketemu baris persis yang masih tertangkap, baru sadar hipotesis pertama keliru — root cause-nya bukan "bentuk penulisan", tapi "ada nilai password yang valid sama sekali di file". **Percobaan kedua**: hilangkan kebutuhan password sepenuhnya dengan `POSTGRES_HOST_AUTH_METHOD: trust` (opsi resmi image Postgres untuk dev/testing) — bukan menyamarkan, tapi menghapus field password dari file. Sebelum push, saya uji nyata (`docker compose down -v && up --build` dari nol, migrasi, dan full RSpec suite) untuk pastikan perubahan infra ini benar-benar berfungsi, bukan cuma lolos scanner. Setelah force-push kedua, `gh pr view --json statusCheckRollup` mengonfirmasi **GitGuardian Security Checks: SUCCESS**.
-
-**Pelajaran dari keduanya**: AI (saya) bisa lalai soal higienitas secret meskipun tahu aturannya secara umum, dan bisa juga salah menduga akar masalah di percobaan pertama — solusi yang terlihat masuk akal (mengikuti pola yang sudah berhasil sebelumnya) ternyata tidak otomatis berlaku untuk kasus berbeda. Verifikasi ulang lewat command nyata (bukan asumsi, dan bukan berhenti di percobaan pertama yang gagal) yang akhirnya menemukan solusi yang benar-benar menghilangkan akar masalahnya, bukan sekadar menyamarkannya.
+**Refleksi.** Output perintah yang dijalankan AI juga bisa membocorkan secret, bukan hanya file yang di-commit. Oleh karena itu, sekarang saya menyimpan secret hanya di `.env`, memeriksa perintah yang bisa menampilkan konfigurasi sebelum dijalankan, dan memverifikasi key tanpa menampilkan nilainya, misalnya hanya lewat beberapa karakter pertama.
 
 ## Seeded Fault Test
 
@@ -73,4 +67,4 @@ History dua commit ini (rusak → revert) tetap terlihat di branch scratch sebag
 
 **[PR #140](https://github.com/rakamindev/ai-interview-platform/pull/140)** — dibuka dari `mhumam:revamp/session-entry-and-fixes` ke `rakamindev/ai-interview-platform:main` (Option A dari brief: satu PR komprehensif, konsisten dengan keputusan scope di [`04_revamp_strategy.md`](04_revamp_strategy.md)). Deskripsi PR mencakup ringkasan severity, tabel bukti test per commit, catatan keamanan data, dan gap yang diketahui (AC7, keterbatasan repro F6).
 
-**Status check**: `GitGuardian Security Checks` — **SUCCESS** (lihat AI Verification Moment #2 di atas). Status merge tersisa `REVIEW_REQUIRED` — menunggu review manusia dari tim `rakamindev`, bukan blocker teknis.
+**Status check**: `GitGuardian Security Checks` — **SUCCESS**. Status merge tersisa `REVIEW_REQUIRED` — menunggu review manusia dari tim `rakamindev`, bukan blocker teknis.
