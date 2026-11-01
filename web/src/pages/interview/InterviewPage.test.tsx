@@ -200,6 +200,29 @@ describe("InterviewPage after the connection is lost", () => {
     expect(await screen.findByText("Interview Complete")).toBeInTheDocument();
   });
 
+  it("continues a rejoined interview with the time the server has left", async () => {
+    mockSession({ session_status: "active", remaining_seconds: 600 });
+    const socketOptions = renderPage();
+    await waitFor(() => expect(sessionsApi.getCandidateInfo).toHaveBeenCalled());
+    await screen.findByText("Frontend Engineer");
+
+    act(() => socketOptions().onStateChange("active"));
+
+    expect(screen.getByText(/^(10:00|09:59)$/)).toBeInTheDocument();
+    expect(screen.queryByText("45:00")).not.toBeInTheDocument();
+  });
+
+  it("gives a new interview its full time when it goes live", async () => {
+    mockSession({ session_status: "pending", remaining_seconds: null });
+    const socketOptions = renderPage();
+    await waitFor(() => expect(sessionsApi.getCandidateInfo).toHaveBeenCalled());
+    await screen.findByText("Frontend Engineer");
+
+    act(() => socketOptions().onStateChange("active"));
+
+    expect(screen.getByText(/^(45:00|44:59)$/)).toBeInTheDocument();
+  });
+
   it("explains why this browser stopped when another one took over", async () => {
     mockSession({});
     const socketOptions = renderPage();
