@@ -21,14 +21,16 @@ import Notice from "@/components/Notice";
 import PageHeader from "@/components/layout/PageHeader";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
+import { copyText } from "@/utils/clipboard";
 import { generateId } from "@/utils/interviewClientId";
+import { interviewUrl } from "@/utils/interviewUrl";
 import { getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 import {
   COVERAGE_STATE_LABELS,
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowRight, Clock, Radio, UserRoundCog, Zap } from "lucide-react";
+import { ArrowRight, Check, Clock, Copy, Radio, UserRoundCog, Zap } from "lucide-react";
 import type { CoverageSkill, TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +104,8 @@ export default function LiveMonitorPage() {
   const [endError, setEndError] = useState(false);
   const [resetStatus, setResetStatus] = useState<"idle" | "resetting" | "done">("idle");
   const [resetError, setResetError] = useState<string | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [linkCopy, setLinkCopy] = useState<"idle" | "copied" | "failed">("idle");
   // Kept across a failed attempt so retrying cannot disconnect a candidate who has already rejoined.
   const resetIdRef = useRef<string | null>(null);
   const [sessionActive, setSessionActive] = useState(true);
@@ -128,6 +132,7 @@ export default function LiveMonitorPage() {
         const s = sRes.data.session;
         setStartedAt(s.started_at ?? null);
         setAssessmentName(s.assessment?.name ?? "");
+        setInviteUrl(s.invite_token ? interviewUrl(s) : null);
         if (s.status !== "active") setSessionActive(false);
 
         const turns = tRes.data.turns;
@@ -170,6 +175,13 @@ export default function LiveMonitorPage() {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
   }, [sessionActive, loading, loadError, fetchNewTurns]);
+
+  const handleCopyLink = async () => {
+    if (!inviteUrl) return;
+    const copied = await copyText(inviteUrl);
+    setLinkCopy(copied ? "copied" : "failed");
+    if (copied) setTimeout(() => setLinkCopy("idle"), 2000);
+  };
 
   const handleResetAccess = async () => {
     resetIdRef.current ??= generateId();
@@ -332,14 +344,26 @@ export default function LiveMonitorPage() {
       {endError && <Notice variant="error">Failed to end session. Please try again.</Notice>}
       {resetStatus === "done" && (
         <Notice variant="success">
-          Candidate access reset. Ask the candidate to open their invite link now; the session ends
-          if nobody rejoins within 2 minutes of the connection being lost.
+          Candidate access reset. Ask the candidate to open their invite link now; the session ends if nobody rejoins within 2 minutes of the connection
+          being lost.
         </Notice>
       )}
       {resetError && <Notice variant="error">{resetError}</Notice>}
+      {linkCopy === "failed" && inviteUrl && (
+        <Notice variant="error">
+          Couldn't copy the link. Copy it manually:{" "}
+          <span className="break-all font-medium">{inviteUrl}</span>
+        </Notice>
+      )}
 
       {/* End Session */}
       <div className="flex flex-wrap justify-end gap-2">
+        {sessionActive && inviteUrl && (
+          <Button variant="ghost" onClick={handleCopyLink}>
+            {linkCopy === "copied" ? <Check /> : <Copy />}
+            {linkCopy === "copied" ? "Copied" : "Copy invite link"}
+          </Button>
+        )}
         {sessionActive && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
