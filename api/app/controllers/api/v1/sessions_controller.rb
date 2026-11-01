@@ -172,6 +172,7 @@ module Api
           role_title:       assessment.name,
           time_limit_min:   assessment.time_limit_min,
           session_status:   session.status,
+          end_reason:       session.end_reason,
           in_use_elsewhere: Sessions::ClientClaim.new(session).claimed_by_other?(params[:client_id])
         )
       end
@@ -194,6 +195,7 @@ module Api
           invite_token:     session.invite_token,
           invite_url:       session.invite_url,
           status:           session.status,
+          end_reason:       session.end_reason,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
