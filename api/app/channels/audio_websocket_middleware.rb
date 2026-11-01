@@ -9,7 +9,9 @@ class AudioWebSocketMiddleware
 
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
-  REPLACEMENT_CHECK_INTERVAL = 5 # seconds between checks that this connection still holds the interview
+  # Seconds between checks that this connection still holds the interview. Gemini refuses a new session
+  # while the old one is open, so this must stay well inside the reconnect backoff (1s + 2s + 4s).
+  REPLACEMENT_CHECK_INTERVAL = 2
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
