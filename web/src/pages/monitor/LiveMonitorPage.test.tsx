@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import LiveMonitorPage from "@/pages/monitor/LiveMonitorPage";
 import { sessionsApi } from "@/services/sessions";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
+import { copyText } from "@/utils/clipboard";
 import type { TranscriptTurn } from "@/types";
 
 vi.mock("@/services/sessions", () => ({
@@ -17,6 +18,7 @@ vi.mock("@/services/sessions", () => ({
   },
 }));
 vi.mock("@/hooks/useCoverageWebSocket", () => ({ useCoverageWebSocket: vi.fn() }));
+vi.mock("@/utils/clipboard", () => ({ copyText: vi.fn() }));
 
 function socketState(overrides: Partial<ReturnType<typeof useCoverageWebSocket>> = {}) {
   return {
@@ -89,6 +91,51 @@ describe("LiveMonitorPage", () => {
     expect(screen.queryByText("You")).not.toBeInTheDocument();
   });
 
+  describe("copying the invite link", () => {
+    const inviteUrl = `${window.location.origin}/interview/tok`;
+
+    function mockSession(status: string) {
+      vi.mocked(useCoverageWebSocket).mockReturnValue(socketState());
+      vi.mocked(copyText).mockReset();
+      vi.mocked(sessionsApi.get).mockResolvedValue({
+        data: { session: { status, started_at: new Date().toISOString(), invite_token: "tok" } },
+      } as Awaited<ReturnType<typeof sessionsApi.get>>);
+    }
+
+    it("copies the link and confirms it", async () => {
+      mockSession("active");
+      vi.mocked(copyText).mockResolvedValue(true);
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(await screen.findByRole("button", { name: /Copy invite link/ }));
+
+      expect(copyText).toHaveBeenCalledWith(inviteUrl);
+      expect(await screen.findByRole("button", { name: /Copied/ })).toBeInTheDocument();
+    });
+
+    it("shows the link to copy by hand when the clipboard fails", async () => {
+      mockSession("active");
+      vi.mocked(copyText).mockResolvedValue(false);
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(await screen.findByRole("button", { name: /Copy invite link/ }));
+
+      expect(await screen.findByText(/Couldn't copy the link/)).toBeInTheDocument();
+      expect(screen.getByText(inviteUrl)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Copied/ })).not.toBeInTheDocument();
+    });
+
+    it("does not offer the link once the session has ended", async () => {
+      mockSession("ended");
+      renderPage();
+
+      expect(await screen.findByRole("button", { name: /View portfolio/ })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Copy invite link/ })).not.toBeInTheDocument();
+    });
+  });
+
   describe("resetting candidate access", () => {
     beforeEach(() => {
       vi.mocked(useCoverageWebSocket).mockReturnValue(socketState());
@@ -117,6 +164,7 @@ describe("LiveMonitorPage", () => {
         expect.stringMatching(/^[0-9a-f]{32}$/),
       );
       expect(await screen.findByText(/Candidate access reset/)).toBeInTheDocument();
+      expect(screen.getByText(/in a different browser or device/)).toBeInTheDocument();
     });
 
     it("explains the consequences before resetting", async () => {

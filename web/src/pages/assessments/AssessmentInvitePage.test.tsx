@@ -133,6 +133,28 @@ describe("AssessmentInvitePage", () => {
     expect(screen.queryByText(/Link for .* ready/)).not.toBeInTheDocument();
   });
 
+  it("still offers the invite link while an interview is running", async () => {
+    mockLoaded([{ ...pendingSession, status: "active" }]);
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /Copy link/ }));
+
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
+    await expect(navigator.clipboard.readText()).resolves.toBe(
+      `${window.location.origin}/interview/tok`,
+    );
+  });
+
+  it("does not offer the invite link once the interview has ended", async () => {
+    mockLoaded([{ ...pendingSession, status: "ended", end_reason: "all_covered" }]);
+    renderPage();
+
+    await screen.findByRole("button", { name: /Results/ });
+
+    expect(screen.queryByRole("button", { name: /Copy link/ })).not.toBeInTheDocument();
+  });
+
   it("says the copy failed when the clipboard is unavailable", async () => {
     mockLoaded([{ ...pendingSession, status: "pending" }]);
     const user = userEvent.setup();
