@@ -16,6 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import FieldError from "@/components/FieldError";
+import Notice from "@/components/Notice";
+import { demoRequestsApi } from "@/services/demoRequests";
+import { getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 import { MAX_TEXT_FIELD_LENGTH, requiredText } from "@/utils/validation";
 
 interface DemoRequestValues {
@@ -27,21 +30,40 @@ interface DemoRequestValues {
 
 const EMPTY_VALUES: DemoRequestValues = { name: "", email: "", company: "", message: "" };
 
-// Demo-only: the request is validated and acknowledged in the browser, never sent to the API.
+const SEND_ERROR_MESSAGE = "We couldn't send your request. Please try again.";
+const THROTTLED_MESSAGE = "Too many requests from this device. Please try again later.";
+
 // `trigger` must be a single focusable element, such as a button.
+
 export default function DemoRequestDialog({ trigger }: { trigger: ReactNode }) {
   const [submitted, setSubmitted] = useState<DemoRequestValues | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<DemoRequestValues>({ defaultValues: EMPTY_VALUES });
+
+  const sendRequest = async (values: DemoRequestValues) => {
+    setSendError(null);
+    try {
+      await demoRequestsApi.create(values);
+      setSubmitted(values);
+    } catch (error) {
+      setSendError(
+        getApiErrorStatus(error) === 429
+          ? THROTTLED_MESSAGE
+          : getApiErrorMessage(error, SEND_ERROR_MESSAGE),
+      );
+    }
+  };
 
   const handleOpenChange = (open: boolean) => {
     // Start from a blank form each time the dialog is reopened.
     if (!open) {
       setSubmitted(null);
+      setSendError(null);
       reset(EMPTY_VALUES);
     }
   };
@@ -55,15 +77,16 @@ export default function DemoRequestDialog({ trigger }: { trigger: ReactNode }) {
             <CheckCircle2 className="h-12 w-12 text-primary duration-500 animate-in zoom-in-50 motion-reduce:animate-none" />
             <DialogTitle>Thanks, {submitted.name.trim()}!</DialogTitle>
             <DialogDescription>
-              We'll reach out at {submitted.email.trim()} to set up a walkthrough for{" "}
-              {submitted.company.trim()}.
+              We've recorded your request for {submitted.company.trim()}. Our team reviews requests
+              by hand and may contact you at {submitted.email.trim()}; no confirmation email is sent
+              automatically.
             </DialogDescription>
             <DialogClose asChild>
               <Button className="mt-2">Done</Button>
             </DialogClose>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(setSubmitted)} noValidate className="space-y-4">
+          <form onSubmit={handleSubmit(sendRequest)} noValidate className="space-y-4">
             <DialogHeader>
               <DialogTitle>Request a demo</DialogTitle>
               <DialogDescription>
@@ -129,13 +152,21 @@ export default function DemoRequestDialog({ trigger }: { trigger: ReactNode }) {
               />
             </div>
 
+            <p className="text-xs text-muted-foreground">
+              We use these details only to follow up on your request.
+            </p>
+
+            {sendError && <Notice variant="error">{sendError}</Notice>}
+
             <DialogFooter className="gap-2 pt-2 sm:gap-0">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit">Send request</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Sending..." : "Send request"}
+              </Button>
             </DialogFooter>
           </form>
         )}
