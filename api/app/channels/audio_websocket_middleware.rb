@@ -763,6 +763,9 @@ class AudioWebSocketMiddleware
     end
 
     [session, nil]
+  rescue Sessions::ClientClaim::Unavailable
+    # Fail closed: without the claim store, ownership cannot be verified, so no browser is admitted.
+    [nil, 'Interview service is temporarily unavailable', 'claim_unavailable']
   end
 
   def send_json(ws, **payload)

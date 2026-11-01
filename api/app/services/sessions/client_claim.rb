@@ -5,6 +5,10 @@ module Sessions
   # used by a second person. The same browser may claim again (page refresh, socket reconnect).
   # Redis SET NX is atomic across Puma workers, so two simultaneous starts cannot both win.
   class ClientClaim
+    # Raised when the claim store cannot be reached. Callers must fail closed: admitting a browser
+    # without a claim would let two browsers share one interview.
+    class Unavailable < StandardError; end
+
     CLIENT_ID_FORMAT = /\A[0-9a-f]{32}\z/
     # Outlives the interview (time limit plus time-ceiling and reconnect grace). Ended sessions are
     # rejected before the claim is checked, so expiry after the interview is harmless.
@@ -26,8 +30,7 @@ module Sessions
     def claimed_by_other?(client_id)
       owner = with_redis { |redis| redis.get(key) }
       owner.present? && owner != client_id
-    rescue ::Redis::BaseError => e
-      Rails.logger.error("[ClientClaim] Failed to read claim for session #{@session.id}: #{e.message}")
+    rescue Unavailable
       false
     end
 
@@ -44,6 +47,9 @@ module Sessions
     def with_redis
       redis = ::Redis.new(url: ENV.fetch('REDIS_URL'))
       yield redis
+    rescue ::Redis::BaseError => e
+      Rails.logger.error("[ClientClaim] Redis unavailable for session #{@session.id}: #{e.message}")
+      raise Unavailable, e.message
     ensure
       redis&.close
     end
