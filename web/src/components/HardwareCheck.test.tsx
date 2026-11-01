@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,6 +25,7 @@ class FakeAudioContext {
   currentTime = 0;
   destination = {};
   resume = vi.fn();
+  close = vi.fn();
   createOscillator() {
     return {
       connect: vi.fn(),
@@ -74,6 +75,54 @@ describe("HardwareCheck", () => {
     expect(screen.queryByText("Checking...")).not.toBeInTheDocument();
     expect(screen.getAllByText("Passed")).toHaveLength(4);
     expect(testInternetSpeed).toHaveBeenCalledTimes(2);
+  });
+
+  describe("releasing the microphone", () => {
+    beforeEach(() => {
+      vi.mocked(testInternetSpeed).mockResolvedValue(speedResult(true));
+    });
+
+    function waitForMicRequest() {
+      return waitFor(() => expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled(), {
+        timeout: 3000,
+      });
+    }
+
+    it("stops the test stream when the check is left", async () => {
+      const stopTrack = vi.fn();
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: {
+          getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }),
+        },
+      });
+      const { unmount } = render(<HardwareCheck />);
+      await waitFor(
+        () => expect(screen.getByRole("button", { name: "Start Interview" })).toBeEnabled(),
+        { timeout: 3000 },
+      );
+      expect(stopTrack).not.toHaveBeenCalled();
+
+      unmount();
+
+      expect(stopTrack).toHaveBeenCalled();
+    });
+
+    it("stops a stream that is granted after the check was left", async () => {
+      const stopTrack = vi.fn();
+      let grantMic: (stream: unknown) => void = () => {};
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: { getUserMedia: vi.fn(() => new Promise((resolve) => (grantMic = resolve))) },
+      });
+      const { unmount } = render(<HardwareCheck />);
+      await waitForMicRequest();
+
+      unmount();
+      await act(async () => grantMic({ getTracks: () => [{ stop: stopTrack }] }));
+
+      expect(stopTrack).toHaveBeenCalled();
+    });
   });
 
   it("fails the browser check with guidance when media APIs are unavailable", async () => {
