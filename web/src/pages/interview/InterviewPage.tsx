@@ -100,6 +100,7 @@ export default function InterviewPage() {
   const [sessionFailed, setSessionFailed] = useState(false);
   const [inUseElsewhere, setInUseElsewhere] = useState(false);
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
+  const [connectionReplaced, setConnectionReplaced] = useState(false);
   const [clientId] = useState(getInterviewClientId);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,6 +122,8 @@ export default function InterviewPage() {
         setSessionId(res.data.session_id);
         setLoadStatus("ready");
         if (res.data.session_status === "ended") {
+          // An interview cut short by an error must not look finished when the link is reopened.
+          if (res.data.end_reason === "error") setSessionFailed(true);
           setInterviewState("complete");
         } else if (res.data.in_use_elsewhere) {
           setInUseElsewhere(true);
@@ -219,6 +222,8 @@ export default function InterviewPage() {
     if (code === "session_in_use") setInUseElsewhere(true);
     // The server could not verify who owns this interview (its claim store is down).
     else if (code === "claim_unavailable") setServiceUnavailable(true);
+    // Another tab took over, or the interviewer reset access for another device.
+    else if (code === "connection_replaced") setConnectionReplaced(true);
     else setSessionFailed(true);
   }, []);
 
@@ -270,6 +275,13 @@ export default function InterviewPage() {
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+
+  // The mic and speaker have no purpose on an end screen, however the interview ended.
+  useEffect(() => {
+    if (interviewState !== "complete") return;
+    stopCapture();
+    stopPlayback();
+  }, [interviewState, stopCapture, stopPlayback]);
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
@@ -426,7 +438,22 @@ export default function InterviewPage() {
             This interview link is already being used in another browser or on another device, and
             only one person can take the interview.
           </p>
-          <p>If you are the candidate and did not start it, please contact the interviewer.</p>
+          <p>
+            If you are the candidate and lost access (for example after switching device or clearing
+            your browser data), contact the interviewer right away. They can reset your access.
+          </p>
+        </StatusScreen>
+      );
+    }
+
+    if (connectionReplaced) {
+      return (
+        <StatusScreen icon={Lock} tone="neutral" title="Interview Continued Elsewhere">
+          <p>
+            This interview moved to another tab or device, or the interviewer reset access, so it
+            has stopped here.
+          </p>
+          <p>If this wasn't you, please contact the interviewer.</p>
         </StatusScreen>
       );
     }
