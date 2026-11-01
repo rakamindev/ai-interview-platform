@@ -8,7 +8,7 @@ Branch perbaikan: `fix/reviewer-feedback`
 | 2 | Rename key F3 belum aman untuk data lama | Selesai, sudah dicoba manual |
 | 3 | State Portfolio F4 belum lengkap | Selesai, sudah dicoba manual |
 | 4 | Failure conditions pada perbandingan opsi | Selesai, perubahan dokumen saja |
-| 5 | AI Verification Moment | Menyusul |
+| 5 | AI Verification Moment | Selesai, perubahan dokumen saja |
 
 ---
 
@@ -222,3 +222,23 @@ Perubahan hanya ada di `assessment/04_revamp_strategy.md`, tanpa perubahan kode.
 - Kondisi gagal Option A diverifikasi dengan membaca kode. Saya tidak menjalankan skenarionya dan tidak menjalankan tes.
 - Kondisi gagal Option B adalah analisis desain, belum dibuktikan dengan implementasi.
 - Kondisi gagal Option A tetap ada di aplikasi. Poin ini hanya mendokumentasikannya, tidak memperbaikinya.
+
+---
+
+## 5. AI Verification Moment
+
+**Commit:** `8acc007`
+
+### Feedback
+
+AI Verification Moment ditulis dari sudut pandang AI. Bagian ini perlu ditulis ulang dengan kata-kata dan refleksi sendiri, serta menjelaskan apakah API key yang tercetak sudah dirotasi.
+
+### Akar masalah
+
+Draf bagian ini saya susun bersama AI, sehingga kronologi dan refleksinya tidak benar-benar berasal dari saya.
+
+### Perbaikan
+
+Perubahan hanya ada di `assessment/05_monozukuri_implementation_and_pull_request.md`, tanpa perubahan kode.
+
+- Status key dijelaskan: key sudah saya cabut di AI Studio setelah selesai mengerjakan case study.
