@@ -223,6 +223,27 @@ describe("InterviewPage after the connection is lost", () => {
     expect(screen.getByText(/^(45:00|44:59)$/)).toBeInTheDocument();
   });
 
+  it("shows the earlier conversation after rejoining and adds new turns after it", async () => {
+    mockSession({ session_status: "active", remaining_seconds: 600 });
+    const socketOptions = renderPage();
+    await screen.findByText("Frontend Engineer");
+
+    act(() => {
+      socketOptions().onStateChange("active");
+      socketOptions().onTranscriptHistory?.([
+        { speaker: "assessor", text: "Tell me about a project" },
+        { speaker: "candidate", text: "I built a table" },
+      ]);
+      socketOptions().onTranscript({ speaker: "assessor", text: "How did you test it?" });
+    });
+
+    const shown = ["Tell me about a project", "I built a table", "How did you test it?"].map(
+      (text) => screen.getByText(text),
+    );
+    expect(shown[0].compareDocumentPosition(shown[1])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(shown[1].compareDocumentPosition(shown[2])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it("explains why this browser stopped when another one took over", async () => {
     mockSession({});
     const socketOptions = renderPage();

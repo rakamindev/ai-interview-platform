@@ -44,6 +44,7 @@ const latestSocket = () => FakeWebSocket.instances[FakeWebSocket.instances.lengt
 function setup() {
   const onStateChange = vi.fn();
   const onSessionFailed = vi.fn();
+  const onTranscriptHistory = vi.fn();
   const { result } = renderHook(() =>
     useAudioWebSocket({
       sessionId: 3,
@@ -54,10 +55,11 @@ function setup() {
       onStateChange,
       onSpeakerChange: vi.fn(),
       onSessionFailed,
+      onTranscriptHistory,
     }),
   );
   act(() => result.current.connect());
-  return { result, onStateChange, onSessionFailed };
+  return { result, onStateChange, onSessionFailed, onTranscriptHistory };
 }
 
 describe("useAudioWebSocket", () => {
@@ -91,6 +93,26 @@ describe("useAudioWebSocket", () => {
     expect(onSessionFailed).toHaveBeenCalledTimes(1);
     expect(onStateChange).toHaveBeenLastCalledWith("complete");
     expect(onStateChange).not.toHaveBeenCalledWith("reconnecting");
+  });
+
+  it("passes on the saved conversation with the labels the live transcript uses", () => {
+    const { onTranscriptHistory } = setup();
+
+    act(() => {
+      latestSocket().serverOpen();
+      latestSocket().serverSend({
+        type: "transcript_history",
+        turns: [
+          { speaker: "ai", text: "Tell me about a project" },
+          { speaker: "candidate", text: "I built a table" },
+        ],
+      });
+    });
+
+    expect(onTranscriptHistory).toHaveBeenCalledWith([
+      { speaker: "assessor", text: "Tell me about a project" },
+      { speaker: "candidate", text: "I built a table" },
+    ]);
   });
 
   it("identifies this browser to the backend when connecting with an invite token", () => {
