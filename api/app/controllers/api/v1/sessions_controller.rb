@@ -6,7 +6,7 @@ module Api
       authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
       skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
 
-      before_action :set_session, only: %i[show end_session coverage transcript]
+      before_action :set_session, only: %i[show end_session reset_access coverage transcript]
 
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
@@ -78,6 +78,25 @@ module Api
         else
           json_error("Failed to end session", :unprocessable_entity)
         end
+      end
+
+      # POST /api/v1/sessions/:id/reset_access
+      # Revokes the candidate's current browser so they can rejoin from another one. reset_id identifies
+      # this assessor action: retrying it is safe, and only a new id can disconnect the candidate again.
+      def reset_access
+        return json_error("Session is already ended", :unprocessable_entity) if @session.ended?
+
+        reset_id = params[:reset_id]
+        unless reset_id.is_a?(String) && reset_id.match?(Sessions::ClientClaim::RESET_ID_FORMAT)
+          return json_error("Invalid reset id", :unprocessable_entity)
+        end
+
+        claim = Sessions::ClientClaim.new(@session)
+        connection_token, deadline = claim.reset(reset_id)
+        claim.schedule_end(connection_token, deadline) if connection_token
+        json_response(reset: true)
+      rescue Sessions::ClientClaim::Unavailable
+        json_error("Could not reset candidate access. Please try again.", :service_unavailable)
       end
 
       # GET /api/v1/sessions/:id/coverage
@@ -175,7 +194,6 @@ module Api
           invite_token:     session.invite_token,
           invite_url:       session.invite_url,
           status:           session.status,
-          end_reason:       session.end_reason,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
