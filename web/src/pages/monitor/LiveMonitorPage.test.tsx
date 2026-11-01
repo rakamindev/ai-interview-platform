@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,7 +9,12 @@ import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import type { TranscriptTurn } from "@/types";
 
 vi.mock("@/services/sessions", () => ({
-  sessionsApi: { get: vi.fn(), getTranscript: vi.fn(), endSession: vi.fn() },
+  sessionsApi: {
+    get: vi.fn(),
+    getTranscript: vi.fn(),
+    endSession: vi.fn(),
+    resetAccess: vi.fn(),
+  },
 }));
 vi.mock("@/hooks/useCoverageWebSocket", () => ({ useCoverageWebSocket: vi.fn() }));
 
@@ -81,5 +87,88 @@ describe("LiveMonitorPage", () => {
     await screen.findByText("I profiled the list.");
     expect(screen.getByText("Candidate")).toBeInTheDocument();
     expect(screen.queryByText("You")).not.toBeInTheDocument();
+  });
+
+  describe("resetting candidate access", () => {
+    beforeEach(() => {
+      vi.mocked(useCoverageWebSocket).mockReturnValue(socketState());
+      vi.mocked(sessionsApi.resetAccess).mockReset();
+      vi.mocked(sessionsApi.get).mockResolvedValue({
+        data: { session: { status: "active", started_at: new Date().toISOString() } },
+      } as Awaited<ReturnType<typeof sessionsApi.get>>);
+    });
+
+    async function confirmReset(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(await screen.findByRole("button", { name: /Reset candidate access/ }));
+      await user.click(await screen.findByRole("button", { name: "Reset access" }));
+    }
+
+    const resetSucceeded = {
+      data: { reset: true },
+    } as Awaited<ReturnType<typeof sessionsApi.resetAccess>>;
+
+    it("resets access after confirmation and tells the assessor what happens next", async () => {
+      vi.mocked(sessionsApi.resetAccess).mockResolvedValue(resetSucceeded);
+      renderPage();
+      await confirmReset(userEvent.setup());
+
+      expect(sessionsApi.resetAccess).toHaveBeenCalledWith(
+        3,
+        expect.stringMatching(/^[0-9a-f]{32}$/),
+      );
+      expect(await screen.findByText(/Candidate access reset/)).toBeInTheDocument();
+    });
+
+    it("explains the consequences before resetting", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole("button", { name: /Reset candidate access/ }));
+
+      expect(await screen.findByText(/disconnected within a few seconds/)).toBeInTheDocument();
+      expect(screen.getByText(/does not add time/)).toBeInTheDocument();
+      expect(sessionsApi.resetAccess).not.toHaveBeenCalled();
+    });
+
+    it("reuses the reset id when retrying a failed attempt", async () => {
+      vi.mocked(sessionsApi.resetAccess)
+        .mockRejectedValueOnce(new Error("boom"))
+        .mockResolvedValueOnce(resetSucceeded);
+      const user = userEvent.setup();
+      renderPage();
+
+      await confirmReset(user);
+      expect(await screen.findByText(/Failed to reset candidate access/)).toBeInTheDocument();
+      await confirmReset(user);
+
+      await screen.findByText(/Candidate access reset/);
+      const [firstCall, secondCall] = vi.mocked(sessionsApi.resetAccess).mock.calls;
+      expect(secondCall[1]).toBe(firstCall[1]);
+      expect(screen.queryByText(/Failed to reset candidate access/)).not.toBeInTheDocument();
+    });
+
+    it("uses a new reset id for a new reset after a success", async () => {
+      vi.mocked(sessionsApi.resetAccess).mockResolvedValue(resetSucceeded);
+      const user = userEvent.setup();
+      renderPage();
+
+      await confirmReset(user);
+      await screen.findByText(/Candidate access reset/);
+      await confirmReset(user);
+
+      const [firstCall, secondCall] = vi.mocked(sessionsApi.resetAccess).mock.calls;
+      expect(secondCall[1]).not.toBe(firstCall[1]);
+    });
+
+    it("does not offer the reset once the session has ended", async () => {
+      vi.mocked(sessionsApi.get).mockResolvedValue({
+        data: { session: { status: "ended" } },
+      } as Awaited<ReturnType<typeof sessionsApi.get>>);
+      renderPage();
+
+      expect(await screen.findByRole("button", { name: /View portfolio/ })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Reset candidate access/ }),
+      ).not.toBeInTheDocument();
+    });
   });
 });
