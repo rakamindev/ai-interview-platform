@@ -12,6 +12,7 @@ class AudioWebSocketMiddleware
   # Seconds between checks that this connection still holds the interview. Gemini refuses a new session
   # while the old one is open, so this must stay well inside the reconnect backoff (1s + 2s + 4s).
   REPLACEMENT_CHECK_INTERVAL = 2
+  TRANSCRIPT_HISTORY_LIMIT = 10 # matches the turns the candidate page keeps on screen
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
@@ -60,10 +61,27 @@ class AudioWebSocketMiddleware
     state.session = session
     state.connection_token = connection_token
     watch_for_replacement(browser_ws, state)
+    restore_conversation(browser_ws, session)
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
     browser_ws.close
+  end
+
+  # Sent over the socket, after admission, so only the browser holding the interview can read it.
+  # A failure only costs the on-screen history, so it must not stop the interview.
+  def restore_conversation(browser_ws, session)
+    send_transcript_history(browser_ws, session)
+  rescue StandardError => e
+    Rails.logger.error("[AudioWS] Could not load history for session #{session.id}: #{e.class}: #{e.message}")
+  end
+
+  def send_transcript_history(browser_ws, session)
+    turns = session.transcript_turns.order(turn_number: :desc).limit(TRANSCRIPT_HISTORY_LIMIT).reverse
+    return if turns.empty?
+
+    send_json(browser_ws, type: 'transcript_history',
+                          turns: turns.map { |turn| { speaker: turn.speaker, text: turn.text } })
   end
 
   def handle_browser_frame(event, browser_ws, state, session_id)
