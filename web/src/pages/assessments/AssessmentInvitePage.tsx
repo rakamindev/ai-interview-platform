@@ -22,6 +22,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import { assessmentsApi } from "@/services/assessments";
 import { getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 import { copyText } from "@/utils/clipboard";
+import { interviewUrl } from "@/utils/interviewUrl";
 import { MAX_TEXT_FIELD_LENGTH } from "@/utils/validation";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowRight, Copy, Check, Eye, Pencil, Clock, Plus, UserRound, Link2 } from "lucide-react";
@@ -31,11 +32,6 @@ import type { Assessment, Session } from "@/types";
 interface CopyResult {
   key: number | "new";
   ok: boolean;
-}
-
-function interviewUrl(session: Session) {
-  return new URL(`/interview/${encodeURIComponent(session.invite_token)}`, window.location.origin)
-    .href;
 }
 
 function SessionRow({
