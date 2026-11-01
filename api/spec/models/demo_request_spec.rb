@@ -7,6 +7,16 @@ RSpec.describe DemoRequest, :aggregate_failures do
     { name: 'Sari Wijaya', email: 'sari@example.test', company: 'Example Corp', message: 'Frontend engineers' }
   end
 
+  def sql_log
+    output = StringIO.new
+    original_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = Logger.new(output, level: :debug)
+    yield
+    output.string
+  ensure
+    ActiveRecord::Base.logger = original_logger
+  end
+
   it 'is valid with name, email, and company' do
     expect(described_class.new(valid_attributes.except(:message))).to be_valid
   end
@@ -27,6 +37,13 @@ RSpec.describe DemoRequest, :aggregate_failures do
 
   it 'rejects a malformed email' do
     expect(described_class.new(valid_attributes.merge(email: 'not-an-email'))).not_to be_valid
+  end
+
+  it 'keeps personal data out of the SQL log' do
+    log = sql_log { described_class.create!(valid_attributes) }
+
+    expect(log).to include('INSERT INTO "demo_requests"')
+    expect(log).not_to include('Sari Wijaya', 'sari@example.test', 'Example Corp', 'Frontend engineers')
   end
 
   it 'rejects over-long fields' do
