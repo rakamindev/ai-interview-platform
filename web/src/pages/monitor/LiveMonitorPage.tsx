@@ -21,13 +21,14 @@ import Notice from "@/components/Notice";
 import PageHeader from "@/components/layout/PageHeader";
 import { useCoverageWebSocket } from "@/hooks/useCoverageWebSocket";
 import { sessionsApi } from "@/services/sessions";
+import { generateId } from "@/utils/interviewClientId";
 import { getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 import {
   COVERAGE_STATE_LABELS,
   COVERAGE_STATE_WIDTH,
   COVERAGE_STATE_COLOR,
 } from "@/utils/constants";
-import { ArrowRight, Clock, Radio, Zap } from "lucide-react";
+import { ArrowRight, Clock, Radio, UserRoundCog, Zap } from "lucide-react";
 import type { CoverageSkill, TranscriptTurn } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +100,10 @@ export default function LiveMonitorPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
+  const [resetStatus, setResetStatus] = useState<"idle" | "resetting" | "done">("idle");
+  const [resetError, setResetError] = useState<string | null>(null);
+  // Kept across a failed attempt so retrying cannot disconnect a candidate who has already rejoined.
+  const resetIdRef = useRef<string | null>(null);
   const [sessionActive, setSessionActive] = useState(true);
   const lastTurnRef = useRef<number>(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -165,6 +170,22 @@ export default function LiveMonitorPage() {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
   }, [sessionActive, loading, loadError, fetchNewTurns]);
+
+  const handleResetAccess = async () => {
+    resetIdRef.current ??= generateId();
+    setResetStatus("resetting");
+    setResetError(null);
+    try {
+      await sessionsApi.resetAccess(Number(sessionId), resetIdRef.current);
+      resetIdRef.current = null;
+      setResetStatus("done");
+    } catch (error) {
+      setResetStatus("idle");
+      setResetError(
+        getApiErrorMessage(error, "Failed to reset candidate access. Please try again."),
+      );
+    }
+  };
 
   const handleEndSession = async () => {
     setEnding(true);
@@ -309,9 +330,42 @@ export default function LiveMonitorPage() {
       </Card>
 
       {endError && <Notice variant="error">Failed to end session. Please try again.</Notice>}
+      {resetStatus === "done" && (
+        <Notice variant="success">
+          Candidate access reset. Ask the candidate to open their invite link now; the session ends
+          if nobody rejoins within 2 minutes of the connection being lost.
+        </Notice>
+      )}
+      {resetError && <Notice variant="error">{resetError}</Notice>}
 
       {/* End Session */}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {sessionActive && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" disabled={resetStatus === "resetting"}>
+                <UserRoundCog />
+                {resetStatus === "resetting" ? "Resetting..." : "Reset candidate access"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset candidate access?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Use this when the candidate switched device or cleared their browser data and
+                  cannot rejoin. Their current browser is disconnected within a few seconds and can
+                  no longer rejoin. The next browser to open the invite link takes over, so confirm
+                  first that you are talking to the candidate. Resetting does not add time: the
+                  session still ends 2 minutes after the connection was lost.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleResetAccess}>Reset access</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
         {sessionActive ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>

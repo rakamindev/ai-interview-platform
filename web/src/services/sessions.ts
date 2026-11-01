@@ -13,6 +13,9 @@ export const sessionsApi = {
       session: { reason },
     }),
 
+  resetAccess: (id: number, resetId: string) =>
+    api.post<{ reset: boolean }>(`/sessions/${id}/reset_access`, { reset_id: resetId }),
+
   getCoverage: (id: number) => api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
   getTranscript: (id: number, fromTurn?: number) =>

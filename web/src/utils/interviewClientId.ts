@@ -1,6 +1,6 @@
 const STORAGE_KEY = "interview_client_id";
 
-function generateId(): string {
+export function generateId(): string {
   // getRandomValues works on plain-http origins too, unlike crypto.randomUUID.
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
