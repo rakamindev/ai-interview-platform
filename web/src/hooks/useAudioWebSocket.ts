@@ -8,6 +8,7 @@ interface UseAudioWebSocketOptions {
   clientId?: string;
   onAudioChunk: (buffer: ArrayBuffer) => void;
   onTranscript: (turn: Pick<TranscriptTurn, "speaker" | "text">) => void;
+  onTranscriptHistory?: (turns: Pick<TranscriptTurn, "speaker" | "text">[]) => void;
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
@@ -22,6 +23,7 @@ export function useAudioWebSocket({
   clientId,
   onAudioChunk,
   onTranscript,
+  onTranscriptHistory,
   onStateChange,
   onSpeakerChange,
   onReconnected,
@@ -81,6 +83,14 @@ export function useAudioWebSocket({
                   text: msg.text,
                 });
               }
+              break;
+            case "transcript_history":
+              onTranscriptHistory?.(
+                (msg.turns ?? []).map((turn) => ({
+                  speaker: turn.speaker === "candidate" ? "candidate" : "assessor",
+                  text: turn.text,
+                })),
+              );
               break;
             case "speaker_changed":
               // Backend sends speaker_changed:candidate 800ms after AI finishes
@@ -155,6 +165,7 @@ export function useAudioWebSocket({
     clientId,
     onAudioChunk,
     onTranscript,
+    onTranscriptHistory,
     onStateChange,
     onSpeakerChange,
     onReconnected,

@@ -242,6 +242,11 @@ export default function InterviewPage() {
     setTranscript((prev) => [...prev.slice(-9), turn]); // keep last 10
   }, []);
 
+  const handleTranscriptHistory = useCallback(
+    (turns: Pick<TranscriptTurn, "speaker" | "text">[]) => setTranscript(turns),
+    [],
+  );
+
   const handleSpeakerChange = useCallback(
     (newSpeaker: InterviewSpeaker) => {
       if (newSpeaker === "ai") {
@@ -263,6 +268,7 @@ export default function InterviewPage() {
     clientId,
     onAudioChunk: playChunk,
     onTranscript: handleTranscript,
+    onTranscriptHistory: handleTranscriptHistory,
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,

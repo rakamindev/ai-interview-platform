@@ -195,6 +195,7 @@ export interface WsControlMessage {
     | "session_ended"
     | "transcript"
     | "transcription"
+    | "transcript_history"
     | "reconnecting"
     | "reconnected"
     | "speaker_changed"
@@ -207,4 +208,5 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+  turns?: { speaker: "candidate" | "ai"; text: string }[];
 }
