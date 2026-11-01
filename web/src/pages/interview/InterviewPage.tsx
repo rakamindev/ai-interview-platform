@@ -36,6 +36,7 @@ import {
   MicOff,
   PhoneOff,
   RefreshCw,
+  ServerCrash,
   WifiOff,
   X,
   Zap,
@@ -98,6 +99,7 @@ export default function InterviewPage() {
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const [sessionFailed, setSessionFailed] = useState(false);
   const [inUseElsewhere, setInUseElsewhere] = useState(false);
+  const [serviceUnavailable, setServiceUnavailable] = useState(false);
   const [clientId] = useState(getInterviewClientId);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,6 +217,8 @@ export default function InterviewPage() {
   const handleSessionFailed = useCallback((code?: string) => {
     // Another browser already started this interview (e.g. both clicked Start on a shared link).
     if (code === "session_in_use") setInUseElsewhere(true);
+    // The server could not verify who owns this interview (its claim store is down).
+    else if (code === "claim_unavailable") setServiceUnavailable(true);
     else setSessionFailed(true);
   }, []);
 
@@ -423,6 +427,24 @@ export default function InterviewPage() {
             only one person can take the interview.
           </p>
           <p>If you are the candidate and did not start it, please contact the interviewer.</p>
+        </StatusScreen>
+      );
+    }
+
+    if (serviceUnavailable) {
+      return (
+        <StatusScreen
+          icon={ServerCrash}
+          tone="error"
+          title="Interview Service Unavailable"
+          action={
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              <RefreshCw /> Try again
+            </Button>
+          }
+        >
+          <p>We couldn't connect you to your interview because our service is temporarily down.</p>
+          <p>Please try again in a moment. If this keeps happening, contact the interviewer.</p>
         </StatusScreen>
       );
     }
