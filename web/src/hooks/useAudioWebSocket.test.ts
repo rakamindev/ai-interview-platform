@@ -135,6 +135,29 @@ describe("useAudioWebSocket", () => {
     expect(onStateChange).toHaveBeenLastCalledWith("complete");
   });
 
+  it("stops without retrying and reports claim_unavailable when the claim cannot be verified", () => {
+    const { onStateChange, onSessionFailed } = setup();
+
+    act(() => {
+      latestSocket().serverOpen();
+      latestSocket().serverSend({
+        type: "error",
+        code: "claim_unavailable",
+        message: "Interview service is temporarily unavailable",
+        recoverable: false,
+      });
+      latestSocket().serverClose();
+    });
+    // Past the whole retry schedule (1s + 2s + 4s).
+    act(() => vi.advanceTimersByTime(30_000));
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(onSessionFailed).toHaveBeenCalledTimes(1);
+    expect(onSessionFailed).toHaveBeenCalledWith("claim_unavailable");
+    expect(onStateChange).not.toHaveBeenCalledWith("reconnecting");
+    expect(onStateChange).toHaveBeenLastCalledWith("complete");
+  });
+
   it("gives up after the retry budget when sockets open but the session never starts", () => {
     const { onStateChange, onSessionFailed } = setup();
 

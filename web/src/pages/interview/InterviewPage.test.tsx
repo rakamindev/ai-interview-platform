@@ -165,6 +165,32 @@ describe("InterviewPage single-browser access", () => {
   });
 });
 
+describe("InterviewPage claim service failure", () => {
+  it("offers a retry instead of reporting a failed or finished interview", async () => {
+    vi.mocked(sessionsApi.getCandidateInfo).mockResolvedValue({
+      data: {
+        session_id: 3,
+        role_title: "Frontend Engineer",
+        time_limit_min: 45,
+        session_status: "active",
+        in_use_elsewhere: false,
+      },
+    } as Awaited<ReturnType<typeof sessionsApi.getCandidateInfo>>);
+    const socketOptions = renderPage();
+    await waitFor(() => expect(sessionsApi.getCandidateInfo).toHaveBeenCalled());
+
+    act(() => {
+      socketOptions().onSessionFailed?.("claim_unavailable");
+      socketOptions().onStateChange("complete");
+    });
+
+    expect(screen.getByText("Interview Service Unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(screen.queryByText("Interview Could Not Continue")).not.toBeInTheDocument();
+    expect(screen.queryByText("Interview Complete")).not.toBeInTheDocument();
+  });
+});
+
 describe("InterviewPage invite link loading", () => {
   beforeEach(() => {
     vi.mocked(sessionsApi.getCandidateInfo).mockReset();
