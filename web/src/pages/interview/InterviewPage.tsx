@@ -101,6 +101,7 @@ export default function InterviewPage() {
   const [inUseElsewhere, setInUseElsewhere] = useState(false);
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
   const [connectionReplaced, setConnectionReplaced] = useState(false);
+  const [deadlineMs, setDeadlineMs] = useState<number | null>(null);
   const [clientId] = useState(getInterviewClientId);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,6 +121,10 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
+        // A rejoining candidate continues against the time the server has already counted.
+        if (res.data.remaining_seconds != null) {
+          setDeadlineMs(Date.now() + res.data.remaining_seconds * 1000);
+        }
         setLoadStatus("ready");
         if (res.data.session_status === "ended") {
           // An interview cut short by an error must not look finished when the link is reopened.
@@ -275,6 +280,13 @@ export default function InterviewPage() {
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+
+  // A new interview's time starts when it goes live.
+  const timeLimitMin = candidateInfo?.time_limit_min;
+  useEffect(() => {
+    if (interviewState !== "active" || timeLimitMin === undefined) return;
+    setDeadlineMs((current) => current ?? Date.now() + timeLimitMin * 60_000);
+  }, [interviewState, timeLimitMin]);
 
   // The mic and speaker have no purpose on an end screen, however the interview ended.
   useEffect(() => {
@@ -517,6 +529,7 @@ export default function InterviewPage() {
         {candidateInfo && (
           <InterviewTimer
             totalSeconds={candidateInfo.time_limit_min * 60}
+            deadlineMs={deadlineMs}
             running={interviewState === "active"}
             onExpired={endInterview}
           />

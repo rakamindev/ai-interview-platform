@@ -165,6 +165,7 @@ export interface CandidateInfo {
   time_limit_min: number;
   session_status: string;
   end_reason?: string | null;
+  remaining_seconds?: number | null;
   in_use_elsewhere: boolean;
 }
 

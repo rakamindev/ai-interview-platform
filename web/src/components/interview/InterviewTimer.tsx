@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 
 interface InterviewTimerProps {
   totalSeconds: number;
+  /** When the interview's time runs out; null until it has started. */
+  deadlineMs: number | null;
   onExpired?: () => void;
   running: boolean;
 }
@@ -14,22 +16,33 @@ function formatTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function InterviewTimer({ totalSeconds, onExpired, running }: InterviewTimerProps) {
+function secondsUntil(deadlineMs: number) {
+  return Math.max(Math.ceil((deadlineMs - Date.now()) / 1000), 0);
+}
+
+export default function InterviewTimer({
+  totalSeconds,
+  deadlineMs,
+  onExpired,
+  running,
+}: InterviewTimerProps) {
   const [remaining, setRemaining] = useState(totalSeconds);
 
+  // Reads the clock on every tick, so a pause or a throttled tab cannot make the timer fall behind.
   useEffect(() => {
-    setRemaining(totalSeconds);
-  }, [totalSeconds]);
-
-  useEffect(() => {
-    if (!running) return;
-    if (remaining <= 0) {
-      onExpired?.();
+    if (deadlineMs === null) {
+      setRemaining(totalSeconds);
       return;
     }
-    const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
-    return () => clearTimeout(id);
-  }, [running, remaining, onExpired]);
+    setRemaining(secondsUntil(deadlineMs));
+    if (!running) return;
+    const id = setInterval(() => setRemaining(secondsUntil(deadlineMs)), 1000);
+    return () => clearInterval(id);
+  }, [deadlineMs, totalSeconds, running]);
+
+  useEffect(() => {
+    if (running && deadlineMs !== null && remaining <= 0) onExpired?.();
+  }, [running, deadlineMs, remaining, onExpired]);
 
   const isWarning = remaining <= 300; // ≤5 min
   const isUrgent = remaining <= 60;
