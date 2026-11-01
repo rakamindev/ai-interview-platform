@@ -9,6 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
+import { PORTFOLIO_POLL_INTERVAL_MS, PORTFOLIO_POLL_MAX_ATTEMPTS } from "@/utils/constants";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
@@ -18,6 +19,8 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
   const [notStarted, setNotStarted] = useState(false);
+  const [inProgress, setInProgress] = useState(false);
+  const [pollTimedOut, setPollTimedOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -30,13 +33,22 @@ export default function PortfolioPage() {
     const data = res.data as any;
     if (data.status === "not_started") {
       setNotStarted(true);
+      setInProgress(false);
+      setGenerating(false);
+    } else if (data.status === "in_progress") {
+      // Interview still running: nothing to analyze yet, and nothing to poll for
+      // here — the Live Monitor is where the assessor follows it.
+      setNotStarted(false);
+      setInProgress(true);
       setGenerating(false);
     } else if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setNotStarted(false);
+      setInProgress(false);
       setGenerating(true);
     } else if (data.portfolio) {
       setPortfolio(data.portfolio);
       setNotStarted(false);
+      setInProgress(false);
       setGenerating(false);
       // Build overrides map
       const overrideMap: Record<number, AssessorOverride> = {};
@@ -48,6 +60,7 @@ export default function PortfolioPage() {
   }, [sessionId]);
 
   useEffect(() => {
+    setPollTimedOut(false);
     Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
       .then(([, vRes, sRes]) => {
         setVacancies(vRes.data.vacancies);
@@ -57,8 +70,21 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
+  // Poll while generating, but not forever: if no portfolio shows up within the
+  // budget (worker down, job lost), stop and let the assessor decide.
+  usePolling(fetchPortfolio, PORTFOLIO_POLL_INTERVAL_MS, generating, {
+    maxAttempts: PORTFOLIO_POLL_MAX_ATTEMPTS,
+    onExhausted: () => {
+      setGenerating(false);
+      setPollTimedOut(true);
+    },
+  });
+
+  const handleCheckAgain = () => {
+    setPollTimedOut(false);
+    setGenerating(true);
+    fetchPortfolio().catch(() => {});
+  };
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
@@ -168,6 +194,41 @@ export default function PortfolioPage() {
               This candidate hasn't taken the interview, so there's no transcript to analyze yet.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* In progress — the interview is still running, nothing to analyze yet */}
+      {inProgress && (
+        <div className="border rounded-lg p-12 text-center space-y-3">
+          <div>
+            <p className="font-medium">Interview is still in progress</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              The portfolio is generated after the interview ends. You can follow it live in the monitor.
+            </p>
+          </div>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/assessments/${id}/sessions/${sessionId}/monitor`}>Open Live Monitor</Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fetchPortfolio().catch(() => {})}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Polling gave up — taking longer than expected */}
+      {pollTimedOut && (
+        <div className="border border-amber-300/60 rounded-lg p-8 text-center space-y-3">
+          <div>
+            <p className="font-medium">Portfolio is taking longer than expected</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              We stopped checking automatically. The analysis may still finish — check again, or try later.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleCheckAgain}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Check again
+          </Button>
         </div>
       )}
 

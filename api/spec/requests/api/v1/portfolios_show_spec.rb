@@ -19,6 +19,17 @@ RSpec.describe 'GET /api/v1/sessions/:id/portfolio', type: :request do
     expect(JSON.parse(response.body)).to eq('status' => 'not_started')
   end
 
+  # Reviewer feedback on F4: an interview that is still running has nothing for
+  # the AI to analyze yet, so it must not be reported as "generating" either.
+  it 'reports in_progress (not generating) for a session whose interview is still running' do
+    session = create(:session, assessment: assessment, tenant_id: organization.id, status: 'active')
+
+    get "/api/v1/sessions/#{session.id}/portfolio", headers: headers
+
+    expect(response).to have_http_status(:ok)
+    expect(JSON.parse(response.body)).to eq('status' => 'in_progress')
+  end
+
   it 'reports generating for an ended session whose portfolio worker has not produced a row yet' do
     session = create(:session, assessment: assessment, tenant_id: organization.id, status: 'ended')
 
