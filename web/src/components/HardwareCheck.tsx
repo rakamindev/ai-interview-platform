@@ -63,6 +63,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const stopMicMonitoringRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const { osAndBrowser, internet, camera, audio, microphone } = progress;
@@ -107,13 +108,29 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
     }
   };
 
+  // The interview opens its own stream, so this one must not keep the microphone on after the check.
+  const stopMicMonitoring = () => {
+    stopMicMonitoringRef.current?.();
+    stopMicMonitoringRef.current = null;
+  };
+
+  useEffect(() => stopMicMonitoring, []);
+
   const startAudioLevelMonitoring = (stream: MediaStream) => {
+    let frame = 0;
+    let audioContext: AudioContext | null = null;
+    stopMicMonitoringRef.current = () => {
+      cancelAnimationFrame(frame);
+      void audioContext?.close();
+      stream.getTracks().forEach((t) => t.stop());
+    };
     try {
       const AudioCtx =
         window.AudioContext ||
         (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
+      audioContext = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -122,7 +139,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
       const update = () => {
         analyser.getByteFrequencyData(data);
         setAudioLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
-        requestAnimationFrame(update);
+        frame = requestAnimationFrame(update);
       };
       update();
     } catch {
@@ -174,7 +191,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
       ? checkCamera()
       : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
 
+    let abandoned = false;
     getStream.then((stream) => {
+      if (abandoned) {
+        stream?.getTracks().forEach((t) => t.stop());
+        return;
+      }
       if (stream) {
         if (REQUIRE_CAMERA) setVideoStream(stream);
         startAudioLevelMonitoring(stream);
@@ -192,6 +214,9 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
         }));
       }
     });
+    return () => {
+      abandoned = true;
+    };
   }, [progress.camera, progress.microphone]);
 
   // Step 4: Audio output
@@ -206,6 +231,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
   }, [progress.audio]);
 
   const retryAll = () => {
+    stopMicMonitoring();
     videoStream?.getTracks().forEach((t) => t.stop());
     setVideoStream(null);
     setInternetResult(null);
