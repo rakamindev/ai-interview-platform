@@ -77,6 +77,27 @@ else
   puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
 end
 
+# ── Admin user ───────────────────────────────────────────────────────────────
+#
+# Development-only login for the assessor UI. An existing user is left
+# untouched, including its password.
+
+TEST_ADMIN = {
+  email:    "admin@example.com",
+  password: "password",
+  role:     "admin"
+}.freeze
+
+admin = User.find_or_initialize_by(email: TEST_ADMIN[:email])
+
+if admin.persisted?
+  puts "  User already exists: #{admin.email} (skipped)"
+elsif admin.update(password: TEST_ADMIN[:password], role: TEST_ADMIN[:role])
+  puts "  Created user: #{admin.email} (id=#{admin.id}, role=#{admin.role})"
+else
+  puts "  ERROR #{TEST_ADMIN[:email]}: #{admin.errors.full_messages.join(', ')}"
+end
+
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
 B7_SKILLS = [

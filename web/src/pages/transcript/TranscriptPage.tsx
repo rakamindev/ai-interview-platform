@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import LoadError from "@/components/LoadError";
+import EmptyState from "@/components/EmptyState";
+import PageHeader from "@/components/layout/PageHeader";
 import { sessionsApi } from "@/services/sessions";
-import { ArrowLeft, Download } from "lucide-react";
+import { getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
+import { Download, MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
@@ -11,20 +16,29 @@ export default function TranscriptPage() {
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [candidateName, setCandidateName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      sessionsApi.getTranscript(Number(sessionId)),
-      sessionsApi.get(Number(sessionId)),
-    ])
+  const loadTranscript = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    Promise.all([sessionsApi.getTranscript(Number(sessionId)), sessionsApi.get(Number(sessionId))])
       .then(([tRes, sRes]) => {
         setTurns(tRes.data.turns);
         setCandidateName(sRes.data.session.candidate_name ?? null);
       })
-      .catch(() => setError(true))
+      .catch((requestError: unknown) =>
+        setError(
+          getApiErrorStatus(requestError) === 404
+            ? "This session doesn't exist or was deleted."
+            : getApiErrorMessage(requestError, "Failed to load the transcript."),
+        ),
+      )
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  useEffect(() => {
+    loadTranscript();
+  }, [loadTranscript]);
 
   const handleDownload = () => {
     const lines = turns.map((t) => {
@@ -41,75 +55,64 @@ export default function TranscriptPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold">Interview Transcript</h1>
-            {candidateName && (
-              <p className="text-sm text-muted-foreground">{candidateName}</p>
-            )}
-          </div>
-        </div>
-        {!loading && !error && turns.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
-            Download .txt
-          </Button>
-        )}
-      </div>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <PageHeader
+        backTo={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+        backLabel="Back to portfolio"
+        eyebrow="Assessment result"
+        title="Interview Transcript"
+        description={candidateName}
+        actions={
+          !loading &&
+          !error &&
+          turns.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download />
+              Download .txt
+            </Button>
+          )
+        }
+      />
 
       {loading && (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
           ))}
         </div>
       )}
 
-      {!loading && error && (
-        <div className="border rounded-lg p-6 text-center text-sm text-destructive">
-          Failed to load transcript. Please refresh.
-        </div>
-      )}
+      {!loading && error && <LoadError message={error} onRetry={loadTranscript} />}
 
       {!loading && !error && turns.length === 0 && (
-        <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
-          No transcript available for this session.
-        </div>
+        <EmptyState icon={MessageSquare} title="No transcript available for this session." />
       )}
 
       {!loading && !error && turns.length > 0 && (
-        <div className="space-y-3">
+        <ol className="space-y-3">
           {turns.map((turn) => {
             const isAI = turn.speaker === "ai";
             return (
-              <div
+              <li
                 key={turn.id}
-                className={`rounded-lg p-4 ${
-                  isAI
-                    ? "bg-muted border"
-                    : "bg-background border border-primary/20"
-                }`}
+                className={cn(
+                  "rounded-2xl border p-4",
+                  isAI ? "bg-card" : "border-rakamin-teal/30 bg-rakamin-light-cyan/50",
+                )}
               >
                 <p
-                  className={`text-xs font-semibold mb-1 ${
-                    isAI ? "text-muted-foreground" : "text-primary"
-                  }`}
+                  className={cn(
+                    "mb-1.5 text-xs font-semibold uppercase tracking-[0.14em]",
+                    isAI ? "text-muted-foreground" : "text-rakamin-teal",
+                  )}
                 >
                   {isAI ? "AI Interviewer" : "Candidate"}
                 </p>
-                <p className="text-sm whitespace-pre-wrap">{turn.text}</p>
-              </div>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{turn.text}</p>
+              </li>
             );
           })}
-        </div>
+        </ol>
       )}
     </div>
   );

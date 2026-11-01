@@ -90,8 +90,8 @@ export interface PortfolioSkill {
   skill_id?: number;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: number; // 1–5 (validated by the API; still parsed defensively in the UI)
+  ai_confidence: string; // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
 }
@@ -164,6 +164,9 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  end_reason?: string | null;
+  remaining_seconds?: number | null;
+  in_use_elsewhere: boolean;
 }
 
 export interface PaginationMeta {
@@ -192,6 +195,7 @@ export interface WsControlMessage {
     | "session_ended"
     | "transcript"
     | "transcription"
+    | "transcript_history"
     | "reconnecting"
     | "reconnected"
     | "speaker_changed"
@@ -204,4 +208,5 @@ export interface WsControlMessage {
   code?: string;
   message?: string;
   recoverable?: boolean;
+  turns?: { speaker: "candidate" | "ai"; text: string }[];
 }

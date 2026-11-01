@@ -1,0 +1,7 @@
+.bundle
+vendor/bundle
+log/*
+tmp/*
+storage
+.env*
+config/application.yml

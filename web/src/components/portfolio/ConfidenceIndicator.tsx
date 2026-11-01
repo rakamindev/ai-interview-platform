@@ -9,29 +9,20 @@ function getLabel(c: string): "HIGH" | "MEDIUM" | "LOW" {
   return "LOW";
 }
 
+const LABEL_CLASSES = {
+  HIGH: "bg-green-50 text-green-800",
+  MEDIUM: "bg-rakamin-yellow/25 text-rakamin-charcoal",
+  LOW: "bg-destructive/10 text-destructive",
+};
+
 export default function ConfidenceIndicator({ confidence }: ConfidenceIndicatorProps) {
   const label = getLabel(confidence);
-
-  if (label === "HIGH") {
-    return (
-      <span className="flex items-center gap-1 text-xs text-green-600">
-        <span className="h-2 w-2 rounded-full bg-green-500" />
-        Confidence: HIGH
-      </span>
-    );
-  }
-  if (label === "MEDIUM") {
-    return (
-      <span className="flex items-center gap-1 text-xs">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        Confidence: MEDIUM
-      </span>
-    );
-  }
   return (
-    <span className="flex items-center gap-1 text-xs text-destructive">
-      <span className="h-2 w-2 rounded-full bg-destructive" />
-      Confidence: LOW
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${LABEL_CLASSES[label]}`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      Confidence: {label}
     </span>
   );
 }

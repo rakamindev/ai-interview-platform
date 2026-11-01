@@ -27,7 +27,7 @@ Fill in the required values in `config/application.yml`:
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `APP_BASE_URL` | Frontend base URL used for candidate invite links, e.g. `http://localhost:5173` |
 
 ---
 
@@ -72,6 +72,25 @@ bundle exec rails server
 ```
 
 Runs on **port 3001** by default.
+
+## Testing
+
+From the repository root, prepare the isolated test database and run RSpec through Docker:
+
+```bash
+docker compose run --rm -e RAILS_ENV=test api bundle exec rails db:prepare
+docker compose run --rm -e RAILS_ENV=test api bundle exec rspec
+```
+
+Run one file by appending its path, for example `bundle exec rspec spec/models/assessment_spec.rb`.
+
+## Code quality
+
+From the repository root, run the Rails, Rails-specific, and RSpec lint rules inside Docker:
+
+```bash
+docker compose exec api bundle exec rubocop
+```
 
 ---
 

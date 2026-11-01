@@ -25,6 +25,7 @@ Rails.application.routes.draw do
       resources :sessions, only: %i[show] do
         member do
           post :end_session
+          post :reset_access
           get  :coverage
           get  :transcript
           get  :portfolio, to: 'portfolios#show'
@@ -35,6 +36,9 @@ Rails.application.routes.draw do
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+
+      # Landing page (public — no JWT, no tenant)
+      post 'demo_requests', to: 'demo_requests#create'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

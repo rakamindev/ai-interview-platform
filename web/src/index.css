@@ -3,77 +3,122 @@
 @tailwind utilities;
 
 @layer base {
-    :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 11%;
+  :root {
+    /* Rakamin Academy palette. RGB channels preserve exact source hex values
+       while allowing Tailwind opacity modifiers such as bg-primary/10. */
+    --rakamin-teal: 50 140 149; /* #328C95 */
+    --rakamin-dark-teal: 33 102 111; /* #21666F */
+    --rakamin-yellow: 245 196 81; /* #F5C451 */
+    --rakamin-cream: 255 253 240; /* #FFFDF0 */
+    --rakamin-light-cyan: 233 247 247; /* #E9F7F7 */
+    --rakamin-charcoal: 41 41 41; /* #292929 */
+    --rakamin-gray: 119 119 119; /* #777777 */
+    --rakamin-white: 255 255 255; /* #FFFFFF */
 
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+    --background: var(--rakamin-white);
+    --foreground: var(--rakamin-charcoal);
 
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
+    --card: var(--rakamin-white);
+    --card-foreground: var(--rakamin-charcoal);
 
-        /* Rakamin teal: #01959f → hsl(184, 99%, 31%) */
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+    --popover: var(--rakamin-white);
+    --popover-foreground: var(--rakamin-charcoal);
 
-        /* Rakamin yellow: #FBC037 → hsl(43, 96%, 60%) */
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+    /* Dark teal is the accessible interactive color (6.57:1 on white).
+       Primary teal remains available as the brand accent. */
+    --primary: var(--rakamin-dark-teal);
+    --primary-foreground: var(--rakamin-white);
 
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
+    --secondary: var(--rakamin-yellow);
+    --secondary-foreground: var(--rakamin-charcoal);
 
-        --accent: 210 40% 96%;
-        --accent-foreground: 222 47% 11%;
+    --muted: var(--rakamin-light-cyan);
+    --muted-foreground: var(--rakamin-dark-teal);
 
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
+    --accent: var(--rakamin-light-cyan);
+    --accent-foreground: var(--rakamin-dark-teal);
 
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 184 99% 31%;
+    --destructive: 220 38 38;
+    --destructive-foreground: var(--rakamin-white);
 
-        --radius: 0.5rem;
-    }
+    --border: 205 224 225;
+    --input: 155 190 194;
+    --ring: var(--rakamin-teal);
 
-    .dark {
-        --background: 222 47% 11%;
-        --foreground: 210 40% 98%;
+    --radius: 0.75rem;
+  }
 
-        --card: 222 47% 11%;
-        --card-foreground: 210 40% 98%;
+  .dark {
+    --background: var(--rakamin-charcoal);
+    --foreground: var(--rakamin-white);
 
-        --popover: 222 47% 11%;
-        --popover-foreground: 210 40% 98%;
+    --card: var(--rakamin-dark-teal);
+    --card-foreground: var(--rakamin-white);
 
-        --primary: 184 99% 31%;
-        --primary-foreground: 0 0% 98%;
+    --popover: var(--rakamin-dark-teal);
+    --popover-foreground: var(--rakamin-white);
 
-        --secondary: 43 96% 60%;
-        --secondary-foreground: 26 47% 25%;
+    --primary: var(--rakamin-dark-teal);
+    --primary-foreground: var(--rakamin-white);
 
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
+    --secondary: var(--rakamin-yellow);
+    --secondary-foreground: var(--rakamin-charcoal);
 
-        --accent: 217 33% 17%;
-        --accent-foreground: 210 40% 98%;
+    --muted: 49 72 75;
+    --muted-foreground: var(--rakamin-white);
 
-        --destructive: 0 63% 31%;
-        --destructive-foreground: 0 0% 98%;
+    --accent: var(--rakamin-teal);
+    --accent-foreground: var(--rakamin-white);
 
-        --border: 217 33% 17%;
-        --input: 217 33% 17%;
-        --ring: 184 99% 31%;
-    }
+    --destructive: 153 27 27;
+    --destructive-foreground: var(--rakamin-white);
+
+    --border: var(--rakamin-teal);
+    --input: var(--rakamin-teal);
+    --ring: var(--rakamin-yellow);
+  }
 }
 
 @layer base {
-    * {
-        @apply border-border;
-    }
+  * {
+    @apply border-border;
+  }
 
-    body {
-        @apply bg-background text-foreground;
-    }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  /* Soft teal "sky" with a warm yellow glow, built only from the brand palette.
+     Each glow eases out over several stops so it never ends in a visible band, the two glows
+     sit in opposite corners so teal and yellow never mix into olive, and the base stays
+     light cyan so the panel's edge remains visible against a white page. */
+  .bg-brand-gradient {
+    background-color: rgb(var(--rakamin-light-cyan));
+    background-image:
+      radial-gradient(
+        55% 65% at 100% 0%,
+        rgb(var(--rakamin-yellow) / 0.3) 0%,
+        rgb(var(--rakamin-yellow) / 0.12) 40%,
+        rgb(var(--rakamin-yellow) / 0.03) 70%,
+        rgb(var(--rakamin-yellow) / 0) 100%
+      ),
+      radial-gradient(
+        75% 85% at 0% 0%,
+        rgb(var(--rakamin-teal) / 0.32) 0%,
+        rgb(var(--rakamin-teal) / 0.14) 40%,
+        rgb(var(--rakamin-teal) / 0.04) 70%,
+        rgb(var(--rakamin-teal) / 0) 100%
+      );
+  }
+
+  /* Faint wash behind app pages so white cards read as raised surfaces. */
+  .bg-page-wash {
+    background-image: linear-gradient(
+      180deg,
+      rgb(var(--rakamin-light-cyan)) 0%,
+      rgb(var(--rakamin-white)) 22rem
+    );
+  }
 }

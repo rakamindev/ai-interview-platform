@@ -10,6 +10,9 @@ interface UseCoverageWebSocketResult {
   sessionEnded: boolean;
   sessionEndReason: string | null;
   isConnected: boolean;
+  // True once every automatic reconnect attempt has failed; call reconnect() to try again.
+  connectionFailed: boolean;
+  reconnect: () => void;
 }
 
 export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketResult {
@@ -17,6 +20,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionFailed, setConnectionFailed] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,6 +36,7 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
 
     ws.onopen = () => {
       setIsConnected(true);
+      setConnectionFailed(false);
       reconnectAttemptsRef.current = 0;
       if (token) ws.send(JSON.stringify({ type: "auth", token }));
     };
@@ -63,6 +68,8 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
           reconnectAttemptsRef.current += 1;
           connect();
         }, RECONNECT_DELAYS[attempt]);
+      } else {
+        setConnectionFailed(true);
       }
     };
 
@@ -81,5 +88,12 @@ export function useCoverageWebSocket(sessionId: number): UseCoverageWebSocketRes
     };
   }, [connect]);
 
-  return { coverageMap, sessionEnded, sessionEndReason, isConnected };
+  const reconnect = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    reconnectAttemptsRef.current = 0;
+    setConnectionFailed(false);
+    connect();
+  }, [connect]);
+
+  return { coverageMap, sessionEnded, sessionEndReason, isConnected, connectionFailed, reconnect };
 }
