@@ -89,8 +89,8 @@ export default function DemoRequestDialog({ trigger }: { trigger: ReactNode }) {
             <DialogHeader>
               <DialogTitle>Request a demo</DialogTitle>
               <DialogDescription>
-                Tell us about your team and we'll walk you through an interview, the live coverage
-                monitor, and the evidence behind each rating.
+                Leave your details to request a demo of an interview, the live coverage monitor, and
+                the evidence behind each rating.
               </DialogDescription>
             </DialogHeader>
 

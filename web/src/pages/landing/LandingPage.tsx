@@ -654,8 +654,8 @@ export default function LandingPage() {
               See it with the roles you hire for
             </h2>
             <p className="mt-3 max-w-md text-sm text-rakamin-charcoal/80">
-              Request a demo and the Rakamin team will walk you through an interview, the live
-              coverage monitor, and the evidence behind each rating.
+              Leave your details to request a demo of an interview, the live coverage monitor, and
+              the evidence behind each rating.
             </p>
             <div className="mt-6">
               <DemoRequestDialog
