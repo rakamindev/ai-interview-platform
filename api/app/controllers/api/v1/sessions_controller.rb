@@ -173,11 +173,19 @@ module Api
           time_limit_min:   assessment.time_limit_min,
           session_status:   session.status,
           end_reason:       session.end_reason,
+          remaining_seconds: remaining_seconds(session, assessment),
           in_use_elsewhere: Sessions::ClientClaim.new(session).claimed_by_other?(params[:client_id])
         )
       end
 
       private
+
+      # Sent as a duration so the candidate's page does not depend on their device clock.
+      def remaining_seconds(session, assessment)
+        return unless session.active? && session.started_at
+
+        [(assessment.time_limit_min * 60) - (Time.current - session.started_at).to_i, 0].max
+      end
 
       def set_session
         @session = Session.find(params[:id])
