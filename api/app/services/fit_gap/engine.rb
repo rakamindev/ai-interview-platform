@@ -27,6 +27,7 @@ module FitGap
         skill_comparisons: skill_comparisons,
         culture_narrative: narratives[:culture],
         overall_narrative: narratives[:overall],
+        narrative_status:  narratives[:status],
         generated_at:      Time.current
       )
 
@@ -63,7 +64,8 @@ module FitGap
           expected_level:  expected_level,
           result:          result,
           delta:           delta,
-          confidence:      portfolio_skill&.dig(:confidence)
+          confidence:      portfolio_skill&.dig(:confidence),
+          is_override:     portfolio_skill&.dig(:overridden) || false
         }
       end
 
@@ -99,13 +101,20 @@ module FitGap
 
       prompt = build_narrative_prompt(gaps, matches, exceeds, not_assessed)
 
+      # W17: if the AI writes no narrative, say so (status "unavailable") instead of substituting a
+      # canned sentence that the UI would show under an analysis heading. The skill table is
+      # rule-based and complete either way.
       begin
         response = @gemini_client.generate_content(prompt, temperature: 0.4)
         data = response.is_a?(Hash) ? response : JSON.parse(response)
-        { culture: data['culture_narrative'], overall: data['overall_narrative'] }
+        culture = data['culture_narrative'].presence
+        overall = data['overall_narrative'].presence
+        return { culture: nil, overall: nil, status: 'unavailable' } if culture.nil? && overall.nil?
+
+        { culture: culture, overall: overall, status: 'generated' }
       rescue => e
-        Rails.logger.error("[N13] Narrative generation failed: #{e.message}")
-        { culture: nil, overall: generate_fallback_narrative(skill_comparisons) }
+        Rails.logger.error("[N13] Narrative generation failed: #{e.class}: #{e.message}")
+        { culture: nil, overall: nil, status: 'unavailable' }
       end
     end
 
@@ -137,14 +146,6 @@ module FitGap
           "overall_narrative": "..."
         }
       PROMPT
-    end
-
-    def generate_fallback_narrative(comparisons)
-      gaps    = comparisons.count { |c| c[:result] == 'gap' }
-      matches = comparisons.count { |c| c[:result] == 'match' }
-      exceeds = comparisons.count { |c| c[:result] == 'exceed' }
-
-      "Candidate shows #{matches} skill matches, #{exceeds} exceeds, and #{gaps} gaps against role requirements."
     end
   end
 end

@@ -129,7 +129,8 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  /** The vacancy's required level (the API field is expected_level). */
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -141,8 +142,10 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  /** "unavailable" when the AI wrote no narrative; the skill table is complete either way. */
+  narrative_status: "generated" | "unavailable";
   generated_at: string;
 }
 

@@ -169,9 +169,16 @@ export default function FitGapReportPage() {
               <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
+              {report.narrative_status === "unavailable" ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  AI summary unavailable for this report. The skill comparison above is rule-based and
+                  complete; regenerate the report to try the summary again.
+                </p>
+              ) : (
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.culture_narrative || report.overall_narrative}
+                </p>
+              )}
             </CardContent>
           </Card>
 
