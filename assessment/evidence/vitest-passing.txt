@@ -1,0 +1,13 @@
+
+> ai-interview-web@0.0.0 test
+> vitest run
+
+
+ RUN  v5.1.0 /Users/Derio/Desktop/Rakamin Projects/repo/web
+
+
+ Test Files  4 passed (4)
+      Tests  24 passed (24)
+   Start at  11:12:35
+   Duration  543ms (environment 55%, import 16%, setup 14%, tests 13%, transform 2%, worker 1%)
+

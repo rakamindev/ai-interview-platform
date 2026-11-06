@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import CandidateAccessState from "@/components/candidate/CandidateAccessState";
+import ConsentGate from "@/components/candidate/ConsentGate";
+import LanguageToggle, { useCandidateLanguage } from "@/components/candidate/LanguageToggle";
+import {
+  resolveCandidateAccessFromError,
+  type CandidateAccessError,
+} from "@/lib/candidateAccess";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +33,15 @@ import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } 
 
 export default function InterviewPage() {
   const { token } = useParams<{ token: string }>();
+  const [language, setLanguage] = useCandidateLanguage();
+  const languageTouchedRef = useRef(false);
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [loadingInfo, setLoadingInfo] = useState(true);
+  const [accessError, setAccessError] = useState<CandidateAccessError | null>(null);
+  const [consentRequired, setConsentRequired] = useState(false);
+  const [consentSubmitting, setConsentSubmitting] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
   const [interviewState, setInterviewState] = useState<InterviewState>("idle");
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
@@ -39,17 +53,75 @@ export default function InterviewPage() {
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
 
-  // Fetch candidate info
+  const changeLanguage = useCallback(
+    (next: typeof language) => {
+      languageTouchedRef.current = true;
+      setLanguage(next);
+    },
+    [setLanguage]
+  );
+
+  // Fetch candidate info. Every rejection maps to a precise, honest state:
+  // an expired link must never be shown as a completed interview.
+  const loadCandidate = useCallback(async () => {
+    if (!token) {
+      setAccessError("not_found");
+      setLoadingInfo(false);
+      return;
+    }
+
+    setLoadingInfo(true);
+    setAccessError(null);
+
+    try {
+      const res = await sessionsApi.getCandidateInfo(token);
+      setCandidateInfo(res.data);
+      setSessionId(res.data.session_id);
+
+      if (!languageTouchedRef.current && res.data.language) {
+        setLanguage(res.data.language);
+      }
+
+      if (res.data.session_status === "ended" || res.data.invite_status === "completed") {
+        setAccessError("completed");
+      } else {
+        setConsentRequired(Boolean(res.data.consent_required));
+        setInterviewState("idle");
+      }
+    } catch (error) {
+      setAccessError(resolveCandidateAccessFromError(error));
+    } finally {
+      setLoadingInfo(false);
+    }
+  }, [token, setLanguage]);
+
   useEffect(() => {
+    void loadCandidate();
+  }, [loadCandidate]);
+
+  const handleConsent = useCallback(async () => {
     if (!token) return;
-    sessionsApi.getCandidateInfo(token)
-      .then((res) => {
-        setCandidateInfo(res.data);
-        setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
-      })
-      .catch(() => setInterviewState("complete"));
-  }, [token]);
+    setConsentSubmitting(true);
+    setConsentError(null);
+
+    try {
+      await sessionsApi.giveConsent(token);
+      setConsentRequired(false);
+    } catch (error) {
+      const access = resolveCandidateAccessFromError(error);
+      if (access === "network" || access === "unknown") {
+        setConsentError(
+          language === "id"
+            ? "Persetujuan gagal disimpan. Periksa koneksi Anda lalu coba lagi."
+            : "We could not save your consent. Check your connection and try again."
+        );
+      } else {
+        setAccessError(access);
+      }
+    } finally {
+      setConsentSubmitting(false);
+    }
+  }, [token, language]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
@@ -187,15 +259,65 @@ export default function InterviewPage() {
       ? "connected"
       : "reconnecting";
 
+  // ── State 0: Loading / invalid link / consent ────────────────────────────
+  if (loadingInfo) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+          {language === "id" ? "Memeriksa tautan..." : "Checking your link..."}
+        </div>
+      </div>
+    );
+  }
+
+  if (accessError) {
+    return (
+      <CandidateAccessState
+        error={accessError}
+        language={language}
+        onLanguageChange={changeLanguage}
+        onRetry={loadCandidate}
+        retrying={loadingInfo}
+      />
+    );
+  }
+
+  if (consentRequired) {
+    return (
+      <ConsentGate
+        language={language}
+        onLanguageChange={changeLanguage}
+        onConsent={handleConsent}
+        submitting={consentSubmitting}
+        error={consentError}
+      />
+    );
+  }
+
   // ── State A: Pre-start ──────────────────────────────────────────────────
   if (interviewState === "idle") {
     return (
       <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+        <div className="flex items-center justify-end">
+          <LanguageToggle language={language} onChange={changeLanguage} />
+        </div>
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">{candidateInfo?.role_title ?? "AI Interview"}</h1>
           {candidateInfo && (
             <p className="text-sm text-muted-foreground">
-              {candidateInfo.time_limit_min} minutes
+              {language === "id"
+                ? `${candidateInfo.time_limit_min} menit`
+                : `${candidateInfo.time_limit_min} minutes`}
+            </p>
+          )}
+          {candidateInfo?.expires_at && (
+            <p className="text-xs text-muted-foreground">
+              {language === "id" ? "Tautan berlaku hingga " : "Link valid until "}
+              {new Date(candidateInfo.expires_at).toLocaleString(
+                language === "id" ? "id-ID" : "en-GB",
+                { dateStyle: "medium", timeStyle: "short" }
+              )}
             </p>
           )}
         </div>
@@ -203,10 +325,21 @@ export default function InterviewPage() {
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
-              <p>• This is a voice interview. Make sure you're in a quiet place.</p>
-              <p>• The AI will ask follow-up questions — there are no scripts.</p>
-              <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
-              <p>• Your mic will be active throughout. You can end anytime.</p>
+              {language === "id" ? (
+                <>
+                  <p>• Ini adalah wawancara suara. Pastikan Anda berada di tempat yang tenang.</p>
+                  <p>• AI akan mengajukan pertanyaan lanjutan — tidak ada skrip.</p>
+                  <p>• Sesi berlangsung hingga {candidateInfo?.time_limit_min ?? "—"} menit.</p>
+                  <p>• Mikrofon Anda aktif selama sesi. Anda dapat mengakhiri kapan saja.</p>
+                </>
+              ) : (
+                <>
+                  <p>• This is a voice interview. Make sure you're in a quiet place.</p>
+                  <p>• The AI will ask follow-up questions — there are no scripts.</p>
+                  <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
+                  <p>• Your mic will be active throughout. You can end anytime.</p>
+                </>
+              )}
             </div>
             <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
           </div>
@@ -214,11 +347,15 @@ export default function InterviewPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
               <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>Hardware checks passed. You're ready to start.</span>
+              <span>
+                {language === "id"
+                  ? "Pemeriksaan perangkat selesai. Anda siap memulai."
+                  : "Hardware checks passed. You're ready to start."}
+              </span>
             </div>
             <Button className="w-full" size="lg" onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
-              Start Interview
+              {language === "id" ? "Mulai Wawancara" : "Start Interview"}
             </Button>
           </div>
         )}
@@ -231,11 +368,23 @@ export default function InterviewPage() {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
+        <h2 className="text-xl font-semibold">
+          {language === "id" ? "Wawancara Selesai" : "Interview Complete"}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
+          {language === "id" ? (
+            <>
+              Terima kasih. Wawancara telah direkam.
+              <br />
+              Tim rekrutmen akan meninjau hasil Anda dan menghubungi Anda.
+            </>
+          ) : (
+            <>
+              Thank you. The interview has been recorded.
+              <br />
+              The hiring team will review your results and follow up with you.
+            </>
+          )}
         </p>
       </div>
     );

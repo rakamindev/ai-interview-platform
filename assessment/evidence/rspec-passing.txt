@@ -1,0 +1,67 @@
+
+Session
+  defaults
+    sets an expiry window on create
+    generates a 64-character invite token
+    uses the web app base URL for the candidate link
+    never points candidates at the API origin
+  #invite_usable?
+    is true for a fresh pending invite
+    is false once the link expired
+    is false once the link was revoked
+    is false while an interview is live
+    is false after the interview ended
+  #invite_status
+    reports pending for a fresh link
+    reports active while live
+    reports expired, revoked and completed distinctly
+    treats a failed session as consumed
+    reports revocation before expiry
+  #revoke_invite!
+    stamps the revocation time
+  #reissue_invite!
+    rotates the token, clears revocation and starts a fresh expiry window
+    invalidates the previously shared URL permanently
+  #record_consent!
+    records consent once and stays idempotent
+
+Candidate invite access
+  GET /api/v1/sessions/:token/candidate
+    opens a fresh link and asks for consent
+    rejects an expired link with a precise code
+    rejects a revoked link with a precise code
+    rejects a link while the interview is live
+    rejects a completed link instead of pretending it is still open
+    returns not_found for an unknown token
+  POST /api/v1/sessions/:token/consent
+    records consent with a timestamp
+    is idempotent when called twice
+    refuses consent on an expired link
+  POST /api/v1/sessions/:token/audio_complete
+    is idempotent for an already ended session
+    rejects completion for an expired link
+
+Assessor invite management
+  POST /api/v1/sessions/:id/revoke_invite
+    revokes a pending link and reports the new status
+    refuses to revoke a completed session
+    cannot revoke another tenant's session
+    requires an assessor token
+    rejects a plain member token
+  POST /api/v1/sessions/:id/reissue_invite
+    rotates the token for an expired link
+    restores a revoked link
+    refuses to reissue while the interview is live
+    refuses to reissue a completed session
+
+Tenant isolation for portfolios
+  GET /api/v1/sessions/:id/portfolio
+    returns a portfolio inside the assessor's tenant
+    does not expose another tenant's candidate portfolio
+  POST /api/v1/portfolio_skills/:id/override
+    lets an assessor override a skill in their own tenant
+    does not let an assessor write to another tenant's skill
+
+Finished in 0.29576 seconds (files took 0.48927 seconds to load)
+42 examples, 0 failures
+

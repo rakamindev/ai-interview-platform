@@ -1,0 +1,63 @@
+# API verification — candidate invite lifecycle
+# Generated 2026-11-06 04:15 UTC
+# Rails API on :3001, demo assessment id 6
+
+## 1. Candidate lookup for every invite state
+
+### pending
+{"session_id":31,"role_title":"Senior Frontend Engineer","time_limit_min":45,"language":"en","session_status":"pending","invite_status":"pending","expires_at":"2026-11-09T04:15:10.294Z","consent_required":true,"consent_given_at":null}
+HTTP 200
+
+### expired
+{"errors":[{"status":410,"message":"This interview link has expired.","code":"invite_expired"}]}
+HTTP 410
+
+### revoked
+{"errors":[{"status":410,"message":"This interview link has been revoked by the hiring team.","code":"invite_revoked"}]}
+HTTP 410
+
+### active
+{"errors":[{"status":410,"message":"This interview is already in progress.","code":"invite_in_progress"}]}
+HTTP 410
+
+### completed
+{"errors":[{"status":410,"message":"This interview has already been completed.","code":"invite_completed"}]}
+HTTP 410
+
+### unknown token
+{"errors":[{"status":404,"message":"This interview link is not valid.","code":"invite_not_found"}]}
+HTTP 404
+
+## 2. Consent is recorded server-side (pending link)
+-- first call
+{"consent_given_at":"2026-11-06T04:15:11.261Z","consent_required":false}
+HTTP 200
+-- second call is idempotent
+{"consent_given_at":"2026-11-06T04:15:11.261Z","consent_required":false}
+HTTP 200
+
+## 3. Consent is refused on an expired link
+{"errors":[{"status":410,"message":"This interview link has expired.","code":"invite_expired"}]}
+HTTP 410
+
+## 4. Assessor revokes a pending link
+{"session":{"id":31,"assessment_id":6,"tenant_id":1,"candidate_id":null,"candidate_name":"Ahmad Rizky","invite_token":"<REDACTED>","invite_url":"http://localhost:5173/interview/<REDACTED>","invite_status":"revoked","invite_expires_at":"2026-11-09T04:15:10.294Z","invite_revoked_at":"2026-11-06T04:15:11.294Z","invite_reissued_count":0,"consent_given_at":"2026-11-06T04:15:11.261Z","status":"pending","end_reason":null,"started_at":null,"ended_at":null,"duration_seconds":null,"created_at":"2026-11-06T04:15:10.295Z"}}
+HTTP 200
+
+## 5. Reissue rotates the token (expired link)
+{"session":{"id":32,"assessment_id":6,"tenant_id":1,"candidate_id":null,"candidate_name":"Siti Rahma","invite_token":"<REDACTED>","invite_url":"http://localhost:5173/interview/<REDACTED>","invite_status":"pending","invite_expires_at":"2026-11-09T04:15:11.310Z","invite_revoked_at":null,"invite_reissued_count":1,"consent_given_at":null,"status":"pending","end_reason":null,"started_at":null,"ended_at":null,"duration_seconds":null,"created_at":"2026-11-06T04:15:10.297Z"},"invite_url":"http://localhost:5173/interview/<REDACTED>"}
+HTTP 200
+
+## 6. Live interviews cannot be revoked (monitor stays available)
+{"errors":[{"status":422,"message":"Cannot revoke an invite while the interview is in progress"}]}
+HTTP 422
+
+## 7. Cross-tenant portfolio access
+-- own tenant portfolio (expect 200)
+HTTP 200
+-- other tenant portfolio via session id (expect 404)
+{"errors":[{"status":404,"message":"Session not found"}]}
+HTTP 404
+-- other tenant skill override (expect 404)
+{"errors":[{"status":404,"message":"Portfolio skill not found"}]}
+HTTP 404
