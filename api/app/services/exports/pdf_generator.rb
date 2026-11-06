@@ -109,8 +109,23 @@ module Exports
       if skill.evidence.any?
         pdf.move_down 4
         pdf.font_size(10) do
-          pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          pdf.text "Transcript excerpts (a match does not validate the AI rating):", style: :bold
+          skill.evidence.each do |quote|
+            check = Array(skill.evidence_checks).find { |item| item['quote'] == quote }
+            case check&.fetch('status', nil)
+            when 'transcript_match'
+              pdf.text "Found in transcript (turns #{Array(check['turn_numbers']).join(', ')})"
+              pdf.text "  • #{quote}"
+            when 'no_exact_match'
+              pdf.text 'AI-proposed excerpt - no exact transcript match; check source'
+              pdf.text "  • #{quote}"
+            when 'not_found'
+              pdf.text 'No supporting transcript excerpt found'
+            else
+              pdf.text 'Excerpt not checked against the transcript; check source'
+              pdf.text "  • #{quote}"
+            end
+          end
         end
       end
 

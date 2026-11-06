@@ -24,4 +24,33 @@ RSpec.describe 'Portfolio PDF export (W20)', type: :request do
     expect(response.media_type).to eq('application/pdf')
     expect(response.body).to start_with('%PDF')
   end
+
+  {
+    'transcript_match' => 'Found in transcript (turns 4)',
+    'no_exact_match' => 'AI-proposed excerpt - no exact transcript match; check source',
+    'not_found' => 'No supporting transcript excerpt found',
+    nil => 'Excerpt not checked against the transcript; check source'
+  }.each do |status, label|
+    it "preserves quote provenance in the PDF for #{status || 'legacy unchecked evidence'}" do
+      skill = portfolio.portfolio_skills.first
+      checks = status ? [{ 'quote' => quote, 'status' => status, 'turn_numbers' => [4] }] : []
+      skill.update!(evidence_checks: checks)
+      rendered_text = []
+      allow_any_instance_of(Prawn::Document).to receive(:text).and_wrap_original do |original, text, **options|
+        rendered_text << text
+        original.call(text, **options)
+      end
+
+      get "/api/v1/portfolios/#{portfolio.id}/export", params: { format: 'pdf' }, headers: auth_headers(org)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to start_with('%PDF')
+      expect(rendered_text.join("\n")).to include(label)
+      if status == 'not_found'
+        expect(rendered_text.join("\n")).not_to include(quote)
+      else
+        expect(rendered_text.join("\n")).to include(quote)
+      end
+    end
+  end
 end
