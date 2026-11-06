@@ -8,7 +8,8 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { apiErrorMessage } from "@/utils/overrides";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
@@ -24,6 +25,7 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -59,15 +61,22 @@ export default function FitGapReportPage() {
     if (portfolio) fetchReport();
   }, [portfolio, fetchReport]);
 
-  usePolling(fetchReport, 5000, generating && !!portfolio);
+  // Polling selama laporan pertama dibuat, atau selama versi lama sedang diperbarui (F-09).
+  // Berhenti bila pembaruan gagal, agar tidak memanggil API tanpa akhir.
+  const updating = !!report?.stale && !report?.generation_error;
+  usePolling(fetchReport, 5000, (generating || updating) && !!portfolio);
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
     setRegenerating(true);
+    setActionError(null);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
-      setGenerating(true);
+      // Versi lama tetap tampil sampai versi baru siap (sebelumnya laporan dikosongkan).
+      if (report) setReport({ ...report, stale: true, generation_error: null });
+      else setGenerating(true);
+    } catch (e) {
+      setActionError(apiErrorMessage(e));
     } finally {
       setRegenerating(false);
     }
@@ -105,12 +114,13 @@ export default function FitGapReportPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Link
               to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
               className="text-muted-foreground hover:text-foreground"
+              aria-label="Back to portfolio"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -119,8 +129,8 @@ export default function FitGapReportPage() {
         </div>
 
         {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating || updating}>
               {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
               Regenerate
             </Button>
@@ -145,6 +155,32 @@ export default function FitGapReportPage() {
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+        </div>
+      )}
+
+      {actionError && (
+        <p role="alert" className="text-sm text-destructive bg-destructive/5 border border-destructive/30 rounded-lg px-3 py-2">
+          {actionError}
+        </p>
+      )}
+
+      {/* State parsial: versi lama tampil selama versi baru dibuat (F-09) */}
+      {updating && (
+        <div role="status" className="flex items-start gap-2 text-sm border border-blue-200 bg-blue-50 text-blue-900 rounded-lg px-3 py-2">
+          <Loader2 className="h-4 w-4 mt-0.5 shrink-0 animate-spin" aria-hidden />
+          <span>Updating after a recent assessor correction. You are seeing the previous version until the update finishes.</span>
+        </div>
+      )}
+
+      {report?.generation_error && (
+        <div role="alert" className="flex flex-wrap items-start justify-between gap-2 text-sm border border-amber-200 bg-amber-50 text-amber-900 rounded-lg px-3 py-2">
+          <span className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden />
+            {report.generation_error}
+          </span>
+          <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden /> Try again
+          </Button>
         </div>
       )}
 

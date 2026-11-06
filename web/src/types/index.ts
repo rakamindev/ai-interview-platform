@@ -94,6 +94,20 @@ export interface PortfolioSkill {
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
+  /** Riwayat koreksi asesor, terbaru di atas (F-05). */
+  override_history?: OverrideEvent[];
+}
+
+export interface OverrideEvent {
+  id: number;
+  previous_level: number;
+  new_level: number;
+  ai_level: number;
+  /** null untuk koreksi lama yang dibuat sebelum alasan diwajibkan. */
+  reason: string | null;
+  actor_id: number;
+  legacy: boolean;
+  created_at: string;
 }
 
 export interface AssessorOverride {
@@ -129,11 +143,17 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
-  result: SkillComparisonResult;
-  delta?: number;
+  /** Level yang dibutuhkan lowongan (F-06). */
+  required_level?: number;
+  /** Nama lama dari API; dipakai sebagai cadangan untuk laporan lama. */
+  expected_level?: number;
+  candidate_level?: number | null;
+  /** Level asli dari AI sebelum dikoreksi asesor (F-07). */
+  ai_level?: number | null;
   is_override?: boolean;
+  override_reason?: string | null;
+  result: SkillComparisonResult;
+  delta?: number | null;
 }
 
 export interface FitGapReport {
@@ -144,6 +164,10 @@ export interface FitGapReport {
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
+  /** Laporan sedang diperbarui setelah koreksi; versi lama tetap ditampilkan (F-09). */
+  stale?: boolean;
+  /** Pesan generik bila pembaruan terakhir gagal. */
+  generation_error?: string | null;
 }
 
 export interface SkillTaxonomy {

@@ -6,8 +6,13 @@ const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
 
 export const WS_URL = WS_BASE_URL;
 
+// Tanpa timeout, request yang macet menggantung selamanya dan UI terjebak di
+// status loading. 30 detik cukup untuk request terlama (export PDF).
+export const REQUEST_TIMEOUT_MS = 30_000;
+
 export const api = axios.create({
   baseURL: BASE_URL,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: { "Content-Type": "application/json" },
 });
 
