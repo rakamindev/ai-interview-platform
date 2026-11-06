@@ -1,8 +1,9 @@
 name: CI
 
+# Push ke branch mana pun agar CI juga berjalan di fork kontributor; PR dari fork
+# ke repo upstream biasanya menunggu persetujuan maintainer sebelum Actions jalan.
 on:
   push:
-    branches: [main]
   pull_request:
 
 concurrency:
