@@ -1,0 +1,45 @@
+Senior Frontend Engineer (demo)
+Skill Portfolio Report
+Session: 14
+Duration: N/A
+Generated: 2026-11-06 14:05
+
+Skill Portfolio
+Assessed Skills
+React / Frontend Development Core
+Level: L4 (AI: L3 → Override: L4) | Confidence: High
+Handles high-frequency state updates with deliberate trade-offs.
+Transcript excerpts (a match does not validate the AI rating):
+Found in transcript (turns 6)
+• I moved the feed into a store so components subscribe to just the slice they need
+AI-proposed excerpt - no exact transcript match; check source
+• we picked a window around the 95th percentile and tested sizes under load
+Assessor Note:
+Stronger than rated on trade-offs
+
+Communication
+Level: Not rated | Confidence: Low
+Not rated: the AI returned no assessment for this skill.
+
+Discovered Skills
+Event streaming (Kafka)
+Level: L2 | Confidence: Low
+Mentioned event streaming briefly.
+Transcript excerpts (a match does not validate the AI rating):
+No supporting transcript excerpt found
+
+
+
+
+                                             Page 1 of 2
+Fit/Gap Analysis — Frontend Lead (synthetic export
+demo)
+Skill                               Required       Candidate   Result   Delta
+
+React / Frontend Development Core   L5             L4          Gap      -1
+
+
+
+
+                                     Page 2 of 2
+

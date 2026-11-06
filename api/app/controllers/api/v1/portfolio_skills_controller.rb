@@ -7,8 +7,9 @@ module Api
 
       before_action :set_portfolio_skill
 
-      # POST /api/v1/portfolio-skills/:id/override
-      # One decision per skill: saving again updates it (200) and clears any review flag.
+      # POST /api/v1/portfolio_skills/:id/override
+      # Saving again updates the decision (200). Review state reflects the AI basis actually seen;
+      # a stale-screen save can retain a review flag.
       def override
         result = Portfolios::SaveOverride.new(
           portfolio_skill: @portfolio_skill,

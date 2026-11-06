@@ -23,7 +23,7 @@ Fill in the required values in `config/application.yml`:
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | Shared PostgreSQL instance |
 | `GEMINI_API_KEY` | Google AI Studio API key |
 | `GEMINI_LIVE_MODEL` | e.g. `gemini-3.1-flash-live-preview` |
-| `GEMINI_ANALYSIS_MODEL` | e.g. `gemini-2.0-flash-001` |
+| `GEMINI_FLASH_MODEL` | Model used by coverage and fit/gap; verify availability for your provider account |
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
@@ -78,7 +78,7 @@ Runs on **port 3001** by default.
 ## 7. Start the frontend
 
 ```bash
-cd ../ai-interview-web
+cd ../web
 npm install
 npm run dev
 ```

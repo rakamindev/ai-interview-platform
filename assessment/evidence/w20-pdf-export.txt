@@ -3,3 +3,12 @@ Before: spec/requests/portfolio_pdf_export_spec.rb -> 500 (AI text with → ≥ 
 Fix: DejaVu Sans 2.37 (official release, Bitstream Vera licence) in api/vendor/fonts, registered in Exports::PdfGenerator.
 After: spec green. Real exports via dev API: portfolio 5 + vacancy 1 -> 200 application/pdf 53997B (2 pages, fit/gap Required L5, 'AI: L3 → Override: L4');
 demo portfolio 6 -> 200, 'Level: Not rated' printed. Rolled-back render of 'Trade-offs → store; latency ≥ 200 ms ✓ — “quoted” café' extracted by pdftotext exactly. pdffonts: DejaVuSans subsets embedded.
+
+Codex continuation (6 Nov 2026, ~20:50-21:05 WIB):
+Browser clicked Download PDF; actual files inspected:
+- session 6, no vacancy: corrected 43023 bytes, 1 page.
+- session 14, synthetic vacancy 3: 48309 bytes, 2 pages.
+Initial browser download exposed unlabelled unsupported evidence in PDF. Narrow provenance patch:
+matched -> turn numbers; approximate -> AI-proposed warning; not_found -> text withheld;
+legacy -> unchecked warning. Four regressions red before / green after. Final RSpec 96/96.
+See checkpoint/verification.md, checkpoint/browser-pdf-text.txt and external submission/evidence PDFs.
