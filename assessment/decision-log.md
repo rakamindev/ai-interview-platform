@@ -49,6 +49,7 @@ A custom harness would also have added its own bugs, all code we would then need
 | 9 | ~16:20 | Fix: generation identity + publication | Added `portfolio_generations` (sequence, status, requested/served model), the request→commit→enqueue path, claim-before-run, and publish-under-lock (current only moves forward). 9 specs green, including real concurrency. Migration checked up/down/up on dev data: the existing portfolio and override were preserved. | `assessment/evidence/w10-green.txt`, `assessment/evidence/migration-up-down-up.txt` |
 | 10 | ~16:50 | Review rounds 2–3 | Independent review of the actual diff found 4 more concurrency gaps: legacy-job race, terminal status overwritten, enqueue failure blocking forever, stale worker after reclaim (status and publish). Each was reproduced by a failing test first, then fixed. 17 specs green. | `assessment/evidence/review-gaps-red.txt`, `w10-green.txt` |
 | 11 | ~17:15 | Retry and recovery policy | Engineer decided: Regenerate only after a real failure, 6 retries, admin failures blocked until the config changes. Tests written first (10 red), then implemented. 32 specs green. | `review-gaps-red.txt`, `w10-green.txt` |
+| 12 | ~17:30 | Seeded fault (brief requirement) | On `scratch/seeded-fault-w10`, removed our own monotonic-publication guard (b643080). The W10 test failed (expected L3, got L1). Reverted (1b6ded9) and the tests pass again. This is separate from the W10 red baseline, which reproduced a defect **observed live** in the original code. | `assessment/evidence/seeded-fault-w10.txt` |
 
 ## Decisions
 
