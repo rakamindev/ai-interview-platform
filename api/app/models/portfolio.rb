@@ -18,6 +18,11 @@ class Portfolio < ApplicationRecord
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
 
+  # Waktu override terbaru di portofolio ini; nil bila belum pernah di-override.
+  def latest_override_at
+    assessor_overrides.maximum(:overridden_at)
+  end
+
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'
   def failed?      = generation_status == 'failed'

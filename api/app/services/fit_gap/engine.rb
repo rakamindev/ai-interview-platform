@@ -15,6 +15,9 @@ module FitGap
 
     # Returns the FitGapReport record.
     def call
+      # Snapshot override terbaru SEBELUM membaca level. Bila ada override baru selama
+      # laporan dibuat, laporan tetap ditandai stale agar diperbarui lagi (F-09).
+      snapshot          = @portfolio.latest_override_at
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
 
@@ -24,10 +27,14 @@ module FitGap
       )
 
       report.update!(
-        skill_comparisons: skill_comparisons,
-        culture_narrative: narratives[:culture],
-        overall_narrative: narratives[:overall],
-        generated_at:      Time.current
+        skill_comparisons:         skill_comparisons,
+        culture_narrative:         narratives[:culture],
+        overall_narrative:         narratives[:overall],
+        generated_at:              Time.current,
+        based_on_override_at:      snapshot,
+        stale:                     !FitGapReport.same_instant?(snapshot, @portfolio.latest_override_at),
+        generation_error:          nil,
+        regeneration_requested_at: nil
       )
 
       Rails.logger.info("[N13] Fit/gap report generated: portfolio=#{@portfolio.id} vacancy=#{@vacancy.id}")
@@ -59,7 +66,14 @@ module FitGap
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
+          # required_level adalah nama yang dibaca frontend (F-06); expected_level
+          # dipertahankan untuk kompatibilitas dengan pembaca lama (export, PDF).
+          required_level:  expected_level,
           expected_level:  expected_level,
+          # Asal level (F-07): level AI asli, apakah dikoreksi asesor, dan alasannya.
+          ai_level:        portfolio_skill&.dig(:ai_level),
+          is_override:     portfolio_skill&.dig(:overridden) || false,
+          override_reason: portfolio_skill&.dig(:override_reason),
           result:          result,
           delta:           delta,
           confidence:      portfolio_skill&.dig(:confidence)
@@ -80,7 +94,8 @@ module FitGap
           ai_level:        skill.ai_level,
           effective_level: override ? override.override_level : skill.ai_level,
           confidence:      skill.ai_confidence,
-          overridden:      override.present?
+          overridden:      override.present?,
+          override_reason: override&.assessor_notes.presence
         }
       end
     end

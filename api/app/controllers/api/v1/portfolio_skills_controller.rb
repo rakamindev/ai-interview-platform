@@ -29,12 +29,11 @@ module Api
 
       private
 
+      # F-09: laporan tidak dihapus; ditandai stale dan diperbarui di latar belakang.
+      # Worker idempoten, jadi override beruntun tidak menghasilkan kerja ganda.
       def regenerate_stale_fitgap_reports
-        portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+        FitGapReport.where(portfolio_id: @portfolio_skill.portfolio_id).find_each do |report|
+          report.request_regeneration!(force: true)
         end
       end
 

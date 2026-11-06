@@ -91,8 +91,13 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)&.destroy
-        FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        # Laporan lama TIDAK dihapus (F-09): tetap bisa dibaca sampai versi baru siap.
+        existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
+        if existing
+          existing.request_regeneration!(force: true)
+        else
+          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy.id)
+        end
 
         render json: { status: "generating", message: "Fit/gap report regeneration queued" }, status: :accepted
       rescue ActiveRecord::RecordNotFound
@@ -116,6 +121,7 @@ module Api
         # Return cached report if it exists and portfolio has no new overrides
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
+          existing.request_regeneration! if existing.stale?
           return json_response(report: fit_gap_json(existing))
         end
 
@@ -133,6 +139,10 @@ module Api
         if report.nil?
           return json_error("Fit/gap report not found", :not_found)
         end
+
+        # Pulih sendiri: laporan stale yang job-nya hilang (mis. Redis mati saat enqueue)
+        # diantrekan ulang saat dibaca, dibatasi cooldown.
+        report.request_regeneration! if report.stale?
 
         json_response(report: fit_gap_json(report))
       rescue ActiveRecord::RecordNotFound
@@ -211,11 +221,24 @@ module Api
           id:                report.id,
           portfolio_id:      report.portfolio_id,
           vacancy_id:        report.vacancy_id,
-          skill_comparisons: report.skill_comparisons,
+          skill_comparisons: Array(report.skill_comparisons).map { |c| normalize_comparison(c) },
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
-          generated_at:      report.generated_at
+          generated_at:      report.generated_at,
+          stale:             report.stale,
+          generation_error:  report.generation_error
         }
+      end
+
+      # Laporan yang dibuat sebelum F-06/F-07 diperbaiki tidak punya field baru.
+      # Isi nilai aman agar frontend tetap bisa merender sampai laporan diperbarui.
+      def normalize_comparison(comparison)
+        row = comparison.to_h.stringify_keys
+        row['required_level']  = row['expected_level'] unless row.key?('required_level')
+        row['is_override']     = false unless row.key?('is_override')
+        row['ai_level']        = nil unless row.key?('ai_level')
+        row['override_reason'] = nil unless row.key?('override_reason')
+        row
       end
 
       def build_export_json(portfolio, vacancy_id = nil)
