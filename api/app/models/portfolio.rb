@@ -9,6 +9,11 @@ class Portfolio < ApplicationRecord
 
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
+  # Portfolio tidak punya kolom tenant_id sendiri; pemiliknya ditentukan oleh
+  # session induk (yang tenant-scoped). Semua lookup portofolio dari controller
+  # wajib lewat scope ini agar organisasi lain tidak bisa mengakses (F-02).
+  scope :for_tenant, ->(tenant_id) { joins(:session).where(sessions: { tenant_id: tenant_id }) }
+
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }
