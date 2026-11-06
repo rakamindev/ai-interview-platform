@@ -5,35 +5,71 @@ module Portfolios
   # and final coverage map using Gemini Pro.
   # Runs post-session as a background job.
   class Generator
-    def initialize(session:, gemini_client: nil)
-      @session = session
+    PROMPT_VERSION = 'n10-v1'
+
+    class InvalidOutput < StandardError; end
+
+    # Malformed model output is usually random, so one more try is reasonable; repeating it six times
+    # rarely helps and wastes calls.
+    MAX_INVALID_OUTPUT_ATTEMPTS = 2
+
+    def self.requested_model
+      ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001')
+    end
+
+    # Short, non-secret fingerprint of everything an administrator might change to fix a failure that
+    # retrying cannot fix: the model, the endpoint and the credential. The key itself is never stored,
+    # only a hash inside the hash.
+    def self.config_fingerprint
+      key_digest = Digest::SHA256.hexdigest(ENV.fetch('GEMINI_API_KEY', ''))
+      Digest::SHA256.hexdigest([requested_model, Gemini::HttpClient::BASE_URL, key_digest].join('|'))[0, 16]
+    end
+
+    def initialize(generation:, gemini_client: nil)
+      @generation = generation
+      @portfolio  = generation.portfolio
+      @session    = @portfolio.session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
-        timeout: 180  # up to 3 minutes for large transcripts
+        model:   @generation.requested_model.presence || self.class.requested_model,
+        timeout: 180 # up to 3 minutes for large transcripts
       )
     end
 
-    # Returns the Portfolio record with skills populated.
+    # Runs one generation. Returns the generation in its resulting state.
+    # Raises on transient errors so Sidekiq retries the SAME generation.
     def call
-      portfolio = @session.portfolio || @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
-      )
+      return @generation unless claim!
 
-      portfolio.update!(generation_status: 'generating')
+      response = @gemini_client.generate_content(build_prompt, temperature: 0.2)
+      data     = parse(response)
+      publish!(data)
+      @generation
+    rescue Gemini::HttpClient::ApiError => e # includes RateLimitError and TimeoutError
+      result = ProviderError.classify(e)
+      unless result.temporary?
+        # Returning normally (not raising) tells Sidekiq the job is done: no automatic retries are
+        # spent on something only an administrator can fix.
+        fail!(result.code, result.provider_message)
+        return @generation
+      end
 
-      prompt   = build_prompt
-      response = @gemini_client.generate_content(prompt, temperature: 0.2)
-
-      save_skills(portfolio, response)
-      portfolio.update!(generation_status: 'complete', generated_at: Time.current)
-
-      Rails.logger.info("[N10] Portfolio generated for session #{@session.id}")
-      portfolio
-    rescue => e
-      portfolio&.update!(generation_status: 'failed', generation_error: e.message)
-      Rails.logger.error("[N10] Portfolio generation failed for session #{@session.id}: #{e.class} #{e.message}")
+      mark_retrying!(result.code, result.provider_message)
       raise
+    rescue InvalidOutput => e
+      if invalid_output_attempts + 1 >= MAX_INVALID_OUTPUT_ATTEMPTS # this attempt is the last one allowed
+        fail!('invalid_output', e.message)
+        return @generation
+      end
+
+      mark_retrying!('invalid_output', e.message)
+      raise
+    end
+
+    # Called by the worker when Sidekiq gives up retrying. Only a run still waiting for its retry
+    # ("retrying") is failed: if another worker has reclaimed it ("running"), that worker owns it.
+    def self.mark_exhausted!(generation, message)
+      new(generation: generation, gemini_client: :unused).send(:fail!, 'retries_exhausted', message,
+                                                               only_if_status: 'retrying')
     end
 
     private
@@ -147,35 +183,155 @@ module Portfolios
       }
     end
 
-    def save_skills(portfolio, response)
-      data = response.is_a?(Hash) ? response : JSON.parse(response)
+    # Moves the generation from queued/retrying (or a stale "running") to running. Returns false when
+    # another worker holds it or it already finished, so duplicate or late jobs do nothing (A5).
+    def claim!
+      claimable = PortfolioGeneration.where(id: @generation.id)
+                                     .where('status IN (?) OR (status = ? AND started_at < ?)',
+                                            %w[queued retrying], 'running',
+                                            PortfolioGeneration::STALE_RUNNING_AFTER.ago)
+      claimed = claimable.update_all(['status = ?, started_at = ?, error_code = NULL, claim_count = claim_count + 1',
+                                      'running', Time.current]) == 1
+      @generation.reload
+      return false unless claimed
 
-      # Destroy existing skills (idempotent regeneration)
-      portfolio.portfolio_skills.destroy_all
+      # Nobody else can claim a freshly started run for STALE_RUNNING_AFTER, so this is our token.
+      @claim_count = @generation.claim_count
 
+      @portfolio.update!(generation_status: 'generating') unless @portfolio.current_generation_id
+      true
+    end
+
+    def parse(response)
+      data = response.is_a?(Hash) ? response : JSON.parse(response.to_s)
+      raise InvalidOutput, 'Model output is not a JSON object' unless data.is_a?(Hash)
+
+      data
+    rescue JSON::ParserError
+      raise InvalidOutput, 'Model output is not valid JSON'
+    end
+
+    # Publication (design §2, I1/I2): inside one transaction holding the portfolio row lock, a
+    # generation becomes current only if it is newer than the current one. Otherwise it is kept as
+    # "superseded" and nothing visible changes. Skill rows are inserted for this generation only;
+    # earlier generations are never deleted, so a failure here leaves the published result intact.
+    def publish!(data)
+      Portfolio.transaction do
+        @portfolio.lock!
+        @generation.reload
+        next if @generation.terminal?
+        next if lost_claim? # reclaimed by another worker after STALE_RUNNING_AFTER: its result wins
+
+        current = @portfolio.current_generation
+        if current && current.sequence > @generation.sequence
+          @generation.update!(status: 'superseded', finished_at: Time.current)
+          next
+        end
+
+        insert_skills!(data)
+        @portfolio.update!(current_generation: @generation, generation_status: 'complete',
+                           generated_at: Time.current, generation_error: nil)
+        @generation.update!(status: 'succeeded', finished_at: Time.current, **provider_meta)
+      end
+    end
+
+    def provider_meta
+      meta = @gemini_client.respond_to?(:last_response_meta) ? @gemini_client.last_response_meta : nil
+      { served_model: meta&.dig(:served_model), provider_response_id: meta&.dig(:response_id) }
+    end
+
+    def insert_skills!(data)
+      seen = Set.new
       (data['configured_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           skill_data['skill_id'],
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      false,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        add_skill(skill_data, discovered: false, seen: seen)
       end
-
       (data['discovered_skills'] || []).each do |skill_data|
-        portfolio.portfolio_skills.create!(
-          skill_id:           nil,
-          skill_label:        skill_data['skill_label'],
-          is_discovered:      true,
-          ai_level:           skill_data['level'].to_i.clamp(1, 5),
-          ai_confidence:      skill_data['confidence'],
-          evidence:           Array(skill_data['evidence']).first(3),
-          competency_summary: skill_data['competency_summary']
-        )
+        add_skill(skill_data, discovered: true, seen: seen)
       end
+    end
+
+    def add_skill(skill_data, discovered:, seen:)
+      key = skill_key(skill_data, discovered)
+      return if key.nil? || !seen.add?(key)
+
+      @portfolio.all_portfolio_skills.create!(
+        generation:         @generation,
+        skill_key:          key,
+        skill_id:           discovered ? nil : skill_data['skill_id'],
+        skill_label:        skill_data['skill_label'],
+        is_discovered:      discovered,
+        ai_level:           skill_data['level'].to_i.clamp(1, 5),
+        ai_confidence:      skill_data['confidence'],
+        evidence:           Array(skill_data['evidence']).first(3),
+        competency_summary: skill_data['competency_summary']
+      )
+    end
+
+    # Stable identity for a skill across generations, used to carry human overrides forward.
+    def skill_key(skill_data, discovered)
+      label = skill_data['skill_label'].to_s
+      return nil if label.strip.empty?
+      return "discovered:#{normalize_label(label)}" if discovered
+
+      configured = configured_skills.find do |s|
+        (s.skill_id.present? && s.skill_id == skill_data['skill_id']) || s.skill_label.casecmp?(label)
+      end
+      configured ? "assessment_skill:#{configured.id}" : "label:#{normalize_label(label)}"
+    end
+
+    def configured_skills
+      @configured_skills ||= @session.assessment.assessment_skills.to_a
+    end
+
+    def normalize_label(label)
+      label.downcase.gsub(/[^a-z0-9]+/, ' ').strip
+    end
+
+    # True when this worker claimed the run but another worker has since reclaimed it. Every state
+    # change a worker makes (publish, retrying, failed) is fenced by this check. The retries-exhausted
+    # path never claimed (@claim_count is nil) and may always fail the run.
+    def lost_claim?
+      !@claim_count.nil? && @generation.claim_count != @claim_count
+    end
+
+    # Only the worker that still owns the claim may move the run back to "retrying". If another
+    # worker reclaimed it (claim_count moved on) or already published/failed it, this does nothing.
+    def mark_retrying!(code, message)
+      validation = @generation.validation.merge(
+        'invalid_output_attempts' => invalid_output_attempts + (code == 'invalid_output' ? 1 : 0)
+      )
+      moved = PortfolioGeneration.where(id: @generation.id, status: 'running', claim_count: @claim_count)
+                                 .update_all(status: 'retrying', error_code: code, validation: validation,
+                                             error_message: message.to_s.truncate(500))
+      @generation.reload
+      # A retry is coming, so this is "still in progress" for the assessor, not "failed".
+      @portfolio.update!(generation_status: 'generating') if moved == 1 && !@portfolio.reload.current_generation_id
+    end
+
+    def invalid_output_attempts
+      @generation.validation.fetch('invalid_output_attempts', 0).to_i
+    end
+
+    def fail!(code, message, only_if_status: nil)
+      Portfolio.transaction do
+        @portfolio.lock!
+        @generation.reload
+        next if @generation.terminal?
+        next if lost_claim?
+        next if only_if_status && @generation.status != only_if_status
+
+        @generation.update!(status: 'failed', error_code: code, error_message: message.to_s.truncate(500),
+                            finished_at: Time.current)
+        sync_failure_status!(message)
+      end
+    end
+
+    # Legacy column: only reflects a failure when nothing has been published yet. With a published
+    # generation the portfolio stays "complete" and the failure is reported on the generation.
+    def sync_failure_status!(message)
+      return if @portfolio.reload.current_generation_id
+
+      @portfolio.update!(generation_status: 'failed', generation_error: message.to_s.truncate(500))
     end
   end
 end

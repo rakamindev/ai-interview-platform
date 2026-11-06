@@ -32,17 +32,27 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
-        end
-
-        portfolio.update!(generation_status: "pending", generation_error: nil)
-        PortfolioGeneratorWorker.perform_async(@session.id)
+        # Regeneration no longer destroys the published result, so it is allowed at any time except
+        # while an earlier request is still queued or running.
+        generation = Portfolios::RequestGeneration.new(portfolio: portfolio, source: "assessor_regenerate").call
 
         json_response(
-          message:   "Portfolio generation queued",
-          portfolio: portfolio_json(portfolio)
+          message:    "Portfolio generation queued",
+          generation: generation_json(generation),
+          portfolio:  portfolio_json(portfolio.reload)
         )
+      rescue Portfolios::RequestGeneration::NotAllowed => e
+        render json: { errors: [{ status: 422, code: e.code, message: e.message }] }, status: :unprocessable_entity
+      rescue Portfolios::RequestGeneration::EnqueueFailed => e
+        render json: {
+          errors: [{ status: 503, message: "Scoring could not be started. The current result is unchanged; please try again." }],
+          generation: generation_json(e.generation)
+        }, status: :service_unavailable
+      rescue Portfolios::RequestGeneration::InFlight => e
+        render json: {
+          errors: [{ status: 409, message: "A scoring run is already in progress." }],
+          generation: generation_json(e.generation)
+        }, status: :conflict
       end
 
       # GET /api/v1/portfolios/:id/export
@@ -167,9 +177,39 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
+          current_generation: portfolio.current_generation && generation_json(portfolio.current_generation),
+          latest_generation:  portfolio.latest_generation && generation_json(portfolio.latest_generation),
+          regenerate:         regenerate_json(portfolio),
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
+      end
+
+      # Assessor-facing view of one scoring run. Error text is the provider message, which never
+      # contains transcript content.
+      def generation_json(generation)
+        {
+          id:              generation.id,
+          sequence:        generation.sequence,
+          status:          generation.status,
+          source:          generation.source,
+          requested_model: generation.requested_model,
+          served_model:    generation.served_model,
+          prompt_version:  generation.prompt_version,
+          error_code:      generation.error_code,
+          error_message:   generation.error_message,
+          queued_at:       generation.queued_at,
+          finished_at:     generation.finished_at
+        }
+      end
+
+      # Tells the UI whether to offer Regenerate and, if not, why (so it can say so honestly).
+      def regenerate_json(portfolio)
+        blocker = Portfolios::RequestGeneration.regenerate_blocker(portfolio)
+        return { allowed: true } unless blocker
+
+        code = blocker.is_a?(Portfolios::RequestGeneration::InFlight) ? 'in_progress' : blocker.code
+        { allowed: false, reason: code, message: blocker.message }
       end
 
       def portfolio_skill_json(skill)

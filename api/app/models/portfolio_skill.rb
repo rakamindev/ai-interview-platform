@@ -4,6 +4,7 @@ class PortfolioSkill < ApplicationRecord
   CONFIDENCE_LEVELS = %w[high medium low].freeze
 
   belongs_to :portfolio
+  belongs_to :generation, class_name: 'PortfolioGeneration', optional: true, inverse_of: :portfolio_skills
   has_one :assessor_override, dependent: :destroy
 
   validates :skill_label, presence: true

@@ -1,0 +1,23 @@
+## Migration up/down/up on local dev DB (5 existing portfolios, 1 with skills, 1 override), Fri Nov  6 17:08:55 WIB 2026
+### before (migrated)
+[[1, "failed", nil, []], [2, "failed", nil, []], [3, "failed", nil, []], [4, "failed", nil, []], [5, "complete", 1, [[3, 1, "assessment_skill:1"], [4, 1, "discovered:backend engineering data engineering"]]]]
+overrides=[[1, 3]]
+### down (2 steps)
+== 20261106100001 BackfillPortfolioGenerations: reverting =====================
+== 20261106100001 BackfillPortfolioGenerations: reverted (0.0172s) ============
+== 20261106100000 CreatePortfolioGenerations: reverting =======================
+== 20261106100000 CreatePortfolioGenerations: reverted (0.0867s) ==============
+pre: [[1, "failed", []], [2, "failed", []], [3, "failed", []], [4, "failed", []], [5, "complete", [3, 4]]]
+overrides=[[1, 3]]
+### up
+== 20261106100000 CreatePortfolioGenerations: migrating =======================
+== 20261106100000 CreatePortfolioGenerations: migrated (0.1045s) ==============
+== 20261106100001 BackfillPortfolioGenerations: migrating =====================
+== 20261106100001 BackfillPortfolioGenerations: migrated (0.0169s) ============
+[[1, "failed", nil, []], [2, "failed", nil, []], [3, "failed", nil, []], [4, "failed", nil, []], [5, "complete", 1, [[3, 1, "assessment_skill:1"], [4, 1, "discovered:backend engineering data engineering"]]]]
+overrides=[[1, 3]]
+### down + up again
+2
+2
+[[1, "failed", nil, []], [2, "failed", nil, []], [3, "failed", nil, []], [4, "failed", nil, []], [5, "complete", 1, [[3, 1, "assessment_skill:1"], [4, 1, "discovered:backend engineering data engineering"]]]]
+overrides=[[1, 3]]

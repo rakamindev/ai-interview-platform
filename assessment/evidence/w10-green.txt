@@ -1,0 +1,47 @@
+# Lifecycle specs green, final G2 incl. retry/recovery policy (Fri Nov  6 17:09:20 WIB 2026); red baseline commit 4da9c6b; command: bundle exec rspec --seed 39486 (entire suite)
+
+Randomized with seed 39486
+
+Portfolio generation requests under concurrency
+  assigns distinct, gap-free sequences to simultaneous requests
+  never lets a racing legacy job get a higher sequence than a modern request
+
+Portfolio generation lifecycle
+  does not let a stale worker interfere with the worker that reclaimed its run
+  keeps the assessor override when a late retry runs after it was saved (D4 via W10)
+  lets the assessor regenerate when a run was left "running" by a worker that died
+  does not let a late retry of an older request replace a newer completed result (W10)
+  keeps the last published result when an administrative re-score fails permanently
+  still ends the interview when the first scoring job cannot be enqueued
+  publishes a valid intermediate result while an even newer request is still running
+  does not let a stale worker publish after its run was reclaimed, even if its call succeeds
+  does not leave a blocking queued run when the job cannot be enqueued
+  refuses Regenerate while the first scoring run is still queued
+  does nothing when the same generation job runs twice
+  never turns a published generation back into "retrying" when a second worker fails late
+  Regenerate is for recovering a failed process, not for re-rolling a finished report
+    refuses Regenerate while an automatic retry is pending, and shows it as in progress
+    never stores the API key itself, only a fingerprint of the configuration
+    unblocks an authentication error when the credential changes, even with the same model
+    refuses Regenerate on a successful report (disagreement goes through Override)
+    allows Regenerate after automatic retries are exhausted
+    allows Regenerate once a pending retry has been silent for over 30 minutes
+    blocks Regenerate after a model error until the configuration changes
+  jobs enqueued before generations existed (session_id only)
+    may create the first generation of a portfolio that has none
+    cannot create a generation once one exists, even if it checked earlier (check and create share one lock)
+    are skipped when the portfolio already has generations, so they cannot publish over newer work
+  error classification
+    fails a 429 that says the billing quota is used up, without retrying
+    retries a 429 rate limit
+    does not let the retries-exhausted hook fail a run that another worker has reclaimed
+    tells the UI whether Regenerate is offered, and why not
+    marks the run failed through Sidekiq's own retries-exhausted hook
+    retries a network failure that has no HTTP status
+    retries malformed model output once, then fails it instead of using every retry
+    gives up after 6 automatic retries
+
+Finished in 3.75 seconds (files took 2.89 seconds to load)
+32 examples, 0 failures
+
+Randomized with seed 39486

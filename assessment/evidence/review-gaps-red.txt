@@ -1,0 +1,33 @@
+# Review round 2 (independent ChatGPT review of the generation diff): 3 gaps, tests written first.
+# Red run on the working tree before the fixes, 2026-11-06 ~17:45 WIB. 14 examples, 4 failures:
+
+1) Portfolio generation requests under concurrency never lets a racing legacy job get a higher sequence than a modern request
+   expected: 1 or nil   got: 2          <- the race really happened: a legacy job got sequence 2 after modern work
+2) Portfolio generation lifecycle never turns a published generation back into "retrying" when a second worker fails late
+   expected: "succeeded"   got: "retrying"
+3) Portfolio generation lifecycle does not leave a blocking queued run when the job cannot be enqueued
+   expected 503   got 500 (and the queued run would have blocked every later request with 409)
+4) ... legacy job cannot create a generation once one exists (check and create share one lock)
+   expected: nil   got: PortfolioGeneration sequence 2, source "legacy_job"
+
+# Review round 3 (claim ownership), red runs before each fix, 2026-11-06 ~16:35-16:50 WIB:
+5) does not let a stale worker interfere with the worker that reclaimed its run
+   expected: "running"   got: "retrying"   <- stale worker A flipped B's live run after B reclaimed it
+6) does not let a stale worker publish after its run was reclaimed, even if its call succeeds
+   expected: "running"   got: "succeeded"  <- stale worker A published although B owned the run
+Fix: claim token (claim_count, incremented on every claim). publish!, mark_retrying! and fail! all require
+the worker's token to still match.
+
+# Retry/recovery policy (product decisions: Regenerate only after a real failure; 6 retries; admin
+# failures blocked until the configuration changes). Red run before implementing, 17:09 WIB:
+  30 examples, 10 failures
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:292 # Portfolio generation lifecycle Regenerate is for recovering a failed process, not for re-rolling a finished report blocks Regenerate after a model error until the configuration changes
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:262 # Portfolio generation lifecycle Regenerate is for recovering a failed process, not for re-rolling a finished report refuses Regenerate while an automatic retry is pending, and shows it as in progress
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:318 # Portfolio generation lifecycle Regenerate is for recovering a failed process, not for re-rolling a finished report never stores the API key itself, only a fingerprint of the configuration
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:254 # Portfolio generation lifecycle Regenerate is for recovering a failed process, not for re-rolling a finished report refuses Regenerate on a successful report (disagreement goes through Override)
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:306 # Portfolio generation lifecycle Regenerate is for recovering a failed process, not for re-rolling a finished report unblocks an authentication error when the credential changes, even with the same model
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:363 # Portfolio generation lifecycle error classification does not let the retries-exhausted hook fail a run that another worker has reclaimed
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:347 # Portfolio generation lifecycle error classification retries a network failure that has no HTTP status
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:353 # Portfolio generation lifecycle error classification retries malformed model output once, then fails it instead of using every retry
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:340 # Portfolio generation lifecycle error classification fails a 429 that says the billing quota is used up, without retrying
+  rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:373 # Portfolio generation lifecycle error classification gives up after 6 automatic retries

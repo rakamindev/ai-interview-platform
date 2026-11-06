@@ -1,0 +1,85 @@
+# Decision Log and Execution Narrative
+
+This is the record of how the work went, step by step, and who decided what.
+
+**Roles:**
+- **Engineer:** Farros (`farroshsy`). Makes every final decision and reviews every diff before it is committed.
+- **Claude Code:** AI assistant. Investigated the repository, wrote research notes, built the test harness and implementation drafts, and ran the verification.
+- **ChatGPT:** AI reviewer. Used for independent challenge of the plan and design.
+
+**"Decided by"** names the person who made the final call. **"Proposed / challenged by"** shows where each idea came from. AI output was accepted only after it was checked against the repository, the running app or a test.
+
+## How we chose the working method
+
+At the start we planned a more elaborate AI engineering harness. It would have been a bounded evaluation loop: acceptance criteria → baseline → focused change → deterministic grading → adversarial review → regression → human acceptance. It would have used MCP integrations (Context7 for docs, Playwright MCP for the browser, GitHub MCP), possibly a local Qwen model on an RTX 2060 for cheap triage, and a file-based task graph.
+
+**We decided not to build it** (decision D-00). The reasons:
+- the deadline (~30 hours);
+- the brief grades product and engineering outcomes, not AI tooling;
+- the repository already offers stronger, more direct evidence: regression tests, controlled job execution, migrations, typechecks and reproducible faults.
+
+A custom harness would also have added its own bugs, all code we would then need to defend.
+
+**What we kept** was the discipline, applied directly to the product:
+
+| Harness idea | What we actually did |
+|---|---|
+| Acceptance criteria first | The G1/G2/G3 guarantees and the acceptance criteria in the design |
+| Baseline | A red test on unchanged code before every fix |
+| Deterministic grading | RSpec, including real-thread concurrency tests, `tsc` and migration up/down/up |
+| Adversarial review | Independent ChatGPT review rounds on the actual diff. Each finding was reproduced as a failing test before it was fixed |
+| Evidence tracking | This log, and `assessment/evidence/` |
+| Browser verification | A manual end-to-end walkthrough in a real browser when the UI mattered |
+| Human acceptance | The engineer reviews the behaviour and the staged diff before every commit |
+
+**Tools actually used:** Claude Code for investigation, implementation and running checks, plus its built-in browser for the walkthrough. ChatGPT was used as an independent reviewer. No custom MCP server, orchestration layer or local model was built or used.
+
+## Timeline
+
+| # | When (WIB, 2026-11-06) | Stage | What happened | Evidence |
+|---|---|---|---|---|
+| 1 | Morning | Setup | Cloned the repo, ran the API, Sidekiq and the web app locally. The baseline has no specs, no web test runner and no CI. | `rspec`: 0 examples, load error |
+| 2 | Morning | Research | Researched the state of the art: interview science, AI scoring reliability, regulation (UU PDP, EU AI Act), and engineering patterns. Each claim is labelled as evidence, vendor claim or inference. | `research/state-of-the-art.md` (kept outside the repo) |
+| 3 | Late morning | Code investigation | Traced the portfolio pipeline, authorization and session lifecycle. Reproduced defects with throwaway probes on the test DB (cross-tenant read/write, late timer ending sessions, unchecked AI output, boot failure). | `investigation/repository-investigation.md`, probe scripts |
+| 4 | Afternoon | Landscape check | Surveyed titles of the ~236 existing PRs to see which areas are crowded. No diffs were read and nothing was copied. | `research/prior-prs-landscape.md` |
+| 5 | Afternoon | End-to-end walkthrough | Used the product as an assessor and as a candidate (the engineer role-played the candidate, so the data is synthetic). Found 22 issues across the candidate side, the AI pipeline and the assessor side, including a **live stale-job overwrite (W10)**. | `investigation/walkthrough-findings.md` |
+| 6 | Afternoon | Company context | Read Rakamin's own site: AI transformation, "hiring & assessment", outcome-based engagements, and a stated belief that AI output needs evidence and the human conversation. | `research/rakamin-company-context.md` |
+| 7 | ~15:30 | Design | Wrote the implementation design, had it reviewed, and amended it (A1–A5). | `design/implementation-design.md` |
+| 8 | 16:01 (commit 4da9c6b) | Red test | Wrote a deterministic W10 regression test and watched it fail on the baseline: L3 replaced by L1, and the override deleted. | `assessment/evidence/w10-red-baseline.txt` |
+| 9 | ~16:20 | Fix: generation identity + publication | Added `portfolio_generations` (sequence, status, requested/served model), the request→commit→enqueue path, claim-before-run, and publish-under-lock (current only moves forward). 9 specs green, including real concurrency. Migration checked up/down/up on dev data: the existing portfolio and override were preserved. | `assessment/evidence/w10-green.txt`, `assessment/evidence/migration-up-down-up.txt` |
+| 10 | ~16:50 | Review rounds 2–3 | Independent review of the actual diff found 4 more concurrency gaps: legacy-job race, terminal status overwritten, enqueue failure blocking forever, stale worker after reclaim (status and publish). Each was reproduced by a failing test first, then fixed. 17 specs green. | `assessment/evidence/review-gaps-red.txt`, `w10-green.txt` |
+| 11 | ~17:15 | Retry and recovery policy | Engineer decided: Regenerate only after a real failure, 6 retries, admin failures blocked until the config changes. Tests written first (10 red), then implemented. 32 specs green. | `review-gaps-red.txt`, `w10-green.txt` |
+
+## Decisions
+
+| ID | Decision | Options considered | Proposed / challenged by | Decided by | Why |
+|---|---|---|---|---|---|
+| D-00 | Use repository-native deterministic tests plus human-reviewed evidence instead of building a custom MCP or agent evaluation harness | Build the harness first (MCP integrations, local Qwen, task graph) | Explored with ChatGPT early on; reconsidered once the brief and the repo were understood | **Engineer** | Better ratio of engineering value to cost under the deadline. The tests sit closer to the behaviour we must guarantee than an orchestration layer would. A future project with many engineers and long-lived AI workflows could justify a harness |
+| D-01 | Ground the work in observed behaviour, not assumptions: research, then investigate, then walk through the product, before choosing a scope | Pick a feature immediately | Engineer's plan; ChatGPT agreed | **Engineer** | The brief rewards problem clarity. Picking first risks a solution looking for a problem |
+| D-02 | Reject "model/prompt versioning" as the headline | Novel provenance feature vs user problem | Claude proposed it (it was the least crowded area); **Engineer challenged it** ("feels like a niche thing") | **Engineer** | Novelty is not value. Provenance became supporting metadata only |
+| D-03 | Walk through the real product before locking the scope | Lock on code reading alone | Claude and ChatGPT agreed with the engineer's request | **Engineer** | It revealed the issues that matter most (W7, W10, W15, W17, W20) |
+| D-04 | Centre the assessor's decision record. Acknowledge the candidate's interests and escalate candidate-side issues | Candidate-side fixes; broad fixes along the decision chain | Claude compared the options; ChatGPT pushed for one coherent system problem | **Engineer** | Assessors act on the portfolio. Going deep on one area beats ten shallow fixes |
+| D-05 | Thesis: the assessor can *review and understand* evidence; the assessment must not silently become less trustworthy across its lifecycle | "Act on it without redoing the interview" | ChatGPT corrected Claude's wording (overclaim) | **Engineer** | The AI is not a validated measure of skill, so we should not imply it is |
+| D-06 | Three guarantees: evidence integrity, generation integrity, human authority | A feature list | Converged across Claude and ChatGPT reviews | **Engineer** | Each guarantee maps to an observed failure and a test |
+| D-07 | Quote states: transcript match / no exact match / no supporting text found. Never say "verified" | Exact / close / not found | Claude proposed "close"; **ChatGPT rejected fuzzy "close"** | **Engineer** | Matching words does not validate a rating, and "verified" over-claims |
+| D-08 | Publication rule: **newest successful generation wins** (the current result only moves forward) | Only the latest *requested* generation may publish | A ChatGPT round suggested "latest requested"; Claude built a counter-example (a valid newer result would be lost, and the oldest result could stick); ChatGPT then agreed | **Engineer** | Keeps useful work when a newer attempt fails. Documented as a trade-off |
+| D-09 | A late legacy job must never create a new generation if one exists | "Legacy job creates a new generation" (design v1) | **ChatGPT found the bug** in Claude's design v1 (it would have recreated W10) | **Engineer** | Sequence is creation order. A late job must not gain new authority to publish |
+| D-10 | Escalate, don't fix: PDF export, fit/gap seam bugs, candidate speed-check and mic filter, login tenant choice, reconnect, model lifecycle | Fix everything found | Claude proposed a "release gate"; ChatGPT warned about scope creep | **Engineer** | Deadline. Each one goes in the report as a constraint signal with evidence |
+| D-11 | Commit the failing test first ("red"), then fix | Fix first | Claude and ChatGPT agreed | **Engineer** | Proves the test catches the real defect |
+| D-13 | Add a claim token (`claim_count`), so a worker that lost its claim cannot change the run's status **or publish** | Accept the edge case, since publication is already safe | **ChatGPT review round 3 found it**; Claude reproduced it in a test (status flipped to "retrying") | **Engineer** | Cheap to fix before the migration is committed. It removes interference between workers, not just corruption |
+| D-14 | **Regenerate recovers a failed process; it never re-rolls a finished report.** Disagreeing with a rating goes through Override, recorded as a human decision with a note | Regenerate allowed at any time (as Claude had built G2) | **The engineer raised it** ("is regenerate a lucky dice?"); Claude agreed it was a fairness risk; ChatGPT agreed | **Engineer** | A rating that can be re-rolled until it looks right is unfair to the candidate and meaningless to the assessor |
+| D-15 | 6 automatic retries for temporary errors (about 18–21 min of scheduled waiting; worst case about 40 min if every call times out) | 3 retries (about 1–2 min); 8 retries (about 80–85 min) | Claude proposed 6 with **wrong timing estimates**; ChatGPT insisted on reading the real schedule | **Engineer** | Rides out most short outages without anyone clicking anything. Timing is from the Sidekiq 7.3.10 source, not guessed |
+| D-16 | Failures only an admin can fix (model unavailable, auth, quota, bad request) block Regenerate **until the configuration fingerprint changes**. The fingerprint covers the model, the endpoint and a hash of the key; the key itself is never stored | Unblock when the model name changes | ChatGPT pointed out that a credential fix with the same model would stay blocked forever | **Engineer** | It covers credential rotation as well as model changes, without storing secrets |
+| D-17 | A pending retry that has been silent for over 30 minutes stops blocking Regenerate (a recovery heuristic, not a guarantee) | 15 minutes | ChatGPT: queue congestion can delay retries beyond the 11.6-minute maximum scheduled wait | **Engineer** | Safe margin. Publication rules still protect the result if the old retry returns |
+| D-12 | Credit AI in commits (`Co-Authored-By` trailer) and disclose tools plus verification in the PDF | No trailer, PDF only | ChatGPT and Claude both recommended the trailer | **Engineer** | Transparency. The brief allows AI if its use is recorded and verified |
+
+## How AI output was verified (running list)
+
+| Claim made by AI | How it was checked | Result |
+|---|---|---|
+| "`gemini-2.5-pro` is available" (Claude, using the models list endpoint) | A real `generateContent` call | **Wrong:** 404 "no longer available to new users". The list endpoint is not proof that a model can be used |
+| "Gemini retry config handles 429/5xx" (taken from the code as written) | Read the faraday-retry 2.4.0 gem source | **The config never runs:** POST is not in the retried methods |
+| "A legacy job creating a new generation is safe" (Claude design v1) | ChatGPT review plus reasoning about sequence order | **Wrong.** Fixed in design A1 |
+| "Conditional update `WHERE status='running'` stops competing workers" (Claude) | ChatGPT review plus a regression test | **Incomplete:** after a reclaim, both workers see "running", so the stale worker could flip the status *and could still publish*. Both reproduced in tests and fixed with a claim token that fences every state change |
+| "6 retries is about 40 minutes; 3 retries is about 3 minutes" (Claude's estimate) | Read Sidekiq 7.3.10 `job_retry.rb` (`count**4 + 15` + jitter) and computed it | **Wrong:** 3 retries = 1.0–1.9 min, 6 = 17.8–21.0 min, 8 = 80–85 min |
+| "W10: a stale job overwrote a newer result" (observed in the logs) | Sidekiq job IDs and timestamps, DB `generated_at`, the quotes before and after, then a deterministic test | **Confirmed.** The test fails on the baseline |

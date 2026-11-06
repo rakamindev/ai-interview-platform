@@ -17,6 +17,11 @@ module Gemini
     class RateLimitError < ApiError; end
     class TimeoutError < ApiError; end
 
+    # Provider metadata from the most recent successful call: the model that actually served it
+    # ("modelVersion", which can differ from the requested model when the provider routes) and the
+    # response id. Nil until a call succeeds.
+    attr_reader :last_response_meta
+
     def initialize(model: nil, api_key: nil, timeout: 60)
       @model = model
       @api_key = api_key || ENV.fetch('GEMINI_API_KEY')
@@ -80,6 +85,7 @@ module Gemini
       end
 
       data = JSON.parse(response.body)
+      @last_response_meta = { served_model: data['modelVersion'], response_id: data['responseId'] }
       text = data.dig('candidates', 0, 'content', 'parts', 0, 'text')
 
       raise ApiError.new("No content in Gemini response") unless text
