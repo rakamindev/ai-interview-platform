@@ -107,15 +107,19 @@ export default function PortfolioPage() {
     }
   };
 
-  const exportJson = async () => {
+  // PDF is the document for the hiring conversation (works since W20); JSON is for systems.
+  const exportFile = async (format: "pdf" | "json") => {
     if (!portfolio) return;
     setExportError(null);
     try {
-      const res = await portfoliosApi.exportPortfolio(portfolio.id, "json", selectedVacancy ? Number(selectedVacancy) : undefined);
-      const url = URL.createObjectURL(new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" }));
+      const res = await portfoliosApi.exportPortfolio(portfolio.id, format, selectedVacancy ? Number(selectedVacancy) : undefined);
+      const blob = format === "pdf"
+        ? new Blob([res.data as BlobPart], { type: "application/pdf" })
+        : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `portfolio-${sessionId}.json`;
+      a.download = `portfolio-${sessionId}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -332,7 +336,8 @@ export default function PortfolioPage() {
         <Button variant="outline" disabled={!selectedVacancy} onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`)}>
           Fit/gap report
         </Button>
-        <Button variant="ghost" onClick={exportJson}><Download className="mr-1 h-4 w-4" />Export</Button>
+        <Button variant="ghost" onClick={() => exportFile("pdf")}><Download className="mr-1 h-4 w-4" />Download PDF</Button>
+        <Button variant="ghost" size="sm" onClick={() => exportFile("json")}>JSON</Button>
         <Link to={transcriptHref} className="text-sm text-primary underline-offset-2 hover:underline">Transcript</Link>
         {exportError && <p className="w-full text-sm text-destructive">{exportError}</p>}
       </section>
