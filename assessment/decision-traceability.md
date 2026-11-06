@@ -428,7 +428,7 @@ Setup: an existing AI interview platform. Conflict: generated assessments may be
 
 **Cons / blast radius:** Test counts are not coverage percentages; fixtures are not live provider validation; CI remains absent.
 
-**How verified:** Recorded checkpoint and seeded fault; current 99/29 checks.
+**How verified:** Recorded checkpoint and seeded fault; final frozen acceptance is 105 backend examples / 29 frontend tests (evidence/checkpoint/freeze-verification.md).
 
 **Evolvability / revisit trigger:** Add focused assertions on new failure evidence; measure performance before optimizing.
 

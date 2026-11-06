@@ -3,11 +3,11 @@
 This is the record of how the work went, step by step, and who decided what.
 
 **Roles:**
-- **Engineer:** Farros (`farroshsy`). Makes every final decision and reviews every diff before it is committed.
-- **Claude Code:** AI assistant. Investigated the repository, wrote research notes, built the test harness and implementation drafts, and ran the verification.
+- **Engineer:** Farros (`farroshsy`) decided direction, scope and the recorded option choices. This is not a claim that he made every implementation decision or reviewed every diff.
+- **AI implementation:** Claude Code, later Codex, wrote most of the code, tests and documentation. Claude Code investigated and recorded the original checks; Codex performed the documented continuation checks and corrections. These are AI-performed checks, not candidate-personal verification.
 - **ChatGPT:** AI reviewer. Used for independent challenge of the plan and design.
 
-**"Decided by"** names the person who made the final call. **"Proposed / challenged by"** shows where each idea came from. AI output was accepted only after it was checked against the repository, the running app or a test.
+**"Decided by"** records the direction, scope and option choices attributed in the existing decision record; it does not establish review of every implementation detail. **"Proposed / challenged by"** shows the recorded origin of an idea. Personal verification consists only of checks Farros ticks in his checklist (`Research/engineering/submission/ai-use-disclosure.md`, outside this repository); it is currently unconfirmed. Recorded repository, browser and test checks below may have been performed by AI.
 
 ## How we chose the working method
 
@@ -30,9 +30,9 @@ A custom harness would also have added its own bugs, all code we would then need
 | Adversarial review | Independent ChatGPT review rounds on the actual diff. Each finding was reproduced as a failing test before it was fixed |
 | Evidence tracking | This log, and `assessment/evidence/` |
 | Browser verification | A manual end-to-end walkthrough in a real browser when the UI mattered |
-| Human acceptance | The engineer reviews the behaviour and the staged diff before every commit |
+| Human acceptance | Farros decided direction, scope and recorded option choices; personal review/verification is limited to his ticked checklist items, currently unconfirmed |
 
-**Tools actually used:** Claude Code for investigation, implementation and running checks, plus its built-in browser for the walkthrough. ChatGPT was used as an independent reviewer. No custom MCP server, orchestration layer or local model was built or used.
+**Tools in the original phase:** Claude Code for investigation, implementation and running checks, plus its built-in browser for the walkthrough; ChatGPT for independent challenge. Codex later wrote continuation code, tests and docs and performed the recorded continuation checks. No custom MCP server, orchestration layer or local model was built for the submitted implementation.
 
 ## Timeline
 

@@ -139,7 +139,7 @@ For this continuation: complete three small source-backed corrections, their che
 
 ## Latest results and added tooling finding
 
-Bounded source fixes pass: 99 backend examples, 29 frontend tests, application TypeScript and Vite build. W19 synthetic browser view checked; synthetic development credential absent in final production assets. Separate `npx tsc --noEmit -p tsconfig.node.json` fails missing Node path/__dirname types; add proper Node dev types with intentional lockfile/dependency review, then rerun. Do not mask with fake ambient declarations. No production-readiness claim. See checkpoint/remediation-verification.md.
+Final frozen acceptance records: 105 backend examples, 29 frontend tests, application TypeScript and Vite build. W19 synthetic browser view checked; synthetic development credential absent in final production assets. Separate `npx tsc --noEmit -p tsconfig.node.json` fails missing Node path/__dirname types; add proper Node dev types with intentional lockfile/dependency review, then rerun. Do not mask with fake ambient declarations. No production-readiness claim. Final counts: evidence/checkpoint/freeze-verification.md; earlier 99-example remediation results remain historical in checkpoint/remediation-verification.md.
 
 ## Final code freeze disposition
 
