@@ -1,0 +1,5 @@
+# W20 PDF export (6 Nov 20:28)
+Before: spec/requests/portfolio_pdf_export_spec.rb -> 500 (AI text with → ≥ ✓).
+Fix: DejaVu Sans 2.37 (official release, Bitstream Vera licence) in api/vendor/fonts, registered in Exports::PdfGenerator.
+After: spec green. Real exports via dev API: portfolio 5 + vacancy 1 -> 200 application/pdf 53997B (2 pages, fit/gap Required L5, 'AI: L3 → Override: L4');
+demo portfolio 6 -> 200, 'Level: Not rated' printed. Rolled-back render of 'Trade-offs → store; latency ≥ 200 ms ✓ — “quoted” café' extracted by pdftotext exactly. pdffonts: DejaVuSans subsets embedded.
