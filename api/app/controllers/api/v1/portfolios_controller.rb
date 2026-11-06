@@ -32,8 +32,8 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        # Regeneration no longer destroys the published result, so it is allowed at any time except
-        # while an earlier request is still queued or running.
+        # Assessor regeneration only recovers eligible failures; a published report blocks re-rolls.
+        # RequestGeneration also checks in-flight runs and configuration failures under the lock.
         generation = Portfolios::RequestGeneration.new(portfolio: portfolio, source: "assessor_regenerate").call
 
         json_response(

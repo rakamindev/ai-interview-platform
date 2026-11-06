@@ -19,6 +19,7 @@ class AuthorizeApiRequest
   # Returns an OpenStruct with :id, :role, :scheme
   def call
     claims = decoded_auth_token
+    check_tenant!(claims)
     user_struct = build_user_struct(claims)
 
     check_role!(user_struct) if @required_roles.any?
@@ -29,6 +30,17 @@ class AuthorizeApiRequest
   private
 
   attr_reader :headers
+
+  # Tenant hints used by unauthenticated flows cannot supply a missing signed claim.
+  # Verify the signature first, then bind the claim to the organization resolved for this request.
+  def check_tenant!(claims)
+    scheme = claims[:scheme]
+    organization = Current.organization { nil }
+    unless scheme.is_a?(String) && scheme.present? && organization.present? &&
+           Organization.identify(scheme)&.id == organization.id
+      raise(ExceptionHandler::InvalidToken, Message.invalid_token)
+    end
+  end
 
   def build_user_struct(claims)
     OpenStruct.new(

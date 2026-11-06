@@ -7,9 +7,9 @@
 #   Current.tenant_id     → organization.id (used to scope all AI interview queries)
 #
 # Resolution order:
-#   1. JWT Bearer token → decode → use `scheme` claim
-#   2. X-Tenant-Scheme request header (for non-JWT requests / candidate flows)
-#   3. Referer host (fallback, same as rakamin-api HostService approach)
+#   Bearer requests: use only the JWT `scheme` hint; authorization later verifies the signature
+#   and binds the signed tenant to the resolved organization. No header/Referer fallback.
+#   Non-Bearer requests: X-Tenant-Scheme, then Referer host (existing unauthenticated flows).
 #
 # If no tenant can be resolved, the request continues with no tenant set.
 # Individual controllers can enforce tenant presence via before_action.
@@ -31,17 +31,18 @@ class TenantResolverMiddleware < ApplicationMiddleware
   private
 
   def resolve_scheme(request)
-    # 1. Try JWT bearer token first
-    scheme_from_jwt(request) ||
-      # 2. Try explicit header
-      request.headers['X-Tenant-Scheme'].presence ||
-      # 3. Fall back to referer host
-      scheme_from_referer(request)
+    return scheme_from_jwt(request) if bearer_auth?(request)
+
+    request.headers['X-Tenant-Scheme'].presence || scheme_from_referer(request)
+  end
+
+  def bearer_auth?(request)
+    request.headers['Authorization'].to_s.match?(/\ABearer(?:\s|$)/i)
   end
 
   def scheme_from_jwt(request)
     auth_header = request.headers['Authorization'].to_s
-    return unless auth_header.start_with?('Bearer ', 'bearer ')
+    return unless bearer_auth?(request)
 
     token = auth_header.split(' ').last
     claims = JsonWebToken.decode_without_verification(token)
