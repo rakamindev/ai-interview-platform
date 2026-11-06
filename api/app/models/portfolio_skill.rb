@@ -7,6 +7,9 @@ class PortfolioSkill < ApplicationRecord
   belongs_to :generation, class_name: 'PortfolioGeneration', optional: true, inverse_of: :portfolio_skills
   has_one :assessor_override, dependent: :destroy
 
+  # See Portfolio.visible_to_current_tenant.
+  scope :visible_to_current_tenant, -> { where(portfolio_id: Portfolio.visible_to_current_tenant.select(:id)) }
+
   validates :skill_label, presence: true
   validates :ai_level, numericality: { only_integer: true, in: 1..5 }
   validates :ai_confidence, inclusion: { in: CONFIDENCE_LEVELS }

@@ -16,6 +16,14 @@ class Portfolio < ApplicationRecord
 
   before_destroy :release_generations
 
+  # Portfolios have no tenant column of their own: they belong to a tenant through their session.
+  # Every id-based lookup from an assessor endpoint must go through this scope. It reads
+  # Current.tenant_id directly (which raises if unset), so a missing tenant fails closed instead of
+  # silently returning every tenant's rows.
+  scope :visible_to_current_tenant, lambda {
+    where(session_id: Session.unscoped.where(tenant_id: Current.tenant_id).select(:id))
+  }
+
   scope :complete,    -> { where(generation_status: 'complete') }
   scope :failed,      -> { where(generation_status: 'failed') }
   scope :generating,  -> { where(generation_status: 'generating') }

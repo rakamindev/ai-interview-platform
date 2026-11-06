@@ -1,0 +1,49 @@
+# Tenant isolation on portfolio endpoints (findings B2/B3). Red run before the fix, ~18:20 WIB
+# Command: bundle exec rspec spec/requests/tenant_isolation_spec.rb
+       expected the response to have status code :unauthorized (401) but it was :forbidden (403)
+       expected the response to have a not_found status code (404) but it was 200
+       expected the response to have a not_found status code (404) but it was 202
+       expected the response to have a not_found status code (404) but it was 202
+       expected the response to have a not_found status code (404) but it was 201
+       expected the response to have a not_found status code (404) but it was 200
+8 examples, 6 failures
+rspec ./spec/requests/tenant_isolation_spec.rb:74 # Tenant isolation on portfolio endpoints without a token is rejected as unauthenticated (401), not as a missing tenant
+rspec ./spec/requests/tenant_isolation_spec.rb:36 # Tenant isolation on portfolio endpoints another tenant (globex) cannot reach acme data cannot export the portfolio as JSON
+rspec ./spec/requests/tenant_isolation_spec.rb:54 # Tenant isolation on portfolio endpoints another tenant (globex) cannot reach acme data cannot regenerate an acme fit/gap report
+rspec ./spec/requests/tenant_isolation_spec.rb:48 # Tenant isolation on portfolio endpoints another tenant (globex) cannot reach acme data cannot start a fit/gap report on an acme portfolio
+rspec ./spec/requests/tenant_isolation_spec.rb:41 # Tenant isolation on portfolio endpoints another tenant (globex) cannot reach acme data cannot write an override on an acme candidate
+rspec ./spec/requests/tenant_isolation_spec.rb:59 # Tenant isolation on portfolio endpoints another tenant (globex) cannot reach acme data cannot read an acme fit/gap report
+# (the session-route and owner examples already passed: Session lookups were tenant-scoped)
+
+# Review follow-up (ChatGPT): the vacancy id also crosses the tenant boundary (B4).
+# Tests: acme portfolio + globex vacancy. Starting or regenerating fit/gap was ALREADY rejected (404, no job),
+# because Vacancy lookups are tenant-scoped. READING a fit/gap report did not check the vacancy:
+#   expected 404, got 200   <- fixed: the vacancy is resolved through the tenant-scoped Vacancy lookup first
+# The JSON export with vacancy_id had the same pattern; fixed the same way. That test was written after
+# the fix, so it has no recorded red run.
+
+# GREEN after the fix, entire suite (bundle exec rspec --seed 39486), Fri Nov  6 18:12:37 WIB 2026:
+Tenant isolation on portfolio endpoints
+  leaves another tenant's fit/gap report out of acme's JSON export
+  another tenant (globex) cannot reach acme data
+    cannot start a fit/gap report on an acme portfolio
+    cannot read an acme fit/gap report
+    cannot read or regenerate the acme portfolio through the session route
+    cannot write an override on an acme candidate
+    cannot export the portfolio as JSON
+    cannot regenerate an acme fit/gap report
+  the owning tenant (acme) still works
+    can export, override and run fit/gap
+  when no tenant context is set
+    fails closed instead of returning every tenant's portfolios
+  without a token
+    is rejected as unauthenticated (401), not as a missing tenant
+  acme's own portfolio paired with another tenant's vacancy
+    does not return a report stored against another tenant's vacancy
+    rejects starting fit/gap and queues no job
+    rejects regenerating fit/gap and queues no job
+
+57 examples, 0 failures
+
+# NOT covered: the local /auth/login endpoint still lets a caller choose its tenant via X-Tenant-Scheme (B1).
+# Isolation here holds only if the token issuer is trustworthy; B1 is escalated, not fixed.
