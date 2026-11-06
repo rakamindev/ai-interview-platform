@@ -173,7 +173,8 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          skills:            portfolio.portfolio_skills.includes(:assessor_override_events)
+                                      .map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
       end
@@ -187,7 +188,9 @@ module Api
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
           evidence:          skill.evidence_quotes,
-          competency_summary: skill.competency_summary
+          competency_summary: skill.competency_summary,
+          # Terbaru di atas (urutan dari scope association) — F-05.
+          override_history:  skill.assessor_override_events.map { |e| OverrideEventSerializer.call(e) }
         }
       end
 

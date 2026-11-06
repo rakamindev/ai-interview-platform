@@ -8,32 +8,23 @@ module Api
       before_action :set_portfolio_skill
 
       # POST /api/v1/portfolio-skills/:id/override
+      # Validasi, penyimpanan state, dan pencatatan riwayat ada di Overrides::Apply
+      # agar controller tetap tipis dan semuanya terjadi dalam satu transaksi.
       def override
-        existing = @portfolio_skill.assessor_override
+        result = Overrides::Apply.new(
+          portfolio_skill: @portfolio_skill,
+          level:           override_params[:override_level],
+          reason:          override_params[:assessor_notes],
+          actor_id:        current_user.id
+        ).call
 
-        if existing
-          if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
-            regenerate_stale_fitgap_reports
-            json_response(override: override_json(existing))
-          else
-            json_error(existing.errors.full_messages.first, :unprocessable_entity)
-          end
-        else
-          new_override = @portfolio_skill.build_assessor_override(
-            override_params.merge(
-              ai_level:      @portfolio_skill.ai_level,
-              overridden_by: current_user.id,
-              overridden_at: Time.current
-            )
-          )
+        return json_error(result.error, result.status) unless result.success?
 
-          if new_override.save
-            regenerate_stale_fitgap_reports
-            json_response({ override: override_json(new_override) }, :created)
-          else
-            json_error(new_override.errors.full_messages.first, :unprocessable_entity)
-          end
-        end
+        regenerate_stale_fitgap_reports
+        json_response(
+          { override: override_json(result.override), event: OverrideEventSerializer.call(result.event) },
+          result.created ? :created : :ok
+        )
       end
 
       private
