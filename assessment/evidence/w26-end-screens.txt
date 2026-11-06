@@ -1,0 +1,16 @@
+# W26 honest candidate end screens (06 Nov 19:57)
+
+$ npm test   (vitest run)
+ ✓ src/lib/interviewOutcome.test.ts (11 tests) 6ms
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+
+## Browser (localhost:5173)
+/interview/not-a-real-token           -> "This interview link isn't valid" (warning, no recorded claim)
+/interview/<token of ended session 5>  -> "This interview has already ended" (neutral), also checked at 375px width
+Interrupted (server error, session_ended reason=error, reconnects exhausted): covered by the unit tests above;
+not triggered live (needs a real audio session failure).
+
+## Watched it fail
+First run: 1 failed / 10 passed. The load-failed screen said "Nothing has been recorded yet", which the
+"only completed claims recorded" test rejected. Copy reworded; 11/11 pass.

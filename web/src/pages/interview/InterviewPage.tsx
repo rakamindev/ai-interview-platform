@@ -21,7 +21,8 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info, Mic, MicOff } from "lucide-react";
+import { endScreen, outcomeFor, type EndSignal, type InterviewOutcome } from "@/lib/interviewOutcome";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -37,6 +38,12 @@ export default function InterviewPage() {
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micMuted, setMicMuted] = useState(false);
+  // W26: why the interview ended. The first signal wins (pressing End is followed by the server's
+  // own session_ended, which must not overwrite it).
+  const [endOutcome, setEndOutcome] = useState<InterviewOutcome | null>(null);
+  const handleEnded = useCallback((signal: EndSignal) => {
+    setEndOutcome((current) => current ?? outcomeFor(signal));
+  }, []);
   const micMutedRef = useRef(false);
 
   // Fetch candidate info
@@ -46,9 +53,17 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") {
+          setEndOutcome(outcomeFor({ kind: "already_ended" }));
+          setInterviewState("complete");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch((err) => {
+        // 404 = the token does not exist; anything else (network, 5xx) is a loading failure.
+        const kind = err?.response?.status === 404 ? "link_not_found" : "link_load_failed";
+        setEndOutcome(outcomeFor({ kind }));
+        setInterviewState("complete");
+      });
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
@@ -138,6 +153,7 @@ export default function InterviewPage() {
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onEnded: handleEnded,
   });
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
@@ -171,6 +187,7 @@ export default function InterviewPage() {
   }, [sessionId, connect, startCapture]);
 
   const endInterview = useCallback(async () => {
+    handleEnded({ kind: "candidate_ended" });
     setInterviewState("ending");
     if (reconnectedPromptTimerRef.current) clearTimeout(reconnectedPromptTimerRef.current);
     stopCapture();
@@ -178,7 +195,7 @@ export default function InterviewPage() {
     sendJson({ type: "end_session" });
     disconnect();
     setInterviewState("complete");
-  }, [stopCapture, stopPlayback, sendJson, disconnect]);
+  }, [stopCapture, stopPlayback, sendJson, disconnect, handleEnded]);
 
   const wsConnectionStatus =
     interviewState === "reconnecting"
@@ -228,15 +245,16 @@ export default function InterviewPage() {
 
   // ── State F: Complete ───────────────────────────────────────────────────
   if (interviewState === "complete") {
+    // Without a known reason, stay neutral rather than claim the interview was recorded.
+    const screen = endScreen(endOutcome ?? "already_ended");
+    const Icon = screen.tone === "success" ? CheckCircle : screen.tone === "warning" ? AlertTriangle : Info;
+    const iconClass =
+      screen.tone === "success" ? "text-green-600" : screen.tone === "warning" ? "text-amber-600" : "text-muted-foreground";
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-semibold">Interview Complete</h2>
-        <p className="text-sm text-muted-foreground">
-          Thank you. The interview has been recorded.
-          <br />
-          The hiring team will review your results and follow up with you.
-        </p>
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4" role="status" aria-live="polite">
+        <Icon className={`h-10 w-10 mx-auto ${iconClass}`} aria-hidden="true" />
+        <h2 className="text-xl font-semibold">{screen.title}</h2>
+        <p className="text-sm text-muted-foreground">{screen.body}</p>
       </div>
     );
   }
